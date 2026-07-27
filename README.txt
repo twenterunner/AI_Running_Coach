@@ -9,7 +9,7 @@ https://twenterunner.github.io/AI_Running_Coach/
 
 CURRENT VERSION
 ---------------
-v6.3 · build 6309
+v6.3 · build 6310
 
 MAIN FEATURES
 -------------
@@ -77,6 +77,14 @@ DEPLOYMENT
 Upload every file in this pack to the root of the GitHub repository and commit the changes.
 
 Then open:
-https://twenterunner.github.io/AI_Running_Coach/?v=6309
+https://twenterunner.github.io/AI_Running_Coach/?v=6310
 
-The header should display v6.3 · build 6309.
+The header should display v6.3 · build 6310.
+
+
+BUILD 6310 BRANDING UPDATE
+--------------------------
+- Replaced the visible AR header badge with the AI Running Coach runner logo.
+- Improved mobile header sizing and spacing.
+- Updated all asset and service-worker cache versions.
+- Kept PWA, Apple touch and browser icons aligned with the in-app branding.
