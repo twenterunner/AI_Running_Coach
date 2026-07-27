@@ -9,7 +9,7 @@ const dec=(v,n=2)=>Number.isFinite(v)?v.toFixed(n):'—';
 function fmtTime(s){if(!Number.isFinite(s))return'—';let h=Math.floor(s/3600),m=Math.floor(s%3600/60),q=Math.round(s%60);if(q===60){q=0;m++}if(m===60){m=0;h++}return h?`${h}:${String(m).padStart(2,'0')}:${String(q).padStart(2,'0')}`:`${m}:${String(q).padStart(2,'0')}`}
 function parseTime(v){let p=String(v||'').split(':').map(Number);if(p.some(x=>!Number.isFinite(x)))return null;return p.length===3?p[0]*3600+p[1]*60+p[2]:p[0]*60+p[1]}
 function pace(s){return Number.isFinite(s)?fmtTime(s)+'/km':'—'} function toast(t,bad=false){$('toast').textContent=t;$('toast').className='toast'+(bad?' bad':'');setTimeout(()=>$('toast').className='toast hidden',3500)}
-const defaults=()=>({schemaVersion:6300,setup:{planStart:'2026-07-26',raceDate:'2026-12-13',raceName:'Goal Race',raceDistance:42.195,targetTime:15300,currentWeekly:35,currentLongest:18,testDistance:5,testTime:1515,thresholdHr:168,criticalPower:300,bodyWeight:93,maxWeekly:70,growth:.08,peakLong:35,taperDays:21,minFactor:.85,maxFactor:1.05,adaptive:true},days:[['Monday',false,'Easy'],['Tuesday',true,'Intervals'],['Wednesday',true,'Easy'],['Thursday',false,'Easy'],['Friday',true,'Tempo'],['Saturday',true,'Easy'],['Sunday',true,'Long run']],runs:[],assessments:[],plan:[],weekView:null});
+const defaults=()=>({schemaVersion:6302,setup:{planStart:'2026-07-26',raceDate:'2026-12-13',raceName:'Goal Race',raceDistance:42.195,targetTime:15300,currentWeekly:35,currentLongest:18,testDistance:5,testTime:1515,thresholdHr:168,criticalPower:300,bodyWeight:93,maxWeekly:70,growth:.08,peakLong:35,taperDays:21,minFactor:.85,maxFactor:1.05,adaptive:true},days:[['Monday',false,'Easy'],['Tuesday',true,'Intervals'],['Wednesday',true,'Easy'],['Thursday',false,'Easy'],['Friday',true,'Tempo'],['Saturday',true,'Easy'],['Sunday',true,'Long run']],runs:[],assessments:[],plan:[],weekView:null});
 let state;try{state=JSON.parse(localStorage.getItem('arc_v62_web'))}catch{}if(!state)state=defaults();
 const save=()=>localStorage.setItem('arc_v62_web',JSON.stringify(state)), today=()=>dte(iso(new Date()));
 function baselineOn(date){let valid=state.assessments.filter(a=>a.valid&&a.date<=date).sort((a,b)=>a.date.localeCompare(b.date));let a=valid.at(-1);return a?{pace:a.time/a.distance,hr:a.thresholdHr||state.setup.thresholdHr,cp:a.criticalPower||state.setup.criticalPower}:{pace:state.setup.testTime/state.setup.testDistance,hr:state.setup.thresholdHr,cp:state.setup.criticalPower}}
@@ -79,7 +79,7 @@ function buildPlan(){
      out.push(old.get(id)||item);
    });
  }
- state.plan=out;state.schemaVersion=6300;save()
+ state.plan=out;state.schemaVersion=6302;save()
 }
 function prescription(type,km,w,ph,z){
  if(type==='Rest')return{warmup:'—',main:'Rest day',cooldown:'—',purpose:'Absorb training and restore freshness.',coach:'Walking and light mobility are fine. Avoid turning recovery into another workout.',fuel:'Normal daily hydration.'};
@@ -90,7 +90,7 @@ function prescription(type,km,w,ph,z){
  if(type==='Fitness assessment')return{warmup:'15–20 min easy + drills + 4 strides',main:'5 km even maximal assessment',cooldown:'10–15 min very easy',purpose:'Create a repeatable benchmark that can update future targets.',coach:'Use even pacing and mark the result valid only when course, weather, health and execution make the result representative.',fuel:'Normal pre-run meal; avoid starting depleted.'};
  return{warmup:'10–15 min easy',main:`${km.toFixed(1)} km race execution`,cooldown:'Walk and begin recovery nutrition',purpose:'Execute the race plan.',coach:'Start controlled, protect the first 10 km and only progress after halfway if effort remains stable.',fuel:'60–90 g carbohydrate/hour and 400–800 ml fluid/hour.'}
 }
-if(state.schemaVersion!==6300){state.plan=[];buildPlan()}else if(!state.plan?.length)buildPlan();
+if(state.schemaVersion!==6302){state.plan=[];buildPlan()}else if(!state.plan?.length)buildPlan();
 function status(p){let done=state.runs.some(r=>r.planId===p.id||r.date===p.date);if(done)return'completed';if(p.type==='Rest')return'rest';let d=dte(p.date);if(d<today())return'missed';if(d.getTime()===today().getTime())return'today';return'upcoming'}
 function confidence(){
  let raceDate=dte(state.setup.raceDate);
@@ -432,68 +432,96 @@ function renderPlan(){if(!state.weekView)state.weekView=currentWeek();let arr=st
 
 function streamAnalysis(records){
  let valid=records.filter(r=>Number.isFinite(r.t)&&r.hr>40&&(r.power>0||r.speed>0)).sort((a,b)=>a.t-b.t);
- if(valid.length<300)return null;
- let start=valid[0].t,end=valid.at(-1).t;
- let warmup=Math.min(900,Math.max(300,(end-start)*.15));
+ if(valid.length<180)return null;
+ // Remove obvious pauses and implausible samples.
+ valid=valid.filter(r=>(!r.speed||r.speed>.5)&&(!r.power||r.power<1000)&&r.hr<230);
+ if(valid.length<180)return null;
+ let start=valid[0].t,end=valid.at(-1).t,total=end-start;
+ if(total<1800)return null;
+ let warmup=Math.min(900,Math.max(300,total*.15));
  valid=valid.filter(r=>r.t>=start+warmup);
- if(valid.length<240)return null;
+ if(valid.length<150)return null;
  let mid=(valid[0].t+valid.at(-1).t)/2,a=valid.filter(r=>r.t<=mid),b=valid.filter(r=>r.t>mid);
+ if(a.length<60||b.length<60)return null;
  const mean=(arr,key)=>avg(arr.map(x=>x[key]).filter(v=>Number.isFinite(v)&&v>0));
  let h1=mean(a,'hr'),h2=mean(b,'hr'),p1=mean(a,'power'),p2=mean(b,'power'),v1=mean(a,'speed'),v2=mean(b,'speed');
  let powerDrift=p1&&p2&&h1&&h2?(1-(p2/h2)/(p1/h1))*100:null;
  let paceDrift=v1&&v2&&h1&&h2?(1-(v2/h2)/(v1/h1))*100:null;
  let drift=Number.isFinite(powerDrift)?powerDrift:paceDrift;
- return{drift,powerDrift,paceDrift,firstHr:h1,secondHr:h2,firstPower:p1,secondPower:p2,firstSpeed:v1,secondSpeed:v2,
-   recordCount:valid.length,analysisDuration:valid.at(-1).t-valid[0].t};
+ if(!Number.isFinite(drift))return null;
+ return{
+   drift,powerDrift,paceDrift,firstHr:h1,secondHr:h2,firstPower:p1,secondPower:p2,
+   firstSpeed:v1,secondSpeed:v2,recordCount:valid.length,analysisDuration:valid.at(-1).t-valid[0].t,
+   reliability:valid.length>=1200?'High':valid.length>=600?'Medium':'Low'
+ };
 }
 function parseCSV(t){let rows=[],r=[],f='',q=false;for(let i=0;i<t.length;i++){let c=t[i],n=t[i+1];if(c=='"'&&q&&n=='"'){f+='"';i++}else if(c=='"')q=!q;else if(c==','&&!q){r.push(f);f=''}else if((c=='\n'||c=='\r')&&!q){if(c=='\r'&&n=='\n')i++;r.push(f);if(r.some(x=>x))rows.push(r);r=[];f=''}else f+=c}if(f||r.length){r.push(f);rows.push(r)}return rows}
 function summariseCSV(rows){
- let h=rows[0].map(x=>x.trim()),idx=n=>h.indexOf(n),data=rows.slice(1).filter(r=>r.length>1);
- const num=(r,n)=>idx(n)>=0?Number(r[idx(n)]):null;
- let records=data.map(r=>({
-   t:num(r,'Timestamp'),
-   hr:num(r,'Heart Rate (bpm)'),
-   speed:num(r,'Watch Speed (m/s)')||num(r,'Stryd Speed (m/s)'),
-   power:(num(r,'Power (W)')||num(r,'Power (Watts)')||((num(r,'Power (w/kg)')||0)*state.setup.bodyWeight))
- })).filter(r=>Number.isFinite(r.t));
- let ts=records.map(r=>r.t),scale=ts.length&&Math.max(...ts)>1e12?1000:1;
- records.forEach(r=>r.t/=scale);
- let distVals=data.map(r=>num(r,'Watch Distance (meters)')||num(r,'Stryd Distance (meters)')).filter(Number.isFinite);
- let dist=distVals.length?Math.max(...distVals)/1000:null,duration=ts.length?(Math.max(...ts)-Math.min(...ts))/scale:null;
- if(!ts.length||!Number.isFinite(dist)||dist<=0||!Number.isFinite(duration)||duration<=0)throw Error('The CSV does not contain valid Stryd timestamp and distance data.');
- let pos=n=>avg(data.map(r=>num(r,n)).filter(v=>Number.isFinite(v)&&v>0));
- let analysis=streamAnalysis(records);
- return{id:'stryd-'+Math.min(...ts)+'-'+Math.round(dist*1000),date:iso(new Date(Math.min(...ts)*(scale===1000?1:1000))),type:'Easy',
-   distanceKm:dist,durationSec:duration,avgHr:pos('Heart Rate (bpm)'),avgPower:pos('Power (W)')||pos('Power (Watts)')||(pos('Power (w/kg)')*state.setup.bodyWeight),
-   cadence:pos('Cadence (spm)'),gct:pos('Ground Time (ms)'),vo:pos('Vertical Oscillation (cm)'),rpe:null,pain:null,recovery:null,temperature:null,notes:'',
-   drift:analysis?.drift??null,powerDrift:analysis?.powerDrift??null,paceDrift:analysis?.paceDrift??null,streamEvidence:analysis};
-}
-async function summariseFIT(file){
- let mod;
- try{mod=await import('https://esm.sh/@garmin/fitsdk@21.208.0')}catch(e){throw Error('FIT decoder could not load. Check internet access and try again, or use the Stryd CSV export.')}
- let bytes=new Uint8Array(await file.arrayBuffer()),stream=mod.Stream.fromByteArray(bytes),decoder=new mod.Decoder(stream);
- if(!decoder.isFIT())throw Error('This is not a valid FIT file.');
- let result=decoder.read(),messages=result.messages||{};
- let recs=messages.recordMesgs||messages.records||[];
- if(!recs.length)throw Error('No time-series activity records were found in the FIT file.');
- const val=(r,...keys)=>{for(let k of keys)if(r[k]!=null)return r[k];return null};
- let records=recs.map(r=>{
-   let ts=val(r,'timestamp','timeStamp'),t=ts instanceof Date?ts.getTime()/1000:(Number(ts)>1e12?Number(ts)/1000:Number(ts));
-   return{t,hr:Number(val(r,'heartRate','heart_rate')),power:Number(val(r,'power')),speed:Number(val(r,'enhancedSpeed','enhanced_speed','speed')),
-     distance:Number(val(r,'distance')),cadence:Number(val(r,'cadence')),temperature:Number(val(r,'temperature'))};
+ let rawHeaders=rows[0].map(x=>String(x).trim()),norm=x=>String(x).trim().toLowerCase().replace(/[^a-z0-9]+/g,' ');
+ let headers=rawHeaders.map(norm),data=rows.slice(1).filter(r=>r.some(x=>String(x).trim()!==''));
+ const find=(names)=>{
+   let variants=names.map(norm);
+   for(let n of variants){let exact=headers.indexOf(n);if(exact>=0)return exact}
+   for(let n of variants){let fuzzy=headers.findIndex(h=>h.includes(n)||n.includes(h));if(fuzzy>=0)return fuzzy}
+   return -1;
+ };
+ const indexMap={
+   timestamp:find(['Timestamp','Time','Date Time','datetime']),
+   hr:find(['Heart Rate (bpm)','Heart Rate','heartrate']),
+   watchSpeed:find(['Watch Speed (m/s)','Speed (m/s)','speed']),
+   strydSpeed:find(['Stryd Speed (m/s)']),
+   powerW:find(['Power (W)','Power (Watts)','power']),
+   powerKg:find(['Power (w/kg)','Power W/kg']),
+   watchDistance:find(['Watch Distance (meters)','Distance (meters)','distance']),
+   strydDistance:find(['Stryd Distance (meters)']),
+   cadence:find(['Cadence (spm)','Cadence']),
+   gct:find(['Ground Time (ms)','Ground Contact Time (ms)']),
+   vo:find(['Vertical Oscillation (cm)','Vertical Oscillation'])
+ };
+ const number=(r,i)=>{
+   if(i<0)return null;
+   let x=String(r[i]??'').trim().replace(',','.');
+   let v=Number(x);return Number.isFinite(v)?v:null;
+ };
+ const timestamp=(r)=>{
+   let raw=r[indexMap.timestamp];
+   let numeric=Number(raw);
+   if(Number.isFinite(numeric))return numeric;
+   let parsed=Date.parse(raw);
+   return Number.isFinite(parsed)?parsed:null;
+ };
+ if(indexMap.timestamp<0)throw Error('No timestamp column was found in this CSV.');
+ let records=data.map(r=>{
+   let wkg=number(r,indexMap.powerKg);
+   return{
+     t:timestamp(r),
+     hr:number(r,indexMap.hr),
+     speed:number(r,indexMap.watchSpeed)||number(r,indexMap.strydSpeed),
+     power:number(r,indexMap.powerW)||(wkg? wkg*state.setup.bodyWeight:null),
+     distance:number(r,indexMap.watchDistance)||number(r,indexMap.strydDistance)
+   }
  }).filter(r=>Number.isFinite(r.t));
- let first=records[0],last=records.at(-1),duration=last.t-first.t;
- let distances=records.map(r=>r.distance).filter(Number.isFinite),dist=Math.max(...distances)/1000;
- if(!Number.isFinite(dist)||dist<=0){
-   let session=(messages.sessionMesgs||[])[0]||{};
-   dist=Number(session.totalDistance||session.total_distance)/1000;
- }
- let positive=(key)=>avg(records.map(r=>r[key]).filter(v=>Number.isFinite(v)&&v>0));
+ if(records.length<2)throw Error('Too few valid timestamped records were found in the CSV.');
+ let maxTs=Math.max(...records.map(r=>r.t)),scale=maxTs>1e12?1000:1;
+ records.forEach(r=>r.t/=scale);
+ let distanceRecords=records.map(r=>r.distance).filter(Number.isFinite);
+ let dist=distanceRecords.length?Math.max(...distanceRecords)/1000:null;
+ let duration=records.at(-1).t-records[0].t;
+ if(!Number.isFinite(dist)||dist<=0||!Number.isFinite(duration)||duration<=0)throw Error('The CSV does not contain valid cumulative distance and duration.');
+ const positive=key=>avg(records.map(r=>r[key]).filter(v=>Number.isFinite(v)&&v>0));
  let analysis=streamAnalysis(records);
- return{id:'fit-'+Math.round(first.t)+'-'+Math.round(dist*1000),date:iso(new Date(first.t*1000)),type:'Easy',distanceKm:dist,durationSec:duration,
-   avgHr:positive('hr'),avgPower:positive('power'),cadence:positive('cadence'),temperature:positive('temperature'),
-   gct:null,vo:null,rpe:null,pain:null,recovery:null,notes:'Imported from FIT',
-   drift:analysis?.drift??null,powerDrift:analysis?.powerDrift??null,paceDrift:analysis?.paceDrift??null,streamEvidence:analysis};
+ let originalStart=records[0].t;
+ return{
+   id:'stryd-'+Math.round(originalStart)+'-'+Math.round(dist*1000),
+   date:iso(new Date(originalStart*1000)),type:'Easy',distanceKm:dist,durationSec:duration,
+   avgHr:positive('hr'),avgPower:positive('power'),
+   cadence:indexMap.cadence>=0?avg(data.map(r=>number(r,indexMap.cadence)).filter(v=>Number.isFinite(v)&&v>0)):null,
+   gct:indexMap.gct>=0?avg(data.map(r=>number(r,indexMap.gct)).filter(v=>Number.isFinite(v)&&v>0)):null,
+   vo:indexMap.vo>=0?avg(data.map(r=>number(r,indexMap.vo)).filter(v=>Number.isFinite(v)&&v>0)):null,
+   rpe:null,pain:null,recovery:null,temperature:null,notes:'Imported from Stryd CSV',
+   drift:analysis?.drift??null,powerDrift:analysis?.powerDrift??null,paceDrift:analysis?.paceDrift??null,
+   streamEvidence:analysis,sourceFormat:'csv-timeseries'
+ };
 }
 
 function renderRuns(){$('runList').innerHTML=state.runs.slice().sort((a,b)=>b.date.localeCompare(a.date)).map(r=>{let m=metrics(r);return`<div class="runCard" data-run="${r.id}"><div class="runSummary"><div><h3>${fmtDate(r.date)} · ${esc(r.type)}</h3><p>${r.distanceKm.toFixed(2)} km · ${fmtTime(r.durationSec)} · ${pace(m.pace)}</p><div class="runStats"><span>HR ${r.avgHr?Math.round(r.avgHr):'—'}</span><span>${r.avgPower?Math.round(r.avgPower):'—'} W</span><span>RE ${dec(m.effect,3)}</span><span>${dec(m.wkg,2)} W/kg</span></div></div><span>›</span></div></div>`}).join('')||'<div class="panel">No completed runs saved yet.</div>'}
@@ -521,9 +549,12 @@ function renderMetrics(){
    $('driftStatus').className='dataStatus '+cls;
    $('driftStatus').innerHTML=`<b>Latest cardiac drift: ${d.drift.toFixed(1)}%</b><br>
    ${Number.isFinite(d.powerDrift)?`Power–HR decoupling ${d.powerDrift.toFixed(1)}%. `:''}${Number.isFinite(d.paceDrift)?`Pace–HR decoupling ${d.paceDrift.toFixed(1)}%.`:''}
-   <br><span class="muted">${d.drift<5?'Good aerobic stability.':d.drift<8?'Noticeable drift; compare conditions and fuelling.':'High drift; review pacing, heat, hydration and fatigue.'}</span>`;
+   <br><span class="muted">Reliability: ${d.streamEvidence?.reliability||'Unknown'}. ${d.drift<5?'Good aerobic stability.':d.drift<8?'Noticeable drift; compare conditions and fuelling.':'High drift; review pacing, heat, hydration and fatigue.'}</span>`;
  }else{
-   $('driftStatus').closest('.panel').style.display='none';
+   $('driftStatus').closest('.panel').style.display='';
+   $('driftStatus').className='dataStatus';
+   $('driftStatus').innerHTML=`<div class="importNotice"><b>No time-series drift evidence is stored yet.</b><br>
+   Re-import the original FIT or detailed Stryd CSV. Runs saved in build 6211 or earlier contain averages only and cannot be retroactively analysed.</div>`;
  }
 }
 function assessmentRunId(a){return a.runId||`assessment-run-${a.id}`}
@@ -610,25 +641,55 @@ function renderProgress(){
  $('progressNarrative').innerHTML=statements.map(x=>`<div class="coachSentence">${x}</div>`).join('');
 }
 function renderAll(){renderDashboard();renderToday();renderPlan();renderRuns();renderMetrics();renderProgress();renderAssessments();renderCoach();renderRace();renderSettings()}
-const pages=[['dashboard','Dashboard'],['today','Today'],['plan','Plan'],['runs','Runs'],['metrics','Metrics'],['assessments','Assessments'],['race','Race day'],['settings','Settings']];
+const pages=[['dashboard','Dashboard'],['today','Today'],['plan','Plan'],['runs','Runs'],['assessments','Assessments'],['race','Race day'],['settings','Settings']];
 $('nav').innerHTML=pages.map((p,i)=>`<button data-page="${p[0]}" class="${i?'':'active'}">${p[1]}</button>`).join('');$('nav').onclick=e=>{let p=e.target.dataset.page;if(!p)return;document.querySelectorAll('.page').forEach(x=>x.classList.toggle('active',x.id===p));document.querySelectorAll('#nav button').forEach(x=>x.classList.toggle('active',x.dataset.page===p));renderAll();scrollTo(0,0)};document.body.onclick=e=>{if(e.target.dataset.go){document.querySelector(`[data-page="${e.target.dataset.go}"]`).click()}let w=e.target.closest('.workout');if(w&&!e.target.closest('button'))w.classList.toggle('open')};
 $('prevWeek').onclick=()=>{state.weekView=clamp((state.weekView||currentWeek())-1,1,weeks());renderPlan()};$('nextWeek').onclick=()=>{state.weekView=clamp((state.weekView||currentWeek())+1,1,weeks());renderPlan()};$('thisWeek').onclick=()=>{state.weekView=currentWeek();renderPlan()};
 $('activityFile').onchange=async e=>{
  let f=e.target.files[0];if(!f)return;
+ if(!f.name.toLowerCase().endsWith('.csv')){toast('Please choose a detailed Stryd CSV file.',true);return}
  try{
-   preview=f.name.toLowerCase().endsWith('.fit')?await summariseFIT(f):summariseCSV(parseCSV(await f.text()));
+   preview=summariseCSV(parseCSV(await f.text()));
    let m=metrics(preview);
    $('importPreview').className='panel';
-   $('importPreview').innerHTML=`<h3>Import preview</h3><div class="metricGrid">
-    ${kpi('Date',preview.date)}${kpi('Distance',preview.distanceKm.toFixed(2)+' km')}${kpi('Duration',fmtTime(preview.durationSec))}
-    ${kpi('Pace',pace(m.pace))}${kpi('HR',preview.avgHr?Math.round(preview.avgHr)+' bpm':'—')}${kpi('Power',preview.avgPower?Math.round(preview.avgPower)+' W':'—')}
-    ${kpi('Cardiac drift',Number.isFinite(preview.drift)?preview.drift.toFixed(1)+'%':'Not available')}${kpi('Running effectiveness',dec(m.effect,3))}
-   </div><div class="formGrid"><div class="field"><label>Run type</label><select id="iType"><option>Easy</option><option>Recovery</option><option>Long run</option><option>Tempo</option><option>Intervals</option><option>Fitness assessment</option><option>Race</option></select></div><div class="field"><label>RPE</label><input id="iRpe" type="number"></div><div class="field"><label>Pain 0–10</label><input id="iPain" type="number"></div><div class="field"><label>Recovery 1–5</label><input id="iRecovery" type="number"></div><div class="field"><label>Notes</label><input id="iNotes"></div></div><button id="saveImport" class="primary full">Save imported run</button>`;
+   $('importPreview').innerHTML=`<h3>CSV analysis preview</h3>
+   <div class="metricGrid">
+    ${kpi('Date',preview.date)}
+    ${kpi('Distance',preview.distanceKm.toFixed(2)+' km')}
+    ${kpi('Duration',fmtTime(preview.durationSec))}
+    ${kpi('Pace',pace(m.pace))}
+    ${kpi('Heart rate',preview.avgHr?Math.round(preview.avgHr)+' bpm':'—')}
+    ${kpi('Power',preview.avgPower?Math.round(preview.avgPower)+' W':'—')}
+    ${kpi('Cardiac drift',Number.isFinite(preview.drift)?preview.drift.toFixed(1)+'%':'Not available',
+      preview.streamEvidence?.reliability?preview.streamEvidence.reliability+' reliability':'Needs ≥30 min with HR plus speed or power')}
+    ${kpi('Power–HR drift',Number.isFinite(preview.powerDrift)?preview.powerDrift.toFixed(1)+'%':'—')}
+    ${kpi('Pace–HR drift',Number.isFinite(preview.paceDrift)?preview.paceDrift.toFixed(1)+'%':'—')}
+    ${kpi('Running effectiveness',dec(m.effect,3))}
+   </div>
+   <div class="formGrid">
+    <div class="field"><label>Run type</label><select id="iType"><option>Easy</option><option>Recovery</option><option>Long run</option><option>Tempo</option><option>Intervals</option><option>Fitness assessment</option><option>Race</option></select></div>
+    <div class="field"><label>RPE</label><input id="iRpe" type="number" min="1" max="10"></div>
+    <div class="field"><label>Pain 0–10</label><input id="iPain" type="number" min="0" max="10"></div>
+    <div class="field"><label>Recovery 1–5</label><input id="iRecovery" type="number" min="1" max="5"></div>
+    <div class="field"><label>Notes</label><input id="iNotes"></div>
+   </div>
+   <button id="saveImport" class="primary full">Save analysed run</button>`;
    $('saveImport').onclick=()=>{
     if(state.runs.some(r=>r.id===preview.id))return toast('This run was already imported.',true);
-    Object.assign(preview,{type:$('iType').value,rpe:Number($('iRpe').value)||null,pain:$('iPain').value===''?null:Number($('iPain').value),recovery:Number($('iRecovery').value)||null,notes:$('iNotes').value});
-    let match=state.plan.find(p=>p.date===preview.date&&p.type!=='Rest');if(match)preview.planId=match.id;
-    state.runs.push(preview);save();$('importPreview').className='hidden';preview=null;renderAll();toast('Run saved with time-series analysis.');
+    Object.assign(preview,{
+      type:$('iType').value,
+      rpe:Number($('iRpe').value)||null,
+      pain:$('iPain').value===''?null:Number($('iPain').value),
+      recovery:Number($('iRecovery').value)||null,
+      notes:$('iNotes').value
+    });
+    let match=state.plan.find(p=>p.date===preview.date&&p.type!=='Rest');
+    if(match)preview.planId=match.id;
+    state.runs.push(preview);
+    save();
+    $('importPreview').className='hidden';
+    preview=null;
+    renderAll();
+    toast('CSV analysed and run saved.');
    };
  }catch(err){toast(err.message,true)}
 };
@@ -639,5 +700,5 @@ $('backupBtn').onclick=()=>download('ai-running-coach-backup.json',JSON.stringif
 let deferred;window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferred=e;$('installBtn').className='install'});$('installBtn').onclick=()=>deferred?.prompt();if('serviceWorker'in navigator&&location.protocol==='https:')navigator.serviceWorker.register('service-worker.js');
 migrateAssessmentRuns();
 renderAll();
-console.info('AI Running Coach v6.3 web build 6300');
+console.info('AI Running Coach v6.3 web build 6302');
 })();

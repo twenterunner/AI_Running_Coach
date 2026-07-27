@@ -3,11 +3,11 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#0b3157"><title>AI Running Coach</title>
-<link rel="manifest" href="manifest.webmanifest?v=6300"><link rel="icon" href="icon-192.png?v=6300"><link rel="stylesheet" href="styles.css?v=6300">
+<link rel="manifest" href="manifest.webmanifest?v=6302"><link rel="icon" href="icon-192.png?v=6302"><link rel="stylesheet" href="styles.css?v=6302">
 </head>
 <body>
 <header class="topbar">
-  <div class="brand"><div class="logo">AR</div><div><h1>AI Running Coach</h1><p>Adaptive marathon planning • v6.3 · build 6300</p></div></div>
+  <div class="brand"><div class="logo">AR</div><div><h1>AI Running Coach</h1><p>Adaptive marathon planning • v6.3 · build 6302</p></div></div>
   <button id="installBtn" class="install hidden">Install</button>
 </header>
 <nav id="nav"></nav>
@@ -53,6 +53,21 @@
     <article class="panel"><div class="panelHead"><h3>Aerobic efficiency</h3><span class="muted">Comparable aerobic runs</span></div><canvas id="progressEconomyChart" width="1000" height="380"></canvas></article>
   </div>
   <article class="panel"><h3>What the data currently says</h3><div id="progressNarrative" class="coachText"></div></article>
+
+  <div class="sectionTitle"><div><h2>Performance metrics</h2><p>Trends from completed runs.</p></div></div>
+  <div id="metricKpis" class="kpis"></div>
+  <div class="grid2">
+      <article class="panel"><div class="panelHead"><h3>Running effectiveness</h3><span class="muted">First comparable run = 100</span></div><canvas id="effectivenessChart" width="1000" height="360"></canvas></article>
+      <article class="panel"><div class="panelHead"><h3>Distance per heartbeat</h3><span class="muted">First comparable run = 100</span></div><canvas id="heartbeatChart" width="1000" height="360"></canvas></article>
+    </div>
+    <article class="panel"><div class="panelHead"><h3>Durability / cardiac drift</h3><span class="muted">Requires split-level HR plus pace or power</span></div><div id="driftStatus" class="dataStatus"></div></article>
+  <article class="panel"><h3>Metric guide</h3><div class="guideGrid">
+   <div><b>Distance / heartbeat</b><p>Metres travelled per heartbeat. Higher is generally better at comparable effort and conditions.</p></div>
+   <div><b>W / bpm</b><p>Average power divided by heart rate. Useful for tracking aerobic output.</p></div>
+   <div><b>Running effectiveness</b><p>Speed in m/s divided by power in W/kg, matching the workbook logic.</p></div>
+   <div><b>W / kg</b><p>Average power divided by current body weight.</p></div>
+  </div></article>
+
   <div class="grid2">
     <article class="panel"><h3>Current strengths</h3><div id="strengths"></div></article>
     <article class="panel"><h3>Risks and limiters</h3><div id="risks"></div></article>
@@ -80,31 +95,14 @@
   <div class="sectionTitle"><div><h2>Run log</h2><p>All v6.2 efficiency and economy metrics.</p></div><button id="manualRunBtn" class="primary small">+ Manual</button></div>
   <article class="panel importBox">
     <div><h3>Import Stryd CSV</h3><p class="muted">Select the CSV exported by Stryd. The run is analysed before saving.</p></div>
-    <label class="filePick" for="activityFile">Choose FIT or CSV</label>
-<input id="activityFile" type="file" accept=".fit,.csv,application/octet-stream,text/csv">
-<p class="muted">FIT is preferred. Stryd CSV also supports cardiac drift because it contains time-series HR, speed and power.</p>
+    <label class="filePick" for="activityFile">Choose Stryd CSV</label>
+<input id="activityFile" type="file" accept=".csv,text/csv">
+<p class="muted">Upload the detailed Stryd CSV. Cardiac drift is calculated immediately from timestamped heart rate, speed and power. Runs imported in older builds must be re-imported because those builds kept only summary averages.</p>
   </article>
   <div id="importPreview" class="hidden"></div>
   <div id="manualRun" class="hidden"></div>
   <div id="runList"></div>
 </section>
-
-<section id="metrics" class="page">
-  <div class="sectionTitle"><div><h2>Performance metrics</h2><p>Trends from completed runs.</p></div></div>
-  <div id="metricKpis" class="kpis"></div>
-  <div class="grid2">
-      <article class="panel"><div class="panelHead"><h3>Running effectiveness</h3><span class="muted">First comparable run = 100</span></div><canvas id="effectivenessChart" width="1000" height="360"></canvas></article>
-      <article class="panel"><div class="panelHead"><h3>Distance per heartbeat</h3><span class="muted">First comparable run = 100</span></div><canvas id="heartbeatChart" width="1000" height="360"></canvas></article>
-    </div>
-    <article class="panel"><div class="panelHead"><h3>Durability / cardiac drift</h3><span class="muted">Requires split-level HR plus pace or power</span></div><div id="driftStatus" class="dataStatus"></div></article>
-  <article class="panel"><h3>Metric guide</h3><div class="guideGrid">
-   <div><b>Distance / heartbeat</b><p>Metres travelled per heartbeat. Higher is generally better at comparable effort and conditions.</p></div>
-   <div><b>W / bpm</b><p>Average power divided by heart rate. Useful for tracking aerobic output.</p></div>
-   <div><b>Running effectiveness</b><p>Speed in m/s divided by power in W/kg, matching the workbook logic.</p></div>
-   <div><b>W / kg</b><p>Average power divided by current body weight.</p></div>
-  </div></article>
-</section>
-
 
 <section id="assessments" class="page">
   <div class="sectionTitle"><div><h2>Fitness assessments</h2><p>Valid assessments update future targets only.</p></div><button id="addAssessmentBtn" class="primary small">+ Add result</button></div>
@@ -137,5 +135,5 @@
 </main>
 
 <div id="modal" class="modal hidden"><div class="modalCard"><button id="closeModal" class="close">×</button><div id="modalContent"></div></div></div>
-<script src="app.js?v=6300"></script>
+<script src="app.js?v=6302"></script>
 </body></html>
