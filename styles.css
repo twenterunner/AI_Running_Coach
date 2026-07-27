@@ -56,3 +56,18 @@ canvas{width:100%;height:auto;display:block}
 .kpi:hover{transform:translateY(-2px);box-shadow:0 15px 30px rgba(15,55,87,.09)}
 @media(max-width:900px){.pillarGrid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:520px){.pillarGrid{grid-template-columns:1fr}.evidenceBadge{font-size:.78rem}.pillarCard{padding:16px}}
+
+.readinessProfile{display:grid;gap:18px;padding:10px 4px}
+.readinessRow{display:grid;grid-template-columns:minmax(170px,1.1fr) minmax(180px,2fr) 46px;gap:16px;align-items:center}
+.readinessName{font-weight:800;color:var(--ink);line-height:1.2}
+.readinessTrack{height:18px;background:#e8eef4;border-radius:999px;overflow:hidden}
+.readinessFill{height:100%;border-radius:inherit;background:linear-gradient(90deg,var(--bar),color-mix(in srgb,var(--bar),#fff 22%))}
+.readinessNumber{text-align:right;font-size:1.05rem;font-weight:900}
+.dataStatus{padding:18px;border-radius:17px;background:#f6f8fb;color:#5d6b7a;line-height:1.5}
+.chartFoot{font-size:.8rem;color:var(--muted);margin-top:6px}
+.coachSentence{padding:15px 17px;border-left:5px solid var(--blue);background:#f4f8fb;border-radius:14px;margin:10px 0}
+@media(max-width:600px){
+ .readinessRow{grid-template-columns:1fr 44px;gap:8px 12px}
+ .readinessTrack{grid-column:1/-1;grid-row:2}
+ .readinessNumber{grid-column:2;grid-row:1}
+}
