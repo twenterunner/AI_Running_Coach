@@ -3,11 +3,11 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#0b3157"><title>AI Running Coach</title>
-<link rel="manifest" href="manifest.webmanifest?v=6205"><link rel="icon" href="icon-192.png?v=6205"><link rel="stylesheet" href="styles.css?v=6205">
+<link rel="manifest" href="manifest.webmanifest?v=6206"><link rel="icon" href="icon-192.png?v=6206"><link rel="stylesheet" href="styles.css?v=6206">
 </head>
 <body>
 <header class="topbar">
-  <div class="brand"><div class="logo">AR</div><div><h1>AI Running Coach</h1><p>Adaptive marathon planning • v6.2 web · build 6205</p></div></div>
+  <div class="brand"><div class="logo">AR</div><div><h1>AI Running Coach</h1><p>Adaptive marathon planning • v6.2 web · build 6206</p></div></div>
   <button id="installBtn" class="install hidden">Install</button>
 </header>
 <nav id="nav"></nav>
@@ -20,15 +20,31 @@
     <div class="confidenceRing"><div><strong id="confidenceValue"></strong><span>confidence</span></div></div>
   </div>
   <div id="kpis" class="kpis"></div>
+  <article class="panel"><h3>Coach assessment</h3><div id="assessmentText" class="coachText"></div></article>
+
+  <article class="panel">
+    <div class="panelHead"><h3>Confidence components</h3><span class="muted">What supports race readiness</span></div>
+    <div id="confidenceBars"></div>
+    <div id="componentGuide" class="guideGrid componentGuide"></div>
+  </article>
+
   <div class="grid2">
-    <article class="panel"><div class="panelHead"><h3>Coach assessment</h3><button class="linkBtn" data-go="coach">Full coaching</button></div><div id="assessmentText" class="coachText"></div></article>
-    <article class="panel"><h3>Confidence components</h3><div id="confidenceBars"></div></article>
+    <article class="panel"><div class="panelHead"><h3>Weekly distance progression</h3><span class="muted">Planned vs completed</span></div><canvas id="volumeChart" width="1000" height="340"></canvas></article>
+    <article class="panel"><div class="panelHead"><h3>Weekly completion rate</h3><span class="muted">Completed ÷ planned</span></div><canvas id="adherenceChart" width="1000" height="340"></canvas></article>
   </div>
-  <article class="panel"><div class="panelHead"><h3>Weekly distance progression</h3><span class="muted">Planned vs completed</span></div><canvas id="volumeChart" width="1000" height="340"></canvas></article>
+
+  <div class="grid2">
+    <article class="panel"><div class="panelHead"><h3>Long-run progression</h3><span class="muted">Planned vs completed long runs</span></div><canvas id="longRunChart" width="1000" height="340"></canvas></article>
+    <article class="panel"><div class="panelHead"><h3>Race prediction trend</h3><span class="muted">Current prediction vs target</span></div><canvas id="predictionChart" width="1000" height="340"></canvas></article>
+  </div>
+
   <div class="grid2">
     <article class="panel"><h3>Current strengths</h3><div id="strengths"></div></article>
     <article class="panel"><h3>Risks and limiters</h3><div id="risks"></div></article>
   </div>
+
+  <article class="panel"><h3>Highest-impact next actions</h3><div id="dashboardActions"></div></article>
+
   <article class="panel"><div class="panelHead"><h3>Next key sessions</h3><button class="linkBtn" data-go="plan">Open plan</button></div><div id="keySessions" class="sessionGrid"></div></article>
 </section>
 
@@ -99,5 +115,5 @@
 </main>
 
 <div id="modal" class="modal hidden"><div class="modalCard"><button id="closeModal" class="close">×</button><div id="modalContent"></div></div></div>
-<script src="app.js?v=6205"></script>
+<script src="app.js?v=6206"></script>
 </body></html>

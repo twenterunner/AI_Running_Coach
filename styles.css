@@ -16,3 +16,11 @@ canvas{width:100%;height:235px;border-radius:10px}.sessionGrid{display:grid;gap:
 .actionRow{display:grid;grid-template-columns:30px 90px 52px 1fr;gap:8px;border-bottom:1px solid var(--line);padding:10px 0;font-size:12px}.actionRow:last-child{border:0}.actionRow strong{color:var(--blue)}
 .modal{position:fixed;inset:0;background:#071625bb;z-index:50;padding:20px 12px;overflow:auto}.modalCard{position:relative;max-width:700px;margin:auto;background:#fff;border-radius:20px;padding:18px}.close{position:absolute;right:12px;top:9px;border:0;background:#eef2f5;width:34px;height:34px;border-radius:50%;font-size:22px}.hidden{display:none!important}.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:20px;z-index:80;background:#172231;color:#fff;padding:11px 16px;border-radius:999px;font-size:12px}.toast.bad{background:#9c2d2d}
 @media(min-width:760px){.kpis{grid-template-columns:repeat(4,1fr)}.grid2{grid-template-columns:1fr 1fr}.sessionGrid{grid-template-columns:1fr 1fr}.formGrid{grid-template-columns:repeat(3,1fr)}.metricGrid{grid-template-columns:repeat(4,1fr)}}
+
+.componentGuide{margin-top:20px}
+.componentGuide>div{background:var(--soft);border-radius:18px;padding:16px}
+.componentGuide b{display:block;margin-bottom:6px}
+.chartEmpty{font-size:30px;fill:#7b8794}
+.chartLabel{font-size:24px;fill:#687586}
+.chartLegend{display:flex;gap:18px;flex-wrap:wrap;margin-top:10px;font-size:.9rem;color:var(--muted)}
+.chartLegend span::before{content:'';display:inline-block;width:12px;height:4px;border-radius:4px;margin-right:7px;vertical-align:middle;background:var(--legend)}
