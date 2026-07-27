@@ -1,11 +1,11 @@
 {
-  "name": "Adaptive Running Coach",
+  "name": "AI Running Coach",
   "short_name": "Run Coach",
-  "start_url": "./index.html",
+  "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "background_color": "#f3f6fa",
-  "theme_color": "#15385f",
+  "theme_color": "#0b3157",
+  "background_color": "#f2f5f8",
   "icons": [
     {
       "src": "icon-192.png",

@@ -1,376 +1,93 @@
-(function(){
-'use strict';
-
-var DAY = 86400000;
-var pages = [
-  ['dashboard','Dashboard'],['today','Today'],['plan','Plan'],['import','Import'],
-  ['runs','Run log'],['coach','Coach'],['settings','Settings']
-];
-var importedRun = null;
-var deferredInstall = null;
-
-function byId(id){ return document.getElementById(id); }
-function numberOrNull(v){ var n=Number(v); return isFinite(n)?n:null; }
-function clamp(v,min,max){ return Math.max(min,Math.min(max,v)); }
-function sum(arr){ return arr.reduce(function(a,b){ return a+(isFinite(b)?b:0); },0); }
-function average(arr){ var valid=arr.filter(function(x){return isFinite(x);}); return valid.length?sum(valid)/valid.length:null; }
-function isoDate(d){ return new Date(d).toISOString().slice(0,10); }
-function dateFromIso(s){ return new Date(s+'T00:00:00'); }
-function today(){ return dateFromIso(isoDate(new Date())); }
-function escapeHtml(v){ return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
-function formatDuration(sec){
-  if(!isFinite(sec)) return '—';
-  var h=Math.floor(sec/3600),m=Math.floor((sec%3600)/60),s=Math.round(sec%60);
-  if(s===60){s=0;m++;} if(m===60){m=0;h++;}
-  return h? h+':'+String(m).padStart(2,'0')+':'+String(s).padStart(2,'0') : m+':'+String(s).padStart(2,'0');
-}
-function parseDuration(text){
-  if(!text) return null;
-  var parts=String(text).trim().split(':').map(Number);
-  if(parts.some(function(x){return !isFinite(x);})){return null;}
-  return parts.length===3?parts[0]*3600+parts[1]*60+parts[2]:parts[0]*60+parts[1];
-}
-function formatPace(sec){
-  if(!isFinite(sec)) return '—';
-  var m=Math.floor(sec/60),s=Math.round(sec%60);
-  if(s===60){m++;s=0;}
-  return m+':'+String(s).padStart(2,'0')+'/km';
-}
-function showMessage(text,type){
-  var el=byId('message'); el.textContent=text; el.className='message '+(type||'ok');
-  setTimeout(function(){el.className='message hidden';},4500);
-}
-function defaultState(){
-  return {
-    setup:{
-      raceName:'Veluwe Trail Marathon',raceDate:'2026-09-05',raceDistance:42.195,targetTime:15300,
-      planStart:'2026-06-26',bodyWeight:93,currentWeeklyKm:35,currentLongestKm:18,
-      fiveKmTime:1515,thresholdHr:168,criticalPower:300,maxWeeklyKm:70,peakLongRunKm:35,
-      growthRate:0.08,taperDays:21
-    },
-    runs:[], plan:[], weekView:null
-  };
-}
-var state;
-try{ state=JSON.parse(localStorage.getItem('arc_pwa_state')); }catch(e){ state=null; }
-if(!state){ state=defaultState(); }
-
-function saveState(){ localStorage.setItem('arc_pwa_state',JSON.stringify(state)); }
-
-function weeksTotal(){
-  return Math.max(1,Math.ceil((dateFromIso(state.setup.raceDate)-dateFromIso(state.setup.planStart))/(7*DAY)));
-}
-function weekStart(week){
-  return new Date(dateFromIso(state.setup.planStart).getTime()+(week-1)*7*DAY);
-}
-function currentWeek(){
-  return clamp(Math.floor((today()-dateFromIso(state.setup.planStart))/(7*DAY))+1,1,weeksTotal());
-}
-function phaseFor(week){
-  var total=weeksTotal(), taper=Math.ceil(state.setup.taperDays/7);
-  if(week>total-taper){return 'Taper';}
-  if(week>total-taper-3){return 'Peak';}
-  if(week<=2){return 'Base';}
-  return 'Build';
-}
-function paceTarget(type){
-  var p=state.setup.fiveKmTime/5;
-  if(type==='Intervals')return p*0.98;
-  if(type==='Tempo')return p*1.08;
-  if(type==='Long run')return p*1.30;
-  if(type==='Recovery')return p*1.42;
-  return p*1.30;
-}
-function hrTarget(type){
-  var hr=state.setup.thresholdHr;
-  if(type==='Intervals')return hr*1.04;
-  if(type==='Tempo')return hr;
-  if(type==='Long run')return hr*0.84;
-  return hr*0.84;
-}
-function powerTarget(type){
-  var cp=state.setup.criticalPower;
-  if(type==='Intervals')return cp*1.05;
-  if(type==='Tempo')return cp*0.95;
-  if(type==='Long run')return cp*0.78;
-  return cp*0.78;
-}
+(()=>{'use strict';
+const DAY=86400000, $=id=>document.getElementById(id), clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const iso=d=>new Date(d).toISOString().slice(0,10), dte=s=>new Date(s+'T00:00:00'), fmtDate=s=>new Date(s+'T00:00:00').toLocaleDateString(undefined,{weekday:'short',day:'numeric',month:'short'});
+const sum=a=>a.reduce((x,y)=>x+(Number.isFinite(y)?y:0),0), avg=a=>{let v=a.filter(Number.isFinite);return v.length?sum(v)/v.length:null};
+const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function fmtTime(s){if(!Number.isFinite(s))return'—';let h=Math.floor(s/3600),m=Math.floor(s%3600/60),q=Math.round(s%60);if(q===60){q=0;m++}if(m===60){m=0;h++}return h?`${h}:${String(m).padStart(2,'0')}:${String(q).padStart(2,'0')}`:`${m}:${String(q).padStart(2,'0')}`}
+function parseTime(v){let p=String(v||'').split(':').map(Number);if(p.some(x=>!Number.isFinite(x)))return null;return p.length===3?p[0]*3600+p[1]*60+p[2]:p[0]*60+p[1]}
+function pace(s){return Number.isFinite(s)?fmtTime(s)+'/km':'—'} function toast(t,bad=false){$('toast').textContent=t;$('toast').className='toast'+(bad?' bad':'');setTimeout(()=>$('toast').className='toast hidden',3500)}
+const defaults=()=>({setup:{planStart:'2026-07-26',raceDate:'2026-12-13',raceName:'Goal Race',raceDistance:42.195,targetTime:15300,currentWeekly:35,currentLongest:18,testDistance:5,testTime:1515,thresholdHr:168,criticalPower:300,bodyWeight:93,maxWeekly:70,growth:.08,peakLong:35,taperDays:21,minFactor:.85,maxFactor:1.05,adaptive:true},days:[['Monday',false,'Easy'],['Tuesday',true,'Intervals'],['Wednesday',true,'Easy'],['Thursday',false,'Easy'],['Friday',true,'Tempo'],['Saturday',true,'Easy'],['Sunday',true,'Long run']],runs:[],assessments:[],plan:[],weekView:null});
+let state;try{state=JSON.parse(localStorage.getItem('arc_v62_web'))}catch{}if(!state)state=defaults();
+const save=()=>localStorage.setItem('arc_v62_web',JSON.stringify(state)), today=()=>dte(iso(new Date()));
+function baselineOn(date){let valid=state.assessments.filter(a=>a.valid&&a.date<=date).sort((a,b)=>a.date.localeCompare(b.date));let a=valid.at(-1);return a?{pace:a.time/a.distance,hr:a.thresholdHr||state.setup.thresholdHr,cp:a.criticalPower||state.setup.criticalPower}:{pace:state.setup.testTime/state.setup.testDistance,hr:state.setup.thresholdHr,cp:state.setup.criticalPower}}
+const zoneDef={Recovery:[1.42,.78,.72,'RPE 2–3 · relaxed and restorative'],Easy:[1.30,.84,.78,'RPE 3–4 · conversational aerobic running'],Steady:[1.20,.89,.84,'RPE 5 · controlled moderate work'],Marathon:[1.15,.92,.88,'RPE 5–6 · race-specific control'],Tempo:[1.08,1,.95,'RPE 7–8 · strong but sustainable'],Intervals:[.98,1.04,1.05,'RPE 8–9 · quality repetitions'],Repetition:[.92,1.08,1.15,'RPE 9 · short fast work'],['Fitness assessment']:[1,1,1,'Even maximal benchmark'],['Race Day']:[1.15,.92,.88,'Controlled race execution']};
+function zone(type,date){let b=baselineOn(date),z=zoneDef[type]||zoneDef.Easy;return{pace:b.pace*z[0],hr:Math.round(b.hr*z[1]),power:Math.round(b.cp*z[2]),guide:z[3]}}
+function weeks(){return Math.max(1,Math.ceil((dte(state.setup.raceDate)-dte(state.setup.planStart))/(7*DAY)))}function weekStart(w){return new Date(dte(state.setup.planStart).getTime()+(w-1)*7*DAY)}
+function phase(w){let t=weeks(),tw=Math.ceil(state.setup.taperDays/7);if(w>t-tw)return'Taper';if(w>t-tw-3)return'Peak';if(w<=3)return'Base';return'Build'}
+function currentWeek(){return clamp(Math.floor((today()-dte(state.setup.planStart))/(7*DAY))+1,1,weeks())}
+function recentRuns(days=28){return state.runs.filter(r=>today()-dte(r.date)<=days*DAY&&today()>=dte(r.date))}
+function metrics(r){let dur=r.durationSec,km=r.distanceKm,hr=r.avgHr,pw=r.avgPower;return{pace:dur/km,dph:km*1000/(dur/60*hr),wpb:pw/hr,effect:(km*1000/dur)/(pw/state.setup.bodyWeight),wkg:pw/state.setup.bodyWeight}}
+function weekData(w){let st=weekStart(w),en=new Date(st.getTime()+7*DAY),p=state.plan.filter(x=>x.week===w&&x.type!=='Rest'),r=state.runs.filter(x=>dte(x.date)>=st&&dte(x.date)<en);return{planned:sum(p.map(x=>x.distance)),actual:sum(r.map(x=>x.distanceKm)),runs:r,plan:p}}
+function adaptiveFactor(w){if(!state.setup.adaptive||w<=1)return 1;let prev=weekData(w-1),ad=prev.planned?prev.actual/prev.planned:1,recovery=avg(prev.runs.map(x=>x.recovery)),pain=avg(prev.runs.map(x=>x.pain));let f=1;if(ad<.7)f-=.08;else if(ad<.85)f-=.04;else if(ad>1.05)f+=.02;if(Number.isFinite(recovery)&&recovery<3)f-=.05;if(Number.isFinite(pain)&&pain>=4)f-=.07;return clamp(f,state.setup.minFactor,state.setup.maxFactor)}
 function buildPlan(){
-  var days=[
-    ['Monday','Rest'],['Tuesday','Intervals'],['Wednesday','Easy'],['Thursday','Rest'],
-    ['Friday','Tempo'],['Saturday','Easy'],['Sunday','Long run']
-  ];
-  var total=weeksTotal(), plan=[];
-  for(var w=1;w<=total;w++){
-    var phase=phaseFor(w);
-    var volume=Math.min(state.setup.maxWeeklyKm,state.setup.currentWeeklyKm*Math.pow(1+state.setup.growthRate,w-1));
-    if(w%4===0 && phase==='Build')volume*=0.90;
-    if(phase==='Taper'){
-      var remaining=total-w;
-      volume*=remaining===0?0.45:(remaining===1?0.62:0.78);
-    }
-    var progression=Math.min(1,(w-1)/Math.max(1,total-Math.ceil(state.setup.taperDays/7)-2));
-    var longKm=state.setup.currentLongestKm+(state.setup.peakLongRunKm-state.setup.currentLongestKm)*progression;
-    if(w%4===0 && phase==='Build')longKm*=0.85;
-    if(phase==='Taper'){ longKm=Math.min(longKm,(total-w===0?12:(total-w===1?18:24))); }
-    var balance=Math.max(0,volume-longKm);
-    var shares={'Intervals':0.25,'Tempo':0.28,'Easy':0.235};
-    days.forEach(function(item,idx){
-      var date=new Date(weekStart(w).getTime()+idx*DAY);
-      var type=item[1], km=0;
-      if(type==='Long run')km=longKm;
-      else if(type==='Intervals')km=balance*shares.Intervals;
-      else if(type==='Tempo')km=balance*shares.Tempo;
-      else if(type==='Easy')km=balance*shares.Easy;
-      plan.push({
-        id:'p-'+w+'-'+idx,week:w,date:isoDate(date),day:item[0],type:type,
-        distanceKm:Math.round(km*10)/10,pace:paceTarget(type),hr:hrTarget(type),
-        power:powerTarget(type),phase:phase
-      });
-    });
-  }
-  state.plan=plan; saveState();
+ let old=new Map((state.plan||[]).filter(p=>dte(p.date)<today()).map(p=>[p.id,p]));let out=[],total=weeks(),taper=Math.ceil(state.setup.taperDays/7),train=state.days.filter(x=>x[1]);
+ for(let w=1;w<=total;w++){let ph=phase(w),factor=adaptiveFactor(w),base=Math.min(state.setup.maxWeekly,state.setup.currentWeekly*Math.pow(1+state.setup.growth,w-1));if(w%4===0&&ph==='Build')base*=.9;if(ph==='Taper'){let left=total-w;base*=left===0?.42:left===1?.62:.78}base*=factor;
+   let prog=clamp((w-1)/Math.max(1,total-taper-2),0,1),long=state.setup.currentLongest+(state.setup.peakLong-state.setup.currentLongest)*prog;if(w%4===0&&ph==='Build')long*=.85;if(ph==='Taper'){let left=total-w;long=Math.min(long,left===0?12:left===1?18:24)}long=Math.min(long,base*.62);
+   let qualityCount=train.filter(x=>['Intervals','Tempo'].includes(x[2])).length,easyCount=train.filter(x=>x[2]==='Easy').length,remaining=Math.max(0,base-long),qualityShare=qualityCount?remaining*.48/qualityCount:0,easyShare=easyCount?remaining*.52/easyCount:0;
+   state.days.forEach((cfg,i)=>{let date=iso(new Date(weekStart(w).getTime()+i*DAY)),type=cfg[1]?cfg[2]:'Rest';if(w===total&&date===state.setup.raceDate)type='Race Day';if(type==='Intervals'&&w%4===0&&ph!=='Taper')type='Fitness assessment';let dist=0;if(type==='Long run')dist=long;else if(['Intervals','Tempo','Fitness assessment'].includes(type))dist=qualityShare;else if(type==='Easy')dist=easyShare;else if(type==='Race Day')dist=state.setup.raceDistance;
+     let z=zone(type,date),id=`${date}-${type}`,detail=prescription(type,dist,w,ph,z);let item={id,week:w,date,day:cfg[0],type,distance:Math.round(dist*10)/10,phase:ph,factor,zone:z,...detail};out.push(old.get(id)||item)})
+ }
+ state.plan=out;save()
 }
-if(!state.plan || !state.plan.length){buildPlan();}
-
-function weekSummaries(){
-  var out=[];
-  for(var w=1;w<=weeksTotal();w++){
-    var start=weekStart(w),end=new Date(start.getTime()+7*DAY);
-    var planned=state.plan.filter(function(p){return p.week===w && p.type!=='Rest';});
-    var runs=state.runs.filter(function(r){var d=dateFromIso(r.date);return d>=start&&d<end;});
-    out.push({
-      week:w,start:isoDate(start),phase:phaseFor(w),
-      planned:sum(planned.map(function(p){return p.distanceKm;})),
-      actual:sum(runs.map(function(r){return r.distanceKm;})),
-      longRun:Math.max.apply(Math,[0].concat(planned.filter(function(p){return p.type==='Long run';}).map(function(p){return p.distanceKm;})))
-    });
-  }
-  return out;
+function prescription(type,km,w,ph,z){
+ if(type==='Rest')return{warmup:'—',main:'Rest day',cooldown:'—',purpose:'Absorb training and restore freshness.',coach:'Walking and light mobility are fine. Avoid turning recovery into another workout.',fuel:'Normal daily hydration.'};
+ if(type==='Easy')return{warmup:'5–10 min very easy',main:`${km.toFixed(1)} km easy, continuous`,cooldown:'5 min easy walk or jog',purpose:'Develop aerobic capacity while keeping fatigue low.',coach:'Keep the effort conversational. Slow down for heat, hills or poor recovery rather than forcing the displayed pace.',fuel:km>=12?'Carry fluids; use carbohydrate if running longer than 75–90 min.':'Water according to thirst.'};
+ if(type==='Long run')return{warmup:'First 2 km deliberately easy',main:`${km.toFixed(1)} km controlled endurance`,cooldown:'Walk 5–10 min and refuel',purpose:'Build marathon durability and practise fuelling.',coach:'The goal is successful completion, not proving fitness. Keep the first half restrained and finish with stable form. Do not add fast kilometres after a missed week.',fuel:'Practise 60–90 g carbohydrate/hour and approximately 400–800 ml fluid/hour, adjusted for conditions.'};
+ if(type==='Tempo')return{warmup:`${Math.max(2,km*.25).toFixed(1)} km easy + 4 strides`,main:`${Math.max(2,km*.5).toFixed(1)} km tempo, continuous or 2 blocks`,cooldown:`${Math.max(1.5,km*.25).toFixed(1)} km easy`,purpose:'Raise sustainable threshold speed and power.',coach:'The final minutes should feel strong but controlled. Stop the quality portion if pain changes your stride.',fuel:'Small carbohydrate intake beforehand if training fasted or after a long workday.'};
+ if(type==='Intervals')return{warmup:`${Math.max(2,km*.3).toFixed(1)} km easy + drills + strides`,main:`${Math.max(4,Math.round((km*.45)/.8))} × 800 m at interval effort with 2 min easy jog`,cooldown:`${Math.max(1.5,km*.25).toFixed(1)} km easy`,purpose:'Improve VO₂max and running economy.',coach:'Run repeatable efforts, not an opening sprint. The last repetition should resemble the first.',fuel:'Arrive hydrated; carbohydrate is useful when the total session exceeds 60 min.'};
+ if(type==='Fitness assessment')return{warmup:'15–20 min easy + drills + 4 strides',main:'5 km even maximal assessment',cooldown:'10–15 min very easy',purpose:'Create a repeatable benchmark that can update future targets.',coach:'Use even pacing and mark the result valid only when course, weather, health and execution make the result representative.',fuel:'Normal pre-run meal; avoid starting depleted.'};
+ return{warmup:'10–15 min easy',main:`${km.toFixed(1)} km race execution`,cooldown:'Walk and begin recovery nutrition',purpose:'Execute the race plan.',coach:'Start controlled, protect the first 10 km and only progress after halfway if effort remains stable.',fuel:'60–90 g carbohydrate/hour and 400–800 ml fluid/hour.'}
 }
+if(!state.plan?.length)buildPlan();
+function status(p){let done=state.runs.some(r=>r.planId===p.id);if(done)return'completed';if(p.type==='Rest')return'rest';let d=dte(p.date);if(d<today())return'missed';if(d.getTime()===today().getTime())return'today';return'upcoming'}
 function confidence(){
-  var recent=state.runs.filter(function(r){return today()-dateFromIso(r.date)<=28*DAY;});
-  var opportunities=state.plan.filter(function(p){
-    var d=dateFromIso(p.date);return p.type!=='Rest'&&d<=today()&&today()-d<=28*DAY;
-  });
-  var dueKm=sum(opportunities.map(function(p){return p.distanceKm;}));
-  var actual=sum(recent.map(function(r){return r.distanceKm;}));
-  var consistency=opportunities.length?clamp(recent.length/opportunities.length*100,0,100):50;
-  var adherence=dueKm?clamp(actual/dueKm*100,0,100):50;
-  var longest=Math.max.apply(Math,[state.setup.currentLongestKm].concat(state.runs.map(function(r){return r.distanceKm;})));
-  var endurance=clamp(longest/state.setup.peakLongRunKm*100,0,100);
-  var marathonPrediction=state.setup.fiveKmTime*Math.pow(state.setup.raceDistance/5,1.06);
-  var fitness=clamp(100-(marathonPrediction/state.setup.targetTime-1)*320,0,100);
-  var rec=average(recent.map(function(r){return r.recovery;}));
-  var pain=average(recent.map(function(r){return r.pain;}));
-  var recovery=isFinite(rec)?clamp(rec/5*70+(10-(pain||0))/10*30,0,100):50;
-  var components=[['Fitness',fitness,0.30],['Endurance',endurance,0.25],['Consistency',consistency,0.20],['Adherence',adherence,0.15],['Recovery',recovery,0.10]];
-  return {components:components,overall:sum(components.map(function(c){return c[1]*c[2];}))};
+ let recent=recentRuns(), due=state.plan.filter(p=>p.type!=='Rest'&&dte(p.date)<=today()&&today()-dte(p.date)<=28*DAY),plannedKm=sum(due.map(p=>p.distance)),actual=sum(recent.map(r=>r.distanceKm));
+ let latest=state.assessments.filter(a=>a.valid).sort((a,b)=>b.date.localeCompare(a.date))[0],testTime=latest?latest.time:state.setup.testTime,testDist=latest?latest.distance:state.setup.testDistance,riegel=testTime*Math.pow(state.setup.raceDistance/testDist,1.06);
+ let fitness=clamp(100-(riegel/state.setup.targetTime-1)*300,0,100),longest=Math.max(state.setup.currentLongest,...state.runs.map(r=>r.distanceKm),0),endurance=clamp(longest/state.setup.peakLong*100,0,100);
+ let opportunities=due.length,consistency=opportunities?clamp(recent.length/opportunities*100,0,100):0,adherence=plannedKm?clamp(actual/plannedKm*100,0,100):0,rec=avg(recent.map(r=>r.recovery)),pain=avg(recent.map(r=>r.pain)),recovery=Number.isFinite(rec)?clamp(rec/5*75+(10-(pain||0))/10*25,0,100):50;
+ let eff=recent.filter(r=>r.avgHr&&r.avgPower).map(r=>metrics(r).effect),economy=eff.length>=2?clamp(70+(eff.at(-1)/eff[0]-1)*500,0,100):50;
+ let c=[['Fitness',fitness,.25],['Endurance',endurance,.20],['Consistency',consistency,.15],['Adherence',adherence,.15],['Recovery',recovery,.10],['Economy',economy,.15]].map(x=>({name:x[0],score:x[1],weight:x[2],impact:x[1]*x[2]}));
+ return{components:c,overall:sum(c.map(x=>x.impact)),riegel,plannedKm,actual,longest}
 }
-function predictedTime(){
-  var c=confidence();
-  var base=state.setup.fiveKmTime*Math.pow(state.setup.raceDistance/5,1.06);
-  var adjustment=1+(70-c.overall)/500;
-  return base*clamp(adjustment,0.94,1.12);
-}
-function card(label,value,sub){
-  return '<div class="card"><small>'+escapeHtml(label)+'</small><strong>'+escapeHtml(value)+'</strong>'+(sub?'<span>'+escapeHtml(sub)+'</span>':'')+'</div>';
-}
-function initTabs(){
-  byId('tabs').innerHTML=pages.map(function(p,i){return '<button data-page="'+p[0]+'" class="'+(i===0?'active':'')+'">'+p[1]+'</button>';}).join('');
-  byId('tabs').addEventListener('click',function(e){
-    var page=e.target.getAttribute('data-page'); if(!page)return;
-    Array.prototype.forEach.call(document.querySelectorAll('#tabs button'),function(b){b.classList.toggle('active',b.getAttribute('data-page')===page);});
-    Array.prototype.forEach.call(document.querySelectorAll('.page'),function(s){s.classList.toggle('active',s.id===page);});
-    renderAll(); window.scrollTo(0,0);
-  });
-}
+function prediction(){let c=confidence();return c.riegel*(1+(70-c.overall)/650)}
+const interpretations={Fitness:s=>s>=85?'Excellent: the latest valid performance supports the goal and is not the present limiter.':s>=65?'Developing: current speed supports a credible result, but there is still a gap to the goal.':'Current test evidence does not yet support the target.',Endurance:s=>s>=85?'Long-run durability is well developed.':s>=65?'Endurance is progressing, but the remaining key long runs matter.':'Long-run readiness is the major limiter.',Consistency:s=>s>=80?'Training frequency has been reliable.':s>0?'Recent training frequency is inconsistent.':'No recent run history is available.',Adherence:s=>s>=85?'Completed volume closely matches the work that was due.':s>0?'There is a meaningful gap between completed and due volume.':'No completed volume is logged for the recent due period.',Recovery:s=>s>=75?'Pain and recovery ratings currently support normal training.':s===50?'Neutral placeholder: no recovery ratings are available yet.':'Recovery or pain data suggests load should be managed.',Economy:s=>s>=75?'Recent efficiency evidence is favourable.':s===50?'More comparable powered runs are needed to establish an economy trend.':'Recent economy has weakened and should be monitored.'};
+const actions={Fitness:'Complete a valid, evenly paced 5 km assessment before changing the race goal.',Endurance:'Prioritise the scheduled long runs and practise race fuelling without racing them.',Consistency:'Reduce optional complexity and focus on completing the core weekly sessions.',Adherence:'Close the volume gap gradually; never recover missed kilometres in one week.',Recovery:'Enter recovery and pain after every run and reduce load when either deteriorates.',Economy:'Compare similar easy runs and avoid interpreting economy without considering heat, hills and fatigue.'};
+function assessmentText(c){let weak=[...c.components].sort((a,b)=>a.score-b.score)[0];if(c.overall>=85)return'Your current fitness, endurance and training execution strongly support the goal. Preserve consistency and avoid adding unnecessary fatigue.';if(c.overall>=70)return`The goal is realistic, but confidence still depends on completing the remaining key sessions and maintaining recovery. The weakest component is ${weak.name}.`;if(c.overall>=55)return`Some indicators support the goal, but overall readiness is not yet secure. The largest current limiter is ${weak.name}. Focus there before making the target more aggressive.`;return'The available training evidence does not yet support the target with confidence. Rebuild the weakest foundations, log completed sessions consistently and use the next assessment to review the goal.'}
+function kpi(l,v,s=''){return`<div class="kpi"><label>${esc(l)}</label><strong>${esc(v)}</strong><small>${esc(s)}</small></div>`}
 function renderDashboard(){
-  var c=confidence(),ws=weekSummaries(),cw=currentWeek(),w=ws[cw-1],pred=predictedTime();
-  byId('dashboardCards').innerHTML=
-    card('Race date',new Date(state.setup.raceDate).toLocaleDateString())+
-    card('Weeks to race',String(Math.max(0,weeksTotal()-cw+1)))+
-    card('Target time',formatDuration(state.setup.targetTime))+
-    card('Predicted time',formatDuration(pred))+
-    card('Confidence',Math.round(c.overall)+'%')+
-    card('Current week',w.planned.toFixed(1)+' km')+
-    card('Peak long run',state.setup.peakLongRunKm.toFixed(1)+' km')+
-    card('Body weight',state.setup.bodyWeight.toFixed(1)+' kg');
-  byId('currentStatus').innerHTML='<p><b>'+escapeHtml(state.setup.raceName)+'</b> · '+state.setup.raceDistance.toFixed(1)+' km</p>'+
-    '<p>Current phase: <b>'+w.phase+'</b></p><p>This week: '+w.actual.toFixed(1)+' of '+w.planned.toFixed(1)+' km completed.</p>';
-  byId('confidenceList').innerHTML=c.components.map(function(x){
-    return '<div class="progress"><b style="width:90px">'+x[0]+'</b><div class="bar"><i style="width:'+x[1]+'%"></i></div><span>'+Math.round(x[1])+'</span></div>';
-  }).join('');
-  drawChart(ws);
+ let c=confidence(),pred=prediction(),cw=currentWeek(),wd=weekData(cw);$('phaseBadge').textContent=phase(cw);$('raceTitle').textContent=state.setup.raceName;$('raceSubtitle').textContent=`${new Date(state.setup.raceDate+'T00:00:00').toLocaleDateString()} • ${state.setup.raceDistance.toFixed(1)} km`;$('confidenceValue').textContent=Math.round(c.overall)+'%';document.querySelector('.confidenceRing').style.setProperty('--pct',Math.round(c.overall)+'%');
+ $('kpis').innerHTML=kpi('Target time',fmtTime(state.setup.targetTime))+kpi('Predicted time',fmtTime(pred),pred<=state.setup.targetTime?'Ahead of target':'Behind target')+kpi('Weeks remaining',Math.max(0,weeks()-cw+1))+kpi('This week',wd.planned.toFixed(1)+' km',wd.actual.toFixed(1)+' km completed')+kpi('Longest completed',c.longest.toFixed(1)+' km')+kpi('Peak long run',state.setup.peakLong.toFixed(1)+' km')+kpi('Adaptive factor',state.plan.find(p=>p.week===cw)?.factor.toFixed(2)||'1.00')+kpi('Latest assessment',state.assessments.filter(a=>a.valid).sort((a,b)=>b.date.localeCompare(a.date))[0]?.date||'Baseline');
+ $('assessmentText').textContent=assessmentText(c);$('confidenceBars').innerHTML=c.components.map(x=>`<div class="comp"><b>${x.name}</b><div class="bar"><i style="width:${x.score}%"></i></div><span>${Math.round(x.score)}</span></div>`).join('');
+ let sorted=[...c.components].sort((a,b)=>b.score-a.score);$('strengths').innerHTML=sorted.slice(0,3).map(x=>`<div class="note good"><b>✓ ${x.name}</b><br>${interpretations[x.name](x.score)}</div>`).join('');$('risks').innerHTML=[...sorted].reverse().slice(0,3).map(x=>`<div class="note warn"><b>⚠ ${x.name}</b><br>${interpretations[x.name](x.score)}</div>`).join('');
+ let future=state.plan.filter(p=>p.type!=='Rest'&&dte(p.date)>=today()).slice(0,4);$('keySessions').innerHTML=future.map(p=>`<div class="miniSession"><b>${fmtDate(p.date)} · ${p.type}</b><span>${p.distance.toFixed(1)} km · ${pace(p.zone.pace)}<br>${p.purpose}</span></div>`).join('');drawVolume()
 }
-function drawChart(data){
-  var canvas=byId('weeklyChart'),ctx=canvas.getContext('2d'),pad=42;
-  ctx.clearRect(0,0,canvas.width,canvas.height);
-  var max=Math.max.apply(Math,[10].concat(data.map(function(x){return Math.max(x.planned,x.actual);})));
-  ctx.strokeStyle='#d8e0ea';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(pad,15);ctx.lineTo(pad,canvas.height-pad);ctx.lineTo(canvas.width-15,canvas.height-pad);ctx.stroke();
-  function line(key,color){
-    ctx.strokeStyle=color;ctx.lineWidth=3;ctx.beginPath();
-    data.forEach(function(d,i){
-      var x=pad+i*(canvas.width-pad-20)/Math.max(1,data.length-1);
-      var y=canvas.height-pad-d[key]/max*(canvas.height-pad-25);
-      if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);
-    });ctx.stroke();
-  }
-  line('planned','#2f75b5');line('actual','#2b8c8c');
-}
-function renderToday(){
-  var p=state.plan.find(function(x){return x.date===isoDate(today());});
-  if(!p){byId('todayWorkout').innerHTML='<h3>No workout found</h3>';return;}
-  byId('todayWorkout').innerHTML='<h3>'+p.type+'</h3><p><b>'+p.distanceKm.toFixed(1)+' km</b></p>'+
-    (p.type==='Rest'?'<p>Rest, walking or mobility.</p>':'<p>Target pace: '+formatPace(p.pace)+' · HR '+Math.round(p.hr)+' · '+Math.round(p.power)+' W</p>');
-  var future=state.plan.filter(function(x){return x.type!=='Rest'&&dateFromIso(x.date)>=today();}).slice(0,4);
-  byId('nextKeySessions').innerHTML=future.map(function(x){return '<p><b>'+new Date(x.date).toLocaleDateString()+' · '+x.type+'</b><br>'+x.distanceKm.toFixed(1)+' km at '+formatPace(x.pace)+'</p>';}).join('');
-}
-function renderPlan(){
-  if(state.weekView==null)state.weekView=currentWeek();
-  var rows=state.plan.filter(function(p){return p.week===state.weekView;});
-  byId('weekSummary').innerHTML='<b>Week '+state.weekView+'</b> · '+new Date(weekStart(state.weekView)).toLocaleDateString()+' · '+phaseFor(state.weekView)+' · '+sum(rows.map(function(r){return r.distanceKm;})).toFixed(1)+' km';
-  byId('planRows').innerHTML=rows.map(function(p){
-    var completed=state.runs.some(function(r){return r.planId===p.id;});
-    return '<tr><td>'+new Date(p.date).toLocaleDateString(undefined,{weekday:'short',day:'numeric',month:'short'})+'</td><td>'+p.type+'</td><td>'+(p.type==='Rest'?'—':p.distanceKm.toFixed(1))+'</td><td>'+(p.type==='Rest'?'—':formatPace(p.pace))+'</td><td>'+(p.type==='Rest'?'—':Math.round(p.hr))+'</td><td>'+(p.type==='Rest'?'—':Math.round(p.power))+'</td><td>'+(completed?'Completed':(dateFromIso(p.date)<today()&&p.type!=='Rest'?'Due':'Planned'))+'</td></tr>';
-  }).join('');
-}
-function parseCSV(text){
-  var rows=[],row=[],field='',quoted=false,i,c,n;
-  for(i=0;i<text.length;i++){c=text[i];n=text[i+1];
-    if(c==='"'&&quoted&&n==='"'){field+='"';i++;}
-    else if(c==='"'){quoted=!quoted;}
-    else if(c===','&&!quoted){row.push(field);field='';}
-    else if((c==='\n'||c==='\r')&&!quoted){if(c==='\r'&&n==='\n')i++;row.push(field);field='';if(row.some(function(v){return v!=='';}))rows.push(row);row=[];}
-    else field+=c;
-  }
-  if(field.length||row.length){row.push(field);rows.push(row);}
-  return rows;
-}
-function positiveAverage(values){return average(values.map(Number).filter(function(v){return isFinite(v)&&v>0;}));}
-function summarizeCSV(rows){
-  var headers=rows[0].map(function(x){return x.trim();});
-  function idx(name){return headers.indexOf(name);}
-  var required=['Timestamp','Power (w/kg)','Watch Distance (meters)','Heart Rate (bpm)','Cadence (spm)'];
-  var missing=required.filter(function(n){return idx(n)<0;});
-  if(missing.length)throw new Error('Missing columns: '+missing.join(', '));
-  var data=rows.slice(1).filter(function(r){return r.length>1;});
-  function col(name){var k=idx(name);return data.map(function(r){return r[k];});}
-  var ts=col('Timestamp').map(Number).filter(isFinite),start=Math.min.apply(Math,ts),end=Math.max.apply(Math,ts);
-  var dist=Math.max.apply(Math,col('Watch Distance (meters)').map(Number).filter(isFinite))/1000;
-  var wkg=positiveAverage(col('Power (w/kg)'));
-  return {
-    id:'stryd-'+start+'-'+Math.round(dist*1000),date:isoDate(new Date(start*1000)),distanceKm:dist,durationSec:end-start,
-    avgHr:positiveAverage(col('Heart Rate (bpm)')),avgPowerW:wkg*state.setup.bodyWeight,
-    avgPowerWkg:wkg,cadence:positiveAverage(col('Cadence (spm)')),
-    gct:idx('Ground Time (ms)')>=0?positiveAverage(col('Ground Time (ms)')):null,
-    vo:idx('Vertical Oscillation (cm)')>=0?positiveAverage(col('Vertical Oscillation (cm)')):null
-  };
-}
-function renderImport(){
-  var types=['Easy','Recovery','Long run','Tempo','Intervals','Race','Other'];
-  byId('runType').innerHTML=types.map(function(x){return '<option>'+x+'</option>';}).join('');
-  if(!importedRun)return;
-  byId('importArea').classList.remove('hidden');
-  byId('importCards').innerHTML=
-    card('Distance',importedRun.distanceKm.toFixed(2)+' km')+
-    card('Duration',formatDuration(importedRun.durationSec))+
-    card('Pace',formatPace(importedRun.durationSec/importedRun.distanceKm))+
-    card('Average HR',Math.round(importedRun.avgHr)+' bpm')+
-    card('Power',Math.round(importedRun.avgPowerW)+' W')+
-    card('Cadence',Math.round(importedRun.cadence)+' spm');
-  var candidates=state.plan.filter(function(p){return p.type!=='Rest'&&Math.abs(dateFromIso(p.date)-dateFromIso(importedRun.date))<=2*DAY;});
-  byId('planMatch').innerHTML='<option value="">Do not match</option>'+candidates.map(function(p){return '<option value="'+p.id+'">'+p.date+' · '+p.type+' · '+p.distanceKm.toFixed(1)+' km</option>';}).join('');
-}
-function renderRuns(){
-  var rows=state.runs.slice().sort(function(a,b){return b.date.localeCompare(a.date);});
-  byId('runRows').innerHTML=rows.length?rows.map(function(r){return '<tr><td>'+new Date(r.date).toLocaleDateString()+'</td><td>'+escapeHtml(r.type)+'</td><td>'+r.distanceKm.toFixed(2)+' km</td><td>'+formatDuration(r.durationSec)+'</td><td>'+formatPace(r.durationSec/r.distanceKm)+'</td><td>'+(r.avgHr?Math.round(r.avgHr):'—')+'</td><td>'+(r.avgPowerW?Math.round(r.avgPowerW):'—')+'</td><td>'+(r.rpe||'—')+'</td><td><button class="danger" data-delete-run="'+r.id+'">Delete</button></td></tr>';}).join(''):'<tr><td colspan="9">No runs saved yet.</td></tr>';
-}
-function renderCoach(){
-  var c=confidence(),pred=predictedTime(),gap=pred-state.setup.targetTime;
-  byId('coachCards').innerHTML=card('Confidence',Math.round(c.overall)+'%')+card('Prediction',formatDuration(pred))+card('Target gap',(gap>=0?'+':'−')+formatDuration(Math.abs(gap)))+card('Current phase',phaseFor(currentWeek()));
-  byId('coachAssessment').innerHTML='<p>'+(c.overall>=75?'The target is well supported by the available evidence.':c.overall>=55?'The target remains plausible, but key foundations still need improvement.':'The target is not yet strongly supported. Focus on consistency, endurance and recovery before adding extra intensity.')+'</p>';
-  var sorted=c.components.slice().sort(function(a,b){return a[1]-b[1];}).slice(0,3);
-  var advice={Fitness:'Complete a valid 5 km assessment and update your baseline.',Endurance:'Build the long run gradually and practise fuelling.',Consistency:'Protect the five core weekly sessions.',Adherence:'Avoid cramming missed kilometres; resume the plan.',Recovery:'Reduce load when pain rises or recovery falls.'};
-  byId('coachPriorities').innerHTML=sorted.map(function(x,i){return '<div class="priority"><b>'+(i+1)+'. '+x[0]+'</b><br>'+advice[x[0]]+'</div>';}).join('');
-}
-function renderSettings(){
-  var defs=[
-    ['raceName','Race name','text'],['raceDate','Race date','date'],['raceDistance','Race distance km','number'],
-    ['targetTime','Target time','duration'],['planStart','Plan start','date'],['bodyWeight','Body weight kg','number'],
-    ['currentWeeklyKm','Current weekly km','number'],['currentLongestKm','Current longest run km','number'],
-    ['fiveKmTime','5 km test time','duration'],['thresholdHr','Threshold HR','number'],['criticalPower','Critical power W','number'],
-    ['maxWeeklyKm','Max weekly km','number'],['peakLongRunKm','Peak long run km','number'],['growthRate','Weekly growth %','percent'],
-    ['taperDays','Taper days','number']
-  ];
-  byId('settingsFields').innerHTML=defs.map(function(d){
-    var val=state.setup[d[0]];
-    if(d[2]==='duration')val=formatDuration(val);
-    if(d[2]==='percent')val=Math.round(val*100);
-    return '<div><label>'+d[1]+'</label><input data-setting="'+d[0]+'" data-type="'+d[2]+'" type="'+(d[2]==='date'?'date':'text')+'" value="'+escapeHtml(val)+'"></div>';
-  }).join('');
-}
-function renderAll(){renderDashboard();renderToday();renderPlan();renderImport();renderRuns();renderCoach();renderSettings();}
-
-byId('previousWeek').onclick=function(){state.weekView=clamp((state.weekView||currentWeek())-1,1,weeksTotal());renderPlan();};
-byId('nextWeek').onclick=function(){state.weekView=clamp((state.weekView||currentWeek())+1,1,weeksTotal());renderPlan();};
-byId('currentWeek').onclick=function(){state.weekView=currentWeek();renderPlan();};
-
-byId('csvInput').addEventListener('change',function(e){
-  var file=e.target.files[0]; if(!file)return;
-  byId('selectedFile').textContent=file.name;
-  file.text().then(function(text){importedRun=summarizeCSV(parseCSV(text));renderImport();showMessage('CSV read successfully.','ok');}).catch(function(err){showMessage(err.message,'bad');});
-});
-byId('saveImported').onclick=function(){
-  if(!importedRun)return;
-  if(state.runs.some(function(r){return r.id===importedRun.id;})){showMessage('This run was already imported.','bad');return;}
-  importedRun.type=byId('runType').value; importedRun.planId=byId('planMatch').value||null;
-  importedRun.rpe=numberOrNull(byId('rpe').value); importedRun.pain=numberOrNull(byId('pain').value);
-  importedRun.recovery=numberOrNull(byId('recovery').value); importedRun.temperature=numberOrNull(byId('temperature').value);
-  importedRun.notes=byId('runNotes').value;
-  state.runs.push(importedRun); importedRun=null; byId('importArea').classList.add('hidden'); saveState(); renderAll(); showMessage('Run saved.','ok');
-};
-byId('runRows').addEventListener('click',function(e){
-  var id=e.target.getAttribute('data-delete-run'); if(!id)return;
-  state.runs=state.runs.filter(function(r){return r.id!==id;});saveState();renderAll();showMessage('Run deleted.','ok');
-});
-byId('manualButton').onclick=function(){
-  var box=byId('manualForm');box.classList.toggle('hidden');
-  box.innerHTML='<h3>Add run manually</h3><div class="formGrid"><div><label>Date</label><input id="mDate" type="date" value="'+isoDate(today())+'"></div><div><label>Type</label><select id="mType"><option>Easy</option><option>Recovery</option><option>Long run</option><option>Tempo</option><option>Intervals</option><option>Race</option></select></div><div><label>Distance km</label><input id="mDistance" type="number" step="0.01"></div><div><label>Duration</label><input id="mDuration" placeholder="51:35"></div><div><label>Average HR</label><input id="mHr" type="number"></div><div><label>Average power W</label><input id="mPower" type="number"></div><div><label>RPE</label><input id="mRpe" type="number"></div><div><label>Pain</label><input id="mPain" type="number"></div><div><label>Recovery</label><input id="mRecovery" type="number"></div></div><button id="saveManual" class="primary full">Save run</button>';
-  byId('saveManual').onclick=function(){
-    var km=Number(byId('mDistance').value),seconds=parseDuration(byId('mDuration').value);
-    if(!km||!seconds){showMessage('Enter a valid distance and duration.','bad');return;}
-    state.runs.push({id:'manual-'+Date.now(),date:byId('mDate').value,type:byId('mType').value,distanceKm:km,durationSec:seconds,avgHr:numberOrNull(byId('mHr').value),avgPowerW:numberOrNull(byId('mPower').value),rpe:numberOrNull(byId('mRpe').value),pain:numberOrNull(byId('mPain').value),recovery:numberOrNull(byId('mRecovery').value)});
-    saveState();box.classList.add('hidden');renderAll();showMessage('Run saved.','ok');
-  };
-};
-function download(name,text,type){
-  var a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type:type}));a.download=name;a.click();setTimeout(function(){URL.revokeObjectURL(a.href);},1000);
-}
-byId('exportRuns').onclick=function(){
-  var header=['Date','Type','Distance km','Duration sec','Average HR','Average power W','RPE','Pain','Recovery','Notes'];
-  var rows=state.runs.map(function(r){return [r.date,r.type,r.distanceKm,r.durationSec,r.avgHr,r.avgPowerW,r.rpe,r.pain,r.recovery,r.notes];});
-  var csv=[header].concat(rows).map(function(row){return row.map(function(v){return '"'+String(v==null?'':v).replace(/"/g,'""')+'"';}).join(',');}).join('\n');
-  download('adaptive-running-coach-runs.csv',csv,'text/csv');
-};
-byId('saveSettings').onclick=function(){
-  Array.prototype.forEach.call(document.querySelectorAll('[data-setting]'),function(el){
-    var key=el.getAttribute('data-setting'),type=el.getAttribute('data-type'),v=el.value;
-    if(type==='number')v=Number(v); if(type==='duration')v=parseDuration(v); if(type==='percent')v=Number(v)/100;
-    state.setup[key]=v;
-  });
-  buildPlan();state.weekView=currentWeek();renderAll();showMessage('Settings saved and plan rebuilt.','ok');
-};
-byId('downloadBackup').onclick=function(){download('adaptive-running-coach-backup.json',JSON.stringify(state,null,2),'application/json');};
-byId('restoreInput').addEventListener('change',function(e){
-  var file=e.target.files[0];if(!file)return;
-  file.text().then(function(text){var restored=JSON.parse(text);if(!restored.setup||!Array.isArray(restored.runs))throw new Error('Invalid backup');state=restored;saveState();buildPlan();renderAll();showMessage('Backup restored.','ok');}).catch(function(err){showMessage(err.message,'bad');});
-});
-byId('resetButton').onclick=function(){if(confirm('Delete all app data?')){state=defaultState();buildPlan();renderAll();showMessage('App reset.','ok');}};
-
-window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();deferredInstall=e;byId('installButton').classList.remove('hidden');});
-byId('installButton').onclick=function(){if(!deferredInstall)return;deferredInstall.prompt();deferredInstall.userChoice.then(function(){deferredInstall=null;byId('installButton').classList.add('hidden');});};
-if('serviceWorker' in navigator && (location.protocol==='https:' || location.hostname==='localhost')){navigator.serviceWorker.register('service-worker.js');}
-
-initTabs();renderAll();
+function drawLine(canvas,series){let ctx=canvas.getContext('2d'),W=canvas.width,H=canvas.height,p=45;ctx.clearRect(0,0,W,H);let vals=series.flatMap(s=>s.data).filter(Number.isFinite),max=Math.max(10,...vals)*1.1;ctx.strokeStyle='#dbe3ea';ctx.beginPath();ctx.moveTo(p,15);ctx.lineTo(p,H-p);ctx.lineTo(W-15,H-p);ctx.stroke();series.forEach((s,si)=>{ctx.strokeStyle=s.color;ctx.lineWidth=3;ctx.beginPath();s.data.forEach((v,i)=>{let x=p+i*(W-p-20)/Math.max(1,s.data.length-1),y=H-p-v/max*(H-p-25);i?ctx.lineTo(x,y):ctx.moveTo(x,y)});ctx.stroke()})}
+function drawVolume(){let arr=Array.from({length:weeks()},(_,i)=>weekData(i+1));drawLine($('volumeChart'),[{data:arr.map(x=>x.planned),color:'#2679bc'},{data:arr.map(x=>x.actual),color:'#12827c'}])}
+function workoutHtml(p){let st=status(p);return`<div class="workout" data-id="${p.id}"><div class="workoutHead"><div class="dateBox"><b>${new Date(p.date+'T00:00:00').getDate()}</b><span>${new Date(p.date+'T00:00:00').toLocaleDateString(undefined,{month:'short'})}</span></div><div class="workoutTitle"><h3>${p.type}</h3><p>${p.type==='Rest'?p.purpose:`${p.distance.toFixed(1)} km · ${p.phase}`}</p></div><span class="status ${st}">${st}</span></div><div class="workoutDetails"><div class="targets">${p.type==='Rest'?'':`<div class="target"><small>Pace</small><b>${pace(p.zone.pace)}</b></div><div class="target"><small>HR</small><b>${p.zone.hr} bpm</b></div><div class="target"><small>Power</small><b>${p.zone.power} W</b></div>`}</div><div class="prescription"><p><b>Warm-up:</b> ${p.warmup}</p><p><b>Main set:</b> ${p.main}</p><p><b>Cooldown:</b> ${p.cooldown}</p><p><b>Purpose:</b> ${p.purpose}</p><p><b>Coach guidance:</b> ${p.coach}</p><p><b>Fuel / hydration:</b> ${p.fuel}</p></div></div></div>`}
+function renderToday(){let p=state.plan.find(x=>x.date===iso(today()));$('todayDate').textContent=today().toLocaleDateString(undefined,{weekday:'long',day:'numeric',month:'long'});$('todayCard').innerHTML=p?workoutHtml(p):'<div class="panel">No workout scheduled.</div>';$('todayCoach').innerHTML=p?`<div class="note">${p.coach}</div><div class="note good">${p.purpose}</div>`:''}
+function renderPlan(){if(!state.weekView)state.weekView=currentWeek();let arr=state.plan.filter(p=>p.week===state.weekView),wd=weekData(state.weekView),factor=arr[0]?.factor||1;$('weekHeader').innerHTML=`<b>Week ${state.weekView} · ${phase(state.weekView)}</b><br><span class="muted">${fmtDate(iso(weekStart(state.weekView)))} · ${wd.planned.toFixed(1)} km planned · ${wd.actual.toFixed(1)} km completed · adaptive factor ${factor.toFixed(2)}</span>`;$('planCards').innerHTML=arr.map(workoutHtml).join('')}
+function parseCSV(t){let rows=[],r=[],f='',q=false;for(let i=0;i<t.length;i++){let c=t[i],n=t[i+1];if(c=='"'&&q&&n=='"'){f+='"';i++}else if(c=='"')q=!q;else if(c==','&&!q){r.push(f);f=''}else if((c=='\n'||c=='\r')&&!q){if(c=='\r'&&n=='\n')i++;r.push(f);if(r.some(x=>x))rows.push(r);r=[];f=''}else f+=c}if(f||r.length){r.push(f);rows.push(r)}return rows}
+function summariseCSV(rows){let h=rows[0].map(x=>x.trim()),idx=n=>h.indexOf(n),data=rows.slice(1).filter(r=>r.length>1),col=n=>data.map(r=>Number(r[idx(n)])).filter(Number.isFinite),pos=n=>avg(col(n).filter(v=>v>0));let ts=col('Timestamp'),dist=Math.max(...col('Watch Distance (meters)'))/1000,wkg=pos('Power (w/kg)');if(!ts.length||!Number.isFinite(dist))throw Error('The CSV does not contain the expected Stryd columns.');return{id:'stryd-'+Math.min(...ts)+'-'+Math.round(dist*1000),date:iso(new Date(Math.min(...ts)*1000)),type:'Easy',distanceKm:dist,durationSec:Math.max(...ts)-Math.min(...ts),avgHr:pos('Heart Rate (bpm)'),avgPower:wkg*state.setup.bodyWeight,cadence:pos('Cadence (spm)'),gct:idx('Ground Time (ms)')>=0?pos('Ground Time (ms)'):null,vo:idx('Vertical Oscillation (cm)')>=0?pos('Vertical Oscillation (cm)'):null,rpe:null,pain:null,recovery:null,temperature:null,notes:''}}
+let preview=null;
+function runDetail(r){let m=metrics(r);return`<h2>${fmtDate(r.date)} · ${esc(r.type)}</h2><div class="metricGrid">${kpi('Distance',r.distanceKm.toFixed(2)+' km')}${kpi('Duration',fmtTime(r.durationSec))}${kpi('Pace',pace(m.pace))}${kpi('Average HR',Math.round(r.avgHr||0)+' bpm')}${kpi('Average power',Math.round(r.avgPower||0)+' W')}${kpi('Cadence',r.cadence?Math.round(r.cadence)+' spm':'—')}${kpi('Distance / heartbeat',m.dph.toFixed(3)+' m')}${kpi('W / bpm',m.wpb.toFixed(3))}${kpi('Running effectiveness',m.effect.toFixed(3))}${kpi('W / kg',m.wkg.toFixed(2))}</div><div class="panel"><p><b>RPE:</b> ${r.rpe??'—'} · <b>Pain:</b> ${r.pain??'—'} · <b>Recovery:</b> ${r.recovery??'—'}</p><p><b>Temperature:</b> ${r.temperature??'—'} °C</p><p><b>Notes:</b> ${esc(r.notes||'—')}</p></div>`}
+function renderRuns(){$('runList').innerHTML=state.runs.slice().sort((a,b)=>b.date.localeCompare(a.date)).map(r=>{let m=metrics(r);return`<div class="runCard" data-run="${r.id}"><div class="runSummary"><div><h3>${fmtDate(r.date)} · ${esc(r.type)}</h3><p>${r.distanceKm.toFixed(2)} km · ${fmtTime(r.durationSec)} · ${pace(m.pace)}</p><div class="runStats"><span>HR ${Math.round(r.avgHr||0)}</span><span>${Math.round(r.avgPower||0)} W</span><span>RE ${m.effect.toFixed(3)}</span><span>${m.wkg.toFixed(2)} W/kg</span></div></div><span>›</span></div></div>`}).join('')||'<div class="panel">No completed runs saved yet.</div>'}
+function renderMetrics(){let rs=state.runs.slice().sort((a,b)=>a.date.localeCompare(b.date)),last=rs.at(-1),m=last?metrics(last):null;$('metricKpis').innerHTML=kpi('Latest pace',m?pace(m.pace):'—')+kpi('Distance / heartbeat',m?m.dph.toFixed(3):'—')+kpi('W / bpm',m?m.wpb.toFixed(3):'—')+kpi('Running effectiveness',m?m.effect.toFixed(3):'—')+kpi('W / kg',m?m.wkg.toFixed(2):'—')+kpi('Runs logged',rs.length);drawLine($('metricChart'),[{data:rs.map(r=>metrics(r).effect),color:'#2679bc'},{data:rs.map(r=>metrics(r).dph),color:'#12827c'}])}
+function renderAssessments(){$('assessmentList').innerHTML=state.assessments.slice().sort((a,b)=>b.date.localeCompare(a.date)).map(a=>`<div class="panel"><div class="panelHead"><div><b>${fmtDate(a.date)} · ${a.distance.toFixed(1)} km</b><p class="muted">${fmtTime(a.time)} · ${pace(a.time/a.distance)} · ${a.valid?'Valid and applied to future targets':'Not applied'}</p></div><span class="status ${a.valid?'completed':'rest'}">${a.valid?'valid':'invalid'}</span></div></div>`).join('')||'<div class="panel">No fitness assessment results entered.</div>'}
+function renderCoach(){let c=confidence(),pred=prediction(),gap=pred-state.setup.targetTime;$('coachTop').innerHTML=kpi('Overall confidence',Math.round(c.overall)+'%')+kpi('Predicted time',fmtTime(pred))+kpi('Target gap',(gap>=0?'+':'−')+fmtTime(Math.abs(gap)))+kpi('Current phase',phase(currentWeek()));$('fullAssessment').textContent=assessmentText(c);let sorted=[...c.components].sort((a,b)=>b.score-a.score);$('coachStrengths').innerHTML=sorted.slice(0,3).map(x=>`<div class="note good"><b>✓ ${x.name} · ${Math.round(x.score)}</b><br>${interpretations[x.name](x.score)}</div>`).join('');$('coachRisks').innerHTML=[...sorted].reverse().slice(0,3).map(x=>`<div class="note warn"><b>⚠ ${x.name} · ${Math.round(x.score)}</b><br>${interpretations[x.name](x.score)}</div>`).join('');$('actionsTable').innerHTML=[...c.components].sort((a,b)=>a.score-b.score).slice(0,3).map((x,i)=>`<div class="actionRow"><strong>${i+1}</strong><b>${x.name}</b><span>${Math.round(x.score)}</span><div>${actions[x.name]}<br><small class="muted">${interpretations[x.name](x.score)}</small></div></div>`).join('')}
+function renderRace(){let c=confidence(),pred=prediction(),targetPace=state.setup.targetTime/state.setup.raceDistance;$('raceKpis').innerHTML=kpi('Target time',fmtTime(state.setup.targetTime))+kpi('Target pace',pace(targetPace))+kpi('Target HR',Math.round(state.setup.thresholdHr*.92)+' bpm')+kpi('Target power',Math.round(state.setup.criticalPower*.88)+' W')+kpi('Current prediction',fmtTime(pred))+kpi('Confidence',Math.round(c.overall)+'%');$('racePacing').innerHTML='<div class="note"><b>0–10 km:</b> Start controlled, slightly slower than target pace. Let heart rate rise gradually.</div><div class="note"><b>10–30 km:</b> Settle at target effort and protect fuelling. Avoid reacting to short pace fluctuations.</div><div class="note good"><b>After 30 km:</b> Progress only when breathing, form and stomach remain stable. Otherwise preserve target effort.</div>';$('raceFuel').innerHTML='<p><b>Carbohydrate:</b> 60–90 g/hour, practised in long runs.</p><p><b>Fluids:</b> approximately 400–800 ml/hour, adjusted for temperature and sweat rate.</p><p><b>Sodium:</b> use the same product and concentration tested in training.</p>';$('raceRules').innerHTML='<p>Slow down early if heart rate is unusually high at normal power.</p><p>Do not chase lost seconds on hills or crowded sections.</p><p>Use effort rather than pace when conditions are hot, windy or technical.</p>'}
+function renderSettings(){let defs=[['planStart','Plan start','date'],['raceDate','Race date','date'],['raceName','Race name','text'],['raceDistance','Race distance km','number'],['targetTime','Target time','time'],['currentWeekly','Current weekly km','number'],['currentLongest','Current longest run km','number'],['testDistance','Recent test distance km','number'],['testTime','Recent test time','time'],['thresholdHr','Threshold HR','number'],['criticalPower','Critical power W','number'],['bodyWeight','Body weight kg','number'],['maxWeekly','Max weekly km','number'],['growth','Max weekly growth %','percent'],['peakLong','Peak long run km','number'],['taperDays','Taper days','number']];$('settingsGrid').innerHTML=defs.map(d=>{let v=state.setup[d[0]];if(d[2]=='time')v=fmtTime(v);if(d[2]=='percent')v=Math.round(v*100);return`<div class="field"><label>${d[1]}</label><input data-setting="${d[0]}" data-type="${d[2]}" type="${d[2]=='date'?'date':'text'}" value="${esc(v)}"></div>`}).join('');$('daysGrid').innerHTML=state.days.map((d,i)=>`<div class="panelHead" style="padding:7px 0;border-bottom:1px solid var(--line)"><b>${d[0]}</b><label><input data-day="${i}" type="checkbox" ${d[1]?'checked':''}> Train</label><select data-session="${i}"><option ${d[2]=='Easy'?'selected':''}>Easy</option><option ${d[2]=='Intervals'?'selected':''}>Intervals</option><option ${d[2]=='Tempo'?'selected':''}>Tempo</option><option ${d[2]=='Long run'?'selected':''}>Long run</option></select></div>`).join('')}
+function renderAll(){renderDashboard();renderToday();renderPlan();renderRuns();renderMetrics();renderAssessments();renderCoach();renderRace();renderSettings()}
+const pages=[['dashboard','Dashboard'],['today','Today'],['plan','Plan'],['runs','Runs'],['metrics','Metrics'],['assessments','Assessments'],['coach','Coach'],['race','Race day'],['settings','Settings']];
+$('nav').innerHTML=pages.map((p,i)=>`<button data-page="${p[0]}" class="${i?'':'active'}">${p[1]}</button>`).join('');$('nav').onclick=e=>{let p=e.target.dataset.page;if(!p)return;document.querySelectorAll('.page').forEach(x=>x.classList.toggle('active',x.id===p));document.querySelectorAll('#nav button').forEach(x=>x.classList.toggle('active',x.dataset.page===p));renderAll();scrollTo(0,0)};document.body.onclick=e=>{if(e.target.dataset.go){document.querySelector(`[data-page="${e.target.dataset.go}"]`).click()}let w=e.target.closest('.workout');if(w&&!e.target.closest('button'))w.classList.toggle('open')};
+$('prevWeek').onclick=()=>{state.weekView=clamp((state.weekView||currentWeek())-1,1,weeks());renderPlan()};$('nextWeek').onclick=()=>{state.weekView=clamp((state.weekView||currentWeek())+1,1,weeks());renderPlan()};$('thisWeek').onclick=()=>{state.weekView=currentWeek();renderPlan()};
+$('csvFile').onchange=e=>{let f=e.target.files[0];if(!f)return;f.text().then(t=>{preview=summariseCSV(parseCSV(t));let m=metrics(preview);$('importPreview').className='panel';$('importPreview').innerHTML=`<h3>Import preview</h3><div class="metricGrid">${kpi('Date',preview.date)}${kpi('Distance',preview.distanceKm.toFixed(2)+' km')}${kpi('Duration',fmtTime(preview.durationSec))}${kpi('Pace',pace(m.pace))}${kpi('HR',Math.round(preview.avgHr)+' bpm')}${kpi('Power',Math.round(preview.avgPower)+' W')}${kpi('Effectiveness',m.effect.toFixed(3))}${kpi('W / kg',m.wkg.toFixed(2))}</div><div class="formGrid"><div class="field"><label>Run type</label><select id="iType"><option>Easy</option><option>Recovery</option><option>Long run</option><option>Tempo</option><option>Intervals</option><option>Fitness assessment</option><option>Race</option></select></div><div class="field"><label>RPE</label><input id="iRpe" type="number"></div><div class="field"><label>Pain 0–10</label><input id="iPain" type="number"></div><div class="field"><label>Recovery 1–5</label><input id="iRecovery" type="number"></div><div class="field"><label>Temperature °C</label><input id="iTemp" type="number"></div><div class="field"><label>Notes</label><input id="iNotes"></div></div><button id="saveImport" class="primary full">Save imported run</button>`;$('saveImport').onclick=()=>{if(state.runs.some(r=>r.id===preview.id))return toast('This run was already imported.',true);Object.assign(preview,{type:$('iType').value,rpe:Number($('iRpe').value)||null,pain:Number($('iPain').value)||null,recovery:Number($('iRecovery').value)||null,temperature:Number($('iTemp').value)||null,notes:$('iNotes').value});let match=state.plan.find(p=>p.date===preview.date&&p.type!=='Rest');if(match)preview.planId=match.id;state.runs.push(preview);save();$('importPreview').className='hidden';preview=null;renderAll();toast('Run saved and coach updated.')};}).catch(x=>toast(x.message,true))};
+$('runList').onclick=e=>{let c=e.target.closest('[data-run]');if(!c)return;let r=state.runs.find(x=>x.id===c.dataset.run);$('modalContent').innerHTML=runDetail(r)+`<button id="deleteRun" class="danger buttonLike full">Delete run</button>`;$('modal').className='modal';$('deleteRun').onclick=()=>{state.runs=state.runs.filter(x=>x.id!==r.id);save();$('modal').className='modal hidden';renderAll();toast('Run deleted.')}};
+$('closeModal').onclick=()=>$('modal').className='modal hidden';
+$('manualRunBtn').onclick=()=>{$('manualRun').className='panel';$('manualRun').innerHTML=`<h3>Add completed run</h3><div class="formGrid"><div class="field"><label>Date</label><input id="mDate" type="date" value="${iso(today())}"></div><div class="field"><label>Type</label><select id="mType"><option>Easy</option><option>Recovery</option><option>Long run</option><option>Tempo</option><option>Intervals</option><option>Fitness assessment</option><option>Race</option></select></div><div class="field"><label>Distance km</label><input id="mKm" type="number"></div><div class="field"><label>Duration mm:ss or h:mm:ss</label><input id="mTime"></div><div class="field"><label>Average HR</label><input id="mHr" type="number"></div><div class="field"><label>Average power</label><input id="mPower" type="number"></div><div class="field"><label>RPE</label><input id="mRpe" type="number"></div><div class="field"><label>Pain</label><input id="mPain" type="number"></div><div class="field"><label>Recovery</label><input id="mRecovery" type="number"></div></div><button id="saveManual" class="primary full">Save run</button>`;$('saveManual').onclick=()=>{let km=Number($('mKm').value),sec=parseTime($('mTime').value);if(!km||!sec)return toast('Enter a valid distance and duration.',true);let r={id:'manual-'+Date.now(),date:$('mDate').value,type:$('mType').value,distanceKm:km,durationSec:sec,avgHr:Number($('mHr').value),avgPower:Number($('mPower').value),rpe:Number($('mRpe').value)||null,pain:Number($('mPain').value)||null,recovery:Number($('mRecovery').value)||null};let match=state.plan.find(p=>p.date===r.date&&p.type!=='Rest');if(match)r.planId=match.id;state.runs.push(r);save();$('manualRun').className='hidden';renderAll();toast('Run saved.')}};
+$('addAssessmentBtn').onclick=()=>{$('assessmentForm').className='panel';$('assessmentForm').innerHTML=`<h3>Fitness assessment result</h3><div class="formGrid"><div class="field"><label>Date</label><input id="aDate" type="date"></div><div class="field"><label>Distance km</label><input id="aDist" value="5"></div><div class="field"><label>Time</label><input id="aTime" placeholder="25:15"></div><div class="field"><label>Threshold HR</label><input id="aHr" value="${state.setup.thresholdHr}"></div><div class="field"><label>Critical power W</label><input id="aCp" value="${state.setup.criticalPower}"></div><div class="field"><label>Valid result</label><select id="aValid"><option value="true">Yes</option><option value="false">No</option></select></div></div><button id="saveAssessment" class="primary full">Save assessment</button>`;$('saveAssessment').onclick=()=>{let a={id:'a-'+Date.now(),date:$('aDate').value,distance:Number($('aDist').value),time:parseTime($('aTime').value),thresholdHr:Number($('aHr').value),criticalPower:Number($('aCp').value),valid:$('aValid').value==='true'};if(!a.date||!a.distance||!a.time)return toast('Complete date, distance and time.',true);state.assessments.push(a);buildPlan();renderAll();$('assessmentForm').className='hidden';toast(a.valid?'Assessment saved. Only future targets were updated.':'Assessment saved but not applied.')}};
+$('saveSettings').onclick=()=>{document.querySelectorAll('[data-setting]').forEach(el=>{let k=el.dataset.setting,t=el.dataset.type,v=el.value;if(t==='number')v=Number(v);if(t==='time')v=parseTime(v);if(t==='percent')v=Number(v)/100;state.setup[k]=v});document.querySelectorAll('[data-day]').forEach(el=>state.days[Number(el.dataset.day)][1]=el.checked);document.querySelectorAll('[data-session]').forEach(el=>state.days[Number(el.dataset.session)][2]=el.value);buildPlan();state.weekView=currentWeek();renderAll();toast('Settings saved. Past workouts were retained; future workouts rebuilt.')};
+function download(n,t,m){let a=document.createElement('a');a.href=URL.createObjectURL(new Blob([t],{type:m}));a.download=n;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
+$('backupBtn').onclick=()=>download('ai-running-coach-backup.json',JSON.stringify(state,null,2),'application/json');$('restoreFile').onchange=e=>e.target.files[0]?.text().then(t=>{state=JSON.parse(t);save();renderAll();toast('Backup restored.')}).catch(()=>toast('Invalid backup.',true));$('exportBtn').onclick=()=>download('run-log.csv',['Date,Type,Distance km,Duration sec,HR,Power,RPE,Pain,Recovery,Notes',...state.runs.map(r=>[r.date,r.type,r.distanceKm,r.durationSec,r.avgHr,r.avgPower,r.rpe,r.pain,r.recovery,`"${String(r.notes||'').replaceAll('"','""')}"`].join(','))].join('\n'),'text/csv');$('resetBtn').onclick=()=>{if(confirm('Delete all app data?')){state=defaults();buildPlan();renderAll();toast('App reset.')}};
+let deferred;window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferred=e;$('installBtn').className='install'});$('installBtn').onclick=()=>deferred?.prompt();if('serviceWorker'in navigator&&location.protocol==='https:')navigator.serviceWorker.register('service-worker.js');
+renderAll();
 })();

@@ -1,139 +1,103 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#15385f">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="mobile-web-app-capable" content="yes">
-  <title>Adaptive Running Coach</title>
-  <link rel="manifest" href="manifest.webmanifest">
-  <link rel="icon" href="icon-192.png">
-  <link rel="stylesheet" href="styles.css">
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0b3157"><title>AI Running Coach</title>
+<link rel="manifest" href="manifest.webmanifest"><link rel="icon" href="icon-192.png"><link rel="stylesheet" href="styles.css">
 </head>
 <body>
-<header>
-  <div>
-    <h1>Adaptive Running Coach</h1>
-    <p>Adaptive marathon planning and Stryd run analysis</p>
-  </div>
-  <button id="installButton" class="install hidden">Install</button>
+<header class="topbar">
+  <div class="brand"><div class="logo">AR</div><div><h1>AI Running Coach</h1><p>Adaptive marathon planning • v6.2 web</p></div></div>
+  <button id="installBtn" class="install hidden">Install</button>
 </header>
-
-<nav id="tabs" aria-label="Main navigation"></nav>
-
+<nav id="nav"></nav>
 <main>
-  <div id="message" class="message hidden"></div>
+<div id="toast" class="toast hidden"></div>
 
-  <section id="dashboard" class="page active">
-    <h2>Dashboard</h2>
-    <div id="dashboardCards" class="cards"></div>
-    <article class="panel">
-      <h3>Current status</h3>
-      <div id="currentStatus"></div>
-    </article>
-    <article class="panel">
-      <h3>Weekly distance</h3>
-      <canvas id="weeklyChart" width="900" height="320"></canvas>
-      <div class="legend"><span><i class="planned"></i>Planned</span><span><i class="actual"></i>Actual</span></div>
-    </article>
-    <article class="panel">
-      <h3>Confidence components</h3>
-      <div id="confidenceList"></div>
-    </article>
-  </section>
+<section id="dashboard" class="page active">
+  <div class="hero">
+    <div><span id="phaseBadge" class="badge"></span><h2 id="raceTitle"></h2><p id="raceSubtitle"></p></div>
+    <div class="confidenceRing"><div><strong id="confidenceValue"></strong><span>confidence</span></div></div>
+  </div>
+  <div id="kpis" class="kpis"></div>
+  <div class="grid2">
+    <article class="panel"><div class="panelHead"><h3>Coach assessment</h3><button class="linkBtn" data-go="coach">Full coaching</button></div><div id="assessmentText" class="coachText"></div></article>
+    <article class="panel"><h3>Confidence components</h3><div id="confidenceBars"></div></article>
+  </div>
+  <article class="panel"><div class="panelHead"><h3>Weekly distance progression</h3><span class="muted">Planned vs completed</span></div><canvas id="volumeChart" width="1000" height="340"></canvas></article>
+  <div class="grid2">
+    <article class="panel"><h3>Current strengths</h3><div id="strengths"></div></article>
+    <article class="panel"><h3>Risks and limiters</h3><div id="risks"></div></article>
+  </div>
+  <article class="panel"><div class="panelHead"><h3>Next key sessions</h3><button class="linkBtn" data-go="plan">Open plan</button></div><div id="keySessions" class="sessionGrid"></div></article>
+</section>
 
-  <section id="today" class="page">
-    <h2>Today</h2>
-    <article class="panel" id="todayWorkout"></article>
-    <article class="panel">
-      <h3>Next key sessions</h3>
-      <div id="nextKeySessions"></div>
-    </article>
-  </section>
+<section id="today" class="page">
+  <div class="sectionTitle"><div><h2>Today</h2><p id="todayDate"></p></div></div>
+  <div id="todayCard"></div>
+  <article class="panel"><h3>Coach focus</h3><div id="todayCoach"></div></article>
+</section>
 
-  <section id="plan" class="page">
-    <h2>Training plan</h2>
-    <div class="buttonRow">
-      <button id="previousWeek" class="secondary">Previous</button>
-      <button id="currentWeek" class="secondary">Current</button>
-      <button id="nextWeek" class="secondary">Next</button>
-    </div>
-    <article class="panel">
-      <div id="weekSummary"></div>
-    </article>
-    <div class="tableWrap">
-      <table>
-        <thead><tr><th>Date</th><th>Session</th><th>Km</th><th>Pace</th><th>HR</th><th>Power</th><th>Status</th></tr></thead>
-        <tbody id="planRows"></tbody>
-      </table>
-    </div>
-  </section>
+<section id="plan" class="page">
+  <div class="sectionTitle"><div><h2>Training plan</h2><p>Tap any workout for the full prescription.</p></div></div>
+  <div class="weekNav"><button id="prevWeek">‹</button><button id="thisWeek">Current week</button><button id="nextWeek">›</button></div>
+  <div id="weekHeader" class="weekHeader"></div>
+  <div id="planCards"></div>
+</section>
 
-  <section id="import" class="page">
-    <h2>Import run</h2>
-    <article class="panel">
-      <label for="csvInput" class="fileButton">Choose Stryd CSV</label>
-      <input id="csvInput" type="file" accept=".csv,text/csv">
-      <p id="selectedFile" class="muted">No file selected.</p>
-    </article>
-    <div id="importArea" class="hidden">
-      <div id="importCards" class="cards"></div>
-      <article class="panel">
-        <div class="formGrid">
-          <div><label>Run type</label><select id="runType"></select></div>
-          <div><label>Match plan</label><select id="planMatch"></select></div>
-          <div><label>RPE 1–10</label><input id="rpe" type="number" min="1" max="10"></div>
-          <div><label>Pain 0–10</label><input id="pain" type="number" min="0" max="10"></div>
-          <div><label>Recovery 1–5</label><input id="recovery" type="number" min="1" max="5"></div>
-          <div><label>Temperature °C</label><input id="temperature" type="number" step="0.1"></div>
-        </div>
-        <div><label>Notes</label><textarea id="runNotes"></textarea></div>
-        <button id="saveImported" class="primary full">Save run</button>
-      </article>
-    </div>
-  </section>
+<section id="runs" class="page">
+  <div class="sectionTitle"><div><h2>Run log</h2><p>All v6.2 efficiency and economy metrics.</p></div><button id="manualRunBtn" class="primary small">+ Manual</button></div>
+  <article class="panel importBox">
+    <div><h3>Import Stryd CSV</h3><p class="muted">Select the CSV exported by Stryd. The run is analysed before saving.</p></div>
+    <label class="filePick" for="csvFile">Choose CSV</label><input id="csvFile" type="file" accept=".csv,text/csv">
+  </article>
+  <div id="importPreview" class="hidden"></div>
+  <div id="manualRun" class="hidden"></div>
+  <div id="runList"></div>
+</section>
 
-  <section id="runs" class="page">
-    <h2>Run log</h2>
-    <div class="buttonRow">
-      <button id="manualButton" class="secondary">Add manually</button>
-      <button id="exportRuns" class="secondary">Export CSV</button>
-    </div>
-    <article id="manualForm" class="panel hidden"></article>
-    <div class="tableWrap">
-      <table>
-        <thead><tr><th>Date</th><th>Type</th><th>Distance</th><th>Time</th><th>Pace</th><th>HR</th><th>Power</th><th>RPE</th><th></th></tr></thead>
-        <tbody id="runRows"></tbody>
-      </table>
-    </div>
-  </section>
+<section id="metrics" class="page">
+  <div class="sectionTitle"><div><h2>Performance metrics</h2><p>Trends from completed runs.</p></div></div>
+  <div id="metricKpis" class="kpis"></div>
+  <article class="panel"><h3>Economy and effectiveness trend</h3><canvas id="metricChart" width="1000" height="340"></canvas></article>
+  <article class="panel"><h3>Metric guide</h3><div class="guideGrid">
+   <div><b>Distance / heartbeat</b><p>Metres travelled per heartbeat. Higher is generally better at comparable effort and conditions.</p></div>
+   <div><b>W / bpm</b><p>Average power divided by heart rate. Useful for tracking aerobic output.</p></div>
+   <div><b>Running effectiveness</b><p>Speed in m/s divided by power in W/kg, matching the workbook logic.</p></div>
+   <div><b>W / kg</b><p>Average power divided by current body weight.</p></div>
+  </div></article>
+</section>
 
-  <section id="coach" class="page">
-    <h2>Coach</h2>
-    <div id="coachCards" class="cards"></div>
-    <article class="panel"><h3>Assessment</h3><div id="coachAssessment"></div></article>
-    <article class="panel"><h3>Priorities</h3><div id="coachPriorities"></div></article>
-  </section>
+<section id="assessments" class="page">
+  <div class="sectionTitle"><div><h2>Fitness assessments</h2><p>Valid assessments update future targets only.</p></div><button id="addAssessmentBtn" class="primary small">+ Add result</button></div>
+  <div id="assessmentForm" class="hidden"></div>
+  <div id="assessmentList"></div>
+</section>
 
-  <section id="settings" class="page">
-    <h2>Settings</h2>
-    <article class="panel">
-      <div id="settingsFields" class="formGrid"></div>
-      <button id="saveSettings" class="primary full">Save and rebuild plan</button>
-    </article>
-    <article class="panel">
-      <h3>Backup</h3>
-      <div class="buttonRow">
-        <button id="downloadBackup" class="secondary">Download backup</button>
-        <label for="restoreInput" class="buttonLike secondary">Restore backup</label>
-        <input id="restoreInput" type="file" accept=".json">
-        <button id="resetButton" class="danger">Reset</button>
-      </div>
-    </article>
-  </section>
+<section id="coach" class="page">
+  <div class="sectionTitle"><div><h2>Coach summary</h2><p>Readiness, evidence and highest-impact actions.</p></div></div>
+  <div id="coachTop" class="kpis"></div>
+  <article class="panel"><h3>Overall assessment</h3><div id="fullAssessment" class="coachText"></div></article>
+  <div class="grid2"><article class="panel"><h3>Current strengths</h3><div id="coachStrengths"></div></article><article class="panel"><h3>Current risks</h3><div id="coachRisks"></div></article></div>
+  <article class="panel"><h3>Highest-impact next actions</h3><div id="actionsTable"></div></article>
+  <article class="panel"><h3>How to interpret the model</h3><p>The confidence score combines fitness, endurance, consistency, adherence, recovery and economy. A strong test result cannot fully compensate for limited long-run endurance or poor training execution. The coach therefore ranks the weakest evidence-weighted components rather than reacting to one isolated number.</p></article>
+</section>
+
+<section id="race" class="page">
+  <div class="sectionTitle"><div><h2>Race day</h2><p>Execution plan based on the current target and readiness.</p></div></div>
+  <div id="raceKpis" class="kpis"></div>
+  <article class="panel"><h3>Pacing strategy</h3><div id="racePacing"></div></article>
+  <div class="grid2"><article class="panel"><h3>Fuel and fluids</h3><div id="raceFuel"></div></article><article class="panel"><h3>Decision rules</h3><div id="raceRules"></div></article></div>
+</section>
+
+<section id="settings" class="page">
+  <div class="sectionTitle"><div><h2>Settings</h2><p>These mirror the editable inputs in v6.2.</p></div></div>
+  <article class="panel"><div id="settingsGrid" class="formGrid"></div><button id="saveSettings" class="primary full">Save and rebuild future plan</button></article>
+  <article class="panel"><h3>Training days</h3><div id="daysGrid"></div></article>
+  <article class="panel"><h3>Data</h3><div class="buttonRow"><button id="backupBtn">Download backup</button><label for="restoreFile" class="buttonLike">Restore backup</label><input id="restoreFile" type="file" accept=".json"><button id="exportBtn">Export runs CSV</button><button id="resetBtn" class="danger">Reset app</button></div></article>
+</section>
 </main>
 
+<div id="modal" class="modal hidden"><div class="modalCard"><button id="closeModal" class="close">×</button><div id="modalContent"></div></div></div>
 <script src="app.js"></script>
-</body>
-</html>
+</body></html>

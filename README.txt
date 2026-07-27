@@ -1,33 +1,11 @@
-Adaptive Running Coach PWA
-=============================
+AI Running Coach — v6.2 Web replacement
 
-This package is a proper Progressive Web App.
+Upload all files in this folder to the root of:
+https://github.com/twenterunner/AI_Running_Coach
 
-Included:
-- Mobile dashboard
-- Today's workout
-- Multi-week Base / Build / Peak / Taper plan
-- Direct Stryd CSV import
-- Run log and manual entry
-- Marathon prediction and confidence score
-- Coach priorities
-- Settings
-- CSV export
-- JSON backup and restore
-- Offline support after installation
+Replace the existing files when GitHub asks. GitHub Pages will redeploy automatically.
 
-TESTING LOCALLY
-1. Extract the ZIP.
-2. Open index.html.
-3. The interface and calculations should render.
-4. Local file mode does not support PWA installation or service-worker caching.
-
-INSTALLING ON ANDROID
-The files must be hosted on an HTTPS address. Easy options:
-- GitHub Pages
-- Netlify Drop
-- Cloudflare Pages
-
-After opening the HTTPS address in Chrome or Samsung Internet, use Install app / Add to Home screen.
-
-All run data is stored locally in the browser. Create backups regularly.
+Important:
+- The app stores data locally in the browser.
+- Download a backup regularly.
+- Existing data from the first prototype uses a different storage key and will not be carried over.
