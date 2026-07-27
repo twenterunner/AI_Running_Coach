@@ -83,3 +83,7 @@ canvas{width:100%;height:auto;display:block}
 .driftHigh{background:#fff0f1;border-left:5px solid #d75b67}
 
 .importNotice{padding:14px 16px;border-radius:14px;background:#fff7e8;border-left:5px solid #e49b35;margin:12px 0;color:#5f5140}
+
+.importGuide{margin-top:16px}
+.importGuide summary{font-weight:800;cursor:pointer;color:#315a7c}
+.importGuide .guideGrid{margin-top:14px}
