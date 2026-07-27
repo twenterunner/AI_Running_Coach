@@ -1,43 +1,82 @@
 AI RUNNING COACH
+================
 
-Adaptive marathon planning powered by objective running metrics and
-intelligent coaching.
+Adaptive marathon planning powered by Stryd data, race-readiness modelling and intelligent coaching.
 
-FEATURES
+LIVE APP
+--------
+https://twenterunner.github.io/AI_Running_Coach/
 
--   Adaptive training plan that updates future sessions
--   Stryd CSV import
--   Cardiac drift analysis (long runs only)
--   Running economy, W/kg, W/bpm and distance/heartbeat metrics
--   Race prediction based on fitness assessments
--   Automatic plan rebuilding
--   Readiness profile and coaching insights
--   Interactive dashboard with training trends
--   Offline Progressive Web App (PWA)
+CURRENT VERSION
+---------------
+v6.3 · build 6309
 
-WORKFLOW
+MAIN FEATURES
+-------------
+- Adaptive marathon training plan
+- Detailed Stryd CSV import
+- Cardiac drift analysis for long runs
+- Running effectiveness and aerobic-efficiency trends
+- Distance per heartbeat, W/bpm and W/kg
+- Fitness assessments and marathon prediction
+- Four-pillar race-readiness model
+- Training adherence, consistency and long-run execution
+- Editable imported and manual runs
+- Offline-first Progressive Web App
+- Mobile-first dashboard
 
-1.  Configure your runner profile and race target.
-2.  Import a Stryd CSV after each run.
-3.  Review the automatically calculated metrics.
-4.  Add:
-    -   RPE (1–10)
-    -   Pain (0–10)
-    -   Recovery (1–5)
-5.  Save the run and let the coach adapt future training.
+RUN IMPORT WORKFLOW
+-------------------
+1. Export a detailed CSV from Stryd.
+2. Open Runs and choose the CSV.
+3. Review automatically calculated metrics.
+4. Select the correct run type.
+5. Add RPE, pain and recovery ratings.
+6. Save the analysed run.
+
+SUBJECTIVE RATINGS
+------------------
+RPE 1-10
+1-2 very easy; 3-4 easy; 5-6 moderate; 7 marathon effort; 8 threshold; 9 very hard; 10 maximal.
+
+Pain 0-10
+0 none; 1-2 awareness; 3-4 mild discomfort; 5-6 affects mechanics; 7-10 stop or seek assessment.
+
+Recovery 1-5
+1 very poor; 2 poor; 3 normal; 4 good; 5 excellent.
 
 KEY METRICS
+-----------
+Running Effectiveness
+Speed in m/s divided by power in W/kg.
 
-Running Effectiveness Distance / Heartbeat W / bpm W / kg Cardiac Drift
-(long runs only)
+Distance per Heartbeat
+Metres travelled per heartbeat.
 
-ROADMAP
+W / bpm
+Average power divided by average heart rate.
 
--   FIT file import
--   Garmin & Polar integration
--   Weather-adjusted pacing
--   AI coaching summaries
--   Fatigue modelling
--   Cloud backup and multi-device sync
+W / kg
+Average power relative to configured body weight.
 
-Version: v6.3
+Cardiac Drift
+Long-run pace-HR or power-HR efficiency loss from the first half to the second half. Lower is generally better.
+
+BRANDING FILES
+--------------
+icon-192.png
+icon-512.png
+apple-touch-icon.png
+favicon-32x32.png
+favicon-16x16.png
+favicon.ico
+github-banner.png
+
+DEPLOYMENT
+----------
+Upload every file in this pack to the root of the GitHub repository and commit the changes.
+
+Then open:
+https://twenterunner.github.io/AI_Running_Coach/?v=6309
+
+The header should display v6.3 · build 6309.

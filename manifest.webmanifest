@@ -1,6 +1,6 @@
 {
   "name": "AI Running Coach",
-  "short_name": "Run Coach",
+  "short_name": "Running Coach",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
@@ -8,14 +8,17 @@
   "background_color": "#f2f5f8",
   "icons": [
     {
-      "src": "icon-192.png",
+      "src": "icon-192.png?v=6309",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
     },
     {
-      "src": "icon-512.png",
+      "src": "icon-512.png?v=6309",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
     }
-  ]
+  ],
+  "description": "Adaptive marathon planning with Stryd metrics, readiness analysis and long-run cardiac drift."
 }
