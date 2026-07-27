@@ -266,6 +266,23 @@ function renderDashboard(){
  $('assessmentText').textContent=assessmentText(c);
  $('evidenceBadge').textContent=`Evidence ${Math.round(c.evidenceCoverage*100)}% complete`;
 
+ const predictionGap=pred-state.setup.targetTime;
+ const predictionPace=pred/state.setup.raceDistance;
+ const gapLabel=Math.abs(predictionGap)<30
+   ? 'On target'
+   : `${fmtTime(Math.abs(predictionGap))} ${predictionGap<0?'ahead of':'behind'} target`;
+ $('predictionSummary').innerHTML=`
+   <div class="predictionPrimary">
+     <span>Latest predicted finish</span>
+     <strong>${fmtTime(pred)}</strong>
+     <small>${pace(predictionPace)}</small>
+   </div>
+   <div class="predictionComparison ${predictionGap<=0?'ahead':'behind'}">
+     <span>Target ${fmtTime(state.setup.targetTime)}</span>
+     <strong>${gapLabel}</strong>
+     <small>Updates automatically after valid assessments and new training evidence.</small>
+   </div>`;
+
  $('pillarCards').innerHTML=c.pillars.map(p=>`
    <div class="pillarCard" style="--pillar:${p.color}">
     <div class="pillarTop"><b>${p.name}</b><span class="pillarScore">${Number.isFinite(p.score)?Math.round(p.score):'—'}</span></div>
@@ -372,13 +389,6 @@ function drawDonut(canvas,segments){
  ctx.textAlign='left';let y=82;
  segments.forEach(s=>{ctx.fillStyle=s.color;ctx.beginPath();ctx.arc(W*.58,y-6,8,0,Math.PI*2);ctx.fill();ctx.fillStyle='#314253';ctx.font='600 22px system-ui';ctx.fillText(s.label,W*.61,y);ctx.fillStyle='#748293';ctx.font='21px system-ui';ctx.fillText(`${s.value.toFixed(1)} km · ${Math.round(s.value/total*100)}%`,W*.61,y+28);y+=65});
 }
-function renderReadinessProfile(pillars){
- $('readinessProfile').innerHTML=pillars.map(p=>`<div class="readinessRow">
-   <div class="readinessName">${p.name}</div>
-   <div class="readinessTrack"><div class="readinessFill" style="--bar:${p.color};width:${Number.isFinite(p.score)?p.score:0}%"></div></div>
-   <div class="readinessNumber">${Number.isFinite(p.score)?Math.round(p.score):'—'}</div>
- </div>`).join('');
-}
 function roundRect(ctx,x,y,w,h,r){w=Math.max(0,w);r=Math.min(r,w/2,h/2);ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath()}
 function drawDashboardCharts(){
  let c=confidence(),arr=completedWeekSeries(),weekLabels=arr.map((_,i)=>'W'+(i+1));
@@ -404,12 +414,15 @@ function drawDashboardCharts(){
  let predSec=tests.map(a=>a.time*Math.pow(state.setup.raceDistance/a.distance,1.06));
  let labels=tests.map(a=>dte(a.date).toLocaleDateString(undefined,{day:'numeric',month:'short'}));
  if(!predSec.length){predSec=[c.riegel];labels=['Baseline']}
+ const currentPrediction=prediction();
+ predSec.push(currentPrediction);
+ labels.push('Latest');
  let allSec=[...predSec,state.setup.targetTime],low=Math.min(...allSec),high=Math.max(...allSec);
  let minSec=Math.max(2*3600,Math.floor((low-1800)/1800)*1800);
  let maxSec=Math.min(7*3600,Math.ceil((high+1800)/1800)*1800);
  if(maxSec-minSec<3600)maxSec=minSec+3600;
  drawLine($('predictionChart'),[
-   {label:'Assessment projection',data:predSec,color:'#7457c8'},
+   {label:'Predicted finish',data:predSec,color:'#7457c8'},
    {label:'Target time',data:predSec.map(()=>state.setup.targetTime),color:'#d75b67',dashed:true,points:false}
  ],{min:minSec,max:maxSec,ticks:5,formatY:v=>fmtTime(v),labels,left:98});
 
@@ -423,7 +436,6 @@ function drawDashboardCharts(){
   {label:'Intervals / tests',value:sum(windowPlan.filter(p=>['Intervals','Fitness assessment'].includes(p.type)).map(p=>p.distance)),color:'#7457c8'}
  ].filter(x=>x.value>0);
  drawDonut($('mixChart'),groups);
- renderReadinessProfile(c.pillars);
 }
 function workoutHtml(p){let st=status(p);return`<div class="workout" data-id="${p.id}"><div class="workoutHead"><div class="dateBox"><b>${new Date(p.date+'T00:00:00').getDate()}</b><span>${new Date(p.date+'T00:00:00').toLocaleDateString(undefined,{month:'short'})}</span></div><div class="workoutTitle"><h3>${p.type}</h3><p>${p.type==='Rest'?p.purpose:`${p.distance.toFixed(1)} km · ${p.phase}`}</p></div><span class="status ${st}">${st}</span></div><div class="workoutDetails"><div class="targets">${p.type==='Rest'?'':`<div class="target"><small>Pace</small><b>${pace(p.zone.pace)}</b></div><div class="target"><small>HR</small><b>${p.zone.hr} bpm</b></div><div class="target"><small>Power</small><b>${p.zone.power} W</b></div>`}</div><div class="prescription"><p><b>Warm-up:</b> ${p.warmup}</p><p><b>Main set:</b> ${p.main}</p><p><b>Cooldown:</b> ${p.cooldown}</p><p><b>Purpose:</b> ${p.purpose}</p><p><b>Coach guidance:</b> ${p.coach}</p><p><b>Fuel / hydration:</b> ${p.fuel}</p></div></div></div>`}
 function renderToday(){let p=state.plan.find(x=>x.date===iso(today()));$('todayDate').textContent=today().toLocaleDateString(undefined,{weekday:'long',day:'numeric',month:'long'});$('todayCard').innerHTML=p?workoutHtml(p):'<div class="panel">No workout scheduled.</div>';$('todayCoach').innerHTML=p?`<div class="note">${p.coach}</div><div class="note good">${p.purpose}</div>`:''}
@@ -797,5 +809,5 @@ let deferred;window.addEventListener('beforeinstallprompt',e=>{e.preventDefault(
 migrateAssessmentRuns();
 migrateImportedPower();
 renderAll();
-console.info('AI Running Coach v6.3 web build 6310');
+console.info('AI Running Coach v6.3 web build 6311');
 })();

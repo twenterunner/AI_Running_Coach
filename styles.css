@@ -92,3 +92,48 @@ canvas{width:100%;height:auto;display:block}
 .importGuide{margin-top:16px}
 .importGuide summary{font-weight:800;cursor:pointer;color:#315a7c}
 .importGuide .guideGrid{margin-top:14px}
+
+
+/* Build 6311: prominent latest race prediction */
+.predictionPanel{overflow:hidden}
+.predictionSummary{
+  display:grid;
+  grid-template-columns:minmax(0,1.05fr) minmax(0,.95fr);
+  gap:14px;
+  margin:14px 0 8px;
+}
+.predictionPrimary,.predictionComparison{
+  border:1px solid var(--line);
+  border-radius:18px;
+  padding:17px 18px;
+  background:#f8fbfe;
+}
+.predictionPrimary{
+  background:linear-gradient(135deg,#0d4672,#176b9d);
+  color:#fff;
+  border-color:transparent;
+}
+.predictionPrimary span,.predictionComparison span{
+  display:block;
+  font-size:.76rem;
+  font-weight:900;
+  letter-spacing:.055em;
+  text-transform:uppercase;
+  opacity:.82;
+}
+.predictionPrimary strong{
+  display:block;
+  margin:5px 0 1px;
+  font-size:clamp(2.15rem,8vw,3.25rem);
+  line-height:1;
+  letter-spacing:-.045em;
+}
+.predictionPrimary small{font-size:1rem;color:#d8efff}
+.predictionComparison{display:flex;flex-direction:column;justify-content:center}
+.predictionComparison strong{font-size:1.25rem;margin:6px 0 5px}
+.predictionComparison small{color:var(--muted);line-height:1.35}
+.predictionComparison.ahead strong{color:#12827c}
+.predictionComparison.behind strong{color:#c46728}
+@media(max-width:620px){
+  .predictionSummary{grid-template-columns:1fr}
+}
