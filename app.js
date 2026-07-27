@@ -9,7 +9,7 @@ const dec=(v,n=2)=>Number.isFinite(v)?v.toFixed(n):'—';
 function fmtTime(s){if(!Number.isFinite(s))return'—';let h=Math.floor(s/3600),m=Math.floor(s%3600/60),q=Math.round(s%60);if(q===60){q=0;m++}if(m===60){m=0;h++}return h?`${h}:${String(m).padStart(2,'0')}:${String(q).padStart(2,'0')}`:`${m}:${String(q).padStart(2,'0')}`}
 function parseTime(v){let p=String(v||'').split(':').map(Number);if(p.some(x=>!Number.isFinite(x)))return null;return p.length===3?p[0]*3600+p[1]*60+p[2]:p[0]*60+p[1]}
 function pace(s){return Number.isFinite(s)?fmtTime(s)+'/km':'—'} function toast(t,bad=false){$('toast').textContent=t;$('toast').className='toast'+(bad?' bad':'');setTimeout(()=>$('toast').className='toast hidden',3500)}
-const defaults=()=>({schemaVersion:6211,setup:{planStart:'2026-07-26',raceDate:'2026-12-13',raceName:'Goal Race',raceDistance:42.195,targetTime:15300,currentWeekly:35,currentLongest:18,testDistance:5,testTime:1515,thresholdHr:168,criticalPower:300,bodyWeight:93,maxWeekly:70,growth:.08,peakLong:35,taperDays:21,minFactor:.85,maxFactor:1.05,adaptive:true},days:[['Monday',false,'Easy'],['Tuesday',true,'Intervals'],['Wednesday',true,'Easy'],['Thursday',false,'Easy'],['Friday',true,'Tempo'],['Saturday',true,'Easy'],['Sunday',true,'Long run']],runs:[],assessments:[],plan:[],weekView:null});
+const defaults=()=>({schemaVersion:6300,setup:{planStart:'2026-07-26',raceDate:'2026-12-13',raceName:'Goal Race',raceDistance:42.195,targetTime:15300,currentWeekly:35,currentLongest:18,testDistance:5,testTime:1515,thresholdHr:168,criticalPower:300,bodyWeight:93,maxWeekly:70,growth:.08,peakLong:35,taperDays:21,minFactor:.85,maxFactor:1.05,adaptive:true},days:[['Monday',false,'Easy'],['Tuesday',true,'Intervals'],['Wednesday',true,'Easy'],['Thursday',false,'Easy'],['Friday',true,'Tempo'],['Saturday',true,'Easy'],['Sunday',true,'Long run']],runs:[],assessments:[],plan:[],weekView:null});
 let state;try{state=JSON.parse(localStorage.getItem('arc_v62_web'))}catch{}if(!state)state=defaults();
 const save=()=>localStorage.setItem('arc_v62_web',JSON.stringify(state)), today=()=>dte(iso(new Date()));
 function baselineOn(date){let valid=state.assessments.filter(a=>a.valid&&a.date<=date).sort((a,b)=>a.date.localeCompare(b.date));let a=valid.at(-1);return a?{pace:a.time/a.distance,hr:a.thresholdHr||state.setup.thresholdHr,cp:a.criticalPower||state.setup.criticalPower}:{pace:state.setup.testTime/state.setup.testDistance,hr:state.setup.thresholdHr,cp:state.setup.criticalPower}}
@@ -79,7 +79,7 @@ function buildPlan(){
      out.push(old.get(id)||item);
    });
  }
- state.plan=out;state.schemaVersion=6211;save()
+ state.plan=out;state.schemaVersion=6300;save()
 }
 function prescription(type,km,w,ph,z){
  if(type==='Rest')return{warmup:'—',main:'Rest day',cooldown:'—',purpose:'Absorb training and restore freshness.',coach:'Walking and light mobility are fine. Avoid turning recovery into another workout.',fuel:'Normal daily hydration.'};
@@ -90,7 +90,7 @@ function prescription(type,km,w,ph,z){
  if(type==='Fitness assessment')return{warmup:'15–20 min easy + drills + 4 strides',main:'5 km even maximal assessment',cooldown:'10–15 min very easy',purpose:'Create a repeatable benchmark that can update future targets.',coach:'Use even pacing and mark the result valid only when course, weather, health and execution make the result representative.',fuel:'Normal pre-run meal; avoid starting depleted.'};
  return{warmup:'10–15 min easy',main:`${km.toFixed(1)} km race execution`,cooldown:'Walk and begin recovery nutrition',purpose:'Execute the race plan.',coach:'Start controlled, protect the first 10 km and only progress after halfway if effort remains stable.',fuel:'60–90 g carbohydrate/hour and 400–800 ml fluid/hour.'}
 }
-if(state.schemaVersion!==6211){state.plan=[];buildPlan()}else if(!state.plan?.length)buildPlan();
+if(state.schemaVersion!==6300){state.plan=[];buildPlan()}else if(!state.plan?.length)buildPlan();
 function status(p){let done=state.runs.some(r=>r.planId===p.id||r.date===p.date);if(done)return'completed';if(p.type==='Rest')return'rest';let d=dte(p.date);if(d<today())return'missed';if(d.getTime()===today().getTime())return'today';return'upcoming'}
 function confidence(){
  let raceDate=dte(state.setup.raceDate);
@@ -152,11 +152,11 @@ function confidence(){
  let specificity=specificDue.length?clamp(specificDone/specificDue.length*100,0,100):null;
 
  const weighted=(items)=>{
-   let available=items.filter(x=>Number.isFinite(x.score));
-   let availableWeight=sum(available.map(x=>x.weight));
+   let totalWeight=sum(items.map(x=>x.weight));
+   let availableWeight=sum(items.filter(x=>Number.isFinite(x.score)).map(x=>x.weight));
    return{
-     score:availableWeight?sum(available.map(x=>x.score*x.weight))/availableWeight:null,
-     coverage:availableWeight/sum(items.map(x=>x.weight)),
+     score:totalWeight?sum(items.map(x=>(Number.isFinite(x.score)?x.score:50)*x.weight))/totalWeight:null,
+     coverage:totalWeight?availableWeight/totalWeight:0,
      items
    }
  };
@@ -169,7 +169,7 @@ function confidence(){
    {name:'Recovery & health',weight:.20,color:'#7457c8',description:'Whether recovery and pain evidence support absorbing the programme.',
     ...weighted([{name:'Recovery',score:recoveryScore,weight:.60},{name:'Pain status',score:painScore,weight:.40}])},
    {name:'Race readiness',weight:.20,color:'#e49b35',description:'Whether enough time remains and marathon-specific work is being completed.',
-    ...weighted([{name:'Preparation time',score:preparationTime,weight:.65},{name:'Specificity',score:specificity,weight:.35}])}
+    ...weighted([{name:'Preparation time',score:preparationTime,weight:.25},{name:'Endurance',score:endurance,weight:.30},{name:'Long-run execution',score:longRunExecution,weight:.25},{name:'Specificity',score:specificity,weight:.20}])}
  ];
 
  let availablePillars=pillars.filter(p=>Number.isFinite(p.score));
@@ -273,6 +273,10 @@ function renderDashboard(){
     <div class="pillarBar"><i style="width:${Number.isFinite(p.score)?p.score:0}%"></i></div>
     <p>${p.description}</p>
     <div class="pillarMeta"><span>Model weight ${Math.round(p.weight*100)}%</span><span>Evidence ${Math.round(p.coverage*100)}%</span></div>
+    <details class="pillarExplain"><summary>How this is calculated</summary>
+      <div class="calcTable">${p.items.map(i=>`<div class="calcRow"><span>${i.name}</span><span>${Number.isFinite(i.score)?Math.round(i.score):'N/A'}</span><span>${Math.round(i.weight*100)}%</span></div>`).join('')}</div>
+      <p class="muted">Missing contributors are held at a neutral 50, while evidence coverage shows how much real data supports the score.</p>
+    </details>
    </div>`).join('');
 
  $('componentGuide').innerHTML=c.components.map(x=>`
@@ -425,44 +429,73 @@ function drawDashboardCharts(){
 function workoutHtml(p){let st=status(p);return`<div class="workout" data-id="${p.id}"><div class="workoutHead"><div class="dateBox"><b>${new Date(p.date+'T00:00:00').getDate()}</b><span>${new Date(p.date+'T00:00:00').toLocaleDateString(undefined,{month:'short'})}</span></div><div class="workoutTitle"><h3>${p.type}</h3><p>${p.type==='Rest'?p.purpose:`${p.distance.toFixed(1)} km · ${p.phase}`}</p></div><span class="status ${st}">${st}</span></div><div class="workoutDetails"><div class="targets">${p.type==='Rest'?'':`<div class="target"><small>Pace</small><b>${pace(p.zone.pace)}</b></div><div class="target"><small>HR</small><b>${p.zone.hr} bpm</b></div><div class="target"><small>Power</small><b>${p.zone.power} W</b></div>`}</div><div class="prescription"><p><b>Warm-up:</b> ${p.warmup}</p><p><b>Main set:</b> ${p.main}</p><p><b>Cooldown:</b> ${p.cooldown}</p><p><b>Purpose:</b> ${p.purpose}</p><p><b>Coach guidance:</b> ${p.coach}</p><p><b>Fuel / hydration:</b> ${p.fuel}</p></div></div></div>`}
 function renderToday(){let p=state.plan.find(x=>x.date===iso(today()));$('todayDate').textContent=today().toLocaleDateString(undefined,{weekday:'long',day:'numeric',month:'long'});$('todayCard').innerHTML=p?workoutHtml(p):'<div class="panel">No workout scheduled.</div>';$('todayCoach').innerHTML=p?`<div class="note">${p.coach}</div><div class="note good">${p.purpose}</div>`:''}
 function renderPlan(){if(!state.weekView)state.weekView=currentWeek();let arr=state.plan.filter(p=>p.week===state.weekView),wd=weekData(state.weekView),factor=arr[0]?.factor||1;$('weekHeader').innerHTML=`<b>Week ${state.weekView} · ${phase(state.weekView)}</b><br><span class="muted">${fmtDate(iso(weekStart(state.weekView)))} · ${wd.planned.toFixed(1)} km planned · ${wd.actual.toFixed(1)} km completed · adaptive factor ${factor.toFixed(2)}</span>`;$('planCards').innerHTML=arr.map(workoutHtml).join('')}
-function parseCSV(t){let rows=[],r=[],f='',q=false;for(let i=0;i<t.length;i++){let c=t[i],n=t[i+1];if(c=='"'&&q&&n=='"'){f+='"';i++}else if(c=='"')q=!q;else if(c==','&&!q){r.push(f);f=''}else if((c=='\n'||c=='\r')&&!q){if(c=='\r'&&n=='\n')i++;r.push(f);if(r.some(x=>x))rows.push(r);r=[];f=''}else f+=c}if(f||r.length){r.push(f);rows.push(r)}return rows}
-function summariseCSV(rows){let h=rows[0].map(x=>x.trim()),idx=n=>h.indexOf(n),data=rows.slice(1).filter(r=>r.length>1),col=n=>data.map(r=>Number(r[idx(n)])).filter(Number.isFinite),pos=n=>avg(col(n).filter(v=>v>0));let ts=col('Timestamp'),scale=ts.length&&Math.max(...ts)>1e12?1000:1,distVals=col('Watch Distance (meters)'),dist=distVals.length?Math.max(...distVals)/1000:null,wkg=pos('Power (w/kg)'),powerW=pos('Power (W)')||pos('Power (Watts)')||(wkg? wkg*state.setup.bodyWeight:null),duration=ts.length?(Math.max(...ts)-Math.min(...ts))/scale:null;if(!ts.length||!Number.isFinite(dist)||dist<=0||!Number.isFinite(duration)||duration<=0)throw Error('The CSV does not contain valid Stryd timestamp and distance data.');return{id:'stryd-'+Math.min(...ts)+'-'+Math.round(dist*1000),date:iso(new Date(Math.min(...ts)*(scale===1000?1:1000))),type:'Easy',distanceKm:dist,durationSec:duration,avgHr:pos('Heart Rate (bpm)'),avgPower:powerW,cadence:pos('Cadence (spm)'),gct:idx('Ground Time (ms)')>=0?pos('Ground Time (ms)'):null,vo:idx('Vertical Oscillation (cm)')>=0?pos('Vertical Oscillation (cm)'):null,rpe:null,pain:null,recovery:null,temperature:null,notes:''}}
-let preview=null;
-function runDetail(r){let m=metrics(r);return`<h2>${fmtDate(r.date)} · ${esc(r.type)}</h2><div class="metricGrid">${kpi('Distance',r.distanceKm.toFixed(2)+' km')}${kpi('Duration',fmtTime(r.durationSec))}${kpi('Pace',pace(m.pace))}${kpi('Average HR',r.avgHr?Math.round(r.avgHr)+' bpm':'—')}${kpi('Average power',r.avgPower?Math.round(r.avgPower)+' W':'—')}${kpi('Cadence',r.cadence?Math.round(r.cadence)+' spm':'—')}${kpi('Distance / heartbeat',dec(m.dph,3)+' m')}${kpi('W / bpm',dec(m.wpb,3))}${kpi('Running effectiveness',dec(m.effect,3))}${kpi('W / kg',dec(m.wkg,2))}</div><div class="panel"><p><b>RPE:</b> ${r.rpe??'—'} · <b>Pain:</b> ${r.pain??'—'} · <b>Recovery:</b> ${r.recovery??'—'}</p><p><b>Temperature:</b> ${r.temperature??'—'} °C</p><p><b>Notes:</b> ${esc(r.notes||'—')}</p></div>`}
 
-function runEditor(r){
- return `<h2>${r.id?'Edit completed run':'Add completed run'}</h2>
- <div class="formGrid">
-  <div class="field"><label>Date</label><input id="eDate" type="date" value="${esc(r.date||iso(today()))}"></div>
-  <div class="field"><label>Type</label><select id="eType">${['Easy','Recovery','Long run','Tempo','Intervals','Fitness assessment','Race'].map(x=>`<option ${r.type===x?'selected':''}>${x}</option>`).join('')}</select></div>
-  <div class="field"><label>Distance km</label><input id="eKm" type="number" step="0.01" value="${esc(r.distanceKm??'')}"></div>
-  <div class="field"><label>Duration mm:ss or h:mm:ss</label><input id="eTime" value="${r.durationSec?fmtTime(r.durationSec):''}"></div>
-  <div class="field"><label>Average HR</label><input id="eHr" type="number" value="${esc(r.avgHr??'')}"></div>
-  <div class="field"><label>Average power</label><input id="ePower" type="number" value="${esc(r.avgPower??'')}"></div>
-  <div class="field"><label>Cadence</label><input id="eCadence" type="number" value="${esc(r.cadence??'')}"></div>
-  <div class="field"><label>RPE</label><input id="eRpe" type="number" min="1" max="10" value="${esc(r.rpe??'')}"></div>
-  <div class="field"><label>Pain 0–10</label><input id="ePain" type="number" min="0" max="10" value="${esc(r.pain??'')}"></div>
-  <div class="field"><label>Recovery 1–5</label><input id="eRecovery" type="number" min="1" max="5" value="${esc(r.recovery??'')}"></div>
-  <div class="field"><label>Temperature °C</label><input id="eTemp" type="number" value="${esc(r.temperature??'')}"></div>
-  <div class="field"><label>Notes</label><textarea id="eNotes">${esc(r.notes||'')}</textarea></div>
- </div>
- <button id="saveEditedRun" class="primary full">Save changes</button>`;
+function streamAnalysis(records){
+ let valid=records.filter(r=>Number.isFinite(r.t)&&r.hr>40&&(r.power>0||r.speed>0)).sort((a,b)=>a.t-b.t);
+ if(valid.length<300)return null;
+ let start=valid[0].t,end=valid.at(-1).t;
+ let warmup=Math.min(900,Math.max(300,(end-start)*.15));
+ valid=valid.filter(r=>r.t>=start+warmup);
+ if(valid.length<240)return null;
+ let mid=(valid[0].t+valid.at(-1).t)/2,a=valid.filter(r=>r.t<=mid),b=valid.filter(r=>r.t>mid);
+ const mean=(arr,key)=>avg(arr.map(x=>x[key]).filter(v=>Number.isFinite(v)&&v>0));
+ let h1=mean(a,'hr'),h2=mean(b,'hr'),p1=mean(a,'power'),p2=mean(b,'power'),v1=mean(a,'speed'),v2=mean(b,'speed');
+ let powerDrift=p1&&p2&&h1&&h2?(1-(p2/h2)/(p1/h1))*100:null;
+ let paceDrift=v1&&v2&&h1&&h2?(1-(v2/h2)/(v1/h1))*100:null;
+ let drift=Number.isFinite(powerDrift)?powerDrift:paceDrift;
+ return{drift,powerDrift,paceDrift,firstHr:h1,secondHr:h2,firstPower:p1,secondPower:p2,firstSpeed:v1,secondSpeed:v2,
+   recordCount:valid.length,analysisDuration:valid.at(-1).t-valid[0].t};
 }
-function readRunEditor(existing={}){
- let km=Number($('eKm').value),sec=parseTime($('eTime').value);
- if(!km||!sec)throw Error('Enter a valid distance and duration.');
- let date=$('eDate').value,type=$('eType').value;
- let result={...existing,date,type,distanceKm:km,durationSec:sec,
-   avgHr:Number($('eHr').value)||null,avgPower:Number($('ePower').value)||null,
-   cadence:Number($('eCadence').value)||null,rpe:Number($('eRpe').value)||null,
-   pain:$('ePain').value===''?null:Number($('ePain').value),
-   recovery:Number($('eRecovery').value)||null,
-   temperature:$('eTemp').value===''?null:Number($('eTemp').value),
-   notes:$('eNotes').value};
- let match=state.plan.find(p=>p.date===date&&p.type!=='Rest');
- if(match)result.planId=match.id;else delete result.planId;
- return result;
+function parseCSV(t){let rows=[],r=[],f='',q=false;for(let i=0;i<t.length;i++){let c=t[i],n=t[i+1];if(c=='"'&&q&&n=='"'){f+='"';i++}else if(c=='"')q=!q;else if(c==','&&!q){r.push(f);f=''}else if((c=='\n'||c=='\r')&&!q){if(c=='\r'&&n=='\n')i++;r.push(f);if(r.some(x=>x))rows.push(r);r=[];f=''}else f+=c}if(f||r.length){r.push(f);rows.push(r)}return rows}
+function summariseCSV(rows){
+ let h=rows[0].map(x=>x.trim()),idx=n=>h.indexOf(n),data=rows.slice(1).filter(r=>r.length>1);
+ const num=(r,n)=>idx(n)>=0?Number(r[idx(n)]):null;
+ let records=data.map(r=>({
+   t:num(r,'Timestamp'),
+   hr:num(r,'Heart Rate (bpm)'),
+   speed:num(r,'Watch Speed (m/s)')||num(r,'Stryd Speed (m/s)'),
+   power:(num(r,'Power (W)')||num(r,'Power (Watts)')||((num(r,'Power (w/kg)')||0)*state.setup.bodyWeight))
+ })).filter(r=>Number.isFinite(r.t));
+ let ts=records.map(r=>r.t),scale=ts.length&&Math.max(...ts)>1e12?1000:1;
+ records.forEach(r=>r.t/=scale);
+ let distVals=data.map(r=>num(r,'Watch Distance (meters)')||num(r,'Stryd Distance (meters)')).filter(Number.isFinite);
+ let dist=distVals.length?Math.max(...distVals)/1000:null,duration=ts.length?(Math.max(...ts)-Math.min(...ts))/scale:null;
+ if(!ts.length||!Number.isFinite(dist)||dist<=0||!Number.isFinite(duration)||duration<=0)throw Error('The CSV does not contain valid Stryd timestamp and distance data.');
+ let pos=n=>avg(data.map(r=>num(r,n)).filter(v=>Number.isFinite(v)&&v>0));
+ let analysis=streamAnalysis(records);
+ return{id:'stryd-'+Math.min(...ts)+'-'+Math.round(dist*1000),date:iso(new Date(Math.min(...ts)*(scale===1000?1:1000))),type:'Easy',
+   distanceKm:dist,durationSec:duration,avgHr:pos('Heart Rate (bpm)'),avgPower:pos('Power (W)')||pos('Power (Watts)')||(pos('Power (w/kg)')*state.setup.bodyWeight),
+   cadence:pos('Cadence (spm)'),gct:pos('Ground Time (ms)'),vo:pos('Vertical Oscillation (cm)'),rpe:null,pain:null,recovery:null,temperature:null,notes:'',
+   drift:analysis?.drift??null,powerDrift:analysis?.powerDrift??null,paceDrift:analysis?.paceDrift??null,streamEvidence:analysis};
 }
+async function summariseFIT(file){
+ let mod;
+ try{mod=await import('https://esm.sh/@garmin/fitsdk@21.208.0')}catch(e){throw Error('FIT decoder could not load. Check internet access and try again, or use the Stryd CSV export.')}
+ let bytes=new Uint8Array(await file.arrayBuffer()),stream=mod.Stream.fromByteArray(bytes),decoder=new mod.Decoder(stream);
+ if(!decoder.isFIT())throw Error('This is not a valid FIT file.');
+ let result=decoder.read(),messages=result.messages||{};
+ let recs=messages.recordMesgs||messages.records||[];
+ if(!recs.length)throw Error('No time-series activity records were found in the FIT file.');
+ const val=(r,...keys)=>{for(let k of keys)if(r[k]!=null)return r[k];return null};
+ let records=recs.map(r=>{
+   let ts=val(r,'timestamp','timeStamp'),t=ts instanceof Date?ts.getTime()/1000:(Number(ts)>1e12?Number(ts)/1000:Number(ts));
+   return{t,hr:Number(val(r,'heartRate','heart_rate')),power:Number(val(r,'power')),speed:Number(val(r,'enhancedSpeed','enhanced_speed','speed')),
+     distance:Number(val(r,'distance')),cadence:Number(val(r,'cadence')),temperature:Number(val(r,'temperature'))};
+ }).filter(r=>Number.isFinite(r.t));
+ let first=records[0],last=records.at(-1),duration=last.t-first.t;
+ let distances=records.map(r=>r.distance).filter(Number.isFinite),dist=Math.max(...distances)/1000;
+ if(!Number.isFinite(dist)||dist<=0){
+   let session=(messages.sessionMesgs||[])[0]||{};
+   dist=Number(session.totalDistance||session.total_distance)/1000;
+ }
+ let positive=(key)=>avg(records.map(r=>r[key]).filter(v=>Number.isFinite(v)&&v>0));
+ let analysis=streamAnalysis(records);
+ return{id:'fit-'+Math.round(first.t)+'-'+Math.round(dist*1000),date:iso(new Date(first.t*1000)),type:'Easy',distanceKm:dist,durationSec:duration,
+   avgHr:positive('hr'),avgPower:positive('power'),cadence:positive('cadence'),temperature:positive('temperature'),
+   gct:null,vo:null,rpe:null,pain:null,recovery:null,notes:'Imported from FIT',
+   drift:analysis?.drift??null,powerDrift:analysis?.powerDrift??null,paceDrift:analysis?.paceDrift??null,streamEvidence:analysis};
+}
+
 function renderRuns(){$('runList').innerHTML=state.runs.slice().sort((a,b)=>b.date.localeCompare(a.date)).map(r=>{let m=metrics(r);return`<div class="runCard" data-run="${r.id}"><div class="runSummary"><div><h3>${fmtDate(r.date)} · ${esc(r.type)}</h3><p>${r.distanceKm.toFixed(2)} km · ${fmtTime(r.durationSec)} · ${pace(m.pace)}</p><div class="runStats"><span>HR ${r.avgHr?Math.round(r.avgHr):'—'}</span><span>${r.avgPower?Math.round(r.avgPower):'—'} W</span><span>RE ${dec(m.effect,3)}</span><span>${dec(m.wkg,2)} W/kg</span></div></div><span>›</span></div></div>`}).join('')||'<div class="panel">No completed runs saved yet.</div>'}
 function renderMetrics(){
  let rs=state.runs.slice().sort((a,b)=>a.date.localeCompare(b.date)),last=rs.at(-1),m=last?metrics(last):null;
@@ -482,8 +515,16 @@ function renderMetrics(){
   {label:'Distance/heartbeat index',data:dphIndex,color:'#159487'}
  ],{min:Math.min(90,...dphIndex.filter(Number.isFinite))-3,max:Math.max(110,...dphIndex.filter(Number.isFinite))+3,zero:false,empty:'Log a ≥30 min aerobic run with HR',formatY:v=>Math.round(v),labels,area:true});
 
- $('driftStatus').innerHTML=`<b>Cardiac drift is not calculated from summary-only run data.</b><br>
- It requires first-half and second-half heart rate plus pace or power. A future split-data import can calculate pace–HR and power–HR decoupling without guessing from averages.`;
+ let driftRuns=rs.filter(r=>Number.isFinite(r.drift)).slice().sort((a,b)=>a.date.localeCompare(b.date));
+ if(driftRuns.length){
+   let d=driftRuns.at(-1),cls=d.drift<5?'driftGood':d.drift<8?'driftWarn':'driftHigh';
+   $('driftStatus').className='dataStatus '+cls;
+   $('driftStatus').innerHTML=`<b>Latest cardiac drift: ${d.drift.toFixed(1)}%</b><br>
+   ${Number.isFinite(d.powerDrift)?`Power–HR decoupling ${d.powerDrift.toFixed(1)}%. `:''}${Number.isFinite(d.paceDrift)?`Pace–HR decoupling ${d.paceDrift.toFixed(1)}%.`:''}
+   <br><span class="muted">${d.drift<5?'Good aerobic stability.':d.drift<8?'Noticeable drift; compare conditions and fuelling.':'High drift; review pacing, heat, hydration and fatigue.'}</span>`;
+ }else{
+   $('driftStatus').closest('.panel').style.display='none';
+ }
 }
 function assessmentRunId(a){return a.runId||`assessment-run-${a.id}`}
 function syncAssessmentRun(a){
@@ -569,45 +610,27 @@ function renderProgress(){
  $('progressNarrative').innerHTML=statements.map(x=>`<div class="coachSentence">${x}</div>`).join('');
 }
 function renderAll(){renderDashboard();renderToday();renderPlan();renderRuns();renderMetrics();renderProgress();renderAssessments();renderCoach();renderRace();renderSettings()}
-const pages=[['dashboard','Dashboard'],['today','Today'],['plan','Plan'],['runs','Runs'],['metrics','Metrics'],['progress','Progress'],['assessments','Assessments'],['race','Race day'],['settings','Settings']];
+const pages=[['dashboard','Dashboard'],['today','Today'],['plan','Plan'],['runs','Runs'],['metrics','Metrics'],['assessments','Assessments'],['race','Race day'],['settings','Settings']];
 $('nav').innerHTML=pages.map((p,i)=>`<button data-page="${p[0]}" class="${i?'':'active'}">${p[1]}</button>`).join('');$('nav').onclick=e=>{let p=e.target.dataset.page;if(!p)return;document.querySelectorAll('.page').forEach(x=>x.classList.toggle('active',x.id===p));document.querySelectorAll('#nav button').forEach(x=>x.classList.toggle('active',x.dataset.page===p));renderAll();scrollTo(0,0)};document.body.onclick=e=>{if(e.target.dataset.go){document.querySelector(`[data-page="${e.target.dataset.go}"]`).click()}let w=e.target.closest('.workout');if(w&&!e.target.closest('button'))w.classList.toggle('open')};
 $('prevWeek').onclick=()=>{state.weekView=clamp((state.weekView||currentWeek())-1,1,weeks());renderPlan()};$('nextWeek').onclick=()=>{state.weekView=clamp((state.weekView||currentWeek())+1,1,weeks());renderPlan()};$('thisWeek').onclick=()=>{state.weekView=currentWeek();renderPlan()};
-$('csvFile').onchange=e=>{let f=e.target.files[0];if(!f)return;f.text().then(t=>{preview=summariseCSV(parseCSV(t));let m=metrics(preview);$('importPreview').className='panel';$('importPreview').innerHTML=`<h3>Import preview</h3><div class="metricGrid">${kpi('Date',preview.date)}${kpi('Distance',preview.distanceKm.toFixed(2)+' km')}${kpi('Duration',fmtTime(preview.durationSec))}${kpi('Pace',pace(m.pace))}${kpi('HR',preview.avgHr?Math.round(preview.avgHr)+' bpm':'—')}${kpi('Power',preview.avgPower?Math.round(preview.avgPower)+' W':'—')}${kpi('Effectiveness',dec(m.effect,3))}${kpi('W / kg',dec(m.wkg,2))}</div><div class="formGrid"><div class="field"><label>Run type</label><select id="iType"><option>Easy</option><option>Recovery</option><option>Long run</option><option>Tempo</option><option>Intervals</option><option>Fitness assessment</option><option>Race</option></select></div><div class="field"><label>RPE</label><input id="iRpe" type="number"></div><div class="field"><label>Pain 0–10</label><input id="iPain" type="number"></div><div class="field"><label>Recovery 1–5</label><input id="iRecovery" type="number"></div><div class="field"><label>Temperature °C</label><input id="iTemp" type="number"></div><div class="field"><label>Notes</label><input id="iNotes"></div></div><button id="saveImport" class="primary full">Save imported run</button>`;$('saveImport').onclick=()=>{if(state.runs.some(r=>r.id===preview.id))return toast('This run was already imported.',true);Object.assign(preview,{type:$('iType').value,rpe:Number($('iRpe').value)||null,pain:$('iPain').value===''?null:Number($('iPain').value),recovery:Number($('iRecovery').value)||null,temperature:$('iTemp').value===''?null:Number($('iTemp').value),notes:$('iNotes').value});let match=state.plan.find(p=>p.date===preview.date&&p.type!=='Rest');if(match)preview.planId=match.id;state.runs.push(preview);save();$('importPreview').className='hidden';preview=null;renderAll();toast('Run saved and coach updated.')};}).catch(x=>toast(x.message,true))};
-$('runList').onclick=e=>{let c=e.target.closest('[data-run]');if(!c)return;let r=state.runs.find(x=>x.id===c.dataset.run);
- $('modalContent').innerHTML=runDetail(r)+`<div class="buttonRow"><button id="editRun" class="primary">Edit run</button><button id="deleteRun" class="danger buttonLike">Delete run</button></div>`;
- $('modal').className='modal';
- $('editRun').onclick=()=>{$('modalContent').innerHTML=runEditor(r);$('saveEditedRun').onclick=()=>{try{let updated=readRunEditor(r),i=state.runs.findIndex(x=>x.id===r.id);state.runs[i]=updated;save();$('modal').className='modal hidden';renderAll();toast('Run updated and coach recalculated.')}catch(err){toast(err.message,true)}}};
- $('deleteRun').onclick=()=>{if(r.source==='assessment'){toast('Delete assessment runs from the Assessments page so both records stay in sync.',true);return}if(!confirm('Delete this run?'))return;state.runs=state.runs.filter(x=>x.id!==r.id);save();$('modal').className='modal hidden';renderAll();toast('Run deleted.')}};
-$('closeModal').onclick=()=>$('modal').className='modal hidden';
-
-$('assessmentList').onclick=e=>{
- let card=e.target.closest('[data-assessment]');if(!card)return;
- let a=state.assessments.find(x=>x.id===card.dataset.assessment);if(!a)return;
- $('modalContent').innerHTML=`<h2>Edit fitness assessment</h2><div class="formGrid">
- <div class="field"><label>Date</label><input id="eaDate" type="date" value="${a.date}"></div>
- <div class="field"><label>Distance km</label><input id="eaDist" type="number" step="0.01" value="${a.distance}"></div>
- <div class="field"><label>Time</label><input id="eaTime" value="${fmtTime(a.time)}"></div>
- <div class="field"><label>Average / threshold HR</label><input id="eaHr" type="number" value="${a.thresholdHr||''}"></div>
- <div class="field"><label>Average / critical power W</label><input id="eaCp" type="number" value="${a.criticalPower||''}"></div>
- <div class="field"><label>Valid result</label><select id="eaValid"><option value="true" ${a.valid?'selected':''}>Yes</option><option value="false" ${!a.valid?'selected':''}>No</option></select></div>
- </div><div class="buttonRow"><button id="updateAssessment" class="primary">Save changes</button><button id="removeAssessment" class="danger buttonLike">Delete assessment and run</button></div>`;
- $('modal').className='modal';
- $('updateAssessment').onclick=()=>{
-   let distance=Number($('eaDist').value),time=parseTime($('eaTime').value);
-   if(!$('eaDate').value||!distance||!time)return toast('Complete date, distance and time.',true);
-   Object.assign(a,{date:$('eaDate').value,distance,time,thresholdHr:Number($('eaHr').value)||null,criticalPower:Number($('eaCp').value)||null,valid:$('eaValid').value==='true'});
-   syncAssessmentRun(a);buildPlan();syncAssessmentRun(a);save();$('modal').className='modal hidden';renderAll();toast('Assessment and linked run updated.');
- };
- $('removeAssessment').onclick=()=>{
-   if(!confirm('Delete this assessment and its linked run?'))return;
-   deleteAssessmentAndRun(a);buildPlan();save();$('modal').className='modal hidden';renderAll();toast('Assessment and linked run deleted.');
- };
-};
-
-$('manualRunBtn').onclick=()=>{
- $('modalContent').innerHTML=runEditor({id:'',date:iso(today()),type:'Easy'});
- $('modal').className='modal';
- $('saveEditedRun').onclick=()=>{try{let r=readRunEditor({id:'manual-'+Date.now()});state.runs.push(r);save();$('modal').className='modal hidden';renderAll();toast('Run saved.')}catch(err){toast(err.message,true)}};
+$('activityFile').onchange=async e=>{
+ let f=e.target.files[0];if(!f)return;
+ try{
+   preview=f.name.toLowerCase().endsWith('.fit')?await summariseFIT(f):summariseCSV(parseCSV(await f.text()));
+   let m=metrics(preview);
+   $('importPreview').className='panel';
+   $('importPreview').innerHTML=`<h3>Import preview</h3><div class="metricGrid">
+    ${kpi('Date',preview.date)}${kpi('Distance',preview.distanceKm.toFixed(2)+' km')}${kpi('Duration',fmtTime(preview.durationSec))}
+    ${kpi('Pace',pace(m.pace))}${kpi('HR',preview.avgHr?Math.round(preview.avgHr)+' bpm':'—')}${kpi('Power',preview.avgPower?Math.round(preview.avgPower)+' W':'—')}
+    ${kpi('Cardiac drift',Number.isFinite(preview.drift)?preview.drift.toFixed(1)+'%':'Not available')}${kpi('Running effectiveness',dec(m.effect,3))}
+   </div><div class="formGrid"><div class="field"><label>Run type</label><select id="iType"><option>Easy</option><option>Recovery</option><option>Long run</option><option>Tempo</option><option>Intervals</option><option>Fitness assessment</option><option>Race</option></select></div><div class="field"><label>RPE</label><input id="iRpe" type="number"></div><div class="field"><label>Pain 0–10</label><input id="iPain" type="number"></div><div class="field"><label>Recovery 1–5</label><input id="iRecovery" type="number"></div><div class="field"><label>Notes</label><input id="iNotes"></div></div><button id="saveImport" class="primary full">Save imported run</button>`;
+   $('saveImport').onclick=()=>{
+    if(state.runs.some(r=>r.id===preview.id))return toast('This run was already imported.',true);
+    Object.assign(preview,{type:$('iType').value,rpe:Number($('iRpe').value)||null,pain:$('iPain').value===''?null:Number($('iPain').value),recovery:Number($('iRecovery').value)||null,notes:$('iNotes').value});
+    let match=state.plan.find(p=>p.date===preview.date&&p.type!=='Rest');if(match)preview.planId=match.id;
+    state.runs.push(preview);save();$('importPreview').className='hidden';preview=null;renderAll();toast('Run saved with time-series analysis.');
+   };
+ }catch(err){toast(err.message,true)}
 };
 $('addAssessmentBtn').onclick=()=>{$('assessmentForm').className='panel';$('assessmentForm').innerHTML=`<h3>Fitness assessment result</h3><div class="formGrid"><div class="field"><label>Date</label><input id="aDate" type="date" value="${iso(today())}"></div><div class="field"><label>Distance km</label><input id="aDist" value="5"></div><div class="field"><label>Time</label><input id="aTime" placeholder="25:15"></div><div class="field"><label>Average / threshold HR</label><input id="aHr" value="${state.setup.thresholdHr}"></div><div class="field"><label>Average / critical power W</label><input id="aCp" value="${state.setup.criticalPower}"></div><div class="field"><label>Valid result</label><select id="aValid"><option value="true">Yes</option><option value="false">No</option></select></div></div><button id="saveAssessment" class="primary full">Save assessment and completed run</button>`;$('saveAssessment').onclick=()=>{let a={id:'a-'+Date.now(),date:$('aDate').value,distance:Number($('aDist').value),time:parseTime($('aTime').value),thresholdHr:Number($('aHr').value),criticalPower:Number($('aCp').value),valid:$('aValid').value==='true'};if(!a.date||!a.distance||!a.time)return toast('Complete date, distance and time.',true);state.assessments.push(a);syncAssessmentRun(a);buildPlan();syncAssessmentRun(a);save();renderAll();$('assessmentForm').className='hidden';toast(a.valid?'Assessment saved, added to run history and applied to future targets.':'Assessment saved and added to run history, but not applied to prediction.')}};
 $('saveSettings').onclick=()=>{document.querySelectorAll('[data-setting]').forEach(el=>{let k=el.dataset.setting,t=el.dataset.type,v=el.value;if(t==='number')v=Number(v);if(t==='time')v=parseTime(v);if(t==='percent')v=Number(v)/100;state.setup[k]=v});document.querySelectorAll('[data-day]').forEach(el=>state.days[Number(el.dataset.day)][1]=el.checked);document.querySelectorAll('[data-session]').forEach(el=>state.days[Number(el.dataset.session)][2]=el.value);buildPlan();state.weekView=currentWeek();renderAll();toast('Settings saved. Past workouts were retained; future workouts rebuilt.')};
@@ -616,5 +639,5 @@ $('backupBtn').onclick=()=>download('ai-running-coach-backup.json',JSON.stringif
 let deferred;window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferred=e;$('installBtn').className='install'});$('installBtn').onclick=()=>deferred?.prompt();if('serviceWorker'in navigator&&location.protocol==='https:')navigator.serviceWorker.register('service-worker.js');
 migrateAssessmentRuns();
 renderAll();
-console.info('AI Running Coach v6.2 web build 6211');
+console.info('AI Running Coach v6.3 web build 6300');
 })();
