@@ -3,11 +3,11 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#0b3157"><title>AI Running Coach</title>
-<link rel="manifest" href="manifest.webmanifest?v=6208"><link rel="icon" href="icon-192.png?v=6208"><link rel="stylesheet" href="styles.css?v=6208">
+<link rel="manifest" href="manifest.webmanifest?v=6209"><link rel="icon" href="icon-192.png?v=6209"><link rel="stylesheet" href="styles.css?v=6209">
 </head>
 <body>
 <header class="topbar">
-  <div class="brand"><div class="logo">AR</div><div><h1>AI Running Coach</h1><p>Adaptive marathon planning • v6.2 web · build 6208</p></div></div>
+  <div class="brand"><div class="logo">AR</div><div><h1>AI Running Coach</h1><p>Adaptive marathon planning • v6.2 web · build 6209</p></div></div>
   <button id="installBtn" class="install hidden">Install</button>
 </header>
 <nav id="nav"></nav>
@@ -17,15 +17,15 @@
 <section id="dashboard" class="page active">
   <div class="hero">
     <div><span id="phaseBadge" class="badge"></span><h2 id="raceTitle"></h2><p id="raceSubtitle"></p></div>
-    <div class="confidenceRing"><div><strong id="confidenceValue"></strong><span>confidence</span></div></div>
+    <div class="confidenceRing"><div><strong id="confidenceValue"></strong><span>readiness</span></div></div>
   </div>
   <div id="kpis" class="kpis"></div>
   <article class="panel"><h3>Coach assessment</h3><div id="assessmentText" class="coachText"></div></article>
 
-  <article class="panel">
-    <div class="panelHead"><h3>Confidence components</h3><span class="muted">What supports race readiness</span></div>
-    <div id="confidenceBars"></div>
-    <div id="componentGuide" class="guideGrid componentGuide"></div>
+  <article class="panel readinessPanel">
+    <div class="panelHead"><div><h3>Race readiness model</h3><p class="muted compact">Evidence-informed coaching score — not a probability of success</p></div><div id="evidenceBadge" class="evidenceBadge"></div></div>
+    <div id="pillarCards" class="pillarGrid"></div>
+    <details class="modelDetails"><summary>How the score is built</summary><div id="componentGuide" class="guideGrid componentGuide"></div></details>
   </article>
 
   <div class="grid2">
@@ -36,6 +36,10 @@
   <div class="grid2">
     <article class="panel"><div class="panelHead"><h3>Long-run progression</h3><span class="muted">Planned vs completed long runs</span></div><canvas id="longRunChart" width="1000" height="340"></canvas></article>
     <article class="panel"><div class="panelHead"><h3>Race prediction trend</h3><span class="muted">Current prediction vs target</span></div><canvas id="predictionChart" width="1000" height="340"></canvas></article>
+  </div>
+  <div class="grid2">
+    <article class="panel"><div class="panelHead"><h3>Training intensity mix</h3><span class="muted">Planned distance by session type</span></div><canvas id="mixChart" width="1000" height="340"></canvas></article>
+    <article class="panel"><div class="panelHead"><h3>Readiness profile</h3><span class="muted">Four coaching pillars</span></div><canvas id="readinessChart" width="1000" height="340"></canvas></article>
   </div>
 
   <div class="grid2">
@@ -115,5 +119,5 @@
 </main>
 
 <div id="modal" class="modal hidden"><div class="modalCard"><button id="closeModal" class="close">×</button><div id="modalContent"></div></div></div>
-<script src="app.js?v=6208"></script>
+<script src="app.js?v=6209"></script>
 </body></html>

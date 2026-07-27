@@ -24,3 +24,35 @@ canvas{width:100%;height:235px;border-radius:10px}.sessionGrid{display:grid;gap:
 .chartLabel{font-size:24px;fill:#687586}
 .chartLegend{display:flex;gap:18px;flex-wrap:wrap;margin-top:10px;font-size:.9rem;color:var(--muted)}
 .chartLegend span::before{content:'';display:inline-block;width:12px;height:4px;border-radius:4px;margin-right:7px;vertical-align:middle;background:var(--legend)}
+
+:root{
+ --navy:#0b3157;--blue:#2d82c7;--teal:#159487;--purple:#7457c8;
+ --amber:#e49b35;--red:#d75b67;--ink:#172536;--soft:#f5f8fb;
+}
+.compact{margin:.25rem 0 0}
+.readinessPanel{overflow:hidden;position:relative}
+.readinessPanel:before{content:"";position:absolute;inset:0 0 auto 0;height:5px;background:linear-gradient(90deg,var(--blue),var(--teal),var(--purple))}
+.evidenceBadge{font-weight:800;background:#eef5fb;color:#235b87;border:1px solid #d6e6f2;border-radius:999px;padding:9px 14px;white-space:nowrap}
+.pillarGrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px;margin-top:18px}
+.pillarCard{border:1px solid #e2e8ef;border-radius:22px;padding:18px;background:linear-gradient(145deg,#fff,#f7fafc);box-shadow:0 10px 25px rgba(17,49,78,.06);position:relative;overflow:hidden}
+.pillarCard:before{content:"";position:absolute;left:0;top:0;bottom:0;width:5px;background:var(--pillar)}
+.pillarTop{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.pillarTop b{font-size:1.02rem}
+.pillarScore{font-size:1.65rem;font-weight:900;color:var(--ink)}
+.pillarBar{height:9px;background:#e8eef4;border-radius:999px;overflow:hidden;margin:14px 0 12px}
+.pillarBar i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,var(--pillar),color-mix(in srgb,var(--pillar),#fff 22%))}
+.pillarCard p{font-size:.9rem;line-height:1.4;margin:0;color:var(--muted)}
+.pillarMeta{display:flex;justify-content:space-between;margin-top:12px;font-size:.78rem;color:var(--muted)}
+.modelDetails{margin-top:20px;border-top:1px solid #e6ebf0;padding-top:14px}
+.modelDetails summary{cursor:pointer;font-weight:800;color:#315a7c}
+.componentGuide>div{position:relative;padding-left:18px}
+.componentGuide>div:before{content:"";position:absolute;left:0;top:19px;width:6px;height:6px;border-radius:50%;background:var(--blue)}
+.metricMissing{color:#8a96a3;font-style:italic}
+canvas{width:100%;height:auto;display:block}
+.panel canvas{border-radius:18px;background:linear-gradient(180deg,rgba(247,250,253,.8),rgba(255,255,255,.2))}
+.hero{box-shadow:0 18px 45px rgba(9,50,86,.18)}
+.confidenceRing{filter:drop-shadow(0 10px 18px rgba(7,45,76,.18))}
+.kpi{transition:transform .18s ease,box-shadow .18s ease}
+.kpi:hover{transform:translateY(-2px);box-shadow:0 15px 30px rgba(15,55,87,.09)}
+@media(max-width:900px){.pillarGrid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:520px){.pillarGrid{grid-template-columns:1fr}.evidenceBadge{font-size:.78rem}.pillarCard{padding:16px}}
