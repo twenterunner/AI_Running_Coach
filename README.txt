@@ -1,4 +1,4 @@
-AI Running Coach v8.1 — build 8100
+AI Running Coach v8.0 — build 8000
 
 Major coach-led dashboard redesign:
 - Central Coach Engine provides one consistent training state for Dashboard, forecast and coaching insights.
