@@ -10,7 +10,7 @@ const dec=(v,n=2)=>Number.isFinite(v)?v.toFixed(n):'—';
 function fmtTime(s){if(!Number.isFinite(s))return'—';let h=Math.floor(s/3600),m=Math.floor(s%3600/60),q=Math.round(s%60);if(q===60){q=0;m++}if(m===60){m=0;h++}return h?`${h}:${String(m).padStart(2,'0')}:${String(q).padStart(2,'0')}`:`${m}:${String(q).padStart(2,'0')}`}
 function parseTime(v){let p=String(v||'').split(':').map(Number);if(p.some(x=>!Number.isFinite(x)))return null;return p.length===3?p[0]*3600+p[1]*60+p[2]:p[0]*60+p[1]}
 function pace(s){return Number.isFinite(s)?fmtTime(s)+'/km':'—'} function toast(t,bad=false){$('toast').textContent=t;$('toast').className='toast'+(bad?' bad':'');setTimeout(()=>$('toast').className='toast hidden',3500)}
-const defaults=()=>({schemaVersion:6312,setup:{planStart:'2026-07-26',raceDate:'2026-12-13',raceName:'Goal Race',raceDistance:42.195,targetTime:15300,currentWeekly:35,currentLongest:18,testDistance:5,testTime:1515,thresholdHr:168,criticalPower:300,bodyWeight:93,maxWeekly:70,growth:.08,peakLong:35,taperDays:21,minFactor:.85,maxFactor:1.05,adaptive:true},days:[['Monday',false,'Easy'],['Tuesday',true,'Intervals'],['Wednesday',true,'Easy'],['Thursday',false,'Easy'],['Friday',true,'Tempo'],['Saturday',true,'Easy'],['Sunday',true,'Long run']],runs:[],assessments:[],plan:[],weekView:null});
+const defaults=()=>({schemaVersion:6314,setup:{planStart:'2026-07-26',raceDate:'2026-12-13',raceName:'Goal Race',raceDistance:42.195,targetTime:15300,currentWeekly:35,currentLongest:18,testDistance:5,testTime:1515,thresholdHr:168,criticalPower:300,bodyWeight:93,maxWeekly:70,growth:.08,peakLong:35,taperDays:21,minFactor:.85,maxFactor:1.05,adaptive:true},days:[['Monday',false,'Easy'],['Tuesday',true,'Intervals'],['Wednesday',true,'Easy'],['Thursday',false,'Easy'],['Friday',true,'Tempo'],['Saturday',true,'Easy'],['Sunday',true,'Long run']],runs:[],assessments:[],plan:[],weekView:null});
 let state;try{state=JSON.parse(localStorage.getItem('arc_v62_web'))}catch{}if(!state)state=defaults();
 const save=()=>localStorage.setItem('arc_v62_web',JSON.stringify(state)), today=()=>dte(iso(new Date()));
 function baselineOn(date){let valid=state.assessments.filter(a=>a.valid&&a.date<=date).sort((a,b)=>a.date.localeCompare(b.date));let a=valid.at(-1);return a?{pace:a.time/a.distance,hr:a.thresholdHr||state.setup.thresholdHr,cp:a.criticalPower||state.setup.criticalPower}:{pace:state.setup.testTime/state.setup.testDistance,hr:state.setup.thresholdHr,cp:state.setup.criticalPower}}
@@ -34,7 +34,44 @@ function typeMetricSummary(runs){return metricRunTypes.map(type=>{
  return{type,count:group.length,effAvg:avg(eff),effBest:eff.length?Math.max(...eff):null,driftAvg:avg(drift),driftBest:drift.length?Math.min(...drift):null};
 }).filter(x=>x.effAvg!==null||x.driftAvg!==null)}
 function weekData(w){let st=weekStart(w),en=new Date(st.getTime()+7*DAY),p=state.plan.filter(x=>x.week===w&&x.type!=='Rest'),r=state.runs.filter(x=>dte(x.date)>=st&&dte(x.date)<en);return{planned:sum(p.map(x=>x.distance)),actual:sum(r.map(x=>x.distanceKm)),runs:r,plan:p}}
-function adaptiveFactor(w){if(!state.setup.adaptive||w<=1)return 1;let prev=weekData(w-1),ad=prev.planned?prev.actual/prev.planned:1,recovery=avg(prev.runs.map(x=>x.recovery)),pain=avg(prev.runs.map(x=>x.pain));let f=1;if(ad<.7)f-=.08;else if(ad<.85)f-=.04;else if(ad>1.05)f+=.02;if(Number.isFinite(recovery)&&recovery<3)f-=.05;if(Number.isFinite(pain)&&pain>=4)f-=.07;return clamp(f,state.setup.minFactor,state.setup.maxFactor)}
+function adaptiveFactorDetails(w){
+ if(!state.setup.adaptive||w<=1)return{factor:1,items:[{name:'Baseline',adjustment:0,detail:w<=1?'No previous training week is available.':'Adaptive planning is disabled.'}]};
+ let prev=weekData(w-1),ad=prev.planned?prev.actual/prev.planned:null;
+ let recovery=avg(prev.runs.map(x=>Number(x.recovery)).filter(v=>Number.isFinite(v)&&v>0));
+ let pain=avg(prev.runs.map(x=>Number(x.pain)).filter(Number.isFinite));
+ let items=[],f=1;
+ const add=(name,adjustment,detail)=>{f+=adjustment;items.push({name,adjustment,detail})};
+ if(!Number.isFinite(ad))add('Completed load',-.04,'No completed-versus-planned load evidence was available.');
+ else if(ad<.70)add('Completed load',-.08,`${Math.round(ad*100)}% of planned distance completed (<70%).`);
+ else if(ad<.85)add('Completed load',-.04,`${Math.round(ad*100)}% of planned distance completed (70–84%).`);
+ else if(ad<=1.05)add('Completed load',0,`${Math.round(ad*100)}% of planned distance completed (85–105%).`);
+ else add('Completed load',-.02,`${Math.round(ad*100)}% completed; excess load is not rewarded.`);
+ if(!Number.isFinite(recovery))add('Recovery',-.03,'No recovery ratings were logged.');
+ else if(recovery<2.5)add('Recovery',-.05,`Average recovery ${recovery.toFixed(1)}/5.`);
+ else if(recovery<3)add('Recovery',-.03,`Average recovery ${recovery.toFixed(1)}/5.`);
+ else add('Recovery',0,`Average recovery ${recovery.toFixed(1)}/5.`);
+ if(!Number.isFinite(pain))add('Pain',-.02,'No pain ratings were logged.');
+ else if(pain>=5)add('Pain',-.08,`Average pain ${pain.toFixed(1)}/10.`);
+ else if(pain>=3)add('Pain',-.04,`Average pain ${pain.toFixed(1)}/10.`);
+ else add('Pain',0,`Average pain ${pain.toFixed(1)}/10.`);
+ let aerobic=state.runs.filter(r=>['Easy','Recovery','Long run'].includes(r.type)&&dte(r.date)>=new Date(weekStart(w).getTime()-35*DAY)&&dte(r.date)<weekStart(w));
+ let byType={};aerobic.forEach(r=>(byType[r.type]??=[]).push(r));
+ let effChanges=[];
+ Object.values(byType).forEach(group=>{group.sort((a,b)=>a.date.localeCompare(b.date));let vals=group.map(r=>metrics(r).efficiencyJ).filter(Number.isFinite);if(vals.length>=4){let cut=Math.floor(vals.length/2),a=avg(vals.slice(0,cut)),b=avg(vals.slice(cut));if(a>0)effChanges.push((b/a-1)*100)}});
+ let effChange=avg(effChanges);
+ if(!Number.isFinite(effChange))add('Efficiency trend',-.01,'Fewer than four comparable runs of the same type.');
+ else if(effChange<=-3)add('Efficiency trend',-.02,`Same-type efficiency changed ${effChange.toFixed(1)}%.`);
+ else if(effChange>=2)add('Efficiency trend',.01,`Same-type efficiency improved ${effChange.toFixed(1)}%.`);
+ else add('Efficiency trend',0,`Same-type efficiency changed ${effChange.toFixed(1)}%.`);
+ let driftVals=aerobic.map(r=>Number(r.powerDrift)).filter(Number.isFinite),drift=driftVals.length?avg(driftVals):null;
+ if(!Number.isFinite(drift))add('Cardiac drift',-.01,'No valid power-based drift data.');
+ else if(drift>7)add('Cardiac drift',-.04,`Average power-based drift ${drift.toFixed(1)}%.`);
+ else if(drift>5)add('Cardiac drift',-.02,`Average power-based drift ${drift.toFixed(1)}%.`);
+ else if(drift<=3)add('Cardiac drift',.01,`Average power-based drift ${drift.toFixed(1)}%.`);
+ else add('Cardiac drift',0,`Average power-based drift ${drift.toFixed(1)}%.`);
+ return{factor:clamp(f,state.setup.minFactor,state.setup.maxFactor),items};
+}
+function adaptiveFactor(w){return adaptiveFactorDetails(w).factor}
 function buildPlan(){
  let old=new Map((state.plan||[]).filter(p=>dte(p.date)<today()).map(p=>[p.id,p])),out=[],total=weeks(),taper=Math.ceil(state.setup.taperDays/7);
  for(let w=1;w<=total;w++){
@@ -90,7 +127,7 @@ function buildPlan(){
      out.push(old.get(id)||item);
    });
  }
- state.plan=out;state.schemaVersion=6310;save()
+ state.plan=out;state.schemaVersion=6314;save()
 }
 function prescription(type,km,w,ph,z){
  if(type==='Rest')return{warmup:'—',main:'Rest day',cooldown:'—',purpose:'Absorb training and restore freshness.',coach:'Walking and light mobility are fine. Avoid turning recovery into another workout.',fuel:'Normal daily hydration.'};
@@ -101,102 +138,68 @@ function prescription(type,km,w,ph,z){
  if(type==='Fitness assessment')return{warmup:'15–20 min easy + drills + 4 strides',main:'5 km even maximal assessment',cooldown:'10–15 min very easy',purpose:'Create a repeatable benchmark that can update future targets.',coach:'Use even pacing and mark the result valid only when course, weather, health and execution make the result representative.',fuel:'Normal pre-run meal; avoid starting depleted.'};
  return{warmup:'10–15 min easy',main:`${km.toFixed(1)} km race execution`,cooldown:'Walk and begin recovery nutrition',purpose:'Execute the race plan.',coach:'Start controlled, protect the first 10 km and only progress after halfway if effort remains stable.',fuel:'60–90 g carbohydrate/hour and 400–800 ml fluid/hour.'}
 }
-if(state.schemaVersion!==6310){state.plan=[];buildPlan()}else if(!state.plan?.length)buildPlan();
+if(state.schemaVersion!==6314){state.plan=[];buildPlan()}else if(!state.plan?.length)buildPlan();
 function status(p){let done=state.runs.some(r=>r.planId===p.id||r.date===p.date);if(done)return'completed';if(p.type==='Rest')return'rest';let d=dte(p.date);if(d<today())return'missed';if(d.getTime()===today().getTime())return'today';return'upcoming'}
 function confidence(){
  let raceDate=dte(state.setup.raceDate);
- let daysRemaining=Math.max(0,(raceDate-today())/DAY);
- let weeksRemaining=daysRemaining/7;
- let taperWeeks=Math.max(1,state.setup.taperDays/7);
- let usableBuildWeeks=Math.max(0,weeksRemaining-taperWeeks);
-
+ let daysRemaining=Math.max(0,(raceDate-today())/DAY),weeksRemaining=daysRemaining/7;
+ let taperWeeks=Math.max(1,state.setup.taperDays/7),usableBuildWeeks=Math.max(0,weeksRemaining-taperWeeks);
  let due=state.plan.filter(p=>p.type!=='Rest'&&p.type!=='Race Day'&&dte(p.date)<=today()&&today()-dte(p.date)<=28*DAY);
  let windowStart=due.length?dte(due[0].date):new Date(today().getTime()-28*DAY);
  let recent=state.runs.filter(r=>dte(r.date)>=windowStart&&dte(r.date)<=today());
  let plannedKm=sum(due.map(p=>p.distance)),actual=sum(recent.map(r=>r.distanceKm));
-
  let latest=state.assessments.filter(a=>a.valid).sort((a,b)=>b.date.localeCompare(a.date))[0];
  let testTime=latest?latest.time:state.setup.testTime,testDist=latest?latest.distance:state.setup.testDistance;
  let riegel=testTime*Math.pow(state.setup.raceDistance/testDist,1.06);
  let fitness=clamp(100-(riegel/state.setup.targetTime-1)*300,0,100);
-
  let completedLongest=state.runs.length?Math.max(...state.runs.map(r=>Number(r.distanceKm)||0)):0;
  let longest=Math.max(Number(state.setup.currentLongest)||0,completedLongest);
  let endurance=clamp(longest/state.setup.peakLong*100,0,100);
-
- let completedDates=new Set(recent.map(r=>r.date));
- let matched=due.filter(p=>completedDates.has(p.date)).length;
- let opportunities=due.length;
+ let completedDates=new Set(recent.map(r=>r.date)),matched=due.filter(p=>completedDates.has(p.date)).length,opportunities=due.length;
  let consistency=opportunities?clamp(matched/opportunities*100,0,100):null;
  let adherence=plannedKm?clamp(actual/plannedKm*100,0,100):null;
-
- let recoveryValues=recent.map(r=>Number(r.recovery)).filter(v=>Number.isFinite(v)&&v>0);
- let painValues=recent.map(r=>Number(r.pain)).filter(Number.isFinite);
+ let recoveryValues=recent.map(r=>Number(r.recovery)).filter(v=>Number.isFinite(v)&&v>0),painValues=recent.map(r=>Number(r.pain)).filter(Number.isFinite);
  let recoveryScore=recoveryValues.length?clamp(avg(recoveryValues)/5*100,0,100):null;
  let painScore=painValues.length?clamp((10-avg(painValues))/10*100,0,100):null;
 
- let comparable=recent.filter(r=>['Easy','Recovery','Long run'].includes(r.type)&&r.avgHr&&r.avgPower&&r.durationSec>=1800)
-   .sort((a,b)=>a.date.localeCompare(b.date))
-   .map(r=>metrics(r).effect).filter(Number.isFinite);
- let economy=null;
- if(comparable.length>=4){
-   let cut=Math.floor(comparable.length/2),early=avg(comparable.slice(0,cut)),late=avg(comparable.slice(cut));
-   economy=clamp(70+(late/early-1)*400,0,100);
- }
+ // Field efficiency proxy: compare J/heartbeat only within the same run type, then combine
+ // its trend with recent power-based cardiac drift. This is not laboratory running economy.
+ let typeTrends=[];
+ ['Easy','Recovery','Long run'].forEach(type=>{
+   let vals=recent.filter(r=>r.type===type&&r.durationSec>=1800).sort((a,b)=>a.date.localeCompare(b.date)).map(r=>metrics(r).efficiencyJ).filter(Number.isFinite);
+   if(vals.length>=4){let cut=Math.floor(vals.length/2),early=avg(vals.slice(0,cut)),late=avg(vals.slice(cut));if(early>0)typeTrends.push((late/early-1)*100)}
+ });
+ let effTrend=avg(typeTrends),effTrendScore=Number.isFinite(effTrend)?clamp(70+effTrend*5,0,100):null;
+ let driftRecent=recent.filter(r=>['Easy','Recovery','Long run'].includes(r.type)).map(r=>Number(r.powerDrift)).filter(Number.isFinite);
+ let driftAvg=driftRecent.length?avg(driftRecent):null;
+ let driftScore=Number.isFinite(driftAvg)?clamp(100-(Math.max(0,driftAvg-2)/8)*100,0,100):null;
+ let efficiency=(Number.isFinite(effTrendScore)||Number.isFinite(driftScore))?
+   ((Number.isFinite(effTrendScore)?effTrendScore:0)*.60+(Number.isFinite(driftScore)?driftScore:0)*.40):null;
 
- let longGap=Math.max(0,state.setup.peakLong-longest);
- let safeLongStep=Math.max(1.5,longest*.10);
- let longWeeksNeeded=longGap/safeLongStep;
- let currentWeekly=Math.max(1,Number(state.setup.currentWeekly)||1);
- let targetWeekly=Math.max(currentWeekly,Number(state.setup.maxWeekly)||currentWeekly);
- let growth=Math.max(.01,Number(state.setup.growth)||.05);
+ let longGap=Math.max(0,state.setup.peakLong-longest),safeLongStep=Math.max(1.5,longest*.10),longWeeksNeeded=longGap/safeLongStep;
+ let currentWeekly=Math.max(1,Number(state.setup.currentWeekly)||1),targetWeekly=Math.max(currentWeekly,Number(state.setup.maxWeekly)||currentWeekly),growth=Math.max(.01,Number(state.setup.growth)||.05);
  let volumeWeeksNeeded=targetWeekly<=currentWeekly?0:Math.log(targetWeekly/currentWeekly)/Math.log(1+growth);
  let requiredBuildWeeks=Math.max(longWeeksNeeded,volumeWeeksNeeded)+1.5;
  let preparationTime=daysRemaining<=0?0:clamp((usableBuildWeeks/Math.max(1,requiredBuildWeeks))*100,0,100);
-
  let completedLongs=state.runs.filter(r=>r.type==='Long run'&&dte(r.date)>=new Date(today().getTime()-84*DAY));
  let dueLongs=state.plan.filter(p=>p.type==='Long run'&&dte(p.date)<=today()&&today()-dte(p.date)<=84*DAY);
  let longRunExecution=dueLongs.length?clamp(completedLongs.length/dueLongs.length*100,0,100):null;
-
  let specificDue=state.plan.filter(p=>['Tempo','Intervals','Fitness assessment'].includes(p.type)&&dte(p.date)<=today()&&today()-dte(p.date)<=56*DAY);
  let specificDone=specificDue.filter(p=>completedDates.has(p.date)).length;
  let specificity=specificDue.length?clamp(specificDone/specificDue.length*100,0,100):null;
-
- const weighted=(items)=>{
-   let totalWeight=sum(items.map(x=>x.weight));
-   let availableWeight=sum(items.filter(x=>Number.isFinite(x.score)).map(x=>x.weight));
-   return{
-     score:totalWeight?sum(items.map(x=>(Number.isFinite(x.score)?x.score:50)*x.weight))/totalWeight:null,
-     coverage:totalWeight?availableWeight/totalWeight:0,
-     items
-   }
- };
-
+ const weighted=(items)=>{let totalWeight=sum(items.map(x=>x.weight)),availableWeight=sum(items.filter(x=>Number.isFinite(x.score)).map(x=>x.weight));return{score:totalWeight?sum(items.map(x=>(Number.isFinite(x.score)?x.score:0)*x.weight))/totalWeight:0,coverage:totalWeight?availableWeight/totalWeight:0,items}};
+ // Each component belongs to exactly one pillar.
  let pillars=[
-   {name:'Physiological readiness',weight:.35,color:'#2d82c7',description:'Current performance, endurance capacity and running economy.',
-    ...weighted([{name:'Fitness',score:fitness,weight:.45},{name:'Endurance',score:endurance,weight:.40},{name:'Economy',score:economy,weight:.15}])},
-   {name:'Training execution',weight:.25,color:'#159487',description:'How reliably the planned work and key long runs are being completed.',
-    ...weighted([{name:'Adherence',score:adherence,weight:.45},{name:'Consistency',score:consistency,weight:.30},{name:'Long-run execution',score:longRunExecution,weight:.25}])},
-   {name:'Recovery & health',weight:.20,color:'#7457c8',description:'Whether recovery and pain evidence support absorbing the programme.',
-    ...weighted([{name:'Recovery',score:recoveryScore,weight:.60},{name:'Pain status',score:painScore,weight:.40}])},
-   {name:'Race readiness',weight:.20,color:'#e49b35',description:'Whether enough time remains and marathon-specific work is being completed.',
-    ...weighted([{name:'Preparation time',score:preparationTime,weight:.25},{name:'Endurance',score:endurance,weight:.30},{name:'Long-run execution',score:longRunExecution,weight:.25},{name:'Specificity',score:specificity,weight:.20}])}
+  {name:'Physiological readiness',weight:.35,color:'#2d82c7',description:'Current performance capacity, long-run endurance and field efficiency.',...weighted([{name:'Fitness',score:fitness,weight:.50},{name:'Endurance',score:endurance,weight:.30},{name:'Efficiency',score:efficiency,weight:.20}])},
+  {name:'Training execution',weight:.25,color:'#159487',description:'How closely completed weekly volume and session frequency match the plan.',...weighted([{name:'Adherence',score:adherence,weight:.55},{name:'Consistency',score:consistency,weight:.45}])},
+  {name:'Recovery & health',weight:.20,color:'#7457c8',description:'Whether recovery and pain evidence support absorbing the programme.',...weighted([{name:'Recovery',score:recoveryScore,weight:.60},{name:'Pain status',score:painScore,weight:.40}])},
+  {name:'Race readiness',weight:.20,color:'#e49b35',description:'Whether time, key long runs and race-specific sessions support the goal.',...weighted([{name:'Preparation time',score:preparationTime,weight:.45},{name:'Long-run execution',score:longRunExecution,weight:.35},{name:'Specificity',score:specificity,weight:.20}])}
  ];
-
- let availablePillars=pillars.filter(p=>Number.isFinite(p.score));
- let availableWeight=sum(availablePillars.map(p=>p.weight));
- let rawOverall=availableWeight?sum(availablePillars.map(p=>p.score*p.weight))/availableWeight:0;
+ let rawOverall=sum(pillars.map(p=>p.score*p.weight))/sum(pillars.map(p=>p.weight));
  let evidenceCoverage=sum(pillars.map(p=>p.weight*p.coverage));
- // Missing evidence pulls the displayed readiness modestly toward neutral without
- // pretending that unavailable data proves poor readiness.
- let overall=rawOverall*evidenceCoverage+50*(1-evidenceCoverage);
-
+ let overall=rawOverall; // Missing component evidence contributes zero by user choice.
  let components=pillars.flatMap(p=>p.items.map(i=>({...i,pillar:p.name,pillarColor:p.color})));
- return{
-   pillars,components,overall,rawOverall,evidenceCoverage,riegel,plannedKm,actual,longest,
-   completedLongest,matched,opportunities,weeksRemaining,usableBuildWeeks,requiredBuildWeeks,
-   preparationTime,longWeeksNeeded,volumeWeeksNeeded
- }
+ return{pillars,components,overall,rawOverall,evidenceCoverage,riegel,plannedKm,actual,longest,completedLongest,matched,opportunities,weeksRemaining,usableBuildWeeks,requiredBuildWeeks,preparationTime,longWeeksNeeded,volumeWeeksNeeded,effTrend,driftAvg}
 }
 function prediction(){
  let c=confidence();
@@ -206,7 +209,7 @@ function prediction(){
 const interpretations={
  'Fitness':s=>s>=85?'Recent assessment performance strongly supports the target.':s>=65?'Performance is credible but not yet comfortably above the target requirement.':'Current assessment evidence does not support the target.',
  'Endurance':s=>s>=85?'Longest-run evidence is close to the planned peak.':s>=65?'Endurance is progressing but key long runs remain.':'Long-run preparation is still limited.',
- 'Economy':s=>s==null?'At least four comparable aerobic runs with HR and power are required.':s>=75?'Aerobic efficiency is stable or improving.':'Aerobic efficiency has weakened in recent comparable runs.',
+ 'Efficiency':s=>s==null?'Comparable same-type runs with power and heart rate are required.':s>=75?'Efficiency and durability evidence is stable or improving.':'Efficiency or durability evidence needs improvement.',
  'Adherence':s=>s==null?'No planned distance is due yet.':s>=85?'Completed distance closely matches due distance.':'There is a meaningful completed-volume gap.',
  'Consistency':s=>s==null?'No scheduled sessions are due yet.':s>=80?'Scheduled training frequency is reliable.':'Recent session completion is inconsistent.',
  'Long-run execution':s=>s==null?'No long runs are due yet.':s>=80?'Key long runs are being completed reliably.':'Several due long runs remain incomplete.',
@@ -218,7 +221,7 @@ const interpretations={
 const actions={
  'Fitness':'Complete a valid evenly paced assessment before making the race goal more aggressive.',
  'Endurance':'Prioritise controlled long runs and practise race fuelling.',
- 'Economy':'Collect comparable aerobic runs; interpret efficiency only with similar terrain and conditions.',
+ 'Efficiency':'Collect comparable same-type aerobic runs and review both J/heartbeat and power-based drift.',
  'Adherence':'Close the volume gap gradually and never recover missed kilometres in one week.',
  'Consistency':'Protect the core weekly sessions before adding optional work.',
  'Long-run execution':'Complete the next suitable long run rather than adding intensity.',
@@ -228,16 +231,16 @@ const actions={
  'Specificity':'Complete the next marathon-specific session at controlled, repeatable effort.'
 };
 const componentDefinitions={
- 'Fitness':'Projection from the latest valid performance assessment relative to the target race time.',
- 'Endurance':'Longest credible completed run relative to the planned peak long run.',
- 'Economy':'Change in running effectiveness across comparable aerobic runs with HR and power.',
- 'Adherence':'Completed distance compared with planned distance that was actually due.',
- 'Consistency':'Percentage of due planned sessions with a completed run on the same date.',
- 'Long-run execution':'Percentage of due long runs completed during the recent preparation block.',
- 'Recovery':'Average self-reported post-run recovery score.',
- 'Pain status':'Average pain score transformed so lower pain produces a higher readiness value.',
- 'Preparation time':'Usable build weeks before taper compared with the weeks needed for safe progression.',
- 'Specificity':'Completion of due tempo, interval and assessment sessions.'
+ 'Fitness':'Score = 100 − 300 × (Riegel-predicted race time ÷ target time − 1), limited to 0–100. The latest valid assessment is used.',
+ 'Endurance':'Score = longest credible completed run ÷ planned peak long run × 100, limited to 0–100.',
+ 'Efficiency':'60% same-run-type J/heartbeat trend and 40% recent power-based cardiac-drift score. Missing sub-evidence contributes zero; comparisons require similar run types.',
+ 'Adherence':'Score = completed distance ÷ due planned distance over the recent 28-day window × 100, limited to 0–100.',
+ 'Consistency':'Score = due sessions completed on the scheduled date ÷ all due sessions over the recent window × 100.',
+ 'Long-run execution':'Score = completed due long runs ÷ due long runs during the last 84 days × 100.',
+ 'Recovery':'Score = average logged recovery rating ÷ 5 × 100.',
+ 'Pain status':'Score = (10 − average logged pain rating) ÷ 10 × 100, so lower pain scores higher.',
+ 'Preparation time':'Score compares usable build weeks before taper with estimated weeks needed to reach weekly-volume and peak-long-run targets safely.',
+ 'Specificity':'Score = completed due tempo, interval and fitness-assessment sessions ÷ all such due sessions during the last 56 days × 100.'
 };
 
 function assessmentText(c){let weak=[...c.components].sort((a,b)=>a.score-b.score)[0];if(c.overall>=85)return'Your current fitness, endurance and training execution strongly support the goal. Preserve consistency and avoid adding unnecessary fatigue.';if(c.overall>=70)return`The goal is realistic, but readiness still depends on completing the remaining key sessions and maintaining recovery. The weakest component is ${weak.name}.`;if(c.overall>=55)return`Some indicators support the goal, but overall readiness is not yet secure. The largest current limiter is ${weak.name}. Focus there before making the target more aggressive.`;return'The available training evidence does not yet support the target with readiness. Rebuild the weakest foundations, log completed sessions consistently and use the next assessment to review the goal.'}
@@ -253,21 +256,12 @@ function coachLabel(name,score){
   'Recovery':score>=75?'Recovery supports normal training':'Recovery evidence suggests caution',
   'Pain status':score>=80?'Pain evidence is reassuring':'Pain requires closer monitoring',
   'Specificity':score>=80?'Specific sessions are on track':'Race-specific work is incomplete',
-  'Economy':score>=75?'Aerobic efficiency is improving':'Aerobic efficiency needs more evidence'
+  'Efficiency':score>=75?'Aerobic efficiency is improving':'Aerobic efficiency needs more evidence'
  };
  return labels[name]||`${name}: ${Math.round(score)}`;
 }
-function uniqueScoredComponents(components,prefer='high'){
- const map=new Map();
- components.filter(x=>Number.isFinite(x.score)).forEach((x,index)=>{
-   const current=map.get(x.name);
-   if(!current || (prefer==='low'?x.score<current.score:x.score>current.score)) map.set(x.name,{...x,_index:index});
- });
- return [...map.values()].sort((a,b)=>{
-   const scoreOrder=prefer==='low'?a.score-b.score:b.score-a.score;
-   return scoreOrder || a.name.localeCompare(b.name) || a._index-b._index;
- });
-}
+
+function uniqueComponents(components){let seen=new Set();return components.filter(x=>{if(seen.has(x.name))return false;seen.add(x.name);return true})}
 function renderDashboard(){
  let c=confidence(),pred=prediction(),cw=currentWeek(),wd=weekData(cw);
  $('phaseBadge').textContent=phase(cw);
@@ -282,10 +276,12 @@ function renderDashboard(){
    kpi('Build weeks needed',c.requiredBuildWeeks.toFixed(1),c.usableBuildWeeks.toFixed(1)+' available before taper')+
    kpi('This week',wd.planned.toFixed(1)+' km',wd.actual.toFixed(1)+' km completed')+
    kpi('Longest evidence',c.longest.toFixed(1)+' km')+
-   kpi('Adaptive factor',state.plan.find(p=>p.week===cw)?.factor.toFixed(2)||'1.00');
+   kpi('Adaptive factor',adaptiveFactorDetails(cw).factor.toFixed(2),'Multiplies next-week training volume');
 
  $('assessmentText').textContent=assessmentText(c);
  $('evidenceBadge').textContent=`Evidence ${Math.round(c.evidenceCoverage*100)}% complete`;
+ let afd=adaptiveFactorDetails(cw);
+ $('adaptiveFactorDetail').innerHTML=`<div class="panelHead"><div><h3>Adaptive factor · ${afd.factor.toFixed(2)}</h3><p class="muted compact">Conservative weekly load multiplier, bounded by ${state.setup.minFactor.toFixed(2)}–${state.setup.maxFactor.toFixed(2)}</p></div></div><div class="adaptiveBreakdown">${afd.items.map(i=>`<div class="adaptiveRow"><b>${i.name}</b><span class="${i.adjustment>0?'positive':i.adjustment<0?'negative':''}">${i.adjustment>0?'+':''}${i.adjustment.toFixed(2)}</span><small>${i.detail}</small></div>`).join('')}</div><p class="muted">The factor scales planned weekly training volume. Positive adjustments are deliberately small; missing evidence and adverse recovery, pain or drift reduce load rather than increasing it.</p>`;
 
  const predictionGap=pred-state.setup.targetTime;
  const predictionPace=pred/state.setup.raceDistance;
@@ -311,8 +307,8 @@ function renderDashboard(){
     <p>${p.description}</p>
     <div class="pillarMeta"><span>Model weight ${Math.round(p.weight*100)}%</span><span>Evidence ${Math.round(p.coverage*100)}%</span></div>
     <details class="pillarExplain"><summary>How this is calculated</summary>
-      <div class="calcTable">${p.items.map(i=>`<div class="calcRow"><span>${i.name}</span><span>${Number.isFinite(i.score)?Math.round(i.score):'N/A'}</span><span>${Math.round(i.weight*100)}%</span></div>`).join('')}</div>
-      <p class="muted">Missing contributors are held at a neutral 50, while evidence coverage shows how much real data supports the score.</p>
+      <div class="calcTable">${p.items.map(i=>`<div class="calcRow"><span>${i.name}</span><span>${Number.isFinite(i.score)?Math.round(i.score):'0'}</span><span>${Math.round(i.weight*100)}%</span></div>`).join('')}</div>
+      <p class="muted">Missing contributors score 0. Evidence coverage separately shows how much of the model is supported by logged data.</p>
     </details>
    </div>`).join('');
 
@@ -320,11 +316,10 @@ function renderDashboard(){
    <div><b>${x.name}</b><p>${componentDefinitions[x.name]}</p>
    <small class="${Number.isFinite(x.score)?'muted':'metricMissing'}">${Number.isFinite(x.score)?`Current score: ${Math.round(x.score)} / 100`:'Not enough data yet'} · within-pillar weight ${Math.round(x.weight*100)}%</small></div>`).join('');
 
- let strengths=uniqueScoredComponents(c.components,'high');
- let risks=uniqueScoredComponents(c.components,'low');
- $('strengths').innerHTML=strengths.slice(0,3).map(x=>`<div class="note good"><b>✓ ${coachLabel(x.name,x.score)}</b><br>${interpretations[x.name](x.score)}</div>`).join('')||'<p class="muted">More training data is needed.</p>';
- $('risks').innerHTML=risks.slice(0,3).map(x=>`<div class="note warn"><b>⚠ ${coachLabel(x.name,x.score)}</b><br>${interpretations[x.name](x.score)}</div>`).join('')||'<p class="muted">More training data is needed.</p>';
- $('dashboardActions').innerHTML=risks.slice(0,3).map((x,i)=>`<div class="actionRow"><strong>${i+1}</strong><b>${x.name}</b><span>${Math.round(x.score)}%</span><div>${actions[x.name]}<br><small class="muted">${interpretations[x.name](x.score)}</small></div></div>`).join('');
+ let scored=uniqueComponents(c.components.map(x=>({...x,score:Number.isFinite(x.score)?x.score:0}))).sort((a,b)=>b.score-a.score||a.name.localeCompare(b.name));
+ $('strengths').innerHTML=scored.slice(0,3).map(x=>`<div class="note good"><b>✓ ${coachLabel(x.name,x.score)}</b><br>${interpretations[x.name](x.score)}</div>`).join('')||'<p class="muted">More training data is needed.</p>';
+ $('risks').innerHTML=[...scored].reverse().slice(0,3).map(x=>`<div class="note warn"><b>⚠ ${coachLabel(x.name,x.score)}</b><br>${interpretations[x.name](x.score)}</div>`).join('')||'<p class="muted">More training data is needed.</p>';
+ $('dashboardActions').innerHTML=[...scored].sort((a,b)=>a.score-b.score).slice(0,3).map((x,i)=>`<div class="actionRow"><strong>${i+1}</strong><b>${x.name}</b><span>${Math.round(x.score)}%</span><div>${actions[x.name]}<br><small class="muted">${interpretations[x.name](x.score)}</small></div></div>`).join('');
 
  let future=state.plan.filter(p=>p.type!=='Rest'&&dte(p.date)>=today()).slice(0,4);
  $('keySessions').innerHTML=future.map(p=>`<div class="miniSession"><b>${fmtDate(p.date)} · ${p.type}</b><span>${p.distance.toFixed(1)} km · ${pace(p.zone.pace)}<br>${p.purpose}</span></div>`).join('');
@@ -617,7 +612,6 @@ function renderMetrics(){
  $('metricTypeSummary').innerHTML=summary.length?`<div class="metricTypeTable"><div class="metricTypeHead"><b>Run type</b><b>Efficiency avg</b><b>Efficiency best</b><b>Drift avg</b><b>Drift best</b></div>${summary.map(x=>`<div class="metricTypeRow"><span><i style="--runColor:${runTypeColors[x.type]}"></i>${esc(x.type)}</span><span>${Number.isFinite(x.effAvg)?x.effAvg.toFixed(1)+' J/beat':'—'}</span><span>${Number.isFinite(x.effBest)?x.effBest.toFixed(1)+' J/beat':'—'}</span><span>${Number.isFinite(x.driftAvg)?x.driftAvg.toFixed(1)+'%':'—'}</span><span>${Number.isFinite(x.driftBest)?x.driftBest.toFixed(1)+'%':'—'}</span></div>`).join('')}</div>`:'<span class="muted">No qualifying run metrics yet.</span>';
 
 }
-
 function assessmentRunId(a){return a.runId||`assessment-run-${a.id}`}
 function syncAssessmentRun(a){
  let id=assessmentRunId(a),i=state.runs.findIndex(r=>r.id===id||r.assessmentId===a.id);
@@ -642,16 +636,7 @@ function migrateAssessmentRuns(){
  save();
 }
 function renderAssessments(){$('assessmentList').innerHTML=state.assessments.slice().sort((a,b)=>b.date.localeCompare(a.date)).map(a=>`<div class="panel clickable" data-assessment="${a.id}"><div class="panelHead"><div><b>${fmtDate(a.date)} · ${a.distance.toFixed(1)} km</b><p class="muted">${fmtTime(a.time)} · ${pace(a.time/a.distance)} · ${a.valid?'Valid and applied to future targets':'Not applied'}<br>Also included in run history and training metrics</p></div><span class="status ${a.valid?'completed':'rest'}">${a.valid?'valid':'invalid'}</span></div></div>`).join('')||'<div class="panel">No fitness assessment results entered.</div>'}
-function renderCoach(){
- let c=confidence(),pred=prediction(),gap=pred-state.setup.targetTime;
- $('coachTop').innerHTML=kpi('Overall readiness',Math.round(c.overall)+'%')+kpi('Predicted time',fmtTime(pred))+kpi('Target gap',(gap>=0?'+':'−')+fmtTime(Math.abs(gap)))+kpi('Current phase',phase(currentWeek()));
- $('fullAssessment').textContent=assessmentText(c);
- let strengths=uniqueScoredComponents(c.components,'high');
- let risks=uniqueScoredComponents(c.components,'low');
- $('coachStrengths').innerHTML=strengths.slice(0,3).map(x=>`<div class="note good"><b>✓ ${x.name} · ${Math.round(x.score)}</b><br>${interpretations[x.name](x.score)}</div>`).join('')||'<p class="muted">More training data is needed.</p>';
- $('coachRisks').innerHTML=risks.slice(0,3).map(x=>`<div class="note warn"><b>⚠ ${x.name} · ${Math.round(x.score)}</b><br>${interpretations[x.name](x.score)}</div>`).join('')||'<p class="muted">More training data is needed.</p>';
- $('actionsTable').innerHTML=risks.slice(0,3).map((x,i)=>`<div class="actionRow"><strong>${i+1}</strong><b>${x.name}</b><span>${Math.round(x.score)}%</span><div>${actions[x.name]}<br><small class="muted">${interpretations[x.name](x.score)}</small></div></div>`).join('');
-}
+function renderCoach(){let c=confidence(),pred=prediction(),gap=pred-state.setup.targetTime;$('coachTop').innerHTML=kpi('Overall readiness',Math.round(c.overall)+'%')+kpi('Predicted time',fmtTime(pred))+kpi('Target gap',(gap>=0?'+':'−')+fmtTime(Math.abs(gap)))+kpi('Current phase',phase(currentWeek()));$('fullAssessment').textContent=assessmentText(c);let sorted=uniqueComponents(c.components.map(x=>({...x,score:Number.isFinite(x.score)?x.score:0}))).sort((a,b)=>b.score-a.score||a.name.localeCompare(b.name));$('coachStrengths').innerHTML=sorted.slice(0,3).map(x=>`<div class="note good"><b>✓ ${x.name} · ${Math.round(x.score)}</b><br>${interpretations[x.name](x.score)}<br><small class="muted">${componentDefinitions[x.name]}</small></div>`).join('');$('coachRisks').innerHTML=[...sorted].reverse().slice(0,3).map(x=>`<div class="note warn"><b>⚠ ${x.name} · ${Math.round(x.score)}</b><br>${interpretations[x.name](x.score)}<br><small class="muted">${componentDefinitions[x.name]}</small></div>`).join('');$('actionsTable').innerHTML=[...sorted].sort((a,b)=>a.score-b.score||a.name.localeCompare(b.name)).slice(0,3).map((x,i)=>`<div class="actionRow"><strong>${i+1}</strong><b>${x.name}</b><span>${Math.round(x.score)}%</span><div>${actions[x.name]}<br><small class="muted">${componentDefinitions[x.name]}</small></div></div>`).join('')}
 function renderRace(){let c=confidence(),pred=prediction(),targetPace=state.setup.targetTime/state.setup.raceDistance;$('raceKpis').innerHTML=kpi('Target time',fmtTime(state.setup.targetTime))+kpi('Target pace',pace(targetPace))+kpi('Target HR',Math.round(state.setup.thresholdHr*.92)+' bpm')+kpi('Target power',Math.round(state.setup.criticalPower*.88)+' W')+kpi('Current prediction',fmtTime(pred))+kpi('Confidence',Math.round(c.overall)+'%');$('racePacing').innerHTML='<div class="note"><b>0–10 km:</b> Start controlled, slightly slower than target pace. Let heart rate rise gradually.</div><div class="note"><b>10–30 km:</b> Settle at target effort and protect fuelling. Avoid reacting to short pace fluctuations.</div><div class="note good"><b>After 30 km:</b> Progress only when breathing, form and stomach remain stable. Otherwise preserve target effort.</div>';$('raceFuel').innerHTML='<p><b>Carbohydrate:</b> 60–90 g/hour, practised in long runs.</p><p><b>Fluids:</b> approximately 400–800 ml/hour, adjusted for temperature and sweat rate.</p><p><b>Sodium:</b> use the same product and concentration tested in training.</p>';$('raceRules').innerHTML='<p>Slow down early if heart rate is unusually high at normal power.</p><p>Do not chase lost seconds on hills or crowded sections.</p><p>Use effort rather than pace when conditions are hot, windy or technical.</p>'}
 function renderSettings(){let defs=[['planStart','Plan start','date'],['raceDate','Race date','date'],['raceName','Race name','text'],['raceDistance','Race distance km','number'],['targetTime','Target time','time'],['currentWeekly','Current weekly km','number'],['currentLongest','Current longest run km','number'],['testDistance','Recent test distance km','number'],['testTime','Recent test time','time'],['thresholdHr','Threshold HR','number'],['criticalPower','Critical power W','number'],['bodyWeight','Body weight kg','number'],['maxWeekly','Max weekly km','number'],['growth','Max weekly growth %','percent'],['peakLong','Peak long run km','number'],['taperDays','Taper days','number']];$('settingsGrid').innerHTML=defs.map(d=>{let v=state.setup[d[0]];if(d[2]=='time')v=fmtTime(v);if(d[2]=='percent')v=Math.round(v*100);return`<div class="field"><label>${d[1]}</label><input data-setting="${d[0]}" data-type="${d[2]}" type="${d[2]=='date'?'date':'text'}" value="${esc(v)}"></div>`}).join('');$('daysGrid').innerHTML=state.days.map((d,i)=>`<div class="panelHead" style="padding:7px 0;border-bottom:1px solid var(--line)"><b>${d[0]}</b><label><input data-day="${i}" type="checkbox" ${d[1]?'checked':''}> Train</label><select data-session="${i}"><option ${d[2]=='Easy'?'selected':''}>Easy</option><option ${d[2]=='Intervals'?'selected':''}>Intervals</option><option ${d[2]=='Tempo'?'selected':''}>Tempo</option><option ${d[2]=='Long run'?'selected':''}>Long run</option></select></div>`).join('')}
 function weeklyCompletedLongs(){
