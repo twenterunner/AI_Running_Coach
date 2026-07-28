@@ -1,4 +1,4 @@
-AI Running Coach v6.6 — build 6600
+AI Running Coach v6.6.1 — build 6601
 ================================================
 
 A browser-based adaptive race training coach with transparent readiness,
@@ -45,7 +45,7 @@ session.
 INSTALLATION / DEPLOYMENT
 -------------------------
 Upload all files in this folder to the root of the GitHub Pages repository.
-The service worker cache is arc-v66-web-6600. After deployment, refresh once or
+The service worker cache is arc-v661-web-6601. After deployment, refresh once or
 close and reopen the installed PWA to activate the new cache.
 
 BACKUP
@@ -83,3 +83,11 @@ Changing race distance in Settings now pre-populates the race model:
 The values remain editable after pre-population. Saving Settings rebuilds future
 workouts and recalculates endurance, preparation time, prediction and readiness
 against the selected race profile. Past workouts remain unchanged.
+
+
+v6.6.1 WORKOUT MATCHING FIX
+----------------------------
+The run-to-plan selector no longer hides all planned workouts when none falls inside
+the former 21-day window. It now shows a suggested match, all sessions from the
+run's training week, and the nearest other planned workouts. Already-linked sessions
+remain visible but disabled. Ad hoc and unresolved remain available under Other actions.

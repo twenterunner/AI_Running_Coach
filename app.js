@@ -188,15 +188,32 @@ function suggestedPlanId(run){
  return best&&Math.abs(dte(best.date)-dte(run.date))<=14*DAY?best.id:null;
 }
 function planMatchOptions(run,selected){
- let plans=state.plan.filter(p=>p.type!=='Rest'&&p.type!=='Race Day'&&Math.abs(dte(p.date)-dte(run.date))<=21*DAY)
-  .sort((a,b)=>Math.abs(dte(a.date)-dte(run.date))-Math.abs(dte(b.date)-dte(run.date))||a.date.localeCompare(b.date));
- let options=plans.map(p=>{
-  let linked=state.runs.find(r=>r.id!==run.id&&r.planId===p.id),offset=Math.round((dte(run.date)-dte(p.date))/DAY);
-  let timing=offset===0?'same day':offset>0?`${offset} day${offset===1?'':'s'} late`:`${Math.abs(offset)} day${offset===-1?'':'s'} early`;
+ const actual=dte(run.date),actualTime=actual.getTime();
+ const validActual=Number.isFinite(actualTime);
+ let plans=state.plan.filter(p=>p.type!=='Rest'&&p.type!=='Race Day');
+ const details=p=>{
+  const planned=dte(p.date),plannedTime=planned.getTime();
+  const validPlanned=Number.isFinite(plannedTime);
+  const offset=validActual&&validPlanned?Math.round((actualTime-plannedTime)/DAY):null;
+  const linked=state.runs.find(r=>r.id!==run.id&&r.planId===p.id);
+  return {p,offset,linked,distance:offset===null?Number.MAX_SAFE_INTEGER:Math.abs(offset)};
+ };
+ let rows=plans.map(details).sort((a,b)=>a.distance-b.distance||a.p.date.localeCompare(b.p.date));
+ const option=x=>{
+  let {p,offset,linked}=x;
+  let timing=offset===null?'date unavailable':offset===0?'same day':offset>0?`${offset} day${offset===1?'':'s'} late`:`${Math.abs(offset)} day${offset===-1?'':'s'} early`;
   let type=compatibleRunType(p.type,run.type)?'type compatible':'different type';
   return `<option value="${esc(p.id)}" ${selected===p.id?'selected':''} ${linked?'disabled':''}>${fmtDate(p.date)} · ${esc(p.type)} · ${p.distance.toFixed(1)} km · ${timing} · ${type}${linked?' · already linked':''}</option>`;
- }).join('');
- return `<option value="adhoc" ${selected==='adhoc'?'selected':''}>Ad hoc — not linked to the plan</option><option value="unresolved" ${selected==='unresolved'?'selected':''}>Decide later — leave unresolved</option>${options}`;
+ };
+ const suggestedId=suggestedPlanId(run),suggested=rows.find(x=>x.p.id===suggestedId&&!x.linked);
+ const sameWeek=rows.filter(x=>x.offset!==null&&Math.floor((actualTime-dte(state.setup.planStart).getTime())/(7*DAY))===Math.floor((dte(x.p.date).getTime()-dte(state.setup.planStart).getTime())/(7*DAY))&&x.p.id!==suggestedId);
+ const nearby=rows.filter(x=>!sameWeek.includes(x)&&x.p.id!==suggestedId).slice(0,24);
+ let html='';
+ if(suggested)html+=`<optgroup label="Suggested match">${option(suggested)}</optgroup>`;
+ if(sameWeek.length)html+=`<optgroup label="This training week">${sameWeek.map(option).join('')}</optgroup>`;
+ if(nearby.length)html+=`<optgroup label="Other planned workouts">${nearby.map(option).join('')}</optgroup>`;
+ html+=`<optgroup label="Other actions"><option value="adhoc" ${selected==='adhoc'?'selected':''}>Ad hoc — not linked to the plan</option><option value="unresolved" ${selected==='unresolved'?'selected':''}>Decide later — leave unresolved</option></optgroup>`;
+ return html;
 }
 function matchSummary(run){
  if(run.planId){let p=state.plan.find(x=>x.id===run.planId);if(p){let o=Math.round((dte(run.date)-dte(p.date))/DAY),timing=o===0?'same day':o>0?`${o} day${o===1?'':'s'} late`:`${Math.abs(o)} day${o===-1?'':'s'} early`;return `${p.type} · ${timing}${compatibleRunType(p.type,run.type)?'':' · different type'}`}}
@@ -921,5 +938,5 @@ let deferred;window.addEventListener('beforeinstallprompt',e=>{e.preventDefault(
 migrateAssessmentRuns();
 migrateImportedPower();
 renderAll();
-console.info('AI Running Coach v6.6 web build 6600');
+console.info('AI Running Coach v6.6.1 web build 6601');
 })();
