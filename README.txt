@@ -1,40 +1,43 @@
-AI Running Coach v8.5.0 Stable — build 8500
-================================================
+AI Running Coach v8.3.3 — build 8330
+===============================================
 
-INSTALL / UPDATE
-----------------
-Upload every file from this package to the root of the GitHub Pages repository, replacing the existing files. Do not upload only app.js: index.html, styles.css, manifest.webmanifest and service-worker.js must remain on the same build.
+Major coach-led dashboard redesign:
+- Central Coach Engine provides one consistent training state for Dashboard, forecast and coaching insights.
+- Current and predicted race-day readiness shown together.
+- On-track status, coach confidence, biggest strength, biggest limiter and best next action.
+- Goal-progress cards for longest verified run, weekly volume, long-run evidence, race-specific work and plan-linked workouts.
+- Visual Build / Peak / Taper / Race timeline.
+- Readiness scenarios for following the plan, continuing the current trend and missing one run per week.
+- Clearer terminology: Longest Verified Run, Estimated Build Time, Time Until Race, Planned This Week and Training Progression Factor.
+- Existing detailed readiness pillars, charts, run import, matching, plan and race-day features remain available.
 
-After GitHub Pages deploys, open the site once in the browser. v8.5 uses network-first loading and cache build 8500. If the installed PWA remains open, close and reopen it once.
+Install by uploading all files in this folder to the GitHub Pages repository root.
 
-DATA SAFETY AND FIELD-POPULATION FIX
-------------------------------------
-- Continues reading the established arc_v62_web storage key used by earlier stable versions.
-- Searches compatible legacy/mirror keys and selects the copy containing the most user data.
-- Creates an untouched pre-migration safety copy under arc_pre8500_backup before conversion.
-- Writes every successful save to both arc_v62_web and arc_v8500_web.
-- Normalises each setup field individually; one missing or invalid value can no longer blank the complete settings form.
-- Preserves runs, assessments, training-day selections and compatible plan history.
-- Shows an Upgrade & data integrity report in Settings.
-- Records storage, migration and rendering errors in Phone diagnostics.
 
-v8.5 COACHING FEATURES
------------------------
-- Scientifically explicit warm-up, quality work, between-repetition recoveries, cooldown and total-distance accounting.
-- Workout validation engine with safe fallback sessions when a generated prescription fails validation.
-- Plan Health checks workout arithmetic, dates, IDs, enabled days, race-week logic and targets.
-- Coach Intelligence explains Why this workout, Why this amount and What if skipped.
-- Existing dashboard, Stryd CSV import, assessment, adaptive factor, readiness and race-day features remain available.
+v8.3.3 STABILITY FIX
+--------------------
+- Corrected the startup-order error that could stop JavaScript before the first render on a fresh browser or cleared site data.
+- Consolidated compatible styling for every new coach-dashboard class.
+- Added in-app phone diagnostics under Settings.
+- Updated HTML, JavaScript, CSS, manifest and service-worker cache together to build 8330.
 
-BACKWARDS COMPATIBILITY
------------------------
-The app deliberately retains the original arc_v62_web key so an update installed over v8.3.3 or earlier reads the existing browser data rather than creating an apparently empty profile.
 
-FILES CHANGED
--------------
-app.js
-index.html
-styles.css
-service-worker.js
-manifest.webmanifest
-README.txt
+v8.3.3 COMPLETED-EVIDENCE AND PRESCRIPTION FIX
+------------------------------------------------
+- Every Goal progress card now uses completed runs only.
+- Weekly-volume progress is the best completed training week; setup baseline values are not counted as completed evidence.
+- Longest-run evidence no longer treats the manually entered baseline as a completed run.
+- Every planned training-session distance equals warm-up + main set + cooldown.
+- Quality-session pace, HR and power cards are explicitly labelled as main-set targets.
+- Session wording now identifies which section the targets apply to and whether recovery distance is included.
+- Build 8330 forces the future plan to regenerate so old inconsistent prescriptions are replaced.
+
+
+v8.3.3 SCIENTIFIC SESSION STRUCTURE AND DISTANCE ACCOUNTING
+---------------------------------------------------------
+- Workout structure now determines total session distance; the plan no longer compresses a prescribed workout to fit an arbitrary quality-run distance.
+- Intervals use explicit repetition and between-repetition recovery distances. Recovery count is repetitions minus one.
+- Tempo sessions use phase-specific continuous or cruise-interval structures.
+- Fitness assessments include the configured test distance plus a 2.0 km warm-up and 1.5 km cooldown.
+- Long-run opening, endurance section and final easy section are all included in the displayed long-run distance.
+- Each non-race workout displays a numerical distance check.
