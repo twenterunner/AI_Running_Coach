@@ -71,7 +71,7 @@ function recommendedRaceDate(setup){
  let totalWeeks=Math.ceil(Math.max(minimumTotal,req.requiredBuildWeeks+taperWeeks+2));
  return{date:iso(new Date(dte(setup.planStart).getTime()+totalWeeks*7*DAY)),totalWeeks,requiredBuildWeeks:req.requiredBuildWeeks,taperWeeks};
 }
-const BUILD=8550, SCHEMA=8500, STORAGE_KEY='arc_v62_web', MIRROR_KEY='arc_v8500_web', BACKUP_KEY='arc_pre8500_backup';
+const BUILD=8560, SCHEMA=8500, STORAGE_KEY='arc_v62_web', MIRROR_KEY='arc_v8500_web', BACKUP_KEY='arc_pre8500_backup';
 const defaults=()=>{let start=iso(new Date()),setup={planStart:start,raceDate:start,raceName:'Goal Race',raceDistance:42.195,targetTime:15300,currentWeekly:35,currentLongest:18,testDistance:5,testTime:1515,thresholdHr:168,criticalPower:300,bodyWeight:93,maxWeekly:80,growth:.08,peakLong:34,taperDays:21,minFactor:.85,maxFactor:1.05,adaptive:true};setup.raceDate=recommendedRaceDate(setup).date;return({schemaVersion:SCHEMA,setup,days:[['Monday',false,'Easy'],['Tuesday',true,'Intervals'],['Wednesday',true,'Easy'],['Thursday',false,'Easy'],['Friday',true,'Tempo'],['Saturday',true,'Easy'],['Sunday',true,'Long run']],runs:[],assessments:[],plan:[],weekView:null,migration:{to:SCHEMA,status:'new',time:new Date().toISOString()}})};
 let migrationReport={from:null,to:SCHEMA,status:'new install',source:'defaults',runs:0,assessments:0,fieldsRecovered:0,warning:''};
 function parseStored(raw){if(!raw)return null;try{const x=JSON.parse(raw);return x&&typeof x==='object'?x:null}catch(err){recordDiagnostic('Storage parse',err);return null}}
@@ -969,16 +969,56 @@ function renderCoach(){
  let c=confidence(),pred=prediction(),gap=pred-state.setup.targetTime;
  $('coachTop').innerHTML=kpi('Overall readiness',Math.round(c.overall)+'%')+kpi('Predicted time',fmtTime(pred))+kpi('Target gap',(gap>=0?'+':'−')+fmtTime(Math.abs(gap)))+kpi('Current phase',phase(currentWeek()));
  $('fullAssessment').textContent=assessmentText(c);
- let measured=uniqueComponents(c.components.filter(x=>x.hasEvidence&&Number.isFinite(x.displayScore)).map(x=>({...x,score:x.displayScore})));
+
+ // Rebuild this part of the Coach page from the active JavaScript build. This prevents
+ // an older cached HTML structure from keeping obsolete strengths/risks markup alive.
+ let strengthsHost=$('coachStrengths'),risksHost=$('coachRisks'),actionsHost=$('actionsTable');
+ let watchHost=$('coachWatch');
+ if(!watchHost&&strengthsHost){
+   let strengthPanel=strengthsHost.closest('article.panel');
+   let wrapper=strengthPanel?.parentElement;
+   if(wrapper){
+     let watchPanel=document.createElement('article');
+     watchPanel.className='panel';
+     watchPanel.innerHTML='<h3>Watch items</h3><div id="coachWatch"></div>';
+     wrapper.appendChild(watchPanel);
+     watchHost=$('coachWatch');
+   }
+ }
+
+ let measured=uniqueComponents(c.components
+   .filter(x=>x.hasEvidence&&Number.isFinite(x.displayScore))
+   .map(x=>({...x,score:clamp(x.displayScore,0,100)})));
+
+ // Each component belongs to one—and only one—category.
  let strengths=measured.filter(x=>x.score>=85).sort((a,b)=>b.score-a.score||a.name.localeCompare(b.name));
  let watchItems=measured.filter(x=>x.score>=70&&x.score<85).sort((a,b)=>a.score-b.score||a.name.localeCompare(b.name));
  let risks=measured.filter(x=>x.score<70).sort((a,b)=>a.score-b.score||a.name.localeCompare(b.name));
- let actionItems=[...risks,...watchItems].slice(0,3);
- $('coachStrengths').innerHTML=strengths.length?strengths.map(x=>`<div class="note good"><b>✓ ${x.name} · ${Math.round(x.score)}</b><br>${interpretations[x.name](x.score)}<br><small class="muted">${componentDefinitions[x.name]}</small></div>`).join(''):'<div class="note"><b>No established strength yet</b><br>More completed training evidence is needed before an area can be classified as a strength.</div>';
- $('coachWatch').innerHTML=watchItems.length?watchItems.map(x=>`<div class="note warn"><b>△ ${x.name} · ${Math.round(x.score)}</b><br>${interpretations[x.name](x.score)}<br><small class="muted">${componentDefinitions[x.name]}</small></div>`).join(''):'<div class="note good"><b>No watch items</b><br>No measured component currently falls in the 70–84 watch range.</div>';
- $('coachRisks').innerHTML=risks.length?risks.map(x=>`<div class="note bad"><b>⚠ ${x.name} · ${Math.round(x.score)}</b><br>${interpretations[x.name](x.score)}<br><small class="muted">${componentDefinitions[x.name]}</small></div>`).join(''):'<div class="note good"><b>No significant risks identified</b><br>No measured component currently scores below 70. Continue executing the plan and collecting evidence.</div>';
- $('actionsTable').innerHTML=actionItems.length?actionItems.map((x,i)=>`<div class="actionRow"><strong>${i+1}</strong><b>${x.name}</b><span>${Math.round(x.score)}%</span><div>${actions[x.name]}<br><small class="muted">${componentDefinitions[x.name]}</small></div></div>`).join(''):'<div class="note good"><b>No corrective action currently required</b><br>Maintain plan execution, recovery and evidence collection. Components scoring 85 or higher do not generate corrective actions.</div>';
+
+ // Actions are generated only where a measurable deficit exists. A 100% component
+ // can never appear here, and no component can simultaneously be a strength and risk.
+ let actionItems=[...risks,...watchItems]
+   .filter(x=>x.score<85&&actions[x.name])
+   .sort((a,b)=>a.score-b.score||a.name.localeCompare(b.name))
+   .slice(0,3);
+
+ if(strengthsHost)strengthsHost.innerHTML=strengths.length
+   ?strengths.map(x=>`<div class="note good"><b>✓ ${x.name} · ${Math.round(x.score)}</b><br>${interpretations[x.name](x.score)}<br><small class="muted">${componentDefinitions[x.name]}</small></div>`).join('')
+   :'<div class="note"><b>No established strength yet</b><br>More completed training evidence is needed before an area can be classified as a strength.</div>';
+
+ if(watchHost)watchHost.innerHTML=watchItems.length
+   ?watchItems.map(x=>`<div class="note warn"><b>△ ${x.name} · ${Math.round(x.score)}</b><br>${interpretations[x.name](x.score)}<br><small class="muted">${componentDefinitions[x.name]}</small></div>`).join('')
+   :'<div class="note good"><b>No watch items</b><br>No measured component currently falls in the 70–84 range.</div>';
+
+ if(risksHost)risksHost.innerHTML=risks.length
+   ?risks.map(x=>`<div class="note bad"><b>⚠ ${x.name} · ${Math.round(x.score)}</b><br>${interpretations[x.name](x.score)}<br><small class="muted">${componentDefinitions[x.name]}</small></div>`).join('')
+   :'<div class="note good"><b>No significant risks identified</b><br>No measured component currently scores below 70.</div>';
+
+ if(actionsHost)actionsHost.innerHTML=actionItems.length
+   ?actionItems.map((x,i)=>`<div class="actionRow"><strong>${i+1}</strong><b>${x.name}</b><span>${Math.round(x.score)}%</span><div>${actions[x.name]}<br><small class="muted">${componentDefinitions[x.name]}</small></div></div>`).join('')
+   :'<div class="note good"><b>No corrective action currently required</b><br>Continue the plan, maintain recovery and collect new evidence. Strong components do not generate corrective actions.</div>';
 }
+
 function renderRace(){let c=confidence(),pred=prediction(),targetPace=state.setup.targetTime/state.setup.raceDistance,predictedPace=pred/state.setup.raceDistance;$('raceKpis').innerHTML=kpi('Target time',fmtTime(state.setup.targetTime))+kpi('Target pace',pace(targetPace))+kpi('Predicted finish',fmtTime(pred))+kpi('Predicted pace',pace(predictedPace))+kpi('Target HR',Math.round(state.setup.thresholdHr*.92)+' bpm')+kpi('Target power',Math.round(state.setup.criticalPower*.88)+' W')+kpi('Confidence',Math.round(c.overall)+'%');let rd=state.setup.raceDistance,first=Math.max(1,Math.round(rd*.20)),final=Math.max(first+1,Math.round(rd*.75));$('racePacing').innerHTML=`<div class="note"><b>0–${first} km:</b> Start controlled, slightly slower than target pace. Let heart rate rise gradually.</div><div class="note"><b>${first}–${final} km:</b> Settle at target effort and protect fuelling. Avoid reacting to short pace fluctuations.</div><div class="note good"><b>After ${final} km:</b> Progress only when breathing, form and stomach remain stable. Otherwise preserve target effort.</div>`;$('raceFuel').innerHTML='<p><b>Carbohydrate:</b> 60–90 g/hour, practised in long runs.</p><p><b>Fluids:</b> approximately 400–800 ml/hour, adjusted for temperature and sweat rate.</p><p><b>Sodium:</b> use the same product and concentration tested in training.</p>';$('raceRules').innerHTML='<p>Slow down early if heart rate is unusually high at normal power.</p><p>Do not chase lost seconds on hills or crowded sections.</p><p>Use effort rather than pace when conditions are hot, windy or technical.</p>'}
 function renderSettings(){let defs=[['planStart','Plan start','date'],['raceDate','Race date','date'],['raceName','Race name','text'],['raceDistance','Race distance km','number'],['targetTime','Target time','time'],['currentWeekly','Current weekly km','number'],['currentLongest','Current longest run km','number'],['testDistance','Recent test distance km','number'],['testTime','Recent test time','time'],['thresholdHr','Threshold HR','number'],['criticalPower','Critical power W','number'],['bodyWeight','Body weight kg','number'],['maxWeekly','Max weekly km','number'],['growth','Max weekly growth %','percent'],['peakLong','Peak long run km','number'],['taperDays','Taper days','number']];$('settingsGrid').innerHTML=defs.map(d=>{let v=state.setup[d[0]];if(d[2]=='time')v=fmtTime(v);if(d[2]=='percent')v=Math.round(v*100);return`<div class="field"><label>${d[1]}</label><input data-setting="${d[0]}" data-type="${d[2]}" type="${d[2]=='date'?'date':'text'}" value="${esc(v)}"></div>`}).join('');
  let raceDistanceInput=document.querySelector('[data-setting="raceDistance"]');
@@ -1185,9 +1225,11 @@ $('saveSettings').onclick=()=>{let candidate={...state.setup};document.querySele
 function download(n,t,m){let a=document.createElement('a');a.href=URL.createObjectURL(new Blob([t],{type:m}));a.download=n;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
 $('planHealthBtn').onclick=()=>{renderPlanHealth();toast(validatePlan(state.plan).valid?'Plan health check passed.':'Plan health check found issues.',!validatePlan(state.plan).valid)};
 $('backupBtn').onclick=()=>download('ai-running-coach-backup.json',JSON.stringify(state,null,2),'application/json');$('restoreFile').onchange=e=>e.target.files[0]?.text().then(t=>{let candidate=JSON.parse(t);if(!validateBackup(candidate))throw new Error('Backup structure is incomplete.');let errors=validateSetup(candidate.setup);if(errors.length)throw new Error(errors[0]);candidate.schemaVersion=SCHEMA;candidate.plan=Array.isArray(candidate.plan)?candidate.plan:[];state=candidate;buildPlan();save();renderAll();toast('Backup restored and migrated.')}).catch(err=>toast(err?.message||'Invalid backup.',true));$('exportBtn').onclick=()=>download('run-log.csv',['Date,Type,Distance km,Duration sec,HR,Power,RPE,Pain,Recovery,Match status,Plan ID,Day offset,Notes',...state.runs.map(r=>[r.date,r.type,r.distanceKm,r.durationSec,r.avgHr,r.avgPower,r.rpe,r.pain,r.recovery,r.matchStatus||'',r.planId||'',r.dayOffset??'',`"${String(r.notes||'').replaceAll('"','""')}"`].join(','))].join('\n'),'text/csv');$('resetBtn').onclick=()=>{if(confirm('Delete all app data?')){state=defaults();buildPlan();save();renderAll();toast('App reset.')}};
-let deferred;window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferred=e;$('installBtn').className='install'});$('installBtn').onclick=()=>deferred?.prompt();if('serviceWorker'in navigator&&location.protocol==='https:')navigator.serviceWorker.register('service-worker.js');
+let deferred;window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferred=e;$('installBtn').className='install'});$('installBtn').onclick=()=>deferred?.prompt();
+const brandVersion=document.querySelector('.brand-copy p');if(brandVersion)brandVersion.textContent=`Adaptive marathon planning • v8.5.6 · build ${BUILD}`;
+if('serviceWorker'in navigator&&location.protocol==='https:')navigator.serviceWorker.register(`service-worker.js?v=${BUILD}`,{updateViaCache:'none'}).then(reg=>reg.update()).catch(()=>{});
 migrateAssessmentRuns();
 migrateImportedPower();
 renderAll();
-console.info('AI Running Coach v8.5.5 stable build 8550');
+console.info('AI Running Coach v8.5.6 stable build 8560');
 })();
