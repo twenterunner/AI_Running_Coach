@@ -1,12 +1,16 @@
-AI Running Coach v8.5.4 Stable — build 8540
+AI Running Coach v8.5.5 Stable — build 8550
+Schema: 8500 (backwards compatible)
 
-INSTALLATION
-Replace index.html, styles.css, app.js, manifest.webmanifest, service-worker.js and README.txt together. Keep the existing icon files in the same repository. After GitHub Pages deploys, close and reopen the installed PWA once so build 8540 activates its new service-worker cache.
+Replace index.html, styles.css, app.js, manifest.webmanifest, service-worker.js and README.txt together. Keep the existing icon files in the same repository. After GitHub Pages deploys, close and reopen the installed PWA once so build 8550 activates its new service-worker cache.
 
-v8.5.4 LIMITER CLASSIFICATION CORRECTION
-- The dashboard no longer labels the lowest score as a major limiter when that score is still healthy.
-- Score below 70: shown as “Biggest limiter”.
-- Score from 70 to below 85: shown as “Primary watch item” and explicitly described as the smallest margin rather than a major limiter.
-- Score 85 or higher: shown as “No significant limiter identified”.
-- This is a presentation and coaching-interpretation correction only. It does not alter readiness calculations, predicted race-day readiness, plan generation or stored data.
-- Schema remains 8500 for backward compatibility.
+v8.5.5 COACH CLASSIFICATION CORRECTION
+
+- Coach-page components are now placed into mutually exclusive categories.
+- Strengths: score 85–100.
+- Watch items: score 70–84.
+- Risks and limiters: score below 70.
+- A component can no longer appear in both strengths and risks.
+- Highest-impact actions are generated only from risks and watch items.
+- Components scoring 85 or higher no longer generate corrective actions.
+- When no risks or actions exist, the app shows an explicit maintenance message instead of inventing a weakness.
+- Current and predicted readiness calculations are unchanged.

@@ -3,18 +3,18 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#0b3157"><title>AI Running Coach</title>
-<link rel="manifest" href="manifest.webmanifest?v=8540"><link rel="stylesheet" href="styles.css?v=8540">
+<link rel="manifest" href="manifest.webmanifest?v=8550"><link rel="stylesheet" href="styles.css?v=8550">
 
-<link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png?v=8540">
-<link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png?v=8540">
-<link rel="icon" href="favicon.ico?v=8540">
-<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=8540">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png?v=8550">
+<link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png?v=8550">
+<link rel="icon" href="favicon.ico?v=8550">
+<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=8550">
 <meta property="og:image" content="github-banner.png">
 
 </head>
 <body>
 <header class="topbar">
-  <div class="brand"><img class="logo" src="icon-192.png?v=8540" alt="AI Running Coach logo"><div class="brand-copy"><h1>AI Running Coach</h1><p>Adaptive marathon planning • v8.5.4 · build 8540</p></div></div>
+  <div class="brand"><img class="logo" src="icon-192.png?v=8550" alt="AI Running Coach logo"><div class="brand-copy"><h1>AI Running Coach</h1><p>Adaptive marathon planning • v8.5.5 · build 8550</p></div></div>
   <button id="installBtn" class="install hidden">Install</button>
 </header>
 <nav id="nav"></nav>
@@ -155,9 +155,10 @@
   <div class="sectionTitle"><div><h2>Coach summary</h2><p>Readiness, evidence and highest-impact actions.</p></div></div>
   <div id="coachTop" class="kpis"></div>
   <article class="panel"><h3>Overall assessment</h3><div id="fullAssessment" class="coachText"></div></article>
-  <div class="grid2"><article class="panel"><h3>Current strengths</h3><div id="coachStrengths"></div></article><article class="panel"><h3>Current risks</h3><div id="coachRisks"></div></article></div>
+  <div class="grid2"><article class="panel"><h3>Current strengths</h3><div id="coachStrengths"></div></article><article class="panel"><h3>Watch items</h3><div id="coachWatch"></div></article></div>
+  <article class="panel"><h3>Risks and limiters</h3><div id="coachRisks"></div></article>
   <article class="panel"><h3>Highest-impact next actions</h3><div id="actionsTable"></div></article>
-  <article class="panel"><h3>How to interpret the model</h3><p>The confidence score combines fitness, endurance, consistency, adherence, recovery and economy. A strong test result cannot fully compensate for limited long-run endurance or poor training execution. The coach therefore ranks the weakest evidence-weighted components rather than reacting to one isolated number.</p></article>
+  <article class="panel"><h3>How to interpret the model</h3><p>The confidence score combines fitness, endurance, consistency, adherence, recovery and economy. A strong test result cannot fully compensate for limited long-run endurance or poor training execution. Components are classified into mutually exclusive groups: strengths at 85–100, watch items at 70–84, and risks below 70. Corrective actions are generated only for risks and watch items; strong components do not appear as risks or generate unnecessary actions.</p></article>
 </section>
 
 <section id="race" class="page">
@@ -179,5 +180,5 @@
 </main>
 
 <div id="modal" class="modal hidden"><div class="modalCard"><button id="closeModal" class="close">×</button><div id="modalContent"></div></div></div>
-<script src="app.js?v=8540"></script>
+<script src="app.js?v=8550"></script>
 </body></html>
