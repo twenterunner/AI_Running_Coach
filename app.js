@@ -10,7 +10,7 @@ const dec=(v,n=2)=>Number.isFinite(v)?v.toFixed(n):'—';
 function fmtTime(s){if(!Number.isFinite(s))return'—';let h=Math.floor(s/3600),m=Math.floor(s%3600/60),q=Math.round(s%60);if(q===60){q=0;m++}if(m===60){m=0;h++}return h?`${h}:${String(m).padStart(2,'0')}:${String(q).padStart(2,'0')}`:`${m}:${String(q).padStart(2,'0')}`}
 function parseTime(v){let p=String(v||'').split(':').map(Number);if(p.some(x=>!Number.isFinite(x)))return null;return p.length===3?p[0]*3600+p[1]*60+p[2]:p[0]*60+p[1]}
 function pace(s){return Number.isFinite(s)?fmtTime(s)+'/km':'—'} function toast(t,bad=false){$('toast').textContent=t;$('toast').className='toast'+(bad?' bad':'');setTimeout(()=>$('toast').className='toast hidden',3500)}
-const defaults=()=>({schemaVersion:6314,setup:{planStart:'2026-07-26',raceDate:'2026-12-13',raceName:'Goal Race',raceDistance:42.195,targetTime:15300,currentWeekly:35,currentLongest:18,testDistance:5,testTime:1515,thresholdHr:168,criticalPower:300,bodyWeight:93,maxWeekly:70,growth:.08,peakLong:35,taperDays:21,minFactor:.85,maxFactor:1.05,adaptive:true},days:[['Monday',false,'Easy'],['Tuesday',true,'Intervals'],['Wednesday',true,'Easy'],['Thursday',false,'Easy'],['Friday',true,'Tempo'],['Saturday',true,'Easy'],['Sunday',true,'Long run']],runs:[],assessments:[],plan:[],weekView:null});
+const defaults=()=>({schemaVersion:6315,setup:{planStart:'2026-07-26',raceDate:'2026-12-13',raceName:'Goal Race',raceDistance:42.195,targetTime:15300,currentWeekly:35,currentLongest:18,testDistance:5,testTime:1515,thresholdHr:168,criticalPower:300,bodyWeight:93,maxWeekly:70,growth:.08,peakLong:35,taperDays:21,minFactor:.85,maxFactor:1.05,adaptive:true},days:[['Monday',false,'Easy'],['Tuesday',true,'Intervals'],['Wednesday',true,'Easy'],['Thursday',false,'Easy'],['Friday',true,'Tempo'],['Saturday',true,'Easy'],['Sunday',true,'Long run']],runs:[],assessments:[],plan:[],weekView:null});
 let state;try{state=JSON.parse(localStorage.getItem('arc_v62_web'))}catch{}if(!state)state=defaults();
 const save=()=>localStorage.setItem('arc_v62_web',JSON.stringify(state)), today=()=>dte(iso(new Date()));
 function baselineOn(date){let valid=state.assessments.filter(a=>a.valid&&a.date<=date).sort((a,b)=>a.date.localeCompare(b.date));let a=valid.at(-1);return a?{pace:a.time/a.distance,hr:a.thresholdHr||state.setup.thresholdHr,cp:a.criticalPower||state.setup.criticalPower}:{pace:state.setup.testTime/state.setup.testDistance,hr:state.setup.thresholdHr,cp:state.setup.criticalPower}}
@@ -35,7 +35,7 @@ function typeMetricSummary(runs){return metricRunTypes.map(type=>{
 }).filter(x=>x.effAvg!==null||x.driftAvg!==null)}
 function weekData(w){let st=weekStart(w),en=new Date(st.getTime()+7*DAY),p=state.plan.filter(x=>x.week===w&&x.type!=='Rest'),r=state.runs.filter(x=>dte(x.date)>=st&&dte(x.date)<en);return{planned:sum(p.map(x=>x.distance)),actual:sum(r.map(x=>x.distanceKm)),runs:r,plan:p}}
 function adaptiveFactorDetails(w){
- if(!state.setup.adaptive||w<=1)return{factor:1,items:[{name:'Baseline',adjustment:0,detail:w<=1?'No previous training week is available.':'Adaptive planning is disabled.'}]};
+ if(!state.setup.adaptive||w<=1)return{factor:1,rawFactor:1,baseFactor:1,items:[{name:'Baseline',adjustment:0,detail:w<=1?'No previous training week is available.':'Adaptive planning is disabled.'}],previousWeek:w-1,plannedKm:null,completedKm:null};
  let prev=weekData(w-1),ad=prev.planned?prev.actual/prev.planned:null;
  let recovery=avg(prev.runs.map(x=>Number(x.recovery)).filter(v=>Number.isFinite(v)&&v>0));
  let pain=avg(prev.runs.map(x=>Number(x.pain)).filter(Number.isFinite));
@@ -69,7 +69,8 @@ function adaptiveFactorDetails(w){
  else if(drift>5)add('Cardiac drift',-.02,`Average power-based drift ${drift.toFixed(1)}%.`);
  else if(drift<=3)add('Cardiac drift',.01,`Average power-based drift ${drift.toFixed(1)}%.`);
  else add('Cardiac drift',0,`Average power-based drift ${drift.toFixed(1)}%.`);
- return{factor:clamp(f,state.setup.minFactor,state.setup.maxFactor),items};
+ let rawFactor=f,boundedFactor=clamp(rawFactor,state.setup.minFactor,state.setup.maxFactor);
+ return{factor:boundedFactor,rawFactor,baseFactor:1,items,previousWeek:w-1,plannedKm:prev.planned,completedKm:prev.actual};
 }
 function adaptiveFactor(w){return adaptiveFactorDetails(w).factor}
 function buildPlan(){
@@ -127,7 +128,7 @@ function buildPlan(){
      out.push(old.get(id)||item);
    });
  }
- state.plan=out;state.schemaVersion=6314;save()
+ state.plan=out;state.schemaVersion=6315;save()
 }
 function prescription(type,km,w,ph,z){
  if(type==='Rest')return{warmup:'—',main:'Rest day',cooldown:'—',purpose:'Absorb training and restore freshness.',coach:'Walking and light mobility are fine. Avoid turning recovery into another workout.',fuel:'Normal daily hydration.'};
@@ -138,7 +139,7 @@ function prescription(type,km,w,ph,z){
  if(type==='Fitness assessment')return{warmup:'15–20 min easy + drills + 4 strides',main:'5 km even maximal assessment',cooldown:'10–15 min very easy',purpose:'Create a repeatable benchmark that can update future targets.',coach:'Use even pacing and mark the result valid only when course, weather, health and execution make the result representative.',fuel:'Normal pre-run meal; avoid starting depleted.'};
  return{warmup:'10–15 min easy',main:`${km.toFixed(1)} km race execution`,cooldown:'Walk and begin recovery nutrition',purpose:'Execute the race plan.',coach:'Start controlled, protect the first 10 km and only progress after halfway if effort remains stable.',fuel:'60–90 g carbohydrate/hour and 400–800 ml fluid/hour.'}
 }
-if(state.schemaVersion!==6314){state.plan=[];buildPlan()}else if(!state.plan?.length)buildPlan();
+if(state.schemaVersion!==6315){state.plan=[];buildPlan()}else if(!state.plan?.length)buildPlan();
 function status(p){let done=state.runs.some(r=>r.planId===p.id||r.date===p.date);if(done)return'completed';if(p.type==='Rest')return'rest';let d=dte(p.date);if(d<today())return'missed';if(d.getTime()===today().getTime())return'today';return'upcoming'}
 function confidence(){
  let raceDate=dte(state.setup.raceDate);
@@ -187,7 +188,11 @@ function confidence(){
  let specificDue=state.plan.filter(p=>['Tempo','Intervals','Fitness assessment'].includes(p.type)&&dte(p.date)<=today()&&today()-dte(p.date)<=56*DAY);
  let specificDone=specificDue.filter(p=>completedDates.has(p.date)).length;
  let specificity=specificDue.length?clamp(specificDone/specificDue.length*100,0,100):null;
- const weighted=(items)=>{let totalWeight=sum(items.map(x=>x.weight)),availableWeight=sum(items.filter(x=>Number.isFinite(x.score)).map(x=>x.weight));return{score:totalWeight?sum(items.map(x=>(Number.isFinite(x.score)?x.score:0)*x.weight))/totalWeight:0,coverage:totalWeight?availableWeight/totalWeight:0,items}};
+ const weighted=(items)=>{
+  let enriched=items.map(x=>({...x,hasEvidence:Number.isFinite(x.score),displayScore:Number.isFinite(x.score)?x.score:0}));
+  let totalWeight=sum(enriched.map(x=>x.weight)),availableWeight=sum(enriched.filter(x=>x.hasEvidence).map(x=>x.weight));
+  return{score:totalWeight?sum(enriched.map(x=>x.displayScore*x.weight))/totalWeight:0,coverage:totalWeight?availableWeight/totalWeight:0,items:enriched};
+ };
  // Each component belongs to exactly one pillar.
  let pillars=[
   {name:'Physiological readiness',weight:.35,color:'#2d82c7',description:'Current performance capacity, long-run endurance and field efficiency.',...weighted([{name:'Fitness',score:fitness,weight:.50},{name:'Endurance',score:endurance,weight:.30},{name:'Efficiency',score:efficiency,weight:.20}])},
@@ -281,7 +286,11 @@ function renderDashboard(){
  $('assessmentText').textContent=assessmentText(c);
  $('evidenceBadge').textContent=`Evidence ${Math.round(c.evidenceCoverage*100)}% complete`;
  let afd=adaptiveFactorDetails(cw);
- $('adaptiveFactorDetail').innerHTML=`<div class="panelHead"><div><h3>Adaptive factor · ${afd.factor.toFixed(2)}</h3><p class="muted compact">Conservative weekly load multiplier, bounded by ${state.setup.minFactor.toFixed(2)}–${state.setup.maxFactor.toFixed(2)}</p></div></div><div class="adaptiveBreakdown">${afd.items.map(i=>`<div class="adaptiveRow"><b>${i.name}</b><span class="${i.adjustment>0?'positive':i.adjustment<0?'negative':''}">${i.adjustment>0?'+':''}${i.adjustment.toFixed(2)}</span><small>${i.detail}</small></div>`).join('')}</div><p class="muted">The factor scales planned weekly training volume. Positive adjustments are deliberately small; missing evidence and adverse recovery, pain or drift reduce load rather than increasing it.</p>`;
+ $('adaptiveFactorDetail').innerHTML=`<div class="panelHead"><div><h3>Adaptive factor · ${afd.factor.toFixed(2)}</h3><p class="muted compact">Evidence-informed weekly load multiplier, bounded by ${state.setup.minFactor.toFixed(2)}–${state.setup.maxFactor.toFixed(2)}</p></div></div>
+ <div class="adaptiveFormula"><b>Calculation</b><span>1.00 ${afd.items.map(i=>`${i.adjustment>=0?'+':'−'} ${Math.abs(i.adjustment).toFixed(2)}`).join(' ')} = ${afd.rawFactor.toFixed(2)} → applied ${afd.factor.toFixed(2)}</span></div>
+ <div class="adaptiveContext"><span>Evidence week</span><b>${afd.previousWeek>0?`Week ${afd.previousWeek}`:'—'}</b><span>Planned / completed</span><b>${Number.isFinite(afd.plannedKm)?afd.plannedKm.toFixed(1):'—'} / ${Number.isFinite(afd.completedKm)?afd.completedKm.toFixed(1):'—'} km</b></div>
+ <div class="adaptiveBreakdown">${afd.items.map(i=>`<div class="adaptiveRow"><b>${i.name}</b><span class="${i.adjustment>0?'positive':i.adjustment<0?'negative':''}">${i.adjustment>0?'+':''}${i.adjustment.toFixed(2)}</span><small>${i.detail}</small></div>`).join('')}</div>
+ <div class="adaptiveExplanation"><p><b>How it is used:</b> the factor multiplies the next week's planned training volume after the normal progression, recovery-week and taper rules. A factor of 0.92 reduces that volume by 8%; 1.03 increases it by 3%.</p><p><b>Interpretation:</b> this is a conservative, evidence-informed coaching rule—not a validated physiological measurement. Load completion, recovery and pain have the strongest safety influence; efficiency and cardiac drift only make small adjustments.</p></div>`;
 
  const predictionGap=pred-state.setup.targetTime;
  const predictionPace=pred/state.setup.raceDistance;
@@ -307,16 +316,16 @@ function renderDashboard(){
     <p>${p.description}</p>
     <div class="pillarMeta"><span>Model weight ${Math.round(p.weight*100)}%</span><span>Evidence ${Math.round(p.coverage*100)}%</span></div>
     <details class="pillarExplain"><summary>How this is calculated</summary>
-      <div class="calcTable">${p.items.map(i=>`<div class="calcRow"><span>${i.name}</span><span>${Number.isFinite(i.score)?Math.round(i.score):'0'}</span><span>${Math.round(i.weight*100)}%</span></div>`).join('')}</div>
-      <p class="muted">Missing contributors score 0. Evidence coverage separately shows how much of the model is supported by logged data.</p>
+      <div class="calcTable">${p.items.map(i=>`<div class="calcRow"><span>${i.name}</span><span>${i.hasEvidence?Math.round(i.displayScore):'No evidence → 0'}</span><span>${Math.round(i.weight*100)}%</span></div>`).join('')}</div>
+      <p class="muted">A missing contributor contributes 0 to the score but does not count as evidence. A genuine measured score of 0 still counts as evidence.</p>
     </details>
    </div>`).join('');
 
  $('componentGuide').innerHTML=c.components.map(x=>`
    <div><b>${x.name}</b><p>${componentDefinitions[x.name]}</p>
-   <small class="${Number.isFinite(x.score)?'muted':'metricMissing'}">${Number.isFinite(x.score)?`Current score: ${Math.round(x.score)} / 100`:'Not enough data yet'} · within-pillar weight ${Math.round(x.weight*100)}%</small></div>`).join('');
+   <small class="${x.hasEvidence?'muted':'metricMissing'}">${x.hasEvidence?`Current score: ${Math.round(x.displayScore)} / 100`:'No evidence yet · contributes 0'} · within-pillar weight ${Math.round(x.weight*100)}%</small></div>`).join('');
 
- let scored=uniqueComponents(c.components.map(x=>({...x,score:Number.isFinite(x.score)?x.score:0}))).sort((a,b)=>b.score-a.score||a.name.localeCompare(b.name));
+ let scored=uniqueComponents(c.components.map(x=>({...x,score:x.displayScore}))).sort((a,b)=>b.score-a.score||a.name.localeCompare(b.name));
  $('strengths').innerHTML=scored.slice(0,3).map(x=>`<div class="note good"><b>✓ ${coachLabel(x.name,x.score)}</b><br>${interpretations[x.name](x.score)}</div>`).join('')||'<p class="muted">More training data is needed.</p>';
  $('risks').innerHTML=[...scored].reverse().slice(0,3).map(x=>`<div class="note warn"><b>⚠ ${coachLabel(x.name,x.score)}</b><br>${interpretations[x.name](x.score)}</div>`).join('')||'<p class="muted">More training data is needed.</p>';
  $('dashboardActions').innerHTML=[...scored].sort((a,b)=>a.score-b.score).slice(0,3).map((x,i)=>`<div class="actionRow"><strong>${i+1}</strong><b>${x.name}</b><span>${Math.round(x.score)}%</span><div>${actions[x.name]}<br><small class="muted">${interpretations[x.name](x.score)}</small></div></div>`).join('');
