@@ -257,6 +257,17 @@ function coachLabel(name,score){
  };
  return labels[name]||`${name}: ${Math.round(score)}`;
 }
+function uniqueScoredComponents(components,prefer='high'){
+ const map=new Map();
+ components.filter(x=>Number.isFinite(x.score)).forEach((x,index)=>{
+   const current=map.get(x.name);
+   if(!current || (prefer==='low'?x.score<current.score:x.score>current.score)) map.set(x.name,{...x,_index:index});
+ });
+ return [...map.values()].sort((a,b)=>{
+   const scoreOrder=prefer==='low'?a.score-b.score:b.score-a.score;
+   return scoreOrder || a.name.localeCompare(b.name) || a._index-b._index;
+ });
+}
 function renderDashboard(){
  let c=confidence(),pred=prediction(),cw=currentWeek(),wd=weekData(cw);
  $('phaseBadge').textContent=phase(cw);
@@ -309,10 +320,11 @@ function renderDashboard(){
    <div><b>${x.name}</b><p>${componentDefinitions[x.name]}</p>
    <small class="${Number.isFinite(x.score)?'muted':'metricMissing'}">${Number.isFinite(x.score)?`Current score: ${Math.round(x.score)} / 100`:'Not enough data yet'} · within-pillar weight ${Math.round(x.weight*100)}%</small></div>`).join('');
 
- let scored=c.components.filter(x=>Number.isFinite(x.score)).sort((a,b)=>b.score-a.score);
- $('strengths').innerHTML=scored.slice(0,3).map(x=>`<div class="note good"><b>✓ ${coachLabel(x.name,x.score)}</b><br>${interpretations[x.name](x.score)}</div>`).join('')||'<p class="muted">More training data is needed.</p>';
- $('risks').innerHTML=[...scored].reverse().slice(0,3).map(x=>`<div class="note warn"><b>⚠ ${coachLabel(x.name,x.score)}</b><br>${interpretations[x.name](x.score)}</div>`).join('')||'<p class="muted">More training data is needed.</p>';
- $('dashboardActions').innerHTML=[...scored].sort((a,b)=>a.score-b.score).slice(0,3).map((x,i)=>`<div class="actionRow"><strong>${i+1}</strong><b>${x.name}</b><span>${Math.round(x.score)}%</span><div>${actions[x.name]}<br><small class="muted">${interpretations[x.name](x.score)}</small></div></div>`).join('');
+ let strengths=uniqueScoredComponents(c.components,'high');
+ let risks=uniqueScoredComponents(c.components,'low');
+ $('strengths').innerHTML=strengths.slice(0,3).map(x=>`<div class="note good"><b>✓ ${coachLabel(x.name,x.score)}</b><br>${interpretations[x.name](x.score)}</div>`).join('')||'<p class="muted">More training data is needed.</p>';
+ $('risks').innerHTML=risks.slice(0,3).map(x=>`<div class="note warn"><b>⚠ ${coachLabel(x.name,x.score)}</b><br>${interpretations[x.name](x.score)}</div>`).join('')||'<p class="muted">More training data is needed.</p>';
+ $('dashboardActions').innerHTML=risks.slice(0,3).map((x,i)=>`<div class="actionRow"><strong>${i+1}</strong><b>${x.name}</b><span>${Math.round(x.score)}%</span><div>${actions[x.name]}<br><small class="muted">${interpretations[x.name](x.score)}</small></div></div>`).join('');
 
  let future=state.plan.filter(p=>p.type!=='Rest'&&dte(p.date)>=today()).slice(0,4);
  $('keySessions').innerHTML=future.map(p=>`<div class="miniSession"><b>${fmtDate(p.date)} · ${p.type}</b><span>${p.distance.toFixed(1)} km · ${pace(p.zone.pace)}<br>${p.purpose}</span></div>`).join('');
@@ -595,7 +607,6 @@ function renderMetrics(){
    empty:'Log a run with average power and heart rate'});
 
  let driftSeries=metricSeries(allMetricRuns,r=>r.powerDrift);
- if(allMetricRuns.length)driftSeries.push({label:'5% reference',data:allMetricRuns.map(()=>5),color:'#159487',dashed:true,points:false});
  drawLine($('driftChart'),driftSeries,{
    min:driftValues.length?Math.min(0,Math.floor(Math.min(...driftValues)-2)):0,
    max:driftValues.length?Math.max(10,Math.ceil(Math.max(...driftValues)+2)):10,ticks:6,
@@ -605,18 +616,8 @@ function renderMetrics(){
  let summary=typeMetricSummary(rs);
  $('metricTypeSummary').innerHTML=summary.length?`<div class="metricTypeTable"><div class="metricTypeHead"><b>Run type</b><b>Efficiency avg</b><b>Efficiency best</b><b>Drift avg</b><b>Drift best</b></div>${summary.map(x=>`<div class="metricTypeRow"><span><i style="--runColor:${runTypeColors[x.type]}"></i>${esc(x.type)}</span><span>${Number.isFinite(x.effAvg)?x.effAvg.toFixed(1)+' J/beat':'—'}</span><span>${Number.isFinite(x.effBest)?x.effBest.toFixed(1)+' J/beat':'—'}</span><span>${Number.isFinite(x.driftAvg)?x.driftAvg.toFixed(1)+'%':'—'}</span><span>${Number.isFinite(x.driftBest)?x.driftBest.toFixed(1)+'%':'—'}</span></div>`).join('')}</div>`:'<span class="muted">No qualifying run metrics yet.</span>';
 
- if(driftRuns.length){
-   let d=latestDrift;
-   $('driftSummary').textContent=`Latest ${d.powerDrift.toFixed(1)}% · ${d.type}`;
-   $('driftStatus').className='dataStatus '+(d.powerDrift<5?'driftGood':d.powerDrift<8?'driftWarn':'driftHigh');
-   $('driftStatus').innerHTML=`<b>${d.powerDrift<5?'Good aerobic stability':d.powerDrift<8?'Noticeable drift':'High drift'}</b><br>
-   Power–HR drift ${d.powerDrift.toFixed(1)}%. <span class="muted">Reliability: ${d.streamEvidence?.reliability||'Unknown'}.</span>`;
- }else{
-   $('driftSummary').textContent='No power-drift data';
-   $('driftStatus').className='dataStatus';
-   $('driftStatus').innerHTML='<span class="muted">Power-based cardiac drift appears after importing a detailed Stryd CSV containing timestamped heart rate and power.</span>';
- }
 }
+
 function assessmentRunId(a){return a.runId||`assessment-run-${a.id}`}
 function syncAssessmentRun(a){
  let id=assessmentRunId(a),i=state.runs.findIndex(r=>r.id===id||r.assessmentId===a.id);
@@ -641,7 +642,16 @@ function migrateAssessmentRuns(){
  save();
 }
 function renderAssessments(){$('assessmentList').innerHTML=state.assessments.slice().sort((a,b)=>b.date.localeCompare(a.date)).map(a=>`<div class="panel clickable" data-assessment="${a.id}"><div class="panelHead"><div><b>${fmtDate(a.date)} · ${a.distance.toFixed(1)} km</b><p class="muted">${fmtTime(a.time)} · ${pace(a.time/a.distance)} · ${a.valid?'Valid and applied to future targets':'Not applied'}<br>Also included in run history and training metrics</p></div><span class="status ${a.valid?'completed':'rest'}">${a.valid?'valid':'invalid'}</span></div></div>`).join('')||'<div class="panel">No fitness assessment results entered.</div>'}
-function renderCoach(){let c=confidence(),pred=prediction(),gap=pred-state.setup.targetTime;$('coachTop').innerHTML=kpi('Overall readiness',Math.round(c.overall)+'%')+kpi('Predicted time',fmtTime(pred))+kpi('Target gap',(gap>=0?'+':'−')+fmtTime(Math.abs(gap)))+kpi('Current phase',phase(currentWeek()));$('fullAssessment').textContent=assessmentText(c);let sorted=[...c.components].sort((a,b)=>b.score-a.score);$('coachStrengths').innerHTML=sorted.slice(0,3).map(x=>`<div class="note good"><b>✓ ${x.name} · ${Math.round(x.score)}</b><br>${interpretations[x.name](x.score)}</div>`).join('');$('coachRisks').innerHTML=[...sorted].reverse().slice(0,3).map(x=>`<div class="note warn"><b>⚠ ${x.name} · ${Math.round(x.score)}</b><br>${interpretations[x.name](x.score)}</div>`).join('');$('actionsTable').innerHTML=[...c.components].sort((a,b)=>a.score-b.score).slice(0,3).map((x,i)=>`<div class="actionRow"><strong>${i+1}</strong><b>${x.name}</b><span>${Math.round(x.score)}%</span><div>${actions[x.name]}<br><small class="muted">${interpretations[x.name](x.score)}</small></div></div>`).join('')}
+function renderCoach(){
+ let c=confidence(),pred=prediction(),gap=pred-state.setup.targetTime;
+ $('coachTop').innerHTML=kpi('Overall readiness',Math.round(c.overall)+'%')+kpi('Predicted time',fmtTime(pred))+kpi('Target gap',(gap>=0?'+':'−')+fmtTime(Math.abs(gap)))+kpi('Current phase',phase(currentWeek()));
+ $('fullAssessment').textContent=assessmentText(c);
+ let strengths=uniqueScoredComponents(c.components,'high');
+ let risks=uniqueScoredComponents(c.components,'low');
+ $('coachStrengths').innerHTML=strengths.slice(0,3).map(x=>`<div class="note good"><b>✓ ${x.name} · ${Math.round(x.score)}</b><br>${interpretations[x.name](x.score)}</div>`).join('')||'<p class="muted">More training data is needed.</p>';
+ $('coachRisks').innerHTML=risks.slice(0,3).map(x=>`<div class="note warn"><b>⚠ ${x.name} · ${Math.round(x.score)}</b><br>${interpretations[x.name](x.score)}</div>`).join('')||'<p class="muted">More training data is needed.</p>';
+ $('actionsTable').innerHTML=risks.slice(0,3).map((x,i)=>`<div class="actionRow"><strong>${i+1}</strong><b>${x.name}</b><span>${Math.round(x.score)}%</span><div>${actions[x.name]}<br><small class="muted">${interpretations[x.name](x.score)}</small></div></div>`).join('');
+}
 function renderRace(){let c=confidence(),pred=prediction(),targetPace=state.setup.targetTime/state.setup.raceDistance;$('raceKpis').innerHTML=kpi('Target time',fmtTime(state.setup.targetTime))+kpi('Target pace',pace(targetPace))+kpi('Target HR',Math.round(state.setup.thresholdHr*.92)+' bpm')+kpi('Target power',Math.round(state.setup.criticalPower*.88)+' W')+kpi('Current prediction',fmtTime(pred))+kpi('Confidence',Math.round(c.overall)+'%');$('racePacing').innerHTML='<div class="note"><b>0–10 km:</b> Start controlled, slightly slower than target pace. Let heart rate rise gradually.</div><div class="note"><b>10–30 km:</b> Settle at target effort and protect fuelling. Avoid reacting to short pace fluctuations.</div><div class="note good"><b>After 30 km:</b> Progress only when breathing, form and stomach remain stable. Otherwise preserve target effort.</div>';$('raceFuel').innerHTML='<p><b>Carbohydrate:</b> 60–90 g/hour, practised in long runs.</p><p><b>Fluids:</b> approximately 400–800 ml/hour, adjusted for temperature and sweat rate.</p><p><b>Sodium:</b> use the same product and concentration tested in training.</p>';$('raceRules').innerHTML='<p>Slow down early if heart rate is unusually high at normal power.</p><p>Do not chase lost seconds on hills or crowded sections.</p><p>Use effort rather than pace when conditions are hot, windy or technical.</p>'}
 function renderSettings(){let defs=[['planStart','Plan start','date'],['raceDate','Race date','date'],['raceName','Race name','text'],['raceDistance','Race distance km','number'],['targetTime','Target time','time'],['currentWeekly','Current weekly km','number'],['currentLongest','Current longest run km','number'],['testDistance','Recent test distance km','number'],['testTime','Recent test time','time'],['thresholdHr','Threshold HR','number'],['criticalPower','Critical power W','number'],['bodyWeight','Body weight kg','number'],['maxWeekly','Max weekly km','number'],['growth','Max weekly growth %','percent'],['peakLong','Peak long run km','number'],['taperDays','Taper days','number']];$('settingsGrid').innerHTML=defs.map(d=>{let v=state.setup[d[0]];if(d[2]=='time')v=fmtTime(v);if(d[2]=='percent')v=Math.round(v*100);return`<div class="field"><label>${d[1]}</label><input data-setting="${d[0]}" data-type="${d[2]}" type="${d[2]=='date'?'date':'text'}" value="${esc(v)}"></div>`}).join('');$('daysGrid').innerHTML=state.days.map((d,i)=>`<div class="panelHead" style="padding:7px 0;border-bottom:1px solid var(--line)"><b>${d[0]}</b><label><input data-day="${i}" type="checkbox" ${d[1]?'checked':''}> Train</label><select data-session="${i}"><option ${d[2]=='Easy'?'selected':''}>Easy</option><option ${d[2]=='Intervals'?'selected':''}>Intervals</option><option ${d[2]=='Tempo'?'selected':''}>Tempo</option><option ${d[2]=='Long run'?'selected':''}>Long run</option></select></div>`).join('')}
 function weeklyCompletedLongs(){

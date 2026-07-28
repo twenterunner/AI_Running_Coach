@@ -3,18 +3,18 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#0b3157"><title>AI Running Coach</title>
-<link rel="manifest" href="manifest.webmanifest?v=6312"><link rel="stylesheet" href="styles.css?v=6312">
+<link rel="manifest" href="manifest.webmanifest?v=6313"><link rel="stylesheet" href="styles.css?v=6313">
 
-<link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png?v=6312">
-<link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png?v=6312">
-<link rel="icon" href="favicon.ico?v=6312">
-<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=6312">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png?v=6313">
+<link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png?v=6313">
+<link rel="icon" href="favicon.ico?v=6313">
+<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=6313">
 <meta property="og:image" content="github-banner.png">
 
 </head>
 <body>
 <header class="topbar">
-  <div class="brand"><img class="logo" src="icon-192.png?v=6312" alt="AI Running Coach logo"><div class="brand-copy"><h1>AI Running Coach</h1><p>Adaptive marathon planning • v6.3 · build 6312</p></div></div>
+  <div class="brand"><img class="logo" src="icon-192.png?v=6313" alt="AI Running Coach logo"><div class="brand-copy"><h1>AI Running Coach</h1><p>Adaptive marathon planning • v6.3 · build 6313</p></div></div>
   <button id="installBtn" class="install hidden">Install</button>
 </header>
 <nav id="nav"></nav>
@@ -37,7 +37,7 @@
 
   <div class="grid2">
     <article class="panel"><div class="panelHead"><h3>Weekly distance progression</h3><span class="muted">Planned vs completed</span></div><canvas id="volumeChart" width="1000" height="340"></canvas></article>
-    <article class="panel"><div class="panelHead"><h3>Weekly completion rate</h3><span class="muted">Completed ÷ planned</span></div><canvas id="adherenceChart" width="1000" height="340"></canvas></article>
+    <article class="panel"><div class="panelHead"><h3>Weekly completion rate</h3></div><canvas id="adherenceChart" width="1000" height="340"></canvas></article>
   </div>
 
   <article class="panel"><div class="panelHead"><h3>Long-run progression</h3><span class="muted">Planned vs completed long runs</span></div><canvas id="longRunChart" width="1000" height="340"></canvas></article>
@@ -63,9 +63,8 @@
       <canvas id="efficiencyChart" width="1000" height="380"></canvas>
     </article>
     <article class="panel">
-      <div class="panelHead"><div><h3>Power-based cardiac drift</h3><p class="muted compact">Change in power–HR efficiency · lower is better</p></div><div id="driftSummary" class="evidenceBadge"></div></div>
+      <div class="panelHead"><div><h3>Power-based cardiac drift</h3><p class="muted compact">Change in power–HR efficiency · lower is better</p></div></div>
       <canvas id="driftChart" width="1000" height="380"></canvas>
-      <div id="driftStatus" class="dataStatus"></div>
     </article>
   </div>
   <article class="panel">
@@ -168,5 +167,5 @@
 </main>
 
 <div id="modal" class="modal hidden"><div class="modalCard"><button id="closeModal" class="close">×</button><div id="modalContent"></div></div></div>
-<script src="app.js?v=6312"></script>
+<script src="app.js?v=6313"></script>
 </body></html>
