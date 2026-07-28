@@ -1,17 +1,17 @@
-const CACHE='arc-v833-web-8330';
+const CACHE='arc-v850-stable-8500';
 const ASSETS=[
   './',
   './index.html',
-  './styles.css?v=8330',
-  './app.js?v=8330',
-  './manifest.webmanifest?v=8330',
-  './icon-192.png?v=8330',
-  './icon-512.png?v=8330',
-  './apple-touch-icon.png?v=8330',
-  './favicon-32x32.png?v=8330',
-  './favicon-16x16.png?v=8330',
-  './favicon.ico?v=8330',
-  './github-banner.png?v=8330'
+  './styles.css?v=8500',
+  './app.js?v=8500',
+  './manifest.webmanifest?v=8500',
+  './icon-192.png?v=8500',
+  './icon-512.png?v=8500',
+  './apple-touch-icon.png?v=8500',
+  './favicon-32x32.png?v=8500',
+  './favicon-16x16.png?v=8500',
+  './favicon.ico?v=8500',
+  './github-banner.png?v=8500'
 ];
 
 self.addEventListener('install', event => {
