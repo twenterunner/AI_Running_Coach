@@ -1,90 +1,72 @@
-AI RUNNING COACH
-================
+AI Running Coach v6.5 — build 6500
+================================================
 
-Adaptive marathon planning powered by Stryd data, race-readiness modelling and intelligent coaching.
+A browser-based adaptive marathon training coach with transparent readiness,
+evidence coverage and conservative weekly plan adaptation.
 
-LIVE APP
---------
-https://twenterunner.github.io/AI_Running_Coach/
+CORE PERFORMANCE METRICS
+------------------------
+1. Efficiency Factor (J/heartbeat)
+   Average running power × 60 ÷ average heart rate.
+   Higher is better when comparing similar run types and conditions.
 
-CURRENT VERSION
+2. Power-based Cardiac Drift (%)
+   Percentage deterioration in power per heartbeat from the first usable half
+   of a run to the second. Lower is better. Detailed timestamped heart-rate and
+   power data are required.
+
+READINESS MODEL
 ---------------
-v6.3 · build 6310
+The four pillars are:
+- Physiological readiness: Fitness, Endurance, Efficiency
+- Training execution: Adherence, Consistency
+- Recovery & health: Recovery, Pain status
+- Race readiness: Preparation time, Long-run execution, Specificity
 
-MAIN FEATURES
--------------
-- Adaptive marathon training plan
-- Detailed Stryd CSV import
-- Cardiac drift analysis for long runs
-- Running effectiveness and aerobic-efficiency trends
-- Distance per heartbeat, W/bpm and W/kg
-- Fitness assessments and marathon prediction
-- Four-pillar race-readiness model
-- Training adherence, consistency and long-run execution
-- Editable imported and manual runs
-- Offline-first Progressive Web App
-- Mobile-first dashboard
+Missing evidence contributes 0 to the readiness score but does not count toward
+evidence coverage. Missing metrics are not ranked as measured weaknesses.
 
-RUN IMPORT WORKFLOW
--------------------
-1. Export a detailed CSV from Stryd.
-2. Open Runs and choose the CSV.
-3. Review automatically calculated metrics.
-4. Select the correct run type.
-5. Add RPE, pain and recovery ratings.
-6. Save the analysed run.
+ADAPTIVE FACTOR
+---------------
+The adaptive factor uses only:
+- completed load versus planned load;
+- same-run-type Efficiency Factor trend;
+- qualifying power-based Cardiac Drift.
 
-SUBJECTIVE RATINGS
-------------------
-RPE 1-10
-1-2 very easy; 3-4 easy; 5-6 moderate; 7 marathon effort; 8 threshold; 9 very hard; 10 maximal.
+Future weeks remain pending at 1.00 until the preceding week is complete.
+The applied factor is constrained by the configured safety range.
 
-Pain 0-10
-0 none; 1-2 awareness; 3-4 mild discomfort; 5-6 affects mechanics; 7-10 stop or seek assessment.
+RUN-TO-PLAN MATCHING
+--------------------
+A completed run matches a planned workout by plan ID, or by both date and a
+compatible run type. An Easy run cannot complete a planned Intervals or Long-run
+session.
 
-Recovery 1-5
-1 very poor; 2 poor; 3 normal; 4 good; 5 excellent.
+INSTALLATION / DEPLOYMENT
+-------------------------
+Upload all files in this folder to the root of the GitHub Pages repository.
+The service worker cache is arc-v65-web-6500. After deployment, refresh once or
+close and reopen the installed PWA to activate the new cache.
 
-KEY METRICS
------------
-Running Effectiveness
-Speed in m/s divided by power in W/kg.
-
-Distance per Heartbeat
-Metres travelled per heartbeat.
-
-W / bpm
-Average power divided by average heart rate.
-
-W / kg
-Average power relative to configured body weight.
-
-Cardiac Drift
-Long-run pace-HR or power-HR efficiency loss from the first half to the second half. Lower is generally better.
-
-BRANDING FILES
---------------
-icon-192.png
-icon-512.png
-apple-touch-icon.png
-favicon-32x32.png
-favicon-16x16.png
-favicon.ico
-github-banner.png
-
-DEPLOYMENT
-----------
-Upload every file in this pack to the root of the GitHub repository and commit the changes.
-
-Then open:
-https://twenterunner.github.io/AI_Running_Coach/?v=6310
-
-The header should display v6.3 · build 6310.
+BACKUP
+------
+Use Settings > Download backup before replacing an older deployment. Restore the
+backup after deployment if browser storage was cleared.
 
 
-BUILD 6310 BRANDING UPDATE
---------------------------
-- Replaced the visible AR header badge with the AI Running Coach runner logo.
-- Improved mobile header sizing and spacing.
-- Updated all asset and service-worker cache versions.
-- Kept PWA, Apple touch and browser icons aligned with the in-app branding.
+v6.5 WORKOUT MATCHING
+---------------------
+Every imported or manually entered run is explicitly classified by the user as:
+- linked to a selected planned workout;
+- ad hoc and intentionally not linked; or
+- unresolved for later review.
+
+The app suggests likely planned sessions but never silently confirms the link. A linked
+run stores the planned date and day offset. Training execution separately assesses
+completed volume, session completion and schedule timing. Long-run execution and
+specificity require a compatible run type, while ad hoc runs still contribute to actual
+weekly volume and physiological metrics.
+
+Timing credit: same day 100%, one day early/late 90%, two days 75%, more than two
+days 50%. A planned workout can only be linked to one run. Links can be changed or
+removed from the run editor at any time.
