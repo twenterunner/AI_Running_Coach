@@ -21,7 +21,7 @@ function raceProfileValues(distance){let p=raceProfile(distance);return{peakLong
 function buildRequirementEstimate(setup=state.setup){
  let longest=Math.max(Number(setup.currentLongest)||0,...((state?.runs||[]).map(r=>Number(r.distanceKm)||0)));
  let currentWeekly=Math.max(1,Number(setup.currentWeekly)||1),targetWeekly=Math.max(1,Number(setup.maxWeekly)||currentWeekly),growth=Math.max(.01,Number(setup.growth)||.05);
- let longGap=Math.max(0,Number(setup.peakLong)||0-longest),safeLongStep=Math.max(1.5,longest*.10),longRun=longGap/safeLongStep;
+ let longGap=Math.max(0,(Number(setup.peakLong)||0)-longest),safeLongStep=Math.max(1.5,longest*.10),longRun=longGap/safeLongStep;
  let weeklyVolume=targetWeekly<=currentWeekly?0:Math.log(targetWeekly/currentWeekly)/Math.log(1+growth);
  let latest=(state?.assessments||[]).filter(a=>a.valid).sort((a,b)=>b.date.localeCompare(a.date))[0];
  let testTime=latest?latest.time:Number(setup.testTime),testDist=latest?latest.distance:Number(setup.testDistance);
@@ -45,6 +45,18 @@ function recommendedRaceDate(setup){
 }
 const defaults=()=>{let start=iso(new Date()),setup={planStart:start,raceDate:start,raceName:'Goal Race',raceDistance:42.195,targetTime:15300,currentWeekly:35,currentLongest:18,testDistance:5,testTime:1515,thresholdHr:168,criticalPower:300,bodyWeight:93,maxWeekly:80,growth:.08,peakLong:34,taperDays:21,minFactor:.85,maxFactor:1.05,adaptive:true};setup.raceDate=recommendedRaceDate(setup).date;return({schemaVersion:8000,setup,days:[['Monday',false,'Easy'],['Tuesday',true,'Intervals'],['Wednesday',true,'Easy'],['Thursday',false,'Easy'],['Friday',true,'Tempo'],['Saturday',true,'Easy'],['Sunday',true,'Long run']],runs:[],assessments:[],plan:[],weekView:null})};
 let state;try{state=JSON.parse(localStorage.getItem('arc_v62_web'))}catch{}if(!state)state=defaults();
+function normaliseState(input){
+ const base=defaults(),src=input&&typeof input==='object'?input:{};
+ const numericSetup=['raceDistance','targetTime','currentWeekly','currentLongest','testDistance','testTime','thresholdHr','criticalPower','bodyWeight','maxWeekly','growth','peakLong','taperDays','minFactor','maxFactor'];
+ const setup={...base.setup,...(src.setup||{})};
+ numericSetup.forEach(k=>{const n=Number(setup[k]);setup[k]=Number.isFinite(n)?n:base.setup[k]});
+ setup.adaptive=setup.adaptive!==false;
+ const runs=Array.isArray(src.runs)?src.runs.map(r=>({...r,distanceKm:Number(r.distanceKm)||0,durationSec:Number(r.durationSec)||0,avgHr:Number(r.avgHr)||0,avgPower:Number(r.avgPower)||0,rpe:r.rpe==null?null:Number(r.rpe),pain:r.pain==null?null:Number(r.pain),recovery:r.recovery==null?null:Number(r.recovery),powerDrift:r.powerDrift==null?null:Number(r.powerDrift)})):[];
+ const assessments=Array.isArray(src.assessments)?src.assessments.map(a=>({...a,distance:Number(a.distance)||0,time:Number(a.time)||0,thresholdHr:Number(a.thresholdHr)||0,criticalPower:Number(a.criticalPower)||0,valid:Boolean(a.valid)})):[];
+ const plan=Array.isArray(src.plan)?src.plan.map(x=>({...x,week:Number(x.week)||1,distance:Number(x.distance)||0,factor:Number(x.factor)||1,zone:{...(x.zone||{}),pace:Number(x.zone?.pace)||0,hr:Number(x.zone?.hr)||0,power:Number(x.zone?.power)||0}})):[];
+ return{...base,...src,schemaVersion:8300,setup,days:Array.isArray(src.days)?src.days:base.days,runs,assessments,plan,weekView:Number(src.weekView)||null};
+}
+state=normaliseState(state);
 const save=()=>localStorage.setItem('arc_v62_web',JSON.stringify(state)), today=()=>dte(iso(new Date()));
 function baselineOn(date){let valid=state.assessments.filter(a=>a.valid&&a.date<=date).sort((a,b)=>a.date.localeCompare(b.date));let a=valid.at(-1);return a?{pace:a.time/a.distance,hr:a.thresholdHr||state.setup.thresholdHr,cp:a.criticalPower||state.setup.criticalPower}:{pace:state.setup.testTime/state.setup.testDistance,hr:state.setup.thresholdHr,cp:state.setup.criticalPower}}
 const zoneDef={Recovery:[1.42,.78,.72,'RPE 2–3 · relaxed and restorative'],Easy:[1.30,.84,.78,'RPE 3–4 · conversational aerobic running'],Steady:[1.20,.89,.84,'RPE 5 · controlled moderate work'],Marathon:[1.15,.92,.88,'RPE 5–6 · race-specific control'],Tempo:[1.08,1,.95,'RPE 7–8 · strong but sustainable'],Intervals:[.98,1.04,1.05,'RPE 8–9 · quality repetitions'],Repetition:[.92,1.08,1.15,'RPE 9 · short fast work'],['Fitness assessment']:[1,1,1,'Even maximal benchmark'],['Race Day']:[1.15,.92,.88,'Controlled race execution']};
@@ -157,18 +169,20 @@ function buildPlan(){
      out.push(old.get(id)||item);
    });
  }
- state.plan=out;state.schemaVersion=8000;save()
+ state.plan=out;state.schemaVersion=8300;save()
 }
 function prescription(type,km,w,ph,z){
+ km=Math.max(0,Number(km)||0);
+ const split=(total,warmRatio=.25,coolRatio=.20,minWarm=.8,minCool=.6)=>{if(total<=0)return{warm:0,main:0,cool:0};let warm=Math.min(Math.max(minWarm,total*warmRatio),total*.40),cool=Math.min(Math.max(minCool,total*coolRatio),total*.30);if(warm+cool>total*.70){let scale=total*.70/(warm+cool);warm*=scale;cool*=scale}const round=x=>Math.round(x*10)/10;warm=round(warm);cool=round(cool);return{warm,main:round(total-warm-cool),cool}};
  if(type==='Rest')return{warmup:'—',main:'Rest day',cooldown:'—',purpose:'Absorb training and restore freshness.',coach:'Walking and light mobility are fine. Avoid turning recovery into another workout.',fuel:'Normal daily hydration.'};
- if(type==='Easy')return{warmup:'5–10 min very easy',main:`${km.toFixed(1)} km easy, continuous`,cooldown:'5 min easy walk or jog',purpose:'Develop aerobic capacity while keeping fatigue low.',coach:'Keep the effort conversational. Slow down for heat, hills or poor recovery rather than forcing the displayed pace.',fuel:km>=12?'Carry fluids; use carbohydrate if running longer than 75–90 min.':'Water according to thirst.'};
- if(type==='Long run')return{warmup:'First 2 km deliberately easy',main:`${km.toFixed(1)} km controlled endurance`,cooldown:'Walk 5–10 min and refuel',purpose:'Build race-specific endurance and practise fuelling.',coach:'The goal is successful completion, not proving fitness. Keep the first half restrained and finish with stable form. Do not add fast kilometres after a missed week.',fuel:'Practise 60–90 g carbohydrate/hour and approximately 400–800 ml fluid/hour, adjusted for conditions.'};
- if(type==='Tempo')return{warmup:`${Math.max(2,km*.25).toFixed(1)} km easy + 4 strides`,main:`${Math.max(2,km*.5).toFixed(1)} km tempo, continuous or 2 blocks`,cooldown:`${Math.max(1.5,km*.25).toFixed(1)} km easy`,purpose:'Raise sustainable threshold speed and power.',coach:'The final minutes should feel strong but controlled. Stop the quality portion if pain changes your stride.',fuel:'Small carbohydrate intake beforehand if training fasted or after a long workday.'};
- if(type==='Intervals')return{warmup:`${Math.max(2,km*.3).toFixed(1)} km easy + drills + strides`,main:`${Math.max(4,Math.round((km*.45)/.8))} × 800 m at interval effort with 2 min easy jog`,cooldown:`${Math.max(1.5,km*.25).toFixed(1)} km easy`,purpose:'Improve VO₂max and running economy.',coach:'Run repeatable efforts, not an opening sprint. The last repetition should resemble the first.',fuel:'Arrive hydrated; carbohydrate is useful when the total session exceeds 60 min.'};
- if(type==='Fitness assessment')return{warmup:'15–20 min easy + drills + 4 strides',main:'5 km even maximal assessment',cooldown:'10–15 min very easy',purpose:'Create a repeatable benchmark that can update future targets.',coach:'Use even pacing and mark the result valid only when course, weather, health and execution make the result representative.',fuel:'Normal pre-run meal; avoid starting depleted.'};
- return{warmup:'10–15 min easy',main:`${km.toFixed(1)} km race execution`,cooldown:'Walk and begin recovery nutrition',purpose:'Execute the race plan.',coach:'Start controlled, protect the first 10 km and only progress after halfway if effort remains stable.',fuel:'60–90 g carbohydrate/hour and 400–800 ml fluid/hour.'}
+ if(type==='Easy')return{warmup:'Opening minutes deliberately easy (included in total)',main:`${km.toFixed(1)} km easy in total`,cooldown:'Finish very easily; optional walk afterwards',purpose:'Develop aerobic capacity while keeping fatigue low.',coach:'The displayed distance is the complete run. Keep the effort conversational and adjust for heat, hills or poor recovery.',fuel:km>=12?'Carry fluids; use carbohydrate if running longer than 75–90 min.':'Water according to thirst.'};
+ if(type==='Long run')return{warmup:'First 2 km deliberately easy (included in total)',main:`${km.toFixed(1)} km total controlled endurance`,cooldown:'Final kilometre easy; walk 5–10 min afterwards',purpose:'Build race-specific endurance and practise fuelling.',coach:'The displayed distance is the complete run. Prioritise even effort, stable form and successful fuelling rather than pace.',fuel:'Practise 60–90 g carbohydrate/hour and approximately 400–800 ml fluid/hour, adjusted for conditions.'};
+ if(type==='Tempo'){let x=split(km,.25,.20,.8,.6);return{warmup:`${x.warm.toFixed(1)} km easy, including 3–4 short strides`,main:`${x.main.toFixed(1)} km at tempo effort, continuous or split into 2 controlled blocks`,cooldown:`${x.cool.toFixed(1)} km very easy`,purpose:'Raise sustainable threshold speed and power.',coach:`Total session distance: ${(x.warm+x.main+x.cool).toFixed(1)} km. Pace, HR and power targets apply to the tempo main set; warm-up and cooldown should be easy.`,fuel:'Small carbohydrate intake beforehand if training fasted or after a long workday.'};}
+ if(type==='Intervals'){let x=split(km,.28,.20,1.0,.7),repDistance=x.main>=4?.8:x.main>=2.4?.6:.4,reps=Math.max(1,Math.floor(x.main/repDistance)),quality=Math.round(reps*repDistance*10)/10,recovery=Math.max(0,Math.round((x.main-quality)*10)/10);return{warmup:`${x.warm.toFixed(1)} km easy with drills and 3–4 strides`,main:`${reps} × ${(repDistance*1000).toFixed(0)} m at interval effort${recovery>0?`, with about ${recovery.toFixed(1)} km total easy-jog recovery`:''}`,cooldown:`${x.cool.toFixed(1)} km very easy`,purpose:'Improve VO₂max and running economy.',coach:`Total session distance: ${km.toFixed(1)} km. Pace, HR and power targets apply to the fast repetitions; recoveries, warm-up and cooldown are easy.`,fuel:'Arrive hydrated; carbohydrate is useful when the total session exceeds 60 min.'};}
+ if(type==='Fitness assessment'){let x=split(km,.25,.20,1.0,.8),test=Math.max(.5,Math.round(x.main*10)/10);return{warmup:`${x.warm.toFixed(1)} km easy with drills and 3–4 strides`,main:`${test.toFixed(1)} km even maximal assessment`,cooldown:`${x.cool.toFixed(1)} km very easy`,purpose:'Create a repeatable benchmark that can update future targets.',coach:`Total session distance: ${km.toFixed(1)} km. Record the main-set result as the assessment; mark it valid only when conditions and execution are representative.`,fuel:'Normal pre-run meal; avoid starting depleted.'};}
+ return{warmup:'Opening section controlled (included in total)',main:`${km.toFixed(1)} km total race execution`,cooldown:'Walk and begin recovery nutrition after finishing',purpose:'Execute the race plan.',coach:'The displayed distance is the complete race distance. Start controlled and progress only when effort remains stable.',fuel:'60–90 g carbohydrate/hour and 400–800 ml fluid/hour.'}
 }
-if(state.schemaVersion!==8000){state.plan=[];buildPlan()}else if(!state.plan?.length)buildPlan();
+if(state.schemaVersion!==8300){state.plan=[];buildPlan()}else if(!state.plan?.length)buildPlan();
 state.runs.forEach(r=>{if(r.planId){r.matchStatus='matched';r.matchMethod=r.matchMethod||'legacy';let p=state.plan.find(x=>x.id===r.planId);if(p){r.plannedDate=p.date;r.dayOffset=Math.round((dte(r.date)-dte(p.date))/DAY)}}else if(!r.matchStatus)r.matchStatus='adHoc'});save();
 function compatibleRunType(planType,runType){
  const groups={
@@ -263,7 +277,7 @@ function confidence(){
  let riegel=testTime*Math.pow(state.setup.raceDistance/testDist,1.06);
  let fitness=clamp(100-(riegel/state.setup.targetTime-1)*300,0,100);
  let completedLongest=state.runs.length?Math.max(...state.runs.map(r=>Number(r.distanceKm)||0)):0;
- let longest=Math.max(Number(state.setup.currentLongest)||0,completedLongest);
+ let longest=completedLongest;
  let endurance=clamp(longest/state.setup.peakLong*100,0,100);
  let completedDates=new Set(recent.map(r=>r.date)),matchedRuns=due.map(p=>({p,r:matchingRun(p,recent)})).filter(x=>x.r),matched=matchedRuns.length,opportunities=due.length;
  let executionEvidence=opportunities>0;
@@ -386,7 +400,7 @@ function uniqueComponents(components){let seen=new Set();return components.filte
 function coachEngine(){
  let c=confidence(),pred=prediction(),cw=currentWeek(),wd=weekData(cw),scored=uniqueComponents(c.components.filter(x=>x.hasEvidence).map(x=>({...x,score:x.displayScore}))).sort((a,b)=>a.score-b.score||a.name.localeCompare(b.name));
  let strongest=[...scored].sort((a,b)=>b.score-a.score)[0],weakest=scored[0];
- let raceWeeks=Math.max(0,c.weeksRemaining),trendGain=clamp(raceWeeks*1.35,0,24),followPlan=clamp(c.overall+trendGain,0,98),currentTrend=clamp(c.overall+trendGain*.72,0,96),missWeekly=clamp(followPlan-9,0,95);
+ let raceWeeks=Math.max(0,c.weeksRemaining),feasibility=clamp(c.usableBuildWeeks/Math.max(1,c.requiredBuildWeeks),0,1.15),followPlan=clamp(60+feasibility*34+(c.overall*.04),0,98),currentTrend=clamp(c.overall+(followPlan-c.overall)*.72,0,96),missWeekly=clamp(followPlan-Math.min(18,6+raceWeeks*.35),0,95);
  let coachConfidencePct=Math.round(clamp(c.evidenceCoverage*100,0,100));
  let status=followPlan>=85?'On track':followPlan>=72?'Achievable with focused execution':followPlan>=60?'At risk — key preparation gaps remain':'Not yet supported by current evidence';
  let completedLongs=state.runs.filter(r=>['Long run','Race'].includes(r.type)).length;
@@ -812,7 +826,7 @@ function weeklyCompletedLongs(){
  });
 }
 
-function renderAll(){renderDashboard();renderToday();renderPlan();renderRuns();renderMetrics();renderAssessments();renderCoach();renderRace();renderSettings()}
+function renderAll(){[renderDashboard,renderToday,renderPlan,renderRuns,renderMetrics,renderAssessments,renderCoach,renderRace,renderSettings].forEach(fn=>{try{fn()}catch(err){console.error('Render failure in '+fn.name,err)}})}
 const pages=[['dashboard','Dashboard'],['today','Today'],['plan','Plan'],['runs','Runs'],['assessments','Assessments'],['race','Race day'],['settings','Settings']];
 $('nav').innerHTML=pages.map((p,i)=>`<button data-page="${p[0]}" class="${i?'':'active'}">${p[1]}</button>`).join('');$('nav').onclick=e=>{let p=e.target.dataset.page;if(!p)return;document.querySelectorAll('.page').forEach(x=>x.classList.toggle('active',x.id===p));document.querySelectorAll('#nav button').forEach(x=>x.classList.toggle('active',x.dataset.page===p));renderAll();scrollTo(0,0)};document.body.onclick=e=>{if(e.target.dataset.go){document.querySelector(`[data-page="${e.target.dataset.go}"]`).click()}let w=e.target.closest('.workout');if(w&&!e.target.closest('button'))w.classList.toggle('open')};
 $('prevWeek').onclick=()=>{state.weekView=clamp((state.weekView||currentWeek())-1,1,weeks());renderPlan()};$('nextWeek').onclick=()=>{state.weekView=clamp((state.weekView||currentWeek())+1,1,weeks());renderPlan()};$('thisWeek').onclick=()=>{state.weekView=currentWeek();renderPlan()};
@@ -990,10 +1004,10 @@ function validateSetup(candidate){
 function validateBackup(obj){return obj&&typeof obj==='object'&&obj.setup&&Array.isArray(obj.runs)&&Array.isArray(obj.assessments)&&Array.isArray(obj.days)}
 $('saveSettings').onclick=()=>{let candidate={...state.setup};document.querySelectorAll('[data-setting]').forEach(el=>{let k=el.dataset.setting,t=el.dataset.type,v=el.value;if(t==='number')v=Number(v);if(t==='time')v=parseTime(v);if(t==='percent')v=Number(v)/100;candidate[k]=v});let errors=validateSetup(candidate);if(errors.length)return toast(errors[0],true);state.setup=candidate;document.querySelectorAll('[data-day]').forEach(el=>state.days[Number(el.dataset.day)][1]=el.checked);document.querySelectorAll('[data-session]').forEach(el=>state.days[Number(el.dataset.session)][2]=el.value);buildPlan();state.weekView=currentWeek();renderAll();toast('Settings saved. Past workouts were retained; future workouts rebuilt.')};
 function download(n,t,m){let a=document.createElement('a');a.href=URL.createObjectURL(new Blob([t],{type:m}));a.download=n;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
-$('backupBtn').onclick=()=>download('ai-running-coach-backup.json',JSON.stringify(state,null,2),'application/json');$('restoreFile').onchange=e=>e.target.files[0]?.text().then(t=>{let candidate=JSON.parse(t);if(!validateBackup(candidate))throw new Error('Backup structure is incomplete.');let errors=validateSetup(candidate.setup);if(errors.length)throw new Error(errors[0]);candidate.schemaVersion=8000;candidate.plan=Array.isArray(candidate.plan)?candidate.plan:[];state=candidate;buildPlan();save();renderAll();toast('Backup restored and migrated.')}).catch(err=>toast(err?.message||'Invalid backup.',true));$('exportBtn').onclick=()=>download('run-log.csv',['Date,Type,Distance km,Duration sec,HR,Power,RPE,Pain,Recovery,Match status,Plan ID,Day offset,Notes',...state.runs.map(r=>[r.date,r.type,r.distanceKm,r.durationSec,r.avgHr,r.avgPower,r.rpe,r.pain,r.recovery,r.matchStatus||'',r.planId||'',r.dayOffset??'',`"${String(r.notes||'').replaceAll('"','""')}"`].join(','))].join('\n'),'text/csv');$('resetBtn').onclick=()=>{if(confirm('Delete all app data?')){state=defaults();buildPlan();renderAll();toast('App reset.')}};
+$('backupBtn').onclick=()=>download('ai-running-coach-backup.json',JSON.stringify(state,null,2),'application/json');$('restoreFile').onchange=e=>e.target.files[0]?.text().then(t=>{let candidate=JSON.parse(t);if(!validateBackup(candidate))throw new Error('Backup structure is incomplete.');let errors=validateSetup(candidate.setup);if(errors.length)throw new Error(errors[0]);candidate.schemaVersion=8300;candidate.plan=Array.isArray(candidate.plan)?candidate.plan:[];state=candidate;buildPlan();save();renderAll();toast('Backup restored and migrated.')}).catch(err=>toast(err?.message||'Invalid backup.',true));$('exportBtn').onclick=()=>download('run-log.csv',['Date,Type,Distance km,Duration sec,HR,Power,RPE,Pain,Recovery,Match status,Plan ID,Day offset,Notes',...state.runs.map(r=>[r.date,r.type,r.distanceKm,r.durationSec,r.avgHr,r.avgPower,r.rpe,r.pain,r.recovery,r.matchStatus||'',r.planId||'',r.dayOffset??'',`"${String(r.notes||'').replaceAll('"','""')}"`].join(','))].join('\n'),'text/csv');$('resetBtn').onclick=()=>{if(confirm('Delete all app data?')){state=defaults();buildPlan();renderAll();toast('App reset.')}};
 let deferred;window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferred=e;$('installBtn').className='install'});$('installBtn').onclick=()=>deferred?.prompt();if('serviceWorker'in navigator&&location.protocol==='https:')navigator.serviceWorker.register('service-worker.js');
 migrateAssessmentRuns();
 migrateImportedPower();
 renderAll();
-console.info('AI Running Coach v6.7 web build 6700');
+console.info('AI Running Coach v8.3 stable build 8300');
 })();
