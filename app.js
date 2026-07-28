@@ -48,7 +48,7 @@ function recommendedRaceDate(setup){
  let totalWeeks=Math.ceil(Math.max(minimumTotal,req.requiredBuildWeeks+taperWeeks+2));
  return{date:iso(new Date(dte(setup.planStart).getTime()+totalWeeks*7*DAY)),totalWeeks,requiredBuildWeeks:req.requiredBuildWeeks,taperWeeks};
 }
-const BUILD=8500, SCHEMA=8500, STORAGE_KEY='arc_v62_web', MIRROR_KEY='arc_v8500_web', BACKUP_KEY='arc_pre8500_backup';
+const BUILD=8510, SCHEMA=8500, STORAGE_KEY='arc_v62_web', MIRROR_KEY='arc_v8500_web', BACKUP_KEY='arc_pre8500_backup';
 const defaults=()=>{let start=iso(new Date()),setup={planStart:start,raceDate:start,raceName:'Goal Race',raceDistance:42.195,targetTime:15300,currentWeekly:35,currentLongest:18,testDistance:5,testTime:1515,thresholdHr:168,criticalPower:300,bodyWeight:93,maxWeekly:80,growth:.08,peakLong:34,taperDays:21,minFactor:.85,maxFactor:1.05,adaptive:true};setup.raceDate=recommendedRaceDate(setup).date;return({schemaVersion:SCHEMA,setup,days:[['Monday',false,'Easy'],['Tuesday',true,'Intervals'],['Wednesday',true,'Easy'],['Thursday',false,'Easy'],['Friday',true,'Tempo'],['Saturday',true,'Easy'],['Sunday',true,'Long run']],runs:[],assessments:[],plan:[],weekView:null,migration:{to:SCHEMA,status:'new',time:new Date().toISOString()}})};
 let migrationReport={from:null,to:SCHEMA,status:'new install',source:'defaults',runs:0,assessments:0,fieldsRecovered:0,warning:''};
 function parseStored(raw){if(!raw)return null;try{const x=JSON.parse(raw);return x&&typeof x==='object'?x:null}catch(err){recordDiagnostic('Storage parse',err);return null}}
@@ -406,6 +406,21 @@ function confidence(){
 
  let buildModel=buildRequirementEstimate(state.setup),requiredBuildWeeks=buildModel.requiredBuildWeeks;
  let preparationTime=daysRemaining<=0?0:clamp((usableBuildWeeks/Math.max(1,requiredBuildWeeks))*100,0,100);
+ // Training opportunity measures whether the selected weekly frequency provides enough
+ // separate training exposures for the race distance. It changes immediately when the
+ // user enables or disables training days, rather than waiting for missed sessions.
+ let enabledTrainingDays=state.days.filter(d=>d[1]).length;
+ let profile=raceProfile(state.setup.raceDistance);
+ let recommendedTrainingDays={"5k":3,"10k":3,"half":4,"marathon":5}[profile.key]||4;
+ let minimumTrainingDays={"5k":2,"10k":2,"half":3,"marathon":3}[profile.key]||3;
+ let frequencyRatio=enabledTrainingDays/Math.max(1,recommendedTrainingDays);
+ let trainingOpportunity=clamp(frequencyRatio*100,0,100);
+ // Below the minimum viable frequency the score falls more sharply because quality,
+ // aerobic volume and long-run recovery must be compressed into too few sessions.
+ if(enabledTrainingDays<minimumTrainingDays){
+  let shortfall=minimumTrainingDays-enabledTrainingDays;
+  trainingOpportunity=clamp(trainingOpportunity-shortfall*15,0,100);
+ }
  let dueLongs=state.plan.filter(p=>p.type==='Long run'&&hasElapsedOrCompleted(p)&&today()-dte(p.date)<=84*DAY);
  let completedLongs=dueLongs.filter(p=>{let r=matchingRun(p);return r&&compatibleRunType(p.type,r.type)});
  let longRunExecution=dueLongs.length?clamp(completedLongs.length/dueLongs.length*100,0,100):null;
@@ -426,7 +441,7 @@ function confidence(){
   {name:'Physiological readiness',weight:.35,color:'#2d82c7',description:'Current performance capacity, long-run endurance and field efficiency.',...weighted([{name:'Fitness',score:fitness,weight:.50,hasEvidence:Number.isFinite(testTime)&&testTime>0&&testDist>0},{name:'Endurance',score:endurance,weight:.30,hasEvidence:state.runs.some(r=>(Number(r.distanceKm)||0)>0)},{name:'Efficiency',score:efficiency,weight:.20,evidenceFraction:(Number.isFinite(effTrendScore)?.60:0)+(Number.isFinite(driftScore)?.40:0)}])},
   {name:'Training execution',weight:.25,color:'#159487',description:'How closely completed volume, sessions and timing match the plan.',...weighted([{name:'Adherence',score:adherence,weight:.45,hasEvidence:executionEvidence},{name:'Consistency',score:consistency,weight:.35,hasEvidence:executionEvidence},{name:'Schedule adherence',score:scheduleAdherence,weight:.20,hasEvidence:matchedRuns.length>0}])},
   {name:'Recovery & health',weight:.20,color:'#7457c8',description:'Whether recovery and pain evidence support absorbing the programme.',...weighted([{name:'Recovery',score:recoveryScore,weight:.60,hasEvidence:recoveryValues.length>0},{name:'Pain status',score:painScore,weight:.40,hasEvidence:painValues.length>0}])},
-  {name:'Race readiness',weight:.20,color:'#e49b35',description:'Whether time, key long runs and race-specific sessions support the goal.',...weighted([{name:'Preparation time',score:preparationTime,weight:.45,hasEvidence:true},{name:'Long-run execution',score:longRunExecution,weight:.35,hasEvidence:dueLongs.length>0},{name:'Specificity',score:specificity,weight:.20,hasEvidence:specificDue.length>0}])}
+  {name:'Race readiness',weight:.20,color:'#e49b35',description:'Whether time, weekly training opportunity, key long runs and race-specific sessions support the goal.',...weighted([{name:'Preparation time',score:preparationTime,weight:.35,hasEvidence:true},{name:'Training opportunity',score:trainingOpportunity,weight:.20,hasEvidence:true},{name:'Long-run execution',score:longRunExecution,weight:.30,hasEvidence:dueLongs.length>0},{name:'Specificity',score:specificity,weight:.15,hasEvidence:specificDue.length>0}])}
  ];
  let rawOverall=sum(pillars.map(p=>p.score*p.weight))/sum(pillars.map(p=>p.weight));
  let evidenceCoverage=sum(pillars.map(p=>p.weight*p.coverage));
@@ -434,7 +449,7 @@ function confidence(){
  let measuredPillars=pillars.map(p=>{let available=p.items.filter(i=>i.hasEvidence),aw=sum(available.map(i=>i.weight));return{weight:p.weight*p.coverage,score:aw?sum(available.map(i=>i.displayScore*i.weight))/aw:null}}).filter(p=>Number.isFinite(p.score)&&p.weight>0);
  let measuredOverall=measuredPillars.length?sum(measuredPillars.map(p=>p.score*p.weight))/sum(measuredPillars.map(p=>p.weight)):null;
  let components=pillars.flatMap(p=>p.items.map(i=>({...i,pillar:p.name,pillarColor:p.color})));
- return{pillars,components,overall,rawOverall,evidenceCoverage,riegel,plannedKm,actual,longest,completedLongest,matched,opportunities,weeksRemaining,usableBuildWeeks,requiredBuildWeeks,buildRequirements:buildModel.components,preparationTime,effTrend,driftAvg,measuredOverall}
+ return{pillars,components,overall,rawOverall,evidenceCoverage,riegel,plannedKm,actual,longest,completedLongest,matched,opportunities,weeksRemaining,usableBuildWeeks,requiredBuildWeeks,buildRequirements:buildModel.components,preparationTime,trainingOpportunity,enabledTrainingDays,recommendedTrainingDays,minimumTrainingDays,effTrend,driftAvg,measuredOverall}
 }
 function prediction(){
  let c=confidence();
@@ -452,6 +467,7 @@ const interpretations={
  'Recovery':s=>s==null?'Add recovery ratings after runs to create evidence.':s>=75?'Recovery ratings support normal training.':'Recovery ratings suggest fatigue management is needed.',
  'Pain status':s=>s==null?'Add pain ratings after runs to create evidence.':s>=80?'Pain evidence is reassuring.':'Pain evidence warrants caution and possible load reduction.',
  'Preparation time':s=>s>=80?'Sufficient build time remains.':s>=60?'The timeline is workable but has little disruption margin.':s>=40?'The required progression is aggressive.':'Too little build time remains for the current peak targets.',
+ 'Training opportunity':s=>s>=95?'Weekly training frequency fully supports the race profile.':s>=75?'The selected training frequency is workable but leaves less flexibility.':s>=55?'Training opportunities are limited for this race distance.':'Too few weekly training opportunities support the current race goal.',
  'Specificity':s=>s==null?'No marathon-specific sessions are due yet.':s>=80?'Specific sessions are being completed reliably.':'Marathon-specific execution is incomplete.'
 };
 const actions={
@@ -464,6 +480,7 @@ const actions={
  'Recovery':'Log recovery and reduce load when ratings trend downward.',
  'Pain status':'Do not progress load while pain changes stride or rises across runs.',
  'Preparation time':'Extend the timeline, reduce peak requirements or keep the target conservative.',
+ 'Training opportunity':'Enable another suitable training day, reduce the weekly-volume target or adopt a more conservative race goal.',
  'Specificity':'Complete the next marathon-specific session at controlled, repeatable effort.'
 };
 const componentDefinitions={
@@ -476,6 +493,7 @@ const componentDefinitions={
  'Recovery':'Score = average logged recovery rating ÷ 5 × 100.',
  'Pain status':'Score = (10 − average logged pain rating) ÷ 10 × 100, so lower pain scores higher.',
  'Preparation time':'Score compares usable build weeks before taper with estimated weeks needed to reach weekly-volume and peak-long-run targets safely.',
+ 'Training opportunity':'Score compares enabled training days with the recommended weekly frequency for the selected race distance. It updates immediately when training days change, with a steeper penalty below the minimum viable frequency.',
  'Specificity':'Score = completed due tempo, interval and fitness-assessment sessions ÷ all such due sessions during the last 56 days × 100.'
 };
 
@@ -485,6 +503,7 @@ function coachLabel(name,score){
  const labels={
   'Fitness':score>=85?'Current fitness supports the race target':'Fitness evidence needs strengthening',
   'Preparation time':score>=80?'The preparation timeline is sufficient':'The preparation timeline is tight',
+  'Training opportunity':score>=95?'Weekly training frequency supports the goal':'Training frequency limits the preparation plan',
   'Endurance':score>=75?'Long-run endurance is progressing well':'Long-run endurance remains a limiter',
   'Adherence':score>=80?'Training volume is being completed reliably':'Completed volume is below plan',
   'Consistency':score>=80?'Weekly training frequency is consistent':'Session consistency needs attention',
@@ -502,7 +521,12 @@ function uniqueComponents(components){let seen=new Set();return components.filte
 function coachEngine(){
  let c=confidence(),pred=prediction(),cw=currentWeek(),wd=weekData(cw),scored=uniqueComponents(c.components.filter(x=>x.hasEvidence).map(x=>({...x,score:x.displayScore}))).sort((a,b)=>a.score-b.score||a.name.localeCompare(b.name));
  let strongest=[...scored].sort((a,b)=>b.score-a.score)[0],weakest=scored[0];
- let raceWeeks=Math.max(0,c.weeksRemaining),feasibility=clamp(c.usableBuildWeeks/Math.max(1,c.requiredBuildWeeks),0,1.15),followPlan=clamp(60+feasibility*34+(c.overall*.04),0,98),currentTrend=clamp(c.overall+(followPlan-c.overall)*.72,0,96),missWeekly=clamp(followPlan-Math.min(18,6+raceWeeks*.35),0,95);
+ let raceWeeks=Math.max(0,c.weeksRemaining),feasibility=clamp(c.usableBuildWeeks/Math.max(1,c.requiredBuildWeeks),0,1.15);
+ let baseFollowPlan=60+feasibility*34+(c.overall*.04);
+ // Frequency is a forward-looking feasibility constraint. A reduced schedule therefore
+ // lowers race-day readiness immediately even before any workout has been missed.
+ let opportunityPenalty=Math.max(0,100-c.trainingOpportunity)*.18;
+ let followPlan=clamp(baseFollowPlan-opportunityPenalty,0,98),currentTrend=clamp(c.overall+(followPlan-c.overall)*.72,0,96),missWeekly=clamp(followPlan-Math.min(18,6+raceWeeks*.35),0,95);
  let coachConfidencePct=Math.round(clamp(c.evidenceCoverage*100,0,100));
  let status=followPlan>=85?'On track':followPlan>=72?'Achievable with focused execution':followPlan>=60?'At risk — key preparation gaps remain':'Not yet supported by current evidence';
  let completedRuns=state.runs.filter(r=>dte(r.date)<=today()&&Number(r.distanceKm)>0);
@@ -1121,7 +1145,7 @@ function validateSetup(candidate){
  return errors;
 }
 function validateBackup(obj){return obj&&typeof obj==='object'&&obj.setup&&Array.isArray(obj.runs)&&Array.isArray(obj.assessments)&&Array.isArray(obj.days)}
-$('saveSettings').onclick=()=>{let candidate={...state.setup};document.querySelectorAll('[data-setting]').forEach(el=>{let k=el.dataset.setting,t=el.dataset.type,v=el.value;if(t==='number')v=Number(v);if(t==='time')v=parseTime(v);if(t==='percent')v=Number(v)/100;candidate[k]=v});let errors=validateSetup(candidate);if(errors.length)return toast(errors[0],true);state.setup=candidate;document.querySelectorAll('[data-day]').forEach(el=>state.days[Number(el.dataset.day)][1]=el.checked);document.querySelectorAll('[data-session]').forEach(el=>state.days[Number(el.dataset.session)][2]=el.value);buildPlan();state.weekView=currentWeek();renderAll();toast('Settings saved. Past workouts were retained; future workouts rebuilt.')};
+$('saveSettings').onclick=()=>{let candidate={...state.setup};document.querySelectorAll('[data-setting]').forEach(el=>{let k=el.dataset.setting,t=el.dataset.type,v=el.value;if(t==='number')v=Number(v);if(t==='time')v=parseTime(v);if(t==='percent')v=Number(v)/100;candidate[k]=v});let errors=validateSetup(candidate);if(errors.length)return toast(errors[0],true);let selectedDays=[...document.querySelectorAll('[data-day]')].filter(el=>el.checked).length;if(selectedDays<1)return toast('Select at least one training day.',true);state.setup=candidate;document.querySelectorAll('[data-day]').forEach(el=>state.days[Number(el.dataset.day)][1]=el.checked);document.querySelectorAll('[data-session]').forEach(el=>state.days[Number(el.dataset.session)][2]=el.value);buildPlan();state.weekView=currentWeek();save();renderAll();toast('Settings saved. Training frequency and race-day readiness were recalculated; future workouts rebuilt.')};
 function download(n,t,m){let a=document.createElement('a');a.href=URL.createObjectURL(new Blob([t],{type:m}));a.download=n;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
 $('planHealthBtn').onclick=()=>{renderPlanHealth();toast(validatePlan(state.plan).valid?'Plan health check passed.':'Plan health check found issues.',!validatePlan(state.plan).valid)};
 $('backupBtn').onclick=()=>download('ai-running-coach-backup.json',JSON.stringify(state,null,2),'application/json');$('restoreFile').onchange=e=>e.target.files[0]?.text().then(t=>{let candidate=JSON.parse(t);if(!validateBackup(candidate))throw new Error('Backup structure is incomplete.');let errors=validateSetup(candidate.setup);if(errors.length)throw new Error(errors[0]);candidate.schemaVersion=SCHEMA;candidate.plan=Array.isArray(candidate.plan)?candidate.plan:[];state=candidate;buildPlan();save();renderAll();toast('Backup restored and migrated.')}).catch(err=>toast(err?.message||'Invalid backup.',true));$('exportBtn').onclick=()=>download('run-log.csv',['Date,Type,Distance km,Duration sec,HR,Power,RPE,Pain,Recovery,Match status,Plan ID,Day offset,Notes',...state.runs.map(r=>[r.date,r.type,r.distanceKm,r.durationSec,r.avgHr,r.avgPower,r.rpe,r.pain,r.recovery,r.matchStatus||'',r.planId||'',r.dayOffset??'',`"${String(r.notes||'').replaceAll('"','""')}"`].join(','))].join('\n'),'text/csv');$('resetBtn').onclick=()=>{if(confirm('Delete all app data?')){state=defaults();buildPlan();save();renderAll();toast('App reset.')}};
@@ -1129,5 +1153,5 @@ let deferred;window.addEventListener('beforeinstallprompt',e=>{e.preventDefault(
 migrateAssessmentRuns();
 migrateImportedPower();
 renderAll();
-console.info('AI Running Coach v8.5.0 stable build 8500');
+console.info('AI Running Coach v8.5.1 stable build 8510');
 })();
