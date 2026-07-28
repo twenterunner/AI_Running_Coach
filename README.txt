@@ -1,4 +1,4 @@
-AI Running Coach v8.4.0 — build 8400
+AI Running Coach v8.3.3 — build 8330
 ===============================================
 
 Major coach-led dashboard redesign:
@@ -14,15 +14,15 @@ Major coach-led dashboard redesign:
 Install by uploading all files in this folder to the GitHub Pages repository root.
 
 
-v8.4.0 STABILITY FIX
+v8.3.3 STABILITY FIX
 --------------------
 - Corrected the startup-order error that could stop JavaScript before the first render on a fresh browser or cleared site data.
 - Consolidated compatible styling for every new coach-dashboard class.
 - Added in-app phone diagnostics under Settings.
-- Updated HTML, JavaScript, CSS, manifest and service-worker cache together to build 8400.
+- Updated HTML, JavaScript, CSS, manifest and service-worker cache together to build 8330.
 
 
-v8.4.0 COMPLETED-EVIDENCE AND PRESCRIPTION FIX
+v8.3.3 COMPLETED-EVIDENCE AND PRESCRIPTION FIX
 ------------------------------------------------
 - Every Goal progress card now uses completed runs only.
 - Weekly-volume progress is the best completed training week; setup baseline values are not counted as completed evidence.
@@ -30,10 +30,10 @@ v8.4.0 COMPLETED-EVIDENCE AND PRESCRIPTION FIX
 - Every planned training-session distance equals warm-up + main set + cooldown.
 - Quality-session pace, HR and power cards are explicitly labelled as main-set targets.
 - Session wording now identifies which section the targets apply to and whether recovery distance is included.
-- Build 8400 forces the future plan to regenerate so old inconsistent prescriptions are replaced.
+- Build 8330 forces the future plan to regenerate so old inconsistent prescriptions are replaced.
 
 
-v8.4.0 SCIENTIFIC SESSION STRUCTURE AND DISTANCE ACCOUNTING
+v8.3.3 SCIENTIFIC SESSION STRUCTURE AND DISTANCE ACCOUNTING
 ---------------------------------------------------------
 - Workout structure now determines total session distance; the plan no longer compresses a prescribed workout to fit an arbitrary quality-run distance.
 - Intervals use explicit repetition and between-repetition recovery distances. Recovery count is repetitions minus one.
@@ -41,6 +41,3 @@ v8.4.0 SCIENTIFIC SESSION STRUCTURE AND DISTANCE ACCOUNTING
 - Fitness assessments include the configured test distance plus a 2.0 km warm-up and 1.5 km cooldown.
 - Long-run opening, endurance section and final easy section are all included in the displayed long-run distance.
 - Each non-race workout displays a numerical distance check.
-
-
-v8.4.0 Stable adds release-blocking workout validation, session accounting, Coach Intelligence explanations, Plan Health checks, schema migration 8400 and synchronized PWA cache versioning.
