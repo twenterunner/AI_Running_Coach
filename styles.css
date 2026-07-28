@@ -166,7 +166,7 @@ canvas{width:100%;height:auto;display:block}
 @media(max-width:760px){.heroScores{width:100%;justify-content:space-between}.coachSnapshot,.goalProgress,.forecastScenarios{grid-template-columns:1fr}.coachHero{align-items:flex-start}.forecastScore{min-width:0}.timelineLabels{font-size:.7rem}}
 
 
-/* v8.3.2 build 8330 — complete coach dashboard compatibility */
+/* v8.4.0 build 8400 — complete coach dashboard compatibility */
 .coachHero{align-items:center;min-height:210px}.heroScores{display:flex;align-items:center;gap:18px}.forecastScore{min-width:190px;display:flex;flex-direction:column;gap:4px}.forecastScore span,.forecastScore small{color:rgba(255,255,255,.78)}.forecastScore strong{font-size:2rem;color:#fff}.trackStatus{margin-top:12px;display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border:1px solid rgba(255,255,255,.25);border-radius:999px;background:rgba(255,255,255,.10)}.statusDot{width:9px;height:9px;border-radius:50%;background:#68d19a;box-shadow:0 0 0 4px rgba(104,209,154,.16)}
 .coachSnapshot{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:16px 0}.snapshotItem{background:#fff;border:1px solid var(--line);border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:6px;box-shadow:0 4px 14px #2134490a}.snapshotItem span{font-size:.78rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}.snapshotItem b{font-size:1.05rem}.snapshotItem small{color:var(--muted);line-height:1.4}.snapshotItem.warn{border-color:#efcf9f;background:#fffbf4}
 .goalProgress{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.progressCard{border:1px solid var(--line);border-radius:14px;padding:14px;display:grid;grid-template-columns:1fr auto;gap:10px;background:#fbfcfd}.progressCard>div:first-child{display:flex;flex-direction:column;gap:3px}.progressCard span{color:var(--muted);font-size:.88rem}.progressCard>strong{font-size:1.1rem}.progressTrack{grid-column:1/-1;height:8px;border-radius:999px;background:#e4ebf1;overflow:hidden}.progressTrack i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,var(--blue),var(--teal))}
@@ -176,10 +176,31 @@ canvas{width:100%;height:auto;display:block}
 @media(max-width:760px){.coachHero{align-items:flex-start;flex-direction:column}.heroScores{width:100%;justify-content:space-between}.coachSnapshot,.goalProgress,.forecastScenarios{grid-template-columns:1fr}.forecastScore{min-width:0}.timelineLabels{font-size:.7rem}.confidenceRing{width:96px;height:96px}.hero h2{font-size:22px}}
 @media(max-width:430px){.heroScores{align-items:flex-end}.forecastScore strong{font-size:1.65rem}.trackStatus{font-size:12px}.panel{padding:14px}.progressCard{padding:12px}}
 
-/* v8.3.2 build 8330 — prescription scope clarity */
+/* v8.4.0 build 8400 — prescription scope clarity */
 .targetScope{margin:2px 0 12px;padding:9px 11px;border-radius:10px;background:#eef5fb;color:#466174;font-size:12px;line-height:1.35}
 .targetScope b{color:var(--navy)}
 @media(max-width:520px){.targets{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.target{padding:8px 4px}.target small{font-size:8px}.target b{font-size:12px}}
 
-/* Build 8330: explicit prescription accounting */
+/* Build 8400: explicit prescription accounting */
 .distanceCheck{background:#eef8f4;border-left:4px solid var(--green);border-radius:10px;padding:10px 12px;color:#285d47}.distanceCheck b{color:#174b36}
+
+
+/* v8.4.0 stable: session accounting, coach intelligence and plan health */
+.accounting,.coachWhy{margin-top:12px;padding:12px;border:1px solid var(--line);border-radius:12px;background:var(--soft)}
+.accounting h4,.coachWhy h4{margin:0 0 8px}
+.accounting>div{display:flex;justify-content:space-between;gap:12px;padding:5px 0;border-bottom:1px dashed var(--line)}
+.accounting>div:last-child{border-bottom:0}
+.accountingTotal{margin-top:4px;padding-top:8px!important;font-size:1.04rem}
+.coachWhy p{margin:7px 0;line-height:1.45}
+.healthScore{display:flex;align-items:center;gap:14px;padding:14px;border-radius:14px;margin:10px 0}
+.healthScore b{font-size:1.8rem}.healthScore span{font-weight:700}
+.healthScore.good{background:rgba(28,151,112,.12)}.healthScore.warn{background:rgba(230,157,44,.14)}.healthScore.bad{background:rgba(195,65,65,.12)}
+.healthGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:10px 0}
+.healthGrid div{padding:12px;border:1px solid var(--line);border-radius:12px;text-align:center}.healthGrid b{display:block;font-size:1.35rem}.healthGrid span{font-size:.82rem;color:var(--muted)}
+.healthIssues{max-height:360px;overflow:auto}.healthIssues p{padding:8px 10px;border-radius:8px;margin:6px 0;font-size:.9rem}.healthIssues .error{background:rgba(195,65,65,.10)}.healthIssues .warning{background:rgba(230,157,44,.12)}
+@media(max-width:600px){.healthGrid{grid-template-columns:1fr}.panelHead{align-items:flex-start}.panelHead button{width:auto}}
+
+
+/* v8.5 data-integrity and migration status */
+.migrationStatus{display:grid;gap:7px;padding:14px 16px;border-radius:13px;background:#f1faf5;border-left:5px solid var(--green);font-size:12px}
+.migrationStatus b{font-size:14px}.migrationStatus span{color:var(--ink)}.migrationStatus small{color:var(--muted)}
