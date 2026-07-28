@@ -1,7 +1,7 @@
-AI Running Coach v6.5 — build 6500
+AI Running Coach v6.6 — build 6600
 ================================================
 
-A browser-based adaptive marathon training coach with transparent readiness,
+A browser-based adaptive race training coach with transparent readiness,
 evidence coverage and conservative weekly plan adaptation.
 
 CORE PERFORMANCE METRICS
@@ -45,7 +45,7 @@ session.
 INSTALLATION / DEPLOYMENT
 -------------------------
 Upload all files in this folder to the root of the GitHub Pages repository.
-The service worker cache is arc-v65-web-6500. After deployment, refresh once or
+The service worker cache is arc-v66-web-6600. After deployment, refresh once or
 close and reopen the installed PWA to activate the new cache.
 
 BACKUP
@@ -54,7 +54,7 @@ Use Settings > Download backup before replacing an older deployment. Restore the
 backup after deployment if browser storage was cleared.
 
 
-v6.5 WORKOUT MATCHING
+v6.6 WORKOUT MATCHING
 ---------------------
 Every imported or manually entered run is explicitly classified by the user as:
 - linked to a selected planned workout;
@@ -70,3 +70,16 @@ weekly volume and physiological metrics.
 Timing credit: same day 100%, one day early/late 90%, two days 75%, more than two
 days 50%. A planned workout can only be linked to one run. Links can be changed or
 removed from the run editor at any time.
+
+
+v6.6 RACE-DISTANCE PROFILES
+---------------------------
+Changing race distance in Settings now pre-populates the race model:
+- 5K profile: 12 km peak long run, 25 km maximum week, 7 taper days
+- 10K profile: 18 km peak long run, 40 km maximum week, 10 taper days
+- Half marathon: 24 km peak long run, 60 km maximum week, 14 taper days
+- Marathon: 34 km peak long run, 80 km maximum week, 21 taper days
+
+The values remain editable after pre-population. Saving Settings rebuilds future
+workouts and recalculates endurance, preparation time, prediction and readiness
+against the selected race profile. Past workouts remain unchanged.
