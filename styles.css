@@ -208,3 +208,5 @@ canvas{width:100%;height:auto;display:block}
 /* v8.5.4 limiter classification */
 .snapshotItem.watch{border-color:#e8c77a;background:#fffaf0}
 .snapshotItem.good{border-color:#b9ddca;background:#f4fbf7}
+
+/* v8.5.7 build 8570: removed duplicated strengths, risks and highest-impact action sections from dashboard and coach views. */

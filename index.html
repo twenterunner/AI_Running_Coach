@@ -3,18 +3,18 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#0b3157"><title>AI Running Coach</title>
-<link rel="manifest" href="manifest.webmanifest?v=8560"><link rel="stylesheet" href="styles.css?v=8560">
+<link rel="manifest" href="manifest.webmanifest?v=8570"><link rel="stylesheet" href="styles.css?v=8570">
 
-<link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png?v=8560">
-<link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png?v=8560">
-<link rel="icon" href="favicon.ico?v=8560">
-<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=8560">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png?v=8570">
+<link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png?v=8570">
+<link rel="icon" href="favicon.ico?v=8570">
+<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=8570">
 <meta property="og:image" content="github-banner.png">
 
 </head>
 <body>
 <header class="topbar">
-  <div class="brand"><img class="logo" src="icon-192.png?v=8560" alt="AI Running Coach logo"><div class="brand-copy"><h1>AI Running Coach</h1><p>Adaptive marathon planning • v8.5.6 · build 8560</p></div></div>
+  <div class="brand"><img class="logo" src="icon-192.png?v=8570" alt="AI Running Coach logo"><div class="brand-copy"><h1>AI Running Coach</h1><p>Adaptive marathon planning • v8.5.7 · build 8570</p></div></div>
   <button id="installBtn" class="install hidden">Install</button>
 </header>
 <nav id="nav"></nav>
@@ -86,12 +86,6 @@
       <div><b>Power-based cardiac drift · %</b><p>The percentage deterioration in power per heartbeat from the first half to the second half after warm-up. Lower is better. It requires timestamped heart-rate and power data.</p></div>
     </div>
   </details>
-<div class="grid2">
-    <article class="panel"><h3>Current strengths</h3><div id="strengths"></div></article>
-    <article class="panel"><h3>Risks and limiters</h3><div id="risks"></div></article>
-  </div>
-
-  <article class="panel"><h3>Highest-impact next actions</h3><div id="dashboardActions"></div></article>
   <details class="panel modelDetails"><summary>Data needed</summary><div id="dataNeeded"></div></details>
 
   <article class="panel"><div class="panelHead"><h3>Next key sessions</h3><button class="linkBtn" data-go="plan">Open plan</button></div><div id="keySessions" class="sessionGrid"></div></article>
@@ -152,13 +146,10 @@
 </section>
 
 <section id="coach" class="page">
-  <div class="sectionTitle"><div><h2>Coach summary</h2><p>Readiness, evidence and highest-impact actions.</p></div></div>
+  <div class="sectionTitle"><div><h2>Coach summary</h2><p>Readiness and evidence without duplicated strengths, risks or action lists.</p></div></div>
   <div id="coachTop" class="kpis"></div>
   <article class="panel"><h3>Overall assessment</h3><div id="fullAssessment" class="coachText"></div></article>
-  <div class="grid2"><article class="panel"><h3>Current strengths</h3><div id="coachStrengths"></div></article><article class="panel"><h3>Watch items</h3><div id="coachWatch"></div></article></div>
-  <article class="panel"><h3>Risks and limiters</h3><div id="coachRisks"></div></article>
-  <article class="panel"><h3>Highest-impact next actions</h3><div id="actionsTable"></div></article>
-  <article class="panel"><h3>How to interpret the model</h3><p>The confidence score combines fitness, endurance, consistency, adherence, recovery and economy. A strong test result cannot fully compensate for limited long-run endurance or poor training execution. Components are classified into mutually exclusive groups: strengths at 85–100, watch items at 70–84, and risks below 70. Corrective actions are generated only for risks and watch items; strong components do not appear as risks or generate unnecessary actions.</p></article>
+  <article class="panel"><h3>How to interpret the model</h3><p>The confidence score combines fitness, endurance, consistency, adherence, recovery and economy. The detailed component scores remain available in the readiness and metric sections. This page intentionally avoids repeating them as separate strengths, risks or action rankings.</p></article>
 </section>
 
 <section id="race" class="page">
@@ -180,5 +171,5 @@
 </main>
 
 <div id="modal" class="modal hidden"><div class="modalCard"><button id="closeModal" class="close">×</button><div id="modalContent"></div></div></div>
-<script src="app.js?v=8560"></script>
+<script src="app.js?v=8570"></script>
 </body></html>
