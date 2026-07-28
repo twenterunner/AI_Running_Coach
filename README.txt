@@ -1,4 +1,4 @@
-AI Running Coach v8.2.1 — build 8210
+AI Running Coach v8.1 — build 8100
 
 Major coach-led dashboard redesign:
 - Central Coach Engine provides one consistent training state for Dashboard, forecast and coaching insights.
@@ -11,10 +11,3 @@ Major coach-led dashboard redesign:
 - Existing detailed readiness pillars, charts, run import, matching, plan and race-day features remain available.
 
 Install by uploading all files in this folder to the GitHub Pages repository root.
-
-
-v8.2 session-prescription consistency:
-- The distance shown on every workout card is the complete planned session distance.
-- Warm-up, main set and cooldown distances add exactly to that total.
-- Pace, HR and power targets describe the quality/main segment unless the guidance explicitly says otherwise.
-- Short quality sessions use proportionally shorter repetitions rather than silently exceeding the planned distance.
