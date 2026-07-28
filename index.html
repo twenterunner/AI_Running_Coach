@@ -3,18 +3,18 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#0b3157"><title>AI Running Coach</title>
-<link rel="manifest" href="manifest.webmanifest?v=6311"><link rel="stylesheet" href="styles.css?v=6311">
+<link rel="manifest" href="manifest.webmanifest?v=6312"><link rel="stylesheet" href="styles.css?v=6312">
 
-<link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png?v=6311">
-<link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png?v=6311">
-<link rel="icon" href="favicon.ico?v=6311">
-<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=6311">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png?v=6312">
+<link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png?v=6312">
+<link rel="icon" href="favicon.ico?v=6312">
+<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=6312">
 <meta property="og:image" content="github-banner.png">
 
 </head>
 <body>
 <header class="topbar">
-  <div class="brand"><img class="logo" src="icon-192.png?v=6311" alt="AI Running Coach logo"><div class="brand-copy"><h1>AI Running Coach</h1><p>Adaptive marathon planning • v6.3 · build 6311</p></div></div>
+  <div class="brand"><img class="logo" src="icon-192.png?v=6312" alt="AI Running Coach logo"><div class="brand-copy"><h1>AI Running Coach</h1><p>Adaptive marathon planning • v6.3 · build 6312</p></div></div>
   <button id="installBtn" class="install hidden">Install</button>
 </header>
 <nav id="nav"></nav>
@@ -54,31 +54,29 @@
   <article class="panel"><div class="panelHead"><h3>Training intensity mix</h3><span class="muted">Next four weeks by session type</span></div><canvas id="mixChart" width="1000" height="340"></canvas></article>
   <div class="sectionDivider">
     <h3>Performance metrics</h3>
-    <p class="muted">Aerobic economy, efficiency and long-run durability in one place.</p>
+    <p class="muted">Two focused measures: cardiovascular efficiency and aerobic durability.</p>
   </div>
   <div id="metricKpis" class="kpis"></div>
-  <div class="grid2">
+  <div class="grid2 metricCharts">
     <article class="panel">
-      <div class="panelHead"><h3>Running effectiveness</h3><span class="muted">First comparable run = 100</span></div>
-      <canvas id="effectivenessChart" width="1000" height="360"></canvas>
+      <div class="panelHead"><div><h3>Efficiency factor</h3><p class="muted compact">Joules of running power per heartbeat · higher is better</p></div></div>
+      <canvas id="efficiencyChart" width="1000" height="380"></canvas>
     </article>
     <article class="panel">
-      <div class="panelHead"><h3>Distance per heartbeat</h3><span class="muted">First comparable run = 100</span></div>
-      <canvas id="heartbeatChart" width="1000" height="360"></canvas>
+      <div class="panelHead"><div><h3>Power-based cardiac drift</h3><p class="muted compact">Change in power–HR efficiency · lower is better</p></div><div id="driftSummary" class="evidenceBadge"></div></div>
+      <canvas id="driftChart" width="1000" height="380"></canvas>
+      <div id="driftStatus" class="dataStatus"></div>
     </article>
   </div>
   <article class="panel">
-    <div class="panelHead"><div><h3>Cardiac drift trend</h3><p class="muted compact">Long runs only</p></div><div id="driftSummary" class="evidenceBadge"></div></div>
-    <canvas id="driftChart" width="1000" height="380"></canvas>
-    <div id="driftStatus" class="dataStatus"></div>
+    <div class="panelHead"><div><h3>Metrics by run type</h3><p class="muted compact">Average and best values calculated separately for each session category</p></div></div>
+    <div id="metricTypeSummary"></div>
   </article>
   <details class="panel modelDetails">
     <summary>Metric definitions</summary>
     <div class="guideGrid componentGuide">
-      <div><b>Distance / heartbeat</b><p>Metres travelled per heartbeat. Higher is generally better at comparable effort and conditions.</p></div>
-      <div><b>W / bpm</b><p>Average power divided by heart rate. Useful for tracking aerobic output.</p></div>
-      <div><b>Running effectiveness</b><p>Speed in m/s divided by power in W/kg, matching the workbook logic.</p></div>
-      <div><b>Cardiac drift</b><p>Loss of pace–HR or power–HR efficiency between the first and second halves of a long run. Lower is generally better.</p></div>
+      <div><b>Efficiency factor · J/heartbeat</b><p>Average power × 60 ÷ average heart rate. It estimates the joules of external running work produced per heartbeat. Higher is better when comparing similar conditions and run types.</p></div>
+      <div><b>Power-based cardiac drift · %</b><p>The percentage deterioration in power per heartbeat from the first half to the second half after warm-up. Lower is better. It requires timestamped heart-rate and power data.</p></div>
     </div>
   </details>
 <div class="grid2">
@@ -110,7 +108,7 @@
     <div><h3>Import Stryd CSV</h3><p class="muted">Select the CSV exported by Stryd. The run is analysed before saving.</p></div>
     <label class="filePick" for="activityFile">Choose Stryd CSV</label>
 <input id="activityFile" type="file" accept=".csv,text/csv">
-<p class="muted">Upload the detailed Stryd CSV. Cardiac drift is calculated from timestamped heart rate, speed and power only when the activity is saved as a Long run. Runs imported in older builds must be re-imported because those builds kept only summary averages.</p>
+<p class="muted">Upload the detailed Stryd CSV. Power-based cardiac drift is calculated from timestamped heart rate and power for every run type. Runs imported in older builds must be re-imported because those builds kept only summary averages.</p>
   </article>
   <div id="importPreview" class="hidden"></div>
   <details class="panel importGuide">
@@ -170,5 +168,5 @@
 </main>
 
 <div id="modal" class="modal hidden"><div class="modalCard"><button id="closeModal" class="close">×</button><div id="modalContent"></div></div></div>
-<script src="app.js?v=6311"></script>
+<script src="app.js?v=6312"></script>
 </body></html>

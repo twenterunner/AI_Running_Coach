@@ -137,3 +137,5 @@ canvas{width:100%;height:auto;display:block}
 @media(max-width:620px){
   .predictionSummary{grid-template-columns:1fr}
 }
+
+.metricTypeTable{display:grid;gap:0;border:1px solid var(--line);border-radius:12px;overflow:auto}.metricTypeHead,.metricTypeRow{display:grid;grid-template-columns:minmax(130px,1.4fr) repeat(4,minmax(105px,1fr));gap:10px;align-items:center;min-width:650px;padding:10px 12px}.metricTypeHead{background:#eef3f7;font-size:11px;color:var(--muted);text-transform:uppercase}.metricTypeRow{border-top:1px solid var(--line);font-size:12px}.metricTypeRow>span:first-child{font-weight:700}.metricTypeRow i{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--runColor);margin-right:8px}.metricCharts canvas{min-height:300px}

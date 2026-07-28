@@ -10,7 +10,7 @@ const dec=(v,n=2)=>Number.isFinite(v)?v.toFixed(n):'—';
 function fmtTime(s){if(!Number.isFinite(s))return'—';let h=Math.floor(s/3600),m=Math.floor(s%3600/60),q=Math.round(s%60);if(q===60){q=0;m++}if(m===60){m=0;h++}return h?`${h}:${String(m).padStart(2,'0')}:${String(q).padStart(2,'0')}`:`${m}:${String(q).padStart(2,'0')}`}
 function parseTime(v){let p=String(v||'').split(':').map(Number);if(p.some(x=>!Number.isFinite(x)))return null;return p.length===3?p[0]*3600+p[1]*60+p[2]:p[0]*60+p[1]}
 function pace(s){return Number.isFinite(s)?fmtTime(s)+'/km':'—'} function toast(t,bad=false){$('toast').textContent=t;$('toast').className='toast'+(bad?' bad':'');setTimeout(()=>$('toast').className='toast hidden',3500)}
-const defaults=()=>({schemaVersion:6310,setup:{planStart:'2026-07-26',raceDate:'2026-12-13',raceName:'Goal Race',raceDistance:42.195,targetTime:15300,currentWeekly:35,currentLongest:18,testDistance:5,testTime:1515,thresholdHr:168,criticalPower:300,bodyWeight:93,maxWeekly:70,growth:.08,peakLong:35,taperDays:21,minFactor:.85,maxFactor:1.05,adaptive:true},days:[['Monday',false,'Easy'],['Tuesday',true,'Intervals'],['Wednesday',true,'Easy'],['Thursday',false,'Easy'],['Friday',true,'Tempo'],['Saturday',true,'Easy'],['Sunday',true,'Long run']],runs:[],assessments:[],plan:[],weekView:null});
+const defaults=()=>({schemaVersion:6312,setup:{planStart:'2026-07-26',raceDate:'2026-12-13',raceName:'Goal Race',raceDistance:42.195,targetTime:15300,currentWeekly:35,currentLongest:18,testDistance:5,testTime:1515,thresholdHr:168,criticalPower:300,bodyWeight:93,maxWeekly:70,growth:.08,peakLong:35,taperDays:21,minFactor:.85,maxFactor:1.05,adaptive:true},days:[['Monday',false,'Easy'],['Tuesday',true,'Intervals'],['Wednesday',true,'Easy'],['Thursday',false,'Easy'],['Friday',true,'Tempo'],['Saturday',true,'Easy'],['Sunday',true,'Long run']],runs:[],assessments:[],plan:[],weekView:null});
 let state;try{state=JSON.parse(localStorage.getItem('arc_v62_web'))}catch{}if(!state)state=defaults();
 const save=()=>localStorage.setItem('arc_v62_web',JSON.stringify(state)), today=()=>dte(iso(new Date()));
 function baselineOn(date){let valid=state.assessments.filter(a=>a.valid&&a.date<=date).sort((a,b)=>a.date.localeCompare(b.date));let a=valid.at(-1);return a?{pace:a.time/a.distance,hr:a.thresholdHr||state.setup.thresholdHr,cp:a.criticalPower||state.setup.criticalPower}:{pace:state.setup.testTime/state.setup.testDistance,hr:state.setup.thresholdHr,cp:state.setup.criticalPower}}
@@ -22,7 +22,17 @@ function currentWeek(){return clamp(Math.floor((today()-dte(state.setup.planStar
 function recentRuns(days=28){return state.runs.filter(r=>today()-dte(r.date)<=days*DAY&&today()>=dte(r.date))}
 function metrics(r){let dur=Number(r.durationSec),km=Number(r.distanceKm),hr=Number(r.avgHr),pw=Number(r.avgPower),kg=Number(state.setup.bodyWeight);
 let validRun=dur>0&&km>0,validHr=validRun&&hr>0,validPw=validRun&&pw>0&&kg>0;
-return{pace:validRun?dur/km:null,dph:validHr?km*1000/(dur/60*hr):null,wpb:validHr&&pw>0?pw/hr:null,effect:validPw?(km*1000/dur)/(pw/kg):null,wkg:pw>0&&kg>0?pw/kg:null}}
+return{pace:validRun?dur/km:null,dph:validHr?km*1000/(dur/60*hr):null,wpb:validHr&&pw>0?pw/hr:null,
+ efficiencyJ:validHr&&pw>0?pw*60/hr:null,effect:validPw?(km*1000/dur)/(pw/kg):null,wkg:pw>0&&kg>0?pw/kg:null}}
+const metricRunTypes=['Recovery','Easy','Long run','Marathon','Tempo','Intervals','Fitness assessment','Race'];
+const runTypeColors={'Recovery':'#58a65c','Easy':'#2d82c7','Long run':'#7457c8','Marathon':'#e49b35','Tempo':'#d65353','Intervals':'#d4aa23','Fitness assessment':'#7b8794','Race':'#202a35'};
+function metricSeries(runs,valueFn,labelSuffix=''){return metricRunTypes.map(type=>({
+ label:type+labelSuffix,data:runs.map(r=>r.type===type?valueFn(r):null),color:runTypeColors[type]
+})).filter(s=>s.data.some(Number.isFinite))}
+function typeMetricSummary(runs){return metricRunTypes.map(type=>{
+ let group=runs.filter(r=>r.type===type),eff=group.map(r=>metrics(r).efficiencyJ).filter(Number.isFinite),drift=group.map(r=>r.powerDrift).filter(Number.isFinite);
+ return{type,count:group.length,effAvg:avg(eff),effBest:eff.length?Math.max(...eff):null,driftAvg:avg(drift),driftBest:drift.length?Math.min(...drift):null};
+}).filter(x=>x.effAvg!==null||x.driftAvg!==null)}
 function weekData(w){let st=weekStart(w),en=new Date(st.getTime()+7*DAY),p=state.plan.filter(x=>x.week===w&&x.type!=='Rest'),r=state.runs.filter(x=>dte(x.date)>=st&&dte(x.date)<en);return{planned:sum(p.map(x=>x.distance)),actual:sum(r.map(x=>x.distanceKm)),runs:r,plan:p}}
 function adaptiveFactor(w){if(!state.setup.adaptive||w<=1)return 1;let prev=weekData(w-1),ad=prev.planned?prev.actual/prev.planned:1,recovery=avg(prev.runs.map(x=>x.recovery)),pain=avg(prev.runs.map(x=>x.pain));let f=1;if(ad<.7)f-=.08;else if(ad<.85)f-=.04;else if(ad>1.05)f+=.02;if(Number.isFinite(recovery)&&recovery<3)f-=.05;if(Number.isFinite(pain)&&pain>=4)f-=.07;return clamp(f,state.setup.minFactor,state.setup.maxFactor)}
 function buildPlan(){
@@ -456,9 +466,9 @@ function streamAnalysis(records){
  if(a.length<60||b.length<60)return null;
  const mean=(arr,key)=>avg(arr.map(x=>x[key]).filter(v=>Number.isFinite(v)&&v>0));
  let h1=mean(a,'hr'),h2=mean(b,'hr'),p1=mean(a,'power'),p2=mean(b,'power'),v1=mean(a,'speed'),v2=mean(b,'speed');
- let powerDrift=p1&&p2&&h1&&h2?(1-(p2/h2)/(p1/h1))*100:null;
+ let powerDrift=p1&&p2&&h1&&h2?((h2/p2)/(h1/p1)-1)*100:null;
  let paceDrift=v1&&v2&&h1&&h2?(1-(v2/h2)/(v1/h1))*100:null;
- let drift=Number.isFinite(powerDrift)?powerDrift:paceDrift;
+ let drift=powerDrift;
  if(!Number.isFinite(drift))return null;
  return{
    drift,powerDrift,paceDrift,firstHr:h1,secondHr:h2,firstPower:p1,secondPower:p2,
@@ -546,7 +556,7 @@ function summariseCSV(rows){
  };
 }
 
-function renderRuns(){$('runList').innerHTML=state.runs.slice().sort((a,b)=>b.date.localeCompare(a.date)).map(r=>{let m=metrics(r);return`<div class="runCard clickable" data-run="${r.id}"><div class="runSummary"><div><h3>${fmtDate(r.date)} · ${esc(r.type)}</h3><p>${r.distanceKm.toFixed(2)} km · ${fmtTime(r.durationSec)} · ${pace(m.pace)}</p><div class="runStats"><span>HR ${r.avgHr?Math.round(r.avgHr):'—'}</span><span>${r.avgPower?Math.round(r.avgPower):'—'} W</span><span>RE ${dec(m.effect,3)}</span><span>${dec(m.wkg,2)} W/kg</span></div></div><span>›</span></div></div>`}).join('')||'<div class="panel">No completed runs saved yet.</div>'}
+function renderRuns(){$('runList').innerHTML=state.runs.slice().sort((a,b)=>b.date.localeCompare(a.date)).map(r=>{let m=metrics(r);return`<div class="runCard clickable" data-run="${r.id}"><div class="runSummary"><div><h3>${fmtDate(r.date)} · ${esc(r.type)}</h3><p>${r.distanceKm.toFixed(2)} km · ${fmtTime(r.durationSec)} · ${pace(m.pace)}</p><div class="runStats"><span>HR ${r.avgHr?Math.round(r.avgHr):'—'}</span><span>${r.avgPower?Math.round(r.avgPower):'—'} W</span><span>${dec(m.efficiencyJ,1)} J/beat</span><span>${Number.isFinite(r.powerDrift)?r.powerDrift.toFixed(1)+'% drift':'— drift'}</span></div></div><span>›</span></div></div>`}).join('')||'<div class="panel">No completed runs saved yet.</div>'}
 function migrateImportedPower(){
  let changed=false,weight=Number(state.setup.bodyWeight)||0;
  if(!weight)return;
@@ -560,53 +570,51 @@ function migrateImportedPower(){
  if(changed)save();
 }
 function renderMetrics(){
- let rs=state.runs.slice().sort((a,b)=>a.date.localeCompare(b.date)),last=rs.at(-1),m=last?metrics(last):null;
- let driftRuns=rs.filter(r=>r.type==='Long run'&&Number.isFinite(r.drift)).slice().sort((a,b)=>a.date.localeCompare(b.date));
- let latestDrift=driftRuns.at(-1),avgDrift=driftRuns.length?avg(driftRuns.slice(-3).map(r=>r.drift)):null;
+ let rs=state.runs.slice().sort((a,b)=>a.date.localeCompare(b.date));
+ let efficiencyRuns=rs.filter(r=>Number.isFinite(metrics(r).efficiencyJ));
+ let driftRuns=rs.filter(r=>Number.isFinite(r.powerDrift));
+ let latestEff=efficiencyRuns.at(-1),latestDrift=driftRuns.at(-1);
+ let recentEff=efficiencyRuns.slice(-3).map(r=>metrics(r).efficiencyJ);
+ let recentDrift=driftRuns.slice(-3).map(r=>r.powerDrift);
 
  $('metricKpis').innerHTML=
-   kpi('Latest pace',m?pace(m.pace):'—')+
-   kpi('Distance / heartbeat',m?dec(m.dph,3):'—')+
-   kpi('W / bpm',m?dec(m.wpb,3):'—')+
-   kpi('Running effectiveness',m?dec(m.effect,3):'—')+
-   kpi('Latest long-run drift',latestDrift?latestDrift.drift.toFixed(1)+'%':'—')+
-   kpi('3-run drift average',Number.isFinite(avgDrift)?avgDrift.toFixed(1)+'%':'—');
+   kpi('Latest efficiency factor',latestEff?dec(metrics(latestEff).efficiencyJ,1)+' J/beat':'—','Average running power converted to joules of external work per heartbeat. Higher is better.')+
+   kpi('3-run efficiency average',recentEff.length?dec(avg(recentEff),1)+' J/beat':'—')+
+   kpi('Latest power cardiac drift',latestDrift?latestDrift.powerDrift.toFixed(1)+'%':'—','Change in the power-to-heart-rate relationship between run halves. Lower is better.')+
+   kpi('3-run drift average',recentDrift.length?dec(avg(recentDrift),1)+'%':'—');
 
- let comparable=rs.filter(r=>['Easy','Recovery','Long run','Fitness assessment'].includes(r.type)&&r.avgHr&&r.avgPower&&r.durationSec>=1800);
- let labels=comparable.map(r=>dte(r.date).toLocaleDateString(undefined,{day:'numeric',month:'short'}));
- let eff=comparable.map(r=>metrics(r).effect),dph=comparable.map(r=>metrics(r).dph);
- let firstEff=eff.find(Number.isFinite),firstDph=dph.find(Number.isFinite);
- let effIndex=eff.map(v=>Number.isFinite(v)&&firstEff?v/firstEff*100:null);
- let dphIndex=dph.map(v=>Number.isFinite(v)&&firstDph?v/firstDph*100:null);
- let effVals=effIndex.filter(Number.isFinite),dphVals=dphIndex.filter(Number.isFinite);
+ let allMetricRuns=rs.filter(r=>Number.isFinite(metrics(r).efficiencyJ)||Number.isFinite(r.powerDrift));
+ let labels=allMetricRuns.map(r=>dte(r.date).toLocaleDateString(undefined,{day:'numeric',month:'short'}));
+ let effValues=allMetricRuns.map(r=>metrics(r).efficiencyJ).filter(Number.isFinite);
+ let driftValues=allMetricRuns.map(r=>r.powerDrift).filter(Number.isFinite);
 
- drawLine($('effectivenessChart'),[
-  {label:'Effectiveness index',data:effIndex,color:'#2d82c7'}
- ],{min:effVals.length?Math.min(90,...effVals)-3:90,max:effVals.length?Math.max(110,...effVals)+3:110,zero:false,empty:'Log a ≥30 min aerobic run with HR and power',formatY:v=>Math.round(v),labels,area:true});
+ drawLine($('efficiencyChart'),metricSeries(allMetricRuns,r=>metrics(r).efficiencyJ),{
+   min:effValues.length?Math.floor(Math.min(...effValues)-5):80,
+   max:effValues.length?Math.ceil(Math.max(...effValues)+5):140,zero:false,ticks:6,
+   formatY:v=>Math.round(v)+' J',labels,allLabels:allMetricRuns.length<=8,
+   empty:'Log a run with average power and heart rate'});
 
- drawLine($('heartbeatChart'),[
-  {label:'Distance/heartbeat index',data:dphIndex,color:'#159487'}
- ],{min:dphVals.length?Math.min(90,...dphVals)-3:90,max:dphVals.length?Math.max(110,...dphVals)+3:110,zero:false,empty:'Log a ≥30 min aerobic run with HR',formatY:v=>Math.round(v),labels,area:true});
+ let driftSeries=metricSeries(allMetricRuns,r=>r.powerDrift);
+ if(allMetricRuns.length)driftSeries.push({label:'5% reference',data:allMetricRuns.map(()=>5),color:'#159487',dashed:true,points:false});
+ drawLine($('driftChart'),driftSeries,{
+   min:driftValues.length?Math.min(0,Math.floor(Math.min(...driftValues)-2)):0,
+   max:driftValues.length?Math.max(10,Math.ceil(Math.max(...driftValues)+2)):10,ticks:6,
+   formatY:v=>Math.round(v)+'%',labels,allLabels:allMetricRuns.length<=8,
+   empty:'Import a detailed Stryd CSV with timestamped heart rate and power'});
 
- let driftLabels=driftRuns.map(r=>dte(r.date).toLocaleDateString(undefined,{day:'numeric',month:'short'}));
- let driftData=driftRuns.map(r=>r.drift);
- let maxDrift=Math.max(10,...driftData.filter(Number.isFinite).map(v=>Math.ceil(v+2)));
- drawLine($('driftChart'),[
-   {label:'Cardiac drift',data:driftData,color:'#e49b35'},
-   {label:'5% reference',data:driftData.map(()=>5),color:'#159487',dashed:true,points:false}
- ],{min:0,max:maxDrift,ticks:6,formatY:v=>Math.round(v)+'%',labels:driftLabels,area:true,empty:'Import a detailed Stryd CSV and save it as a Long run'});
+ let summary=typeMetricSummary(rs);
+ $('metricTypeSummary').innerHTML=summary.length?`<div class="metricTypeTable"><div class="metricTypeHead"><b>Run type</b><b>Efficiency avg</b><b>Efficiency best</b><b>Drift avg</b><b>Drift best</b></div>${summary.map(x=>`<div class="metricTypeRow"><span><i style="--runColor:${runTypeColors[x.type]}"></i>${esc(x.type)}</span><span>${Number.isFinite(x.effAvg)?x.effAvg.toFixed(1)+' J/beat':'—'}</span><span>${Number.isFinite(x.effBest)?x.effBest.toFixed(1)+' J/beat':'—'}</span><span>${Number.isFinite(x.driftAvg)?x.driftAvg.toFixed(1)+'%':'—'}</span><span>${Number.isFinite(x.driftBest)?x.driftBest.toFixed(1)+'%':'—'}</span></div>`).join('')}</div>`:'<span class="muted">No qualifying run metrics yet.</span>';
 
  if(driftRuns.length){
    let d=latestDrift;
-   $('driftSummary').textContent=`Latest ${d.drift.toFixed(1)}%`;
-   $('driftStatus').className='dataStatus '+(d.drift<5?'driftGood':d.drift<8?'driftWarn':'driftHigh');
-   $('driftStatus').innerHTML=`<b>${d.drift<5?'Good aerobic stability':d.drift<8?'Noticeable drift':'High drift'}</b><br>
-   ${Number.isFinite(d.powerDrift)?`Power–HR ${d.powerDrift.toFixed(1)}%. `:''}${Number.isFinite(d.paceDrift)?`Pace–HR ${d.paceDrift.toFixed(1)}%. `:''}
-   <span class="muted">Reliability: ${d.streamEvidence?.reliability||'Unknown'}.</span>`;
+   $('driftSummary').textContent=`Latest ${d.powerDrift.toFixed(1)}% · ${d.type}`;
+   $('driftStatus').className='dataStatus '+(d.powerDrift<5?'driftGood':d.powerDrift<8?'driftWarn':'driftHigh');
+   $('driftStatus').innerHTML=`<b>${d.powerDrift<5?'Good aerobic stability':d.powerDrift<8?'Noticeable drift':'High drift'}</b><br>
+   Power–HR drift ${d.powerDrift.toFixed(1)}%. <span class="muted">Reliability: ${d.streamEvidence?.reliability||'Unknown'}.</span>`;
  }else{
-   $('driftSummary').textContent='No long-run data';
+   $('driftSummary').textContent='No power-drift data';
    $('driftStatus').className='dataStatus';
-   $('driftStatus').innerHTML='<span class="muted">Cardiac drift appears here after a detailed Stryd CSV is imported and saved as a Long run.</span>';
+   $('driftStatus').innerHTML='<span class="muted">Power-based cardiac drift appears after importing a detailed Stryd CSV containing timestamped heart rate and power.</span>';
  }
 }
 function assessmentRunId(a){return a.runId||`assessment-run-${a.id}`}
@@ -692,9 +700,6 @@ $('runList').onclick=e=>{
    try{
     let updated=updatedRunFromForm(r),i=state.runs.findIndex(x=>x.id===r.id);
     if(i<0)throw Error('Run not found.');
-    if(updated.type!=='Long run'){
-      updated.drift=null;updated.powerDrift=null;updated.paceDrift=null;updated.streamEvidence=null;
-    }
     state.runs[i]=updated;save();$('modal').className='modal hidden';renderAll();toast('Run updated.');
    }catch(err){toast(err.message,true)}
  };
@@ -741,10 +746,10 @@ $('activityFile').onchange=async e=>{
     ${kpi('Power',preview.avgPower?Math.round(preview.avgPower)+' W':'—',
       preview.avgPower&&preview.avgPower<20?'Detected value is implausibly low—check body weight and CSV headers':'Parsed as watts')}
     ${kpi('Cardiac drift',Number.isFinite(preview.candidateDrift)?preview.candidateDrift.toFixed(1)+'% candidate':'Not available',
-      preview.candidateStreamEvidence?.reliability?preview.candidateStreamEvidence.reliability+' reliability · saved only for Long runs':'Needs ≥30 min with HR plus speed or power')}
+      preview.candidateStreamEvidence?.reliability?preview.candidateStreamEvidence.reliability+' reliability · saved for every run type':'Needs ≥30 min with HR and power')}
     ${kpi('Power–HR drift',Number.isFinite(preview.candidatePowerDrift)?preview.candidatePowerDrift.toFixed(1)+'% candidate':'—')}
     ${kpi('Pace–HR drift',Number.isFinite(preview.candidatePaceDrift)?preview.candidatePaceDrift.toFixed(1)+'% candidate':'—')}
-    ${kpi('Running effectiveness',dec(m.effect,3))}
+    ${kpi('Efficiency factor',dec(m.efficiencyJ,1)+' J/beat')}
    </div>
    <div class="formGrid">
     <div class="field"><label>Run type</label><select id="iType"><option>Easy</option><option>Recovery</option><option>Long run</option><option>Tempo</option><option>Intervals</option><option>Fitness assessment</option><option>Race</option></select></div>
@@ -766,17 +771,10 @@ $('activityFile').onchange=async e=>{
         recovery:Number($('iRecovery').value)||null,
         notes:$('iNotes').value
       });
-      if(preview.type==='Long run'){
-        preview.drift=preview.candidateDrift;
-        preview.powerDrift=preview.candidatePowerDrift;
-        preview.paceDrift=preview.candidatePaceDrift;
-        preview.streamEvidence=preview.candidateStreamEvidence;
-      }else{
-        preview.drift=null;
-        preview.powerDrift=null;
-        preview.paceDrift=null;
-        preview.streamEvidence=null;
-      }
+      preview.drift=preview.candidatePowerDrift;
+      preview.powerDrift=preview.candidatePowerDrift;
+      preview.paceDrift=null;
+      preview.streamEvidence=preview.candidateStreamEvidence;
       delete preview.candidateDrift;
       delete preview.candidatePowerDrift;
       delete preview.candidatePaceDrift;
@@ -809,5 +807,5 @@ let deferred;window.addEventListener('beforeinstallprompt',e=>{e.preventDefault(
 migrateAssessmentRuns();
 migrateImportedPower();
 renderAll();
-console.info('AI Running Coach v6.3 web build 6311');
+console.info('AI Running Coach v6.3 web build 6312');
 })();
