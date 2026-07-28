@@ -23,6 +23,29 @@ const RACE_PROFILES=[
 ];
 function raceProfile(distance=state?.setup?.raceDistance){let d=Number(distance);return RACE_PROFILES.find(p=>d<=p.maxDistance)||RACE_PROFILES.at(-1)}
 function raceProfileValues(distance){let p=raceProfile(distance);return{peakLong:p.peakLong,maxWeekly:p.maxWeekly,taperDays:p.taperDays}}
+function trainingOpportunityModel(setup=state.setup,enabledDays=state.days.filter(d=>d[1]).length,currentPhase=phase(currentWeek())){
+ const profile=raceProfile(setup.raceDistance);
+ // Minimum effective frequencies are intended for performance-oriented preparation,
+ // not merely completing the distance. Above the minimum, frequency is not awarded
+ // bonus confidence because additional days mainly improve load distribution.
+ const minimumEffectiveDays={"5k":3,"10k":3,"half":4,"marathon":4}[profile.key]||4;
+ const idealDays={"5k":5,"10k":5,"half":6,"marathon":6}[profile.key]||5;
+ const baseOpportunity=clamp(Math.pow(enabledDays/Math.max(1,minimumEffectiveDays),1.6),0,1);
+ const raceImportance={"5k":5,"10k":8,"half":12,"marathon":18}[profile.key]||12;
+ const phaseMultiplier={Base:.7,Build:1,Peak:1.3,Taper:.3}[currentPhase]??1;
+ const peakWeekly=Math.max(0,Number(setup.maxWeekly)||0);
+ const ambitionMultiplier=peakWeekly<30?.6:peakWeekly<45?.8:peakWeekly<60?1:peakWeekly<75?1.2:1.5;
+ const deficit=1-baseOpportunity;
+ // raceImportance is the maximum percentage-point deduction at normal Build-phase
+ // sensitivity; phase and ambition make the consequence context-specific.
+ const confidencePenalty=clamp(deficit*raceImportance*phaseMultiplier*ambitionMultiplier,0,60);
+ // The component score uses the same non-linear deficit, normalized to marathon
+ // sensitivity so that fewer days matter progressively more as race distance rises.
+ const distanceSensitivity=raceImportance/18;
+ const opportunityScore=clamp(100-deficit*100*distanceSensitivity*phaseMultiplier*ambitionMultiplier,0,100);
+ const averagePeakKmPerRun=enabledDays>0?peakWeekly/enabledDays:null;
+ return{profileKey:profile.key,enabledDays,minimumEffectiveDays,idealDays,baseOpportunity,opportunityScore,confidencePenalty,raceImportance,phaseMultiplier,ambitionMultiplier,averagePeakKmPerRun,currentPhase};
+}
 function buildRequirementEstimate(setup=state.setup){
  let longest=Math.max(Number(setup.currentLongest)||0,...((state?.runs||[]).map(r=>Number(r.distanceKm)||0)));
  let currentWeekly=Math.max(1,Number(setup.currentWeekly)||1),targetWeekly=Math.max(1,Number(setup.maxWeekly)||currentWeekly),growth=Math.max(.01,Number(setup.growth)||.05);
@@ -48,7 +71,7 @@ function recommendedRaceDate(setup){
  let totalWeeks=Math.ceil(Math.max(minimumTotal,req.requiredBuildWeeks+taperWeeks+2));
  return{date:iso(new Date(dte(setup.planStart).getTime()+totalWeeks*7*DAY)),totalWeeks,requiredBuildWeeks:req.requiredBuildWeeks,taperWeeks};
 }
-const BUILD=8510, SCHEMA=8500, STORAGE_KEY='arc_v62_web', MIRROR_KEY='arc_v8500_web', BACKUP_KEY='arc_pre8500_backup';
+const BUILD=8520, SCHEMA=8500, STORAGE_KEY='arc_v62_web', MIRROR_KEY='arc_v8500_web', BACKUP_KEY='arc_pre8500_backup';
 const defaults=()=>{let start=iso(new Date()),setup={planStart:start,raceDate:start,raceName:'Goal Race',raceDistance:42.195,targetTime:15300,currentWeekly:35,currentLongest:18,testDistance:5,testTime:1515,thresholdHr:168,criticalPower:300,bodyWeight:93,maxWeekly:80,growth:.08,peakLong:34,taperDays:21,minFactor:.85,maxFactor:1.05,adaptive:true};setup.raceDate=recommendedRaceDate(setup).date;return({schemaVersion:SCHEMA,setup,days:[['Monday',false,'Easy'],['Tuesday',true,'Intervals'],['Wednesday',true,'Easy'],['Thursday',false,'Easy'],['Friday',true,'Tempo'],['Saturday',true,'Easy'],['Sunday',true,'Long run']],runs:[],assessments:[],plan:[],weekView:null,migration:{to:SCHEMA,status:'new',time:new Date().toISOString()}})};
 let migrationReport={from:null,to:SCHEMA,status:'new install',source:'defaults',runs:0,assessments:0,fieldsRecovered:0,warning:''};
 function parseStored(raw){if(!raw)return null;try{const x=JSON.parse(raw);return x&&typeof x==='object'?x:null}catch(err){recordDiagnostic('Storage parse',err);return null}}
@@ -406,21 +429,13 @@ function confidence(){
 
  let buildModel=buildRequirementEstimate(state.setup),requiredBuildWeeks=buildModel.requiredBuildWeeks;
  let preparationTime=daysRemaining<=0?0:clamp((usableBuildWeeks/Math.max(1,requiredBuildWeeks))*100,0,100);
- // Training opportunity measures whether the selected weekly frequency provides enough
- // separate training exposures for the race distance. It changes immediately when the
- // user enables or disables training days, rather than waiting for missed sessions.
+ // Training opportunity is a non-linear, race-specific feasibility model.
+ // It combines enabled days, race distance, current phase and planned peak volume.
  let enabledTrainingDays=state.days.filter(d=>d[1]).length;
- let profile=raceProfile(state.setup.raceDistance);
- let recommendedTrainingDays={"5k":3,"10k":3,"half":4,"marathon":5}[profile.key]||4;
- let minimumTrainingDays={"5k":2,"10k":2,"half":3,"marathon":3}[profile.key]||3;
- let frequencyRatio=enabledTrainingDays/Math.max(1,recommendedTrainingDays);
- let trainingOpportunity=clamp(frequencyRatio*100,0,100);
- // Below the minimum viable frequency the score falls more sharply because quality,
- // aerobic volume and long-run recovery must be compressed into too few sessions.
- if(enabledTrainingDays<minimumTrainingDays){
-  let shortfall=minimumTrainingDays-enabledTrainingDays;
-  trainingOpportunity=clamp(trainingOpportunity-shortfall*15,0,100);
- }
+ let opportunityModel=trainingOpportunityModel(state.setup,enabledTrainingDays,phase(currentWeek()));
+ let trainingOpportunity=opportunityModel.opportunityScore;
+ let recommendedTrainingDays=opportunityModel.idealDays;
+ let minimumTrainingDays=opportunityModel.minimumEffectiveDays;
  let dueLongs=state.plan.filter(p=>p.type==='Long run'&&hasElapsedOrCompleted(p)&&today()-dte(p.date)<=84*DAY);
  let completedLongs=dueLongs.filter(p=>{let r=matchingRun(p);return r&&compatibleRunType(p.type,r.type)});
  let longRunExecution=dueLongs.length?clamp(completedLongs.length/dueLongs.length*100,0,100):null;
@@ -445,11 +460,11 @@ function confidence(){
  ];
  let rawOverall=sum(pillars.map(p=>p.score*p.weight))/sum(pillars.map(p=>p.weight));
  let evidenceCoverage=sum(pillars.map(p=>p.weight*p.coverage));
- let overall=rawOverall; // Missing component evidence contributes zero by user choice.
+ let overall=clamp(rawOverall-opportunityModel.confidencePenalty,0,100); // Missing evidence contributes zero; schedule feasibility applies an immediate context-specific deduction.
  let measuredPillars=pillars.map(p=>{let available=p.items.filter(i=>i.hasEvidence),aw=sum(available.map(i=>i.weight));return{weight:p.weight*p.coverage,score:aw?sum(available.map(i=>i.displayScore*i.weight))/aw:null}}).filter(p=>Number.isFinite(p.score)&&p.weight>0);
  let measuredOverall=measuredPillars.length?sum(measuredPillars.map(p=>p.score*p.weight))/sum(measuredPillars.map(p=>p.weight)):null;
  let components=pillars.flatMap(p=>p.items.map(i=>({...i,pillar:p.name,pillarColor:p.color})));
- return{pillars,components,overall,rawOverall,evidenceCoverage,riegel,plannedKm,actual,longest,completedLongest,matched,opportunities,weeksRemaining,usableBuildWeeks,requiredBuildWeeks,buildRequirements:buildModel.components,preparationTime,trainingOpportunity,enabledTrainingDays,recommendedTrainingDays,minimumTrainingDays,effTrend,driftAvg,measuredOverall}
+ return{pillars,components,overall,rawOverall,evidenceCoverage,riegel,plannedKm,actual,longest,completedLongest,matched,opportunities,weeksRemaining,usableBuildWeeks,requiredBuildWeeks,buildRequirements:buildModel.components,preparationTime,trainingOpportunity,enabledTrainingDays,recommendedTrainingDays,minimumTrainingDays,opportunityModel,effTrend,driftAvg,measuredOverall}
 }
 function prediction(){
  let c=confidence();
@@ -467,7 +482,7 @@ const interpretations={
  'Recovery':s=>s==null?'Add recovery ratings after runs to create evidence.':s>=75?'Recovery ratings support normal training.':'Recovery ratings suggest fatigue management is needed.',
  'Pain status':s=>s==null?'Add pain ratings after runs to create evidence.':s>=80?'Pain evidence is reassuring.':'Pain evidence warrants caution and possible load reduction.',
  'Preparation time':s=>s>=80?'Sufficient build time remains.':s>=60?'The timeline is workable but has little disruption margin.':s>=40?'The required progression is aggressive.':'Too little build time remains for the current peak targets.',
- 'Training opportunity':s=>s>=95?'Weekly training frequency fully supports the race profile.':s>=75?'The selected training frequency is workable but leaves less flexibility.':s>=55?'Training opportunities are limited for this race distance.':'Too few weekly training opportunities support the current race goal.',
+ 'Training opportunity':s=>s>=95?'Weekly training frequency supports the race profile and planned load.':s>=75?'The selected frequency is workable but offers less load-distribution flexibility.':s>=55?'Training opportunities are materially limited for this race distance, phase and ambition.':'Too few weekly training opportunities support the current race goal and planned peak load.',
  'Specificity':s=>s==null?'No marathon-specific sessions are due yet.':s>=80?'Specific sessions are being completed reliably.':'Marathon-specific execution is incomplete.'
 };
 const actions={
@@ -493,7 +508,7 @@ const componentDefinitions={
  'Recovery':'Score = average logged recovery rating ÷ 5 × 100.',
  'Pain status':'Score = (10 − average logged pain rating) ÷ 10 × 100, so lower pain scores higher.',
  'Preparation time':'Score compares usable build weeks before taper with estimated weeks needed to reach weekly-volume and peak-long-run targets safely.',
- 'Training opportunity':'Score compares enabled training days with the recommended weekly frequency for the selected race distance. It updates immediately when training days change, with a steeper penalty below the minimum viable frequency.',
+ 'Training opportunity':'Base opportunity = (enabled days ÷ minimum effective days)^1.6, capped at 100%. Its consequence is scaled by race distance (5/8/12/18 points), phase (Base 0.7, Build 1.0, Peak 1.3, Taper 0.3) and peak-week ambition (0.6–1.5).',
  'Specificity':'Score = completed due tempo, interval and fitness-assessment sessions ÷ all such due sessions during the last 56 days × 100.'
 };
 
@@ -525,7 +540,7 @@ function coachEngine(){
  let baseFollowPlan=60+feasibility*34+(c.overall*.04);
  // Frequency is a forward-looking feasibility constraint. A reduced schedule therefore
  // lowers race-day readiness immediately even before any workout has been missed.
- let opportunityPenalty=Math.max(0,100-c.trainingOpportunity)*.18;
+ let opportunityPenalty=c.opportunityModel.confidencePenalty;
  let followPlan=clamp(baseFollowPlan-opportunityPenalty,0,98),currentTrend=clamp(c.overall+(followPlan-c.overall)*.72,0,96),missWeekly=clamp(followPlan-Math.min(18,6+raceWeeks*.35),0,95);
  let coachConfidencePct=Math.round(clamp(c.evidenceCoverage*100,0,100));
  let status=followPlan>=85?'On track':followPlan>=72?'Achievable with focused execution':followPlan>=60?'At risk — key preparation gaps remain':'Not yet supported by current evidence';
@@ -542,6 +557,7 @@ function coachEngine(){
   {label:'Best completed week',value:bestCompletedWeek,target:Number(state.setup.maxWeekly)||1,unit:'km'},
   {label:'Long-run evidence',value:completedLongs,target:Math.max(3,Math.ceil(weeks()*.22)),unit:'runs'},
   {label:'Race-specific sessions',value:completedSpecific,target:Math.max(4,Math.ceil(weeks()*.30)),unit:'sessions'},
+  {label:'Weekly training opportunities',value:c.enabledTrainingDays,target:c.minimumTrainingDays,unit:'days'},
   {label:'Plan-linked workouts',value:matched,target:Math.max(1,dueWorkouts),unit:'workouts'}
  ];
  let limiting=Object.entries(c.buildRequirements).sort((a,b)=>b[1]-a[1])[0];
@@ -1153,5 +1169,5 @@ let deferred;window.addEventListener('beforeinstallprompt',e=>{e.preventDefault(
 migrateAssessmentRuns();
 migrateImportedPower();
 renderAll();
-console.info('AI Running Coach v8.5.1 stable build 8510');
+console.info('AI Running Coach v8.5.2 stable build 8520');
 })();

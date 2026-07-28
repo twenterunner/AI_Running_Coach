@@ -1,39 +1,46 @@
-AI Running Coach v8.5.1 Stable — build 8510
-================================================
+AI Running Coach v8.5.2 Stable — build 8520
 
-INSTALL / UPDATE
-----------------
-Upload every file from this package to the root of the GitHub Pages repository, replacing the existing files. Keep index.html, app.js, styles.css, manifest.webmanifest and service-worker.js on the same build.
+INSTALLATION
+Replace index.html, styles.css, app.js, manifest.webmanifest, service-worker.js and README.txt together. Keep the existing icon files in the same repository. After GitHub Pages deploys, close and reopen the installed PWA once so build 8520 activates its new service-worker cache.
 
-After GitHub Pages deploys, close and reopen the installed PWA once. Build 8510 uses a new service-worker cache and network-first loading.
+v8.5.2 SCIENCE-BASED TRAINING-OPPORTUNITY UPDATE
 
-v8.5.1 TRAINING-FREQUENCY UPDATE
---------------------------------
-- Enabled training days now directly affect both current overall readiness and predicted race-day readiness.
-- The model compares selected weekly training opportunities with race-specific recommendations:
-  5K: 3 days; 10K: 3 days; half marathon: 4 days; marathon: 5 days.
-- A steeper penalty applies below the minimum viable frequency:
-  5K/10K: 2 days; half marathon/marathon: 3 days.
-- Reducing training days therefore changes confidence immediately, even before a workout is missed.
-- Training opportunity is shown as a Race readiness component, with its own explanation and recommended action.
-- Saving Settings now explicitly saves the rebuilt plan and rejects a zero-day schedule.
+Training frequency now changes both current readiness and predicted race-day readiness immediately. The calculation is no longer a fixed deduction.
 
-MODEL RATIONALE
----------------
-Training frequency is treated as a forward-looking feasibility constraint, not as completed-training evidence. Fewer weekly sessions reduce the ability to distribute easy volume, quality work, long runs and recovery. The effect scales with race distance and becomes stronger below the minimum viable frequency.
+1. NON-LINEAR BASE OPPORTUNITY
+Base opportunity = (enabled training days / minimum effective days)^1.6, capped at 100%.
 
-DATA SAFETY
------------
-- Schema remains 8500, so this update does not require a new data migration.
-- Continues reading and writing the established arc_v62_web key.
-- Continues mirroring saves to arc_v8500_web.
-- Existing runs, assessments, settings, training days and plan history remain compatible.
+Minimum effective days for performance-oriented preparation:
+- 5K: 3 days/week
+- 10K: 3 days/week
+- Half marathon: 4 days/week
+- Marathon: 4 days/week
 
-FILES CHANGED
--------------
-app.js
-index.html
-manifest.webmanifest
-README.txt
-service-worker.js
-styles.css (unchanged content, included so the release remains a complete synchronized replacement set)
+Ideal load-distribution reference:
+- 5K and 10K: 5 days/week
+- Half marathon and marathon: 6 days/week
+
+2. RACE-DISTANCE IMPORTANCE
+The maximum normal Build-phase confidence consequence scales with distance:
+- 5K: 5 percentage points
+- 10K: 8 percentage points
+- Half marathon: 12 percentage points
+- Marathon: 18 percentage points
+
+3. TRAINING-PHASE MULTIPLIER
+- Base: 0.7
+- Build: 1.0
+- Peak: 1.3
+- Taper: 0.3
+
+4. AMBITION MULTIPLIER FROM PLANNED PEAK WEEK
+- below 30 km: 0.6
+- 30 to below 45 km: 0.8
+- 45 to below 60 km: 1.0
+- 60 to below 75 km: 1.2
+- 75 km or more: 1.5
+
+The app also calculates the implied average peak kilometres per enabled running day for diagnostics. The selected schedule is therefore judged in the context of race distance, phase and planned workload rather than by frequency alone.
+
+DATA COMPATIBILITY
+Schema remains 8500. Existing runs, assessments, plans and settings are preserved. Future plan sessions are rebuilt when settings are saved.
