@@ -153,3 +153,8 @@ canvas{width:100%;height:auto;display:block}
 
 /* Build 6316: transparent adaptive-factor constituents */
 .adaptiveRules{display:grid;gap:8px;margin:8px 0 12px}.adaptiveRules>div{display:grid;grid-template-columns:minmax(120px,.7fr) minmax(0,1.8fr);gap:10px;padding:9px 0;border-bottom:1px solid #e8edf2}.adaptiveRules>div:last-child{border-bottom:0}.adaptiveRules b{color:var(--ink)}.adaptiveRules span{color:var(--muted);font-size:.86rem;line-height:1.4}@media(max-width:560px){.adaptiveRules>div{grid-template-columns:1fr;gap:3px}}
+
+/* v6.4 release candidate */
+.adaptivePanel>summary{cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:12px;font-weight:900;color:var(--ink);list-style:none}
+.adaptivePanel>summary::-webkit-details-marker{display:none}.adaptivePanel>summary:before{content:'▸';color:var(--blue);margin-right:8px}.adaptivePanel[open]>summary:before{content:'▾'}
+.adaptivePanel>summary span{font-size:1.05rem}.adaptivePanel>summary small{font-weight:700;color:var(--muted);text-align:right}.adaptiveFoldout{margin-top:16px;border-top:1px solid var(--line);padding-top:14px}
