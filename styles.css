@@ -235,11 +235,10 @@ canvas{width:100%;height:auto;display:block}
 .adaptivePanel[open]{scroll-margin-top:145px}
 
 
-/* v8.6.2 build 8620: focused dashboard interaction and clarity update. */
+/* v8.6.3 build 8630: focused interaction and consistency patch. */
 :root{--status-good:#159487;--status-watch:#e49b35;--status-action:#d75b67;--status-none:#8a96a3}
 .pillarCard{cursor:pointer;transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease}
 .pillarCard:hover,.pillarCard:focus-visible{transform:translateY(-2px);box-shadow:0 14px 30px rgba(15,55,87,.11)}
 .pillarCard.status-good{--pillar:var(--status-good)}.pillarCard.status-watch{--pillar:var(--status-watch)}.pillarCard.status-action{--pillar:var(--status-action)}.pillarCard.status-noEvidence{--pillar:var(--status-none)}
 .pillarCard .pillarExplain{display:none}.pillarCard.open .pillarExplain{display:block}.pillarCard.open{grid-column:span 2}
-.moreKpis{display:none;border:1px solid var(--line);background:#fff;color:var(--blue);border-radius:11px;padding:10px 13px;font-weight:800;margin:8px 0 2px}
-@media(max-width:600px){.compactKpis .kpi:nth-child(n+5){display:none}.compactKpis.showAll .kpi:nth-child(n+5){display:flex}.moreKpis{display:block;width:100%}.pillarCard.open{grid-column:auto}}
+@media(max-width:600px){.pillarCard.open{grid-column:auto}}

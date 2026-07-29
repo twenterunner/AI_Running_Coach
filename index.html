@@ -3,18 +3,18 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#0b3157"><title>AI Running Coach</title>
-<link rel="manifest" href="manifest.webmanifest?v=8620"><link rel="stylesheet" href="styles.css?v=8620">
+<link rel="manifest" href="manifest.webmanifest?v=8630"><link rel="stylesheet" href="styles.css?v=8630">
 
-<link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png?v=8620">
-<link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png?v=8620">
-<link rel="icon" href="favicon.ico?v=8620">
-<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=8620">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png?v=8630">
+<link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png?v=8630">
+<link rel="icon" href="favicon.ico?v=8630">
+<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=8630">
 <meta property="og:image" content="github-banner.png">
 
 </head>
 <body>
 <header class="topbar">
-  <div class="brand"><img class="logo" src="icon-192.png?v=8620" alt="AI Running Coach logo"><div class="brand-copy"><h1>AI Running Coach</h1><p>Adaptive marathon planning • v8.6.2 · build 8620</p></div></div>
+  <div class="brand"><img class="logo" src="icon-192.png?v=8630" alt="AI Running Coach logo"><div class="brand-copy"><h1>AI Running Coach</h1><p>Adaptive marathon planning • v8.6.3 · build 8630</p></div></div>
   <button id="installBtn" class="install hidden">Install</button>
 </header>
 <nav id="nav"></nav>
@@ -38,14 +38,14 @@
 
   <div class="dashboardSection">
     <div class="dashboardSectionHead"><span>2</span><div><h3>Progress to goal</h3><p>Whether your preparation is building as required.</p></div></div>
-    <div id="kpis" class="kpis compactKpis"></div><button id="toggleProgressKpis" class="moreKpis" type="button" aria-expanded="false">More details</button>
+    <div id="kpis" class="kpis"></div>
+    <details id="adaptiveFactorDetail" class="panel adaptivePanel"></details>
     <article class="panel"><div class="panelHead"><div><h3>Goal progress</h3><p class="muted compact">Progress toward the preparation requirements for this race.</p></div></div><div id="goalProgress" class="goalProgress"></div></article>
     <article class="panel"><div class="panelHead"><div><h3>Race timeline</h3><p class="muted compact">Your current training phase and the path to race day.</p></div></div><div id="raceTimeline"></div></article>
     <div class="grid2">
       <article class="panel"><div class="panelHead"><h3>Weekly distance progression</h3><span class="muted">Planned vs completed</span></div><canvas id="volumeChart" width="1000" height="340"></canvas></article>
       <article class="panel"><div class="panelHead"><h3>Long-run progression</h3><span class="muted">Planned vs completed</span></div><canvas id="longRunChart" width="1000" height="340"></canvas></article>
     </div>
-    <details id="adaptiveFactorDetail" class="panel adaptivePanel"></details>
   </div>
 
   <div class="dashboardSection">
@@ -159,5 +159,5 @@
 </main>
 
 <div id="modal" class="modal hidden"><div class="modalCard"><button id="closeModal" class="close">×</button><div id="modalContent"></div></div></div>
-<script src="app.js?v=8620"></script>
+<script src="app.js?v=8630"></script>
 </body></html>
