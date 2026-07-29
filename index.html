@@ -3,18 +3,18 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#0b3157"><title>AI Running Coach</title>
-<link rel="manifest" href="manifest.webmanifest?v=8740"><link rel="stylesheet" href="styles.css?v=8740">
+<link rel="manifest" href="manifest.webmanifest?v=8750"><link rel="stylesheet" href="styles.css?v=8750">
 
-<link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png?v=8740">
-<link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png?v=8740">
-<link rel="icon" href="favicon.ico?v=8740">
-<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=8740">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png?v=8750">
+<link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png?v=8750">
+<link rel="icon" href="favicon.ico?v=8750">
+<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=8750">
 <meta property="og:image" content="github-banner.png">
 
 </head>
 <body>
 <header class="topbar">
-  <div class="brand"><img class="logo" src="icon-192.png?v=8740" alt="AI Running Coach logo"><div class="brand-copy"><h1>AI Running Coach</h1><p>Adaptive marathon planning • v8.7.4 · build 8740</p></div></div>
+  <div class="brand"><img class="logo" src="icon-192.png?v=8750" alt="AI Running Coach logo"><div class="brand-copy"><h1>AI Running Coach</h1><p>Adaptive marathon planning • v8.7.5 · build 8750</p></div></div>
   <button id="installBtn" class="install hidden">Install</button>
 </header>
 <nav id="nav"></nav>
@@ -49,6 +49,7 @@
     <div id="outlookGain" class="outlookGain"></div>
     <p class="outlookAssumption">Programme scenario assumes every remaining session is completed, but not perfect adaptation, health or race-day conditions.</p>
   </div>
+  <details id="predictionModelDetail" class="panel modelDetail"><summary><span>How time and probability are calculated</span><small>Tap to expand</small></summary><div id="predictionModelContent" class="modelDetailBody"></div></details>
 
   <div class="dashboardSection firstDashboardSection">
     <div class="dashboardSectionHead"><span>1</span><div><h3>Coach summary</h3><p>The conclusion, the main limiter and the highest-value next step.</p></div></div>
@@ -69,7 +70,6 @@
     <div class="dashboardSectionHead"><span>3</span><div><h3>Progress to race</h3><p>How the plan is progressing and what remains.</p></div></div>
     <div id="kpis" class="kpis"></div>
     <article class="panel"><div id="executionBreakdown" class="executionBreakdown progressExecution"></div></article>
-    <details id="adaptiveFactorDetail" class="panel adaptivePanel"></details>
     <article class="panel"><div class="panelHead"><div><h3>Race timeline</h3><p class="muted compact">Current phase and path to race day.</p></div></div><div id="raceTimeline"></div></article>
     <div class="grid2">
       <article class="panel"><div class="panelHead"><h3>Weekly distance</h3><span class="muted">Planned vs completed</span></div><canvas id="volumeChart" width="1000" height="340"></canvas></article>
@@ -174,5 +174,5 @@
 </main>
 
 <div id="modal" class="modal hidden"><div class="modalCard"><button id="closeModal" class="close">×</button><div id="modalContent"></div></div></div>
-<script src="app.js?v=8740"></script>
+<script src="app.js?v=8750"></script>
 </body></html>
