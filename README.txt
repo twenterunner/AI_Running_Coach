@@ -1,17 +1,14 @@
-AI Running Coach v9.0.1 Stable — build 9010
+AI Running Coach v9.0.2 Stable — build 9020
 
 WHAT CHANGED
-- Replaced the generic Coach assessment paragraph with an evidence-based coaching report.
-- Every surfaced strength and opportunity is derived from configured goals, plan-linked workouts, logged runs, valid assessments, Garmin HRV or pain entries.
-- Added expandable evidence details showing the measured values, calculation window, score, impact and confidence.
-- Added deterministic prioritisation by evidence strength, marathon impact and urgency.
-- Added recovery-aware contradiction handling so load-building advice is not prioritised when supported pain or HRV evidence calls for caution.
-- Limited recommended actions to the three highest-value, evidence-backed next steps.
-- Updated the dedicated Coach report page and the Dashboard Coach assessment consistently.
-- Updated schema, version labels, cache references and service worker to v9.0.1 build 9010.
+- Removed the three duplicated Dashboard cards: Main positive, Biggest limiter and Highest-value next step.
+- Made Coach assessment the first Dashboard section and retained the expandable evidence behind every conclusion.
+- Reworked the assessment introduction so the opening conclusion and programme scenario use calmer, mostly regular-weight typography instead of a large block of bold text.
+- Kept Verified strengths, Priority opportunities and the three evidence-backed Next actions as the structured coaching hierarchy.
+- Updated schema, version labels, cache references, manifest and service worker to v9.0.2 build 9020.
 
 VERIFICATION STANDARD
-The coach does not infer sleep, nutrition, motivation, mental fatigue, overtraining or other conditions unless corresponding information exists in the app. Missing data remains missing. Race predictions are model estimates and are clearly separated from directly observed training evidence.
+The coach uses configured goals, generated plan data, plan-linked workouts, logged runs, valid assessments, Garmin HRV and pain entries. Missing data remains missing, and model-generated race estimates are identified separately from observed evidence.
 
 INSTALLATION
-Replace all six files in the GitHub Pages repository. Keep the existing icon files. Fully close and reopen the browser tab or installed PWA once so cache build 9010 activates. Existing stored data is migrated in place.
+Replace all six files in the GitHub Pages repository. Keep the existing icon files. After GitHub Pages deploys, fully close and reopen the browser tab or installed PWA so cache build 9020 activates. Existing stored data is migrated in place.
