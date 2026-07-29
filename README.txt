@@ -1,4 +1,4 @@
-AI Running Coach v8.5.7 Stable — build 8570
+AI Running Coach v8.5.8 Stable — build 8580
 Schema: 8500 (backwards compatible)
 
 DEPLOYMENT
@@ -10,9 +10,9 @@ Replace all six files together:
 - service-worker.js
 - README.txt
 
-Keep the existing icon files in the repository. After GitHub Pages deploys, fully close and reopen the browser tab or installed PWA once so service-worker cache 8570 activates.
+Keep the existing icon files in the repository. After GitHub Pages deploys, fully close and reopen the browser tab or installed PWA once so service-worker cache 8580 activates.
 
-v8.5.7 INTERFACE SIMPLIFICATION
+v8.5.8 INTERFACE REFINEMENT
 
 Removed the following duplicated sections from both the Dashboard and Coach views:
 - Current strengths
@@ -35,3 +35,12 @@ Detailed evidence remains available through:
 - Next key sessions
 
 No readiness calculation, predicted probability calculation, plan-generation rule or stored athlete data was changed. Schema remains 8500.
+
+
+v8.5.8 CHANGES
+- Time until race now includes weeks or days and a consistent secondary label.
+- Removed the duplicate Session accounting distance table; the green distance check remains.
+- Plan Health now shows only the final validation conclusion.
+- Renamed Run health check to Validate plan.
+- Removed Upgrade & data integrity and Phone diagnostics from Settings.
+- All six release files regenerated together for build 8580.
