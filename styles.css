@@ -213,4 +213,17 @@ canvas{width:100%;height:auto;display:block}
 /* v8.5.8 concise plan validation */
 .healthConclusion{display:flex;flex-direction:column;gap:4px;padding:18px 20px;border-radius:18px;margin-top:14px;font-size:1rem}.healthConclusion b{font-size:1.08rem}.healthConclusion.good{background:#eaf7f1;border-left:5px solid var(--green)}.healthConclusion.warn{background:#fff7e7;border-left:5px solid #e5a52f}.healthConclusion.bad{background:#fff0f0;border-left:5px solid var(--red)}
 
-/* v8.5.9 build 8590: synchronized runtime, visible header and cache version metadata. */
+/* v8.6.0 build 8600: dashboard information hierarchy and synchronized release metadata. */
+
+
+/* v8.6.0: logical dashboard coaching flow */
+.dashboardSection{margin:24px 0 30px}
+.firstDashboardSection{margin-top:18px}
+.dashboardSectionHead{display:flex;align-items:center;gap:12px;margin:0 2px 12px}
+.dashboardSectionHead>span{display:grid;place-items:center;width:31px;height:31px;border-radius:50%;background:var(--navy);color:#fff;font-size:13px;font-weight:900;flex:0 0 auto;box-shadow:0 5px 14px #0b31572b}
+.dashboardSectionHead h3{margin:0;font-size:18px;color:var(--ink)}
+.dashboardSectionHead p{margin:2px 0 0;color:var(--muted);font-size:12px}
+.dashboardSection .panel:last-child{margin-bottom:0}
+.dashboardActionSection{padding-top:4px}
+.dashboardActionSection .dashboardSectionHead>span{background:var(--teal)}
+@media(max-width:600px){.dashboardSection{margin:20px 0 26px}.dashboardSectionHead{align-items:flex-start}.dashboardSectionHead h3{font-size:17px}.dashboardSectionHead>span{width:28px;height:28px}}
