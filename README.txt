@@ -1,4 +1,4 @@
-AI Running Coach v8.7.0 Stable (build 8700)
+AI Running Coach v8.7.1 Stable (build 8710)
 
 DEPLOYMENT
 Replace all six files together:
@@ -9,9 +9,9 @@ Replace all six files together:
 - service-worker.js
 - README.txt
 
-Keep the existing icon files in the repository. After GitHub Pages deploys, fully close and reopen the browser tab or installed PWA once so service-worker cache 8700 activates.
+Keep the existing icon files in the repository. After GitHub Pages deploys, fully close and reopen the browser tab or installed PWA once so service-worker cache 8710 activates.
 
-V8.7.0 DASHBOARD AND MODEL UPDATE
+V8.7.1 DASHBOARD AND MODEL UPDATE
 
 Dashboard structure
 1. Marathon Outlook — compares the probability of meeting the target if racing today with the projected probability after completing the remaining programme.
@@ -42,7 +42,7 @@ VALIDATION
 - Manifest JSON validated.
 - Static HTML IDs checked for duplicates.
 - Service-worker core cache restricted to the six release files so missing optional image assets cannot block installation.
-- Version, build and cache references synchronised to 8.7.0 / 8700.
+- Version, build and cache references synchronised to 8.7.1 / 8710.
 
 BACKWARDS COMPATIBILITY
 The existing storage key and schema remain unchanged. Existing setup, runs, assessments, plan data and prediction history are preserved.
