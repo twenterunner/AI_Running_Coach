@@ -71,7 +71,7 @@ function recommendedRaceDate(setup){
  let totalWeeks=Math.ceil(Math.max(minimumTotal,req.requiredBuildWeeks+taperWeeks+2));
  return{date:iso(new Date(dte(setup.planStart).getTime()+totalWeeks*7*DAY)),totalWeeks,requiredBuildWeeks:req.requiredBuildWeeks,taperWeeks};
 }
-const BUILD=8600, SCHEMA=8500, STORAGE_KEY='arc_v62_web', MIRROR_KEY='arc_v8500_web', BACKUP_KEY='arc_pre8500_backup';
+const BUILD=8620, SCHEMA=8500, STORAGE_KEY='arc_v62_web', MIRROR_KEY='arc_v8500_web', BACKUP_KEY='arc_pre8500_backup';
 const defaults=()=>{let start=iso(new Date()),setup={planStart:start,raceDate:start,raceName:'Goal Race',raceDistance:42.195,targetTime:15300,currentWeekly:35,currentLongest:18,testDistance:5,testTime:1515,thresholdHr:168,criticalPower:300,bodyWeight:93,maxWeekly:80,growth:.08,peakLong:34,taperDays:21,minFactor:.85,maxFactor:1.05,adaptive:true};setup.raceDate=recommendedRaceDate(setup).date;return({schemaVersion:SCHEMA,setup,days:[['Monday',false,'Easy'],['Tuesday',true,'Intervals'],['Wednesday',true,'Easy'],['Thursday',false,'Easy'],['Friday',true,'Tempo'],['Saturday',true,'Easy'],['Sunday',true,'Long run']],runs:[],assessments:[],plan:[],weekView:null,migration:{to:SCHEMA,status:'new',time:new Date().toISOString()}})};
 let migrationReport={from:null,to:SCHEMA,status:'new install',source:'defaults',runs:0,assessments:0,fieldsRecovered:0,warning:''};
 function parseStored(raw){if(!raw)return null;try{const x=JSON.parse(raw);return x&&typeof x==='object'?x:null}catch(err){recordDiagnostic('Storage parse',err);return null}}
@@ -89,7 +89,8 @@ function normaliseState(input){
  const assessments=Array.isArray(src.assessments)?src.assessments.filter(Boolean).map(a=>({...a,distance:Number(a.distance)||0,time:Number(a.time)||0,thresholdHr:Number(a.thresholdHr)||0,criticalPower:Number(a.criticalPower)||0,valid:Boolean(a.valid)})):[];
  const plan=Array.isArray(src.plan)?src.plan.filter(Boolean).map(x=>({...x,week:Number(x.week)||1,distance:Number(x.distance)||0,factor:Number(x.factor)||1,zone:{...(x.zone||{}),pace:Number(x.zone?.pace)||0,hr:Number(x.zone?.hr)||0,power:Number(x.zone?.power)||0}})):[];
  migrationReport={...migrationReport,from:Number(src.schemaVersion)||'legacy',to:SCHEMA,status:'success',runs:runs.length,assessments:assessments.length,fieldsRecovered:recovered};
- return{...base,...src,schemaVersion:SCHEMA,setup,days:Array.isArray(src.days)&&src.days.length?src.days:base.days,runs,assessments,plan,weekView:Number(src.weekView)||null,migration:{...migrationReport,time:new Date().toISOString()}};
+ const predictionHistory=Array.isArray(src.predictionHistory)?src.predictionHistory.filter(x=>x&&x.date&&Number.isFinite(Number(x.seconds))).map(x=>({...x,seconds:Number(x.seconds)})):[];
+ return{...base,...src,schemaVersion:SCHEMA,setup,days:Array.isArray(src.days)&&src.days.length?src.days:base.days,runs,assessments,plan,predictionHistory,weekView:Number(src.weekView)||null,migration:{...migrationReport,time:new Date().toISOString()}};
 }
 let rawState=loadStoredState();
 try{if(rawState) localStorage.setItem(BACKUP_KEY,JSON.stringify(rawState))}catch(err){recordDiagnostic('Pre-migration backup',err)}
@@ -472,12 +473,22 @@ function prediction(){
  let penalty=Math.max(0,(75-basis)/500);
  return c.riegel*(1+penalty)
 }
+function scoreStatus(score,hasEvidence=true){if(!hasEvidence||!Number.isFinite(score))return'noEvidence';if(score>=80)return'good';if(score>=60)return'watch';return'action'}
+function recordPredictionSnapshot(date=iso(today()),source='Training update'){
+ const seconds=prediction();if(!Number.isFinite(seconds))return;
+ state.predictionHistory=Array.isArray(state.predictionHistory)?state.predictionHistory:[];
+ const existing=state.predictionHistory.find(x=>x.date===date&&x.source===source);
+ if(existing){existing.seconds=seconds;existing.updatedAt=new Date().toISOString()}
+ else state.predictionHistory.push({id:'pred-'+Date.now()+'-'+Math.random().toString(36).slice(2,7),date,seconds,source,updatedAt:new Date().toISOString()});
+ state.predictionHistory=state.predictionHistory.sort((a,b)=>a.date.localeCompare(b.date)).slice(-60);
+}
 const interpretations={
  'Fitness':s=>s>=85?'Recent assessment performance strongly supports the target.':s>=65?'Performance is credible but not yet comfortably above the target requirement.':'Current assessment evidence does not support the target.',
  'Endurance':s=>s>=85?'Longest-run evidence is close to the planned peak.':s>=65?'Endurance is progressing but key long runs remain.':'Long-run preparation is still limited.',
  'Efficiency':s=>s==null?'Comparable same-type runs with power and heart rate are required.':s>=75?'Efficiency and durability evidence is stable or improving.':'Efficiency or durability evidence needs improvement.',
  'Adherence':s=>s==null?'No planned distance is due yet.':s>=85?'Completed distance closely matches due distance.':'There is a meaningful completed-volume gap.',
  'Consistency':s=>s==null?'No scheduled sessions are due yet.':s>=80?'Scheduled training frequency is reliable.':'Recent session completion is inconsistent.',
+ 'Schedule adherence':s=>s==null?'No plan-linked completed sessions are available yet.':s>=85?'Completed sessions are usually close to their planned dates.':'Completed sessions are often shifted away from their planned dates.',
  'Long-run execution':s=>s==null?'No long runs are due yet.':s>=80?'Key long runs are being completed reliably.':'Several due long runs remain incomplete.',
  'Recovery':s=>s==null?'Add recovery ratings after runs to create evidence.':s>=75?'Recovery ratings support normal training.':'Recovery ratings suggest fatigue management is needed.',
  'Pain status':s=>s==null?'Add pain ratings after runs to create evidence.':s>=80?'Pain evidence is reassuring.':'Pain evidence warrants caution and possible load reduction.',
@@ -491,6 +502,7 @@ const actions={
  'Efficiency':'Collect comparable same-type aerobic runs and review both J/heartbeat and power-based drift.',
  'Adherence':'Close the volume gap gradually and never recover missed kilometres in one week.',
  'Consistency':'Protect the core weekly sessions before adding optional work.',
+ 'Schedule adherence':'Complete sessions near their planned dates; do not stack displaced workouts to catch up.',
  'Long-run execution':'Complete the next suitable long run rather than adding intensity.',
  'Recovery':'Log recovery and reduce load when ratings trend downward.',
  'Pain status':'Do not progress load while pain changes stride or rises across runs.',
@@ -503,7 +515,8 @@ const componentDefinitions={
  'Endurance':'Score = longest credible completed run ÷ planned peak long run × 100, limited to 0–100.',
  'Efficiency':'60% same-run-type J/heartbeat trend and 40% recent power-based cardiac-drift score. Missing sub-evidence contributes zero; comparisons require similar run types.',
  'Adherence':'Score = completed distance ÷ due planned distance over the recent 28-day window × 100, limited to 0–100.',
- 'Consistency':'Score = due sessions completed on the scheduled date ÷ all due sessions over the recent window × 100.',
+ 'Consistency':'Score = completed due sessions ÷ all due sessions over the recent window × 100.',
+ 'Schedule adherence':'Average timing credit for plan-linked completed sessions: full credit on the planned day, with progressively less credit as the session moves further away.',
  'Long-run execution':'Score = completed due long runs ÷ due long runs during the last 84 days × 100.',
  'Recovery':'Score = average logged recovery rating ÷ 5 × 100.',
  'Pain status':'Score = (10 − average logged pain rating) ÷ 10 × 100, so lower pain scores higher.',
@@ -514,6 +527,7 @@ const componentDefinitions={
 
 function assessmentText(c){let weak=[...c.components].sort((a,b)=>a.score-b.score)[0];if(c.overall>=85)return'Your current fitness, endurance and training execution strongly support the goal. Preserve consistency and avoid adding unnecessary fatigue.';if(c.overall>=70)return`The goal is realistic, but readiness still depends on completing the remaining key sessions and maintaining recovery. The weakest component is ${weak.name}.`;if(c.overall>=55)return`Some indicators support the goal, but overall readiness is not yet secure. The largest current limiter is ${weak.name}. Focus there before making the target more aggressive.`;return'The available training evidence does not yet support the target with readiness. Rebuild the weakest foundations, log completed sessions consistently and use the next assessment to review the goal.'}
 function kpi(l,v,s=''){return`<div class="kpi"><label>${esc(l)}</label><strong>${esc(v)}</strong><small>${esc(s)}</small></div>`}
+function factorKpi(v,s=''){return`<button type="button" class="kpi factorKpi" aria-controls="adaptiveFactorDetail" aria-expanded="false"><label>Training progression factor</label><strong>${esc(v)}</strong><small>${esc(s)} · Tap for calculation</small></button>`}
 function coachLabel(name,score){
  const labels={
   'Fitness':score>=85?'Current fitness supports the race target':'Fitness evidence needs strengthening',
@@ -594,7 +608,7 @@ function renderDashboard(){
    kpi('Estimated build time',c.requiredBuildWeeks.toFixed(1),c.usableBuildWeeks.toFixed(1)+' available · limited by '+Object.entries(c.buildRequirements).sort((a,b)=>b[1]-a[1])[0][0].replace(/([A-Z])/g,' $1').toLowerCase())+
    kpi('Planned this week',wd.planned.toFixed(1)+' km',wd.actual.toFixed(1)+' km completed')+
    kpi('Longest verified run',c.completedLongest.toFixed(1)+' km','Longest completed run in the run log')+
-   kpi('Training progression factor',adaptiveFactorDetails(cw).factor.toFixed(2),'Multiplies next-week training volume');
+   factorKpi(adaptiveFactorDetails(cw).factor.toFixed(2),'Multiplies next-week training volume');
 
  $('assessmentText').textContent=assessmentText(c);
  $('evidenceBadge').textContent=`Evidence ${Math.round(c.evidenceCoverage*100)}% complete`;
@@ -619,11 +633,11 @@ function renderDashboard(){
    <div class="predictionComparison ${predictionGap<=0?'ahead':'behind'}">
      <span>Target ${fmtTime(state.setup.targetTime)}</span>
      <strong>${gapLabel}</strong>
-     <small>Updates automatically after valid assessments and new training evidence.</small>
+     <small>The live estimate updates after valid assessments and new training evidence. A prediction snapshot is stored whenever a run, import or assessment is saved. Tap a chart point for its date, value and source.</small>
    </div>`;
 
- $('pillarCards').innerHTML=c.pillars.map(p=>`
-   <div class="pillarCard" style="--pillar:${p.color}">
+ $('pillarCards').innerHTML=c.pillars.map((p,pi)=>`
+   <div class="pillarCard status-${scoreStatus(p.score,p.coverage>0)}" data-pillar-index="${pi}" role="button" tabindex="0" aria-expanded="false">
     <div class="pillarTop"><b>${p.name}</b><span class="pillarScore">${Number.isFinite(p.score)?Math.round(p.score):'—'}</span></div>
     <div class="pillarBar"><i style="width:${Number.isFinite(p.score)?p.score:0}%"></i></div>
     <p>${p.description}</p>
@@ -634,15 +648,13 @@ function renderDashboard(){
     </details>
    </div>`).join('');
 
- $('componentGuide').innerHTML=c.components.map(x=>`
+ if($('componentGuide'))$('componentGuide').innerHTML=c.components.map(x=>`
    <div><b>${x.name}</b><p>${componentDefinitions[x.name]}</p>
    <small class="${x.hasEvidence?'muted':'metricMissing'}">${x.hasEvidence?`Current score: ${Math.round(x.displayScore)} / 100 · evidence ${Math.round((x.evidenceFraction??1)*100)}%`:'No evidence yet · contributes 0'} · within-pillar weight ${Math.round(x.weight*100)}%</small></div>`).join('');
 
  let missing=uniqueComponents(c.components.filter(x=>!x.hasEvidence));
  $('dataNeeded').innerHTML=missing.length?missing.map(x=>`<div class="note"><b>${x.name}</b><br>${componentDefinitions[x.name]}</div>`).join(''):'<p class="muted">All model components currently have evidence.</p>';
 
- let future=state.plan.filter(p=>p.type!=='Rest'&&dte(p.date)>=today()).slice(0,4);
- $('keySessions').innerHTML=future.map(p=>`<div class="miniSession"><b>${fmtDate(p.date)} · ${p.type}</b><span>${p.distance.toFixed(1)} km · ${pace(p.zone.pace)}<br>${p.purpose}</span></div>`).join('');
  drawDashboardCharts();
 }
 function drawLine(canvas,series,options={}){
@@ -711,6 +723,9 @@ function drawLine(canvas,series,options={}){
    ctx.font='19px system-ui';ctx.fillStyle='#748293';ctx.textAlign='center';
    positions.forEach(i=>ctx.fillText(options.labels[i]||'',px(i),H-18));
  }
+ const interactive=[];series.forEach(s=>s.data.forEach((v,i)=>{if(Number.isFinite(v)&&s.points!==false)interactive.push({x:px(i),y:py(v),label:s.label||'Value',value:v,index:i})}));
+ canvas._chartPoints=interactive;canvas._chartOptions=options;
+ if(!canvas.dataset.chartInteractive){canvas.dataset.chartInteractive='1';canvas.style.cursor='pointer';canvas.addEventListener('click',ev=>{const rect=canvas.getBoundingClientRect(),sx=canvas.width/rect.width,sy=canvas.height/rect.height,x=(ev.clientX-rect.left)*sx,y=(ev.clientY-rect.top)*sy;let nearest=(canvas._chartPoints||[]).map(p=>({...p,d:Math.hypot(p.x-x,p.y-y)})).sort((a,b)=>a.d-b.d)[0];if(!nearest||nearest.d>55)return;let detail=canvas._chartOptions?.pointDetails?.[nearest.index];let formatted=canvas._chartOptions?.formatY?canvas._chartOptions.formatY(nearest.value):Number(nearest.value).toFixed(1);toast(detail||`${nearest.label}: ${formatted}`)});}
 }
 function completedWeekSeries(){
  return Array.from({length:weeks()},(_,i)=>weekData(i+1));
@@ -733,9 +748,6 @@ function drawDashboardCharts(){
    {label:'Planned km',data:arr.map(x=>x.planned),color:'#2d82c7',dashed:true,points:false},
    {label:'Completed km',data:arr.map(x=>x.actual),color:'#159487'}
  ],{empty:'No weekly distance data yet',labels:weekLabels,area:false});
- drawLine($('adherenceChart'),[
-   {label:'Completion rate',data:arr.map((x,i)=>i+1<=currentWeek()&&x.planned?Math.min(125,x.actual/x.planned*100):null),color:'#159487'}
- ],{min:0,max:125,empty:'Complete a planned week to see adherence',formatY:v=>Math.round(v)+'%',labels:weekLabels,area:true});
  let plannedLong=Array.from({length:weeks()},(_,i)=>state.plan.find(x=>x.week===i+1&&x.type==='Long run')?.distance??null);
  let completedLong=Array.from({length:weeks()},(_,i)=>{
    let st=weekStart(i+1),en=new Date(st.getTime()+7*DAY);
@@ -747,13 +759,12 @@ function drawDashboardCharts(){
    {label:'Completed long run',data:completedLong,color:'#159487'}
  ],{min:0,max:Math.max(state.setup.peakLong*1.12,10),empty:'Log a long run to show completed progression',labels:weekLabels});
 
- let tests=state.assessments.filter(a=>a.valid).sort((a,b)=>a.date.localeCompare(b.date));
- let predSec=tests.map(a=>a.time*Math.pow(state.setup.raceDistance/a.distance,1.06));
- let labels=tests.map(a=>dte(a.date).toLocaleDateString(undefined,{day:'numeric',month:'short'}));
- if(!predSec.length){predSec=[c.riegel];labels=['Baseline']}
- const currentPrediction=prediction();
- predSec.push(currentPrediction);
- labels.push('Latest');
+ let history=(state.predictionHistory||[]).slice().sort((a,b)=>a.date.localeCompare(b.date));
+ let predSec=history.map(x=>x.seconds);
+ let labels=history.map(x=>dte(x.date).toLocaleDateString(undefined,{day:'numeric',month:'short'}));
+ let pointDetails=history.map(x=>`${fmtDate(x.date)} · ${x.source||'Training update'} · ${fmtTime(x.seconds)}`);
+ if(!predSec.length){predSec=[c.riegel];labels=['Baseline'];pointDetails=[`Baseline · ${fmtTime(c.riegel)}`]}
+ const currentPrediction=prediction();predSec.push(currentPrediction);labels.push('Latest');pointDetails.push(`Latest live estimate · ${fmtTime(currentPrediction)}`);
  let allSec=[...predSec,state.setup.targetTime],low=Math.min(...allSec),high=Math.max(...allSec);
  let minSec=Math.max(2*3600,Math.floor((low-1800)/1800)*1800);
  let maxSec=Math.min(7*3600,Math.ceil((high+1800)/1800)*1800);
@@ -761,7 +772,7 @@ function drawDashboardCharts(){
  drawLine($('predictionChart'),[
    {label:'Predicted finish',data:predSec,color:'#7457c8'},
    {label:'Target time',data:predSec.map(()=>state.setup.targetTime),color:'#d75b67',dashed:true,points:false}
- ],{min:minSec,max:maxSec,ticks:5,formatY:v=>fmtTime(v),labels,left:98});
+ ],{min:minSec,max:maxSec,ticks:5,formatY:v=>fmtTime(v),labels,left:98,pointDetails});
 
  // Current week + next three complete plan weeks, rather than the entire plan.
  let cw=currentWeek(),windowEnd=cw+3;
@@ -995,7 +1006,7 @@ function renderPlanHealth(){
 function renderMigrationReport(){const box=$('migrationReport');if(!box)return;const m=state.migration||migrationReport;box.innerHTML=`<div class="migrationStatus good"><b>Upgrade status: ${esc(m.status||'ready')}</b><span>Schema ${esc(m.from??'new')} → ${SCHEMA}</span><span>${Number(m.runs)||0} runs · ${Number(m.assessments)||0} assessments preserved</span><span>${Number(m.fieldsRecovered)||0} invalid or missing fields repaired</span><small>Storage source: ${esc(m.source||migrationReport.source||STORAGE_KEY)}</small></div>`;}
 function renderAll(){[renderDashboard,renderToday,renderPlan,renderRuns,renderMetrics,renderAssessments,renderCoach,renderRace,renderSettings,renderPlanHealth,renderMigrationReport].forEach(fn=>{try{fn()}catch(err){recordDiagnostic('Render failure in '+fn.name,err)}});renderDiagnostics()}
 const pages=[['dashboard','Dashboard'],['today','Today'],['plan','Plan'],['runs','Runs'],['assessments','Assessments'],['race','Race day'],['settings','Settings']];
-$('nav').innerHTML=pages.map((p,i)=>`<button data-page="${p[0]}" class="${i?'':'active'}">${p[1]}</button>`).join('');$('nav').onclick=e=>{let p=e.target.dataset.page;if(!p)return;document.querySelectorAll('.page').forEach(x=>x.classList.toggle('active',x.id===p));document.querySelectorAll('#nav button').forEach(x=>x.classList.toggle('active',x.dataset.page===p));renderAll();scrollTo(0,0)};document.body.onclick=e=>{if(e.target.dataset.go){document.querySelector(`[data-page="${e.target.dataset.go}"]`).click()}let w=e.target.closest('.workout');if(w&&!e.target.closest('button'))w.classList.toggle('open')};
+$('nav').innerHTML=pages.map((p,i)=>`<button data-page="${p[0]}" class="${i?'':'active'}">${p[1]}</button>`).join('');$('nav').onclick=e=>{let p=e.target.dataset.page;if(!p)return;document.querySelectorAll('.page').forEach(x=>x.classList.toggle('active',x.id===p));document.querySelectorAll('#nav button').forEach(x=>x.classList.toggle('active',x.dataset.page===p));renderAll();scrollTo(0,0)};document.body.onclick=e=>{if(e.target.dataset.go){document.querySelector(`[data-page="${e.target.dataset.go}"]`).click()}let factorTile=e.target.closest('.factorKpi');if(factorTile){let detail=$('adaptiveFactorDetail');detail.open=!detail.open;factorTile.setAttribute('aria-expanded',String(detail.open));if(detail.open)detail.scrollIntoView({behavior:'smooth',block:'center'});return}let w=e.target.closest('.workout');if(w&&!e.target.closest('button'))w.classList.toggle('open')};
 $('prevWeek').onclick=()=>{state.weekView=clamp((state.weekView||currentWeek())-1,1,weeks());renderPlan()};$('nextWeek').onclick=()=>{state.weekView=clamp((state.weekView||currentWeek())+1,1,weeks());renderPlan()};$('thisWeek').onclick=()=>{state.weekView=currentWeek();renderPlan()};
 
 function runEditorHtml(r){
@@ -1058,7 +1069,7 @@ $('runList').onclick=e=>{
  };
  $('deleteEditedRun').onclick=()=>{
    if(!confirm('Delete this run?'))return;
-   state.runs=state.runs.filter(x=>x.id!==r.id);save();$('modal').className='modal hidden';renderAll();toast('Run deleted.');
+   state.runs=state.runs.filter(x=>x.id!==r.id);recordPredictionSnapshot(iso(today()),'Run deleted');save();$('modal').className='modal hidden';renderAll();toast('Run deleted.');
  };
 };
 $('manualRunBtn').onclick=()=>{
@@ -1067,7 +1078,7 @@ $('manualRunBtn').onclick=()=>{
  $('modal').className='modal';
  bindEditorPlanRefresh(r);
  $('saveRunEdit').onclick=()=>{
-   try{let created=updatedRunFromForm(r);state.runs.push(created);save();$('modal').className='modal hidden';renderAll();toast('Run saved.')}catch(err){toast(err.message,true)}
+   try{let created=updatedRunFromForm(r);state.runs.push(created);recordPredictionSnapshot(created.date,'Run saved');save();$('modal').className='modal hidden';renderAll();toast('Run saved.')}catch(err){toast(err.message,true)}
  };
 };
 $('closeModal').onclick=()=>{$('modal').className='modal hidden'};
@@ -1138,6 +1149,7 @@ $('activityFile').onchange=async e=>{
       delete preview.candidateStreamEvidence;
       applyRunMatch(preview,$('iPlanMatch').value,'user');
       state.runs.push({...preview});
+      recordPredictionSnapshot(preview.date,'Stryd import');
       save();
       $('importPreview').className='hidden';
       preview=null;
@@ -1155,7 +1167,7 @@ $('activityFile').onchange=async e=>{
    toast(err?.message||'The CSV could not be imported.',true);
  }
 };
-$('addAssessmentBtn').onclick=()=>{$('assessmentForm').className='panel';$('assessmentForm').innerHTML=`<h3>Fitness assessment result</h3><div class="formGrid"><div class="field"><label>Date</label><input id="aDate" type="date" value="${iso(today())}"></div><div class="field"><label>Distance km</label><input id="aDist" value="5"></div><div class="field"><label>Time</label><input id="aTime" placeholder="25:15"></div><div class="field"><label>Average / threshold HR</label><input id="aHr" value="${state.setup.thresholdHr}"></div><div class="field"><label>Average / critical power W</label><input id="aCp" value="${state.setup.criticalPower}"></div><div class="field"><label>Valid result</label><select id="aValid"><option value="true">Yes</option><option value="false">No</option></select></div></div><button id="saveAssessment" class="primary full">Save assessment and completed run</button>`;$('saveAssessment').onclick=()=>{let a={id:'a-'+Date.now(),date:$('aDate').value,distance:Number($('aDist').value),time:parseTime($('aTime').value),thresholdHr:Number($('aHr').value),criticalPower:Number($('aCp').value),valid:$('aValid').value==='true'};if(!a.date||!a.distance||!a.time)return toast('Complete date, distance and time.',true);state.assessments.push(a);syncAssessmentRun(a);buildPlan();syncAssessmentRun(a);save();renderAll();$('assessmentForm').className='hidden';toast(a.valid?'Assessment saved, added to run history and applied to future targets.':'Assessment saved and added to run history, but not applied to prediction.')}};
+$('addAssessmentBtn').onclick=()=>{$('assessmentForm').className='panel';$('assessmentForm').innerHTML=`<h3>Fitness assessment result</h3><div class="formGrid"><div class="field"><label>Date</label><input id="aDate" type="date" value="${iso(today())}"></div><div class="field"><label>Distance km</label><input id="aDist" value="5"></div><div class="field"><label>Time</label><input id="aTime" placeholder="25:15"></div><div class="field"><label>Average / threshold HR</label><input id="aHr" value="${state.setup.thresholdHr}"></div><div class="field"><label>Average / critical power W</label><input id="aCp" value="${state.setup.criticalPower}"></div><div class="field"><label>Valid result</label><select id="aValid"><option value="true">Yes</option><option value="false">No</option></select></div></div><button id="saveAssessment" class="primary full">Save assessment and completed run</button>`;$('saveAssessment').onclick=()=>{let a={id:'a-'+Date.now(),date:$('aDate').value,distance:Number($('aDist').value),time:parseTime($('aTime').value),thresholdHr:Number($('aHr').value),criticalPower:Number($('aCp').value),valid:$('aValid').value==='true'};if(!a.date||!a.distance||!a.time)return toast('Complete date, distance and time.',true);state.assessments.push(a);syncAssessmentRun(a);buildPlan();syncAssessmentRun(a);recordPredictionSnapshot(a.date,'Fitness assessment');save();renderAll();$('assessmentForm').className='hidden';toast(a.valid?'Assessment saved, added to run history and applied to future targets.':'Assessment saved and added to run history, but not applied to prediction.')}};
 
 function validateSetup(candidate){
  const errors=[];
@@ -1174,10 +1186,13 @@ function download(n,t,m){let a=document.createElement('a');a.href=URL.createObje
 $('planHealthBtn').onclick=()=>{renderPlanHealth();const ok=validatePlan(state.plan).valid;toast(ok?'Plan validation passed.':'Plan validation found issues.',!ok)};
 $('backupBtn').onclick=()=>download('ai-running-coach-backup.json',JSON.stringify(state,null,2),'application/json');$('restoreFile').onchange=e=>e.target.files[0]?.text().then(t=>{let candidate=JSON.parse(t);if(!validateBackup(candidate))throw new Error('Backup structure is incomplete.');let errors=validateSetup(candidate.setup);if(errors.length)throw new Error(errors[0]);candidate.schemaVersion=SCHEMA;candidate.plan=Array.isArray(candidate.plan)?candidate.plan:[];state=candidate;buildPlan();save();renderAll();toast('Backup restored and migrated.')}).catch(err=>toast(err?.message||'Invalid backup.',true));$('exportBtn').onclick=()=>download('run-log.csv',['Date,Type,Distance km,Duration sec,HR,Power,RPE,Pain,Recovery,Match status,Plan ID,Day offset,Notes',...state.runs.map(r=>[r.date,r.type,r.distanceKm,r.durationSec,r.avgHr,r.avgPower,r.rpe,r.pain,r.recovery,r.matchStatus||'',r.planId||'',r.dayOffset??'',`"${String(r.notes||'').replaceAll('"','""')}"`].join(','))].join('\n'),'text/csv');$('resetBtn').onclick=()=>{if(confirm('Delete all app data?')){state=defaults();buildPlan();save();renderAll();toast('App reset.')}};
 let deferred;window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferred=e;$('installBtn').className='install'});$('installBtn').onclick=()=>deferred?.prompt();
-const brandVersion=document.querySelector('.brand-copy p');if(brandVersion)brandVersion.textContent=`Adaptive marathon planning • v8.6.0 · build ${BUILD}`;
+$('toggleProgressKpis')?.addEventListener('click',e=>{const grid=$('kpis'),open=grid.classList.toggle('showAll');e.currentTarget.textContent=open?'Show less':'More details';e.currentTarget.setAttribute('aria-expanded',String(open))});
+$('pillarCards')?.addEventListener('click',e=>{const card=e.target.closest('.pillarCard');if(!card||e.target.closest('summary'))return;const detail=card.querySelector('.pillarExplain');if(!detail)return;card.classList.toggle('open');detail.open=card.classList.contains('open');card.setAttribute('aria-expanded',String(detail.open))});
+$('pillarCards')?.addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&e.target.classList.contains('pillarCard')){e.preventDefault();e.target.click()}});
+const brandVersion=document.querySelector('.brand-copy p');if(brandVersion)brandVersion.textContent=`Adaptive marathon planning • v8.6.2 · build ${BUILD}`;
 if('serviceWorker'in navigator&&location.protocol==='https:')navigator.serviceWorker.register(`service-worker.js?v=${BUILD}`,{updateViaCache:'none'}).then(reg=>reg.update()).catch(()=>{});
 migrateAssessmentRuns();
 migrateImportedPower();
 renderAll();
-console.info('AI Running Coach v8.6.0 stable build 8600');
+console.info('AI Running Coach v8.6.2 stable build 8620');
 })();

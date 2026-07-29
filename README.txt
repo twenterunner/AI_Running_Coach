@@ -1,4 +1,4 @@
-AI Running Coach v8.6.0 Stable — build 8600
+AI Running Coach v8.6.2 Stable — build 8620
 Schema: 8500 (backwards compatible)
 
 DEPLOYMENT
@@ -10,9 +10,9 @@ Replace all six files together:
 - service-worker.js
 - README.txt
 
-Keep the existing icon files in the repository. After GitHub Pages deploys, fully close and reopen the browser tab or installed PWA once so service-worker cache 8600 activates.
+Keep the existing icon files in the repository. After GitHub Pages deploys, fully close and reopen the browser tab or installed PWA once so service-worker cache 8620 activates.
 
-v8.6.0 DASHBOARD INFORMATION HIERARCHY
+v8.6.2 DASHBOARD CLARITY UPDATE
 
 The Dashboard is now ordered around the way a runner uses coaching information:
 1. Coach verdict — the immediate assessment and what matters now.
@@ -33,6 +33,24 @@ RELEASE NOTES
 - Kept technical efficiency and cardiac-drift analysis in a dedicated Performance analytics section.
 - Made Next key sessions the final dashboard section.
 - Added responsive styling for the numbered dashboard section headings.
-- Synchronized index, app, stylesheet, manifest, service worker and README to v8.6.0 build 8600.
+- Synchronized index, app, stylesheet, manifest, service worker and README to v8.6.2 build 8620.
 
 No readiness calculation, race prediction calculation, workout-generation rule, schema or stored athlete data was changed. Schema remains 8500.
+
+
+v8.6.2 CHANGES
+- Moved the adaptive-factor foldout into Section 2, Progress to goal.
+- Made the Training progression factor KPI tile open and close the calculation foldout.
+- Removed the Weekly completion rate graph. Completion evidence remains in the readiness model.
+- Removed Section 6, What to do next, and its Next key sessions panel.
+- Clarified that the prediction chart shows valid assessment history plus one automatically updated live estimate.
+- Fixed missing Schedule adherence interpretation, action and calculation-definition mappings that could display undefined.
+- Synchronized all six release files to v8.6.2 build 8620.
+
+
+v8.6.2 focused update
+- Readiness pillars are tappable and reveal their calculation in place.
+- Mobile Progress shows four primary KPIs with a More details control.
+- Chart points can be tapped for date, value and context.
+- Prediction snapshots are stored after saved runs, Stryd imports and assessments.
+- Readiness colours consistently mean green/on track, amber/watch, red/action and grey/no evidence.

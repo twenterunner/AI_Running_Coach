@@ -3,18 +3,18 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#0b3157"><title>AI Running Coach</title>
-<link rel="manifest" href="manifest.webmanifest?v=8600"><link rel="stylesheet" href="styles.css?v=8600">
+<link rel="manifest" href="manifest.webmanifest?v=8620"><link rel="stylesheet" href="styles.css?v=8620">
 
-<link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png?v=8600">
-<link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png?v=8600">
-<link rel="icon" href="favicon.ico?v=8600">
-<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=8600">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png?v=8620">
+<link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png?v=8620">
+<link rel="icon" href="favicon.ico?v=8620">
+<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=8620">
 <meta property="og:image" content="github-banner.png">
 
 </head>
 <body>
 <header class="topbar">
-  <div class="brand"><img class="logo" src="icon-192.png?v=8600" alt="AI Running Coach logo"><div class="brand-copy"><h1>AI Running Coach</h1><p>Adaptive marathon planning • v8.6.0 · build 8600</p></div></div>
+  <div class="brand"><img class="logo" src="icon-192.png?v=8620" alt="AI Running Coach logo"><div class="brand-copy"><h1>AI Running Coach</h1><p>Adaptive marathon planning • v8.6.2 · build 8620</p></div></div>
   <button id="installBtn" class="install hidden">Install</button>
 </header>
 <nav id="nav"></nav>
@@ -38,13 +38,14 @@
 
   <div class="dashboardSection">
     <div class="dashboardSectionHead"><span>2</span><div><h3>Progress to goal</h3><p>Whether your preparation is building as required.</p></div></div>
-    <div id="kpis" class="kpis"></div>
+    <div id="kpis" class="kpis compactKpis"></div><button id="toggleProgressKpis" class="moreKpis" type="button" aria-expanded="false">More details</button>
     <article class="panel"><div class="panelHead"><div><h3>Goal progress</h3><p class="muted compact">Progress toward the preparation requirements for this race.</p></div></div><div id="goalProgress" class="goalProgress"></div></article>
     <article class="panel"><div class="panelHead"><div><h3>Race timeline</h3><p class="muted compact">Your current training phase and the path to race day.</p></div></div><div id="raceTimeline"></div></article>
     <div class="grid2">
       <article class="panel"><div class="panelHead"><h3>Weekly distance progression</h3><span class="muted">Planned vs completed</span></div><canvas id="volumeChart" width="1000" height="340"></canvas></article>
       <article class="panel"><div class="panelHead"><h3>Long-run progression</h3><span class="muted">Planned vs completed</span></div><canvas id="longRunChart" width="1000" height="340"></canvas></article>
     </div>
+    <details id="adaptiveFactorDetail" class="panel adaptivePanel"></details>
   </div>
 
   <div class="dashboardSection">
@@ -52,20 +53,15 @@
     <article class="panel readinessPanel">
       <div class="panelHead"><div><h3>Race readiness model</h3><p class="muted compact">Evidence-informed coaching score — not a probability of success</p></div><div id="evidenceBadge" class="evidenceBadge"></div></div>
       <div id="pillarCards" class="pillarGrid"></div>
-      <details class="modelDetails"><summary>How the score is built</summary><div id="componentGuide" class="guideGrid componentGuide"></div></details>
     </article>
-    <div class="grid2 statusGrid">
-      <article class="panel"><div class="panelHead"><h3>Weekly completion rate</h3></div><canvas id="adherenceChart" width="1000" height="340"></canvas></article>
-      <article class="panel"><div class="panelHead"><h3>Training intensity mix</h3><span class="muted">Next four weeks by session type</span></div><canvas id="mixChart" width="1000" height="340"></canvas></article>
-    </div>
-    <details id="adaptiveFactorDetail" class="panel adaptivePanel"></details>
+    <article class="panel"><div class="panelHead"><h3>Training intensity mix</h3><span class="muted">Next four weeks by session type</span></div><canvas id="mixChart" width="1000" height="340"></canvas></article>
   </div>
 
   <div class="dashboardSection">
     <div class="dashboardSectionHead"><span>4</span><div><h3>Future outlook</h3><p>Where your current trajectory is leading.</p></div></div>
     <article class="panel"><div class="panelHead"><div><h3>Readiness forecast</h3><p class="muted compact">Planning scenarios, not guaranteed outcomes.</p></div></div><div id="forecastScenarios" class="forecastScenarios"></div></article>
     <article class="panel predictionPanel">
-      <div class="panelHead"><div><h3>Race prediction trend</h3><p class="muted compact">Latest readiness-adjusted estimate and assessment history</p></div></div>
+      <div class="panelHead"><div><h3>Race prediction trend</h3><p class="muted compact">Saved training-update history plus the live readiness-adjusted estimate</p></div></div>
       <div id="predictionSummary" class="predictionSummary"></div>
       <canvas id="predictionChart" width="1000" height="340"></canvas>
     </article>
@@ -83,10 +79,6 @@
     <details class="panel modelDetails"><summary>Data needed</summary><div id="dataNeeded"></div></details>
   </div>
 
-  <div class="dashboardSection dashboardActionSection">
-    <div class="dashboardSectionHead"><span>6</span><div><h3>What to do next</h3><p>Your most important upcoming training sessions.</p></div></div>
-    <article class="panel"><div class="panelHead"><h3>Next key sessions</h3><button class="linkBtn" data-go="plan">Open plan</button></div><div id="keySessions" class="sessionGrid"></div></article>
-  </div>
 </section>
 
 <section id="today" class="page">
@@ -167,5 +159,5 @@
 </main>
 
 <div id="modal" class="modal hidden"><div class="modalCard"><button id="closeModal" class="close">×</button><div id="modalContent"></div></div></div>
-<script src="app.js?v=8600"></script>
+<script src="app.js?v=8620"></script>
 </body></html>
