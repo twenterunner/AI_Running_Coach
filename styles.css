@@ -322,3 +322,9 @@ canvas{width:100%;height:auto;display:block}
 /* Build 9100: explainable evidence-weighted prediction updates */
 .predictionUpdateEvidence{margin-top:14px;padding:14px 16px;border:1px solid #d9e2ea;border-radius:16px;background:#fff;display:grid;gap:5px}
 .predictionUpdateEvidence b{font-size:.95rem}.predictionUpdateEvidence span,.predictionUpdateEvidence small{color:#68778a;line-height:1.35}
+
+/* v9.2.0 prediction-update states */
+.predictionUpdateEvidence{border-left:4px solid #159487;background:rgba(21,148,135,.07)}
+.predictionCurrent[data-update-mode="maintained"] .predictionUpdateEvidence{border-left-color:#68778a;background:rgba(104,119,138,.08)}
+.predictionCurrent[data-update-mode="improved"] .predictionUpdateEvidence{border-left-color:#159487;background:rgba(21,148,135,.08)}
+.predictionCurrent[data-update-mode="slower"] .predictionUpdateEvidence{border-left-color:#d75b67;background:rgba(215,91,103,.08)}
