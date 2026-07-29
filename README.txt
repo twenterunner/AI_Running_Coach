@@ -1,7 +1,11 @@
-AI Running Coach v8.7.6 Stable (build 8760)
+AI Running Coach v8.7.8 Stable — build 8780
+
+Changes: Garmin previous-night HRV logging, baseline from first logged value, 7-value rolling average, HRV-informed adaptive factor, unique prediction-history points, race defaults through 100 km, and corrected version labels.
+
+AI Running Coach v8.7.8 Stable (v8.7.8)
 
 INSTALLATION
-Replace all six files in the GitHub Pages repository. Keep the existing icon files. Fully close and reopen the browser tab or installed PWA once so cache 8760 activates.
+Replace all six files in the GitHub Pages repository. Keep the existing icon files. Fully close and reopen the browser tab or installed PWA once so cache 8780 activates.
 
 V8.7.6 PLAN-SENSITIVE PREDICTION MODEL
 
@@ -47,3 +51,12 @@ These are calibration tests, not guarantees. Changing the assessment, target, he
 
 BACKWARDS COMPATIBILITY
 Existing schema-8500 data, completed runs, assessments and generated plans remain compatible.
+
+HRV UPDATE IN v8.7.8
+- Garmin previous-night HRV is used from the first logged value.
+- 1 value: provisional baseline, no plan penalty.
+- 2–3 values: maximum HRV moderation 1%.
+- 4–6 values: maximum HRV moderation 3%.
+- 7–20 values: maximum HRV moderation 6%.
+- 21+ values: established model, maximum HRV moderation 10%.
+- Early estimates are labelled by maturity and remain deliberately low influence.

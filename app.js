@@ -15,11 +15,15 @@ const diagnostics=[];
 function recordDiagnostic(source,error){const message=error?.stack||error?.message||String(error);diagnostics.unshift({time:new Date().toLocaleString(),source,message});if(diagnostics.length>20)diagnostics.length=20;console.error(source,error);renderDiagnostics();}
 function renderDiagnostics(){const box=$('diagnosticsContent');if(!box)return;box.innerHTML=diagnostics.length?diagnostics.map(x=>`<div class="diagnosticItem"><b>${esc(x.time)} · ${esc(x.source)}</b><pre>${esc(x.message)}</pre></div>`).join(''):'<p class="muted">No JavaScript errors have been recorded in this session.</p>';}
 window.addEventListener('error',e=>recordDiagnostic('Window error',e.error||e.message));window.addEventListener('unhandledrejection',e=>recordDiagnostic('Unhandled promise rejection',e.reason));
+const FIVE_DAY_TEMPLATE=[['Monday',false,'Easy'],['Tuesday',true,'Intervals'],['Wednesday',true,'Easy'],['Thursday',true,'Tempo'],['Friday',false,'Easy'],['Saturday',true,'Easy'],['Sunday',true,'Long run']];
 const RACE_PROFILES=[
- {key:'5k',label:'5K',maxDistance:7.5,currentWeekly:18,peakLong:12,maxWeekly:32,growth:.07,taperDays:7,days:[['Monday',false,'Easy'],['Tuesday',true,'Intervals'],['Wednesday',false,'Easy'],['Thursday',true,'Easy'],['Friday',false,'Easy'],['Saturday',true,'Tempo'],['Sunday',true,'Long run']]},
- {key:'10k',label:'10K',maxDistance:15.55,currentWeekly:24,peakLong:16,maxWeekly:42,growth:.07,taperDays:7,days:[['Monday',false,'Easy'],['Tuesday',true,'Intervals'],['Wednesday',true,'Easy'],['Thursday',false,'Easy'],['Friday',true,'Tempo'],['Saturday',false,'Easy'],['Sunday',true,'Long run']]},
- {key:'half',label:'Half marathon',maxDistance:31.65,currentWeekly:30,peakLong:24,maxWeekly:52,growth:.07,taperDays:14,days:[['Monday',false,'Easy'],['Tuesday',true,'Intervals'],['Wednesday',true,'Easy'],['Thursday',false,'Easy'],['Friday',true,'Tempo'],['Saturday',true,'Easy'],['Sunday',true,'Long run']]},
- {key:'marathon',label:'Marathon',maxDistance:Infinity,currentWeekly:35,peakLong:32,maxWeekly:65,growth:.07,taperDays:14,days:[['Monday',false,'Easy'],['Tuesday',true,'Intervals'],['Wednesday',true,'Easy'],['Thursday',false,'Easy'],['Friday',true,'Tempo'],['Saturday',true,'Easy'],['Sunday',true,'Long run']]}
+ {key:'5k',label:'5K',maxDistance:7.5,currentWeekly:18,peakLong:12,maxWeekly:32,growth:.07,taperDays:7,days:[['Monday',false,'Easy'],['Tuesday',true,'Intervals'],['Wednesday',true,'Easy'],['Thursday',false,'Easy'],['Friday',false,'Easy'],['Saturday',true,'Tempo'],['Sunday',true,'Long run']]},
+ {key:'10k',label:'10K',maxDistance:15.55,currentWeekly:24,peakLong:16,maxWeekly:42,growth:.07,taperDays:7,days:[['Monday',false,'Easy'],['Tuesday',true,'Intervals'],['Wednesday',true,'Easy'],['Thursday',false,'Easy'],['Friday',false,'Easy'],['Saturday',true,'Tempo'],['Sunday',true,'Long run']]},
+ {key:'half',label:'Half marathon',maxDistance:31.65,currentWeekly:30,peakLong:24,maxWeekly:52,growth:.07,taperDays:14,days:FIVE_DAY_TEMPLATE.map(d=>[...d])},
+ {key:'marathon',label:'Marathon',maxDistance:47.5,currentWeekly:35,peakLong:32,maxWeekly:65,growth:.07,taperDays:14,days:FIVE_DAY_TEMPLATE.map(d=>[...d])},
+ {key:'50k',label:'50 km ultra',maxDistance:62.5,currentWeekly:40,peakLong:38,maxWeekly:72,growth:.06,taperDays:14,days:FIVE_DAY_TEMPLATE.map(d=>[...d])},
+ {key:'75k',label:'75 km ultra',maxDistance:87.5,currentWeekly:45,peakLong:45,maxWeekly:82,growth:.06,taperDays:18,days:FIVE_DAY_TEMPLATE.map(d=>[...d])},
+ {key:'100k',label:'100 km ultra',maxDistance:Infinity,currentWeekly:50,peakLong:50,maxWeekly:92,growth:.05,taperDays:21,days:FIVE_DAY_TEMPLATE.map(d=>[...d])}
 ];
 function raceProfile(distance=state?.setup?.raceDistance){let d=Number(distance);return RACE_PROFILES.find(p=>d<=p.maxDistance)||RACE_PROFILES.at(-1)}
 function raceProfileValues(distance){let p=raceProfile(distance);return{currentWeekly:p.currentWeekly,peakLong:p.peakLong,maxWeekly:p.maxWeekly,growth:p.growth,taperDays:p.taperDays}}
@@ -29,10 +33,10 @@ function trainingOpportunityModel(setup=state.setup,enabledDays=state.days.filte
  // Minimum effective frequencies are intended for performance-oriented preparation,
  // not merely completing the distance. Above the minimum, frequency is not awarded
  // bonus confidence because additional days mainly improve load distribution.
- const minimumEffectiveDays={"5k":3,"10k":3,"half":4,"marathon":4}[profile.key]||4;
- const idealDays={"5k":5,"10k":5,"half":6,"marathon":6}[profile.key]||5;
+ const minimumEffectiveDays={"5k":3,"10k":3,"half":4,"marathon":4,"50k":4,"75k":5,"100k":5}[profile.key]||4;
+ const idealDays={"5k":5,"10k":5,"half":5,"marathon":5,"50k":5,"75k":6,"100k":6}[profile.key]||5;
  const baseOpportunity=clamp(Math.pow(enabledDays/Math.max(1,minimumEffectiveDays),1.6),0,1);
- const raceImportance={"5k":5,"10k":8,"half":12,"marathon":18}[profile.key]||12;
+ const raceImportance={"5k":5,"10k":8,"half":12,"marathon":18,"50k":20,"75k":24,"100k":28}[profile.key]||12;
  const phaseMultiplier={Base:.7,Build:1,Peak:1.3,Taper:.3}[currentPhase]??1;
  const peakWeekly=Math.max(0,Number(setup.maxWeekly)||0);
  const ambitionMultiplier=peakWeekly<30?.6:peakWeekly<45?.8:peakWeekly<60?1:peakWeekly<75?1.2:1.5;
@@ -67,13 +71,13 @@ function buildRequirementEstimate(setup=state.setup){
  return{components,consolidation:1.5,requiredBuildWeeks:limiting+1.5,longest,fitnessScore};
 }
 function recommendedRaceDate(setup){
- let p=raceProfile(setup.raceDistance),minimumTotal={"5k":6,"10k":8,"half":12,"marathon":20}[p.key]||12;
+ let p=raceProfile(setup.raceDistance),minimumTotal={"5k":6,"10k":8,"half":12,"marathon":20,"50k":22,"75k":24,"100k":26}[p.key]||12;
  let req=buildRequirementEstimate(setup),taperWeeks=Math.max(1,Number(setup.taperDays||p.taperDays)/7);
  let totalWeeks=Math.ceil(Math.max(minimumTotal,req.requiredBuildWeeks+taperWeeks+2));
  return{date:iso(new Date(dte(setup.planStart).getTime()+totalWeeks*7*DAY)),totalWeeks,requiredBuildWeeks:req.requiredBuildWeeks,taperWeeks};
 }
-const BUILD=8760, SCHEMA=8500, STORAGE_KEY='arc_v62_web', MIRROR_KEY='arc_v8500_web', BACKUP_KEY='arc_pre8500_backup';
-const defaults=()=>{let start=iso(new Date()),setup={planStart:start,raceDate:start,raceName:'Goal Race',raceDistance:42.195,targetTime:15300,currentWeekly:35,currentLongest:18,testDistance:5,testTime:1515,thresholdHr:168,criticalPower:300,bodyWeight:93,maxWeekly:65,growth:.07,peakLong:32,taperDays:14,minFactor:.85,maxFactor:1.05,adaptive:true};setup.raceDate=recommendedRaceDate(setup).date;return({schemaVersion:SCHEMA,setup,days:[['Monday',false,'Easy'],['Tuesday',true,'Intervals'],['Wednesday',true,'Easy'],['Thursday',false,'Easy'],['Friday',true,'Tempo'],['Saturday',true,'Easy'],['Sunday',true,'Long run']],runs:[],assessments:[],plan:[],weekView:null,migration:{to:SCHEMA,status:'new',time:new Date().toISOString()}})};
+const BUILD=8780, SCHEMA=8500, STORAGE_KEY='arc_v62_web', MIRROR_KEY='arc_v8500_web', BACKUP_KEY='arc_pre8500_backup';
+const defaults=()=>{let start=iso(new Date()),setup={planStart:start,raceDate:start,raceName:'Goal Race',raceDistance:42.195,targetTime:15300,currentWeekly:35,currentLongest:18,testDistance:5,testTime:1515,thresholdHr:168,criticalPower:300,bodyWeight:93,maxWeekly:65,growth:.07,peakLong:32,taperDays:14,minFactor:.85,maxFactor:1.05,adaptive:true};setup.raceDate=recommendedRaceDate(setup).date;return({schemaVersion:SCHEMA,setup,days:FIVE_DAY_TEMPLATE.map(d=>[...d]),runs:[],assessments:[],plan:[],weekView:null,migration:{to:SCHEMA,status:'new',time:new Date().toISOString()}})};
 let migrationReport={from:null,to:SCHEMA,status:'new install',source:'defaults',runs:0,assessments:0,fieldsRecovered:0,warning:''};
 function parseStored(raw){if(!raw)return null;try{const x=JSON.parse(raw);return x&&typeof x==='object'?x:null}catch(err){recordDiagnostic('Storage parse',err);return null}}
 function storageCandidates(){const keys=[STORAGE_KEY,MIRROR_KEY,'arc_v84_web','arc_v83_web','arc_v8_web'];return keys.map(key=>({key,value:parseStored(localStorage.getItem(key))})).filter(x=>x.value)}
@@ -86,11 +90,13 @@ function normaliseState(input){
  let recovered=0;numericSetup.forEach(k=>{const n=Number(setup[k]);if(Number.isFinite(n)){setup[k]=n}else{setup[k]=base.setup[k];recovered++}});
  ['planStart','raceDate','raceName'].forEach(k=>{if(setup[k]==null||setup[k]===''){setup[k]=base.setup[k];recovered++}});
  setup.adaptive=setup.adaptive!==false;
- const runs=Array.isArray(src.runs)?src.runs.filter(Boolean).map(r=>({...r,distanceKm:Number(r.distanceKm)||0,durationSec:Number(r.durationSec)||0,avgHr:Number(r.avgHr)||0,avgPower:Number(r.avgPower)||0,rpe:r.rpe==null?null:Number(r.rpe),pain:r.pain==null?null:Number(r.pain),recovery:r.recovery==null?null:Number(r.recovery),powerDrift:r.powerDrift==null?null:Number(r.powerDrift)})):[];
+ const runs=Array.isArray(src.runs)?src.runs.filter(Boolean).map(r=>({...r,distanceKm:Number(r.distanceKm)||0,durationSec:Number(r.durationSec)||0,avgHr:Number(r.avgHr)||0,avgPower:Number(r.avgPower)||0,rpe:r.rpe==null?null:Number(r.rpe),pain:r.pain==null?null:Number(r.pain),recovery:null,hrv:r.hrv==null?null:Number(r.hrv),powerDrift:r.powerDrift==null?null:Number(r.powerDrift)})):[];
  const assessments=Array.isArray(src.assessments)?src.assessments.filter(Boolean).map(a=>({...a,distance:Number(a.distance)||0,time:Number(a.time)||0,thresholdHr:Number(a.thresholdHr)||0,criticalPower:Number(a.criticalPower)||0,valid:Boolean(a.valid)})):[];
  const plan=Array.isArray(src.plan)?src.plan.filter(Boolean).map(x=>({...x,week:Number(x.week)||1,distance:Number(x.distance)||0,factor:Number(x.factor)||1,zone:{...(x.zone||{}),pace:Number(x.zone?.pace)||0,hr:Number(x.zone?.hr)||0,power:Number(x.zone?.power)||0}})):[];
  migrationReport={...migrationReport,from:Number(src.schemaVersion)||'legacy',to:SCHEMA,status:'success',runs:runs.length,assessments:assessments.length,fieldsRecovered:recovered};
- const predictionHistory=Array.isArray(src.predictionHistory)?src.predictionHistory.filter(x=>x&&x.date&&Number.isFinite(Number(x.seconds))).map(x=>({...x,seconds:Number(x.seconds)})):[];
+ let predictionHistory=Array.isArray(src.predictionHistory)?src.predictionHistory.filter(x=>x&&x.date&&Number.isFinite(Number(x.seconds))).map(x=>({...x,seconds:Number(x.seconds)})):[];
+ const standaloneRuns=runs.filter(r=>r.source!=='assessment').length,maxTrendEvents=standaloneRuns+assessments.length;
+ if(maxTrendEvents===0)predictionHistory=[];else if(predictionHistory.every(x=>!x.entityId)&&predictionHistory.length>maxTrendEvents)predictionHistory=predictionHistory.slice(-maxTrendEvents);
  return{...base,...src,schemaVersion:SCHEMA,setup,days:Array.isArray(src.days)&&src.days.length?src.days:base.days,runs,assessments,plan,predictionHistory,weekView:Number(src.weekView)||null,migration:{...migrationReport,time:new Date().toISOString()}};
 }
 let rawState=loadStoredState();
@@ -119,6 +125,51 @@ function typeMetricSummary(runs){return metricRunTypes.map(type=>{
  return{type,count:group.length,effAvg:avg(eff),effBest:eff.length?Math.max(...eff):null,driftAvg:avg(drift),driftBest:drift.length?Math.min(...drift):null};
 }).filter(x=>x.effAvg!==null||x.driftAvg!==null)}
 function weekData(w){let st=weekStart(w),en=new Date(st.getTime()+7*DAY),p=state.plan.filter(x=>x.week===w&&x.type!=='Rest'),r=state.runs.filter(x=>dte(x.date)>=st&&dte(x.date)<en);return{planned:sum(p.map(x=>x.distance)),actual:sum(r.map(x=>x.distanceKm)),runs:r,plan:p}}
+
+function hrvHistory(excludeRunId=null){
+ return (state.runs||[]).filter(r=>r.id!==excludeRunId&&Number.isFinite(Number(r.hrv))&&Number(r.hrv)>0)
+  .map(r=>({date:r.date,value:Number(r.hrv),id:r.id})).sort((a,b)=>a.date.localeCompare(b.date)||String(a.id).localeCompare(String(b.id)));
+}
+function median(values){let a=values.filter(Number.isFinite).sort((x,y)=>x-y);if(!a.length)return null;let m=Math.floor(a.length/2);return a.length%2?a[m]:(a[m-1]+a[m])/2}
+function hrvModel(){
+ const hist=hrvHistory(), values=hist.map(x=>x.value), n=values.length;
+ if(!n)return{count:0,status:'not available',factor:1,baseline:null,rolling:null,deviation:null,ready:false,confidence:'none',detail:'No previous-night Garmin HRV values have been logged.'};
+
+ // HRV is used from the first logged value. Early estimates are deliberately
+ // low influence because the personal baseline is still provisional.
+ let stage,rollingValues,baselinePool,maxPenalty;
+ if(n===1){
+  stage='provisional';rollingValues=values.slice(-1);baselinePool=values.slice(0,1);maxPenalty=0;
+ }else if(n<=3){
+  stage='early baseline';rollingValues=values.slice();baselinePool=values.slice();maxPenalty=.01;
+ }else if(n<=6){
+  stage='early baseline';rollingValues=values.slice(-3);baselinePool=values.slice();maxPenalty=.03;
+ }else if(n<=20){
+  stage='developing baseline';rollingValues=values.slice(-7);baselinePool=values.slice(-Math.min(21,n));maxPenalty=.06;
+ }else{
+  stage='established baseline';rollingValues=values.slice(-7);
+  // Compare the recent seven values with up to 21 earlier values so the
+  // mature baseline changes slowly and is not pulled down by the same dip.
+  baselinePool=values.slice(Math.max(0,n-28),n-7);maxPenalty=.10;
+ }
+ const rolling=avg(rollingValues);
+ const baseline=median(baselinePool)||median(values)||rolling;
+ const deviation=baseline>0?(rolling/baseline-1):0;
+
+ // Wide trend bands. The stage-specific cap prevents early values from
+ // making large plan changes before enough personal evidence exists.
+ let status='within normal range',rawFactor=1;
+ if(deviation<=-.35){status='strongly suppressed';rawFactor=.90}
+ else if(deviation<=-.25){status='suppressed';rawFactor=.94}
+ else if(deviation<=-.15){status='below normal range';rawFactor=.98}
+ else if(deviation>=.25){status='above normal range';rawFactor=1}
+ const factor=Math.max(1-maxPenalty,rawFactor);
+ const windowLabel=rollingValues.length===1?'latest value':`latest ${rollingValues.length}-value average`;
+ const confidence=n===1?'very low':n<=6?'low':n<=20?'developing':'established';
+ const capText=maxPenalty?`Maximum plan moderation at this stage is ${(maxPenalty*100).toFixed(0)}%.`:'No plan penalty is applied from a single value.';
+ return{count:n,status,factor,baseline,rolling,deviation,ready:true,confidence,stage,maxPenalty,
+  detail:`${stage[0].toUpperCase()+stage.slice(1)} (${n} logged value${n===1?'':'s'}): ${windowLabel} ${rolling.toFixed(0)} ms versus personal baseline ${baseline.toFixed(0)} ms (${deviation>=0?'+':''}${(deviation*100).toFixed(0)}%). ${capText}`};
+}
 function adaptiveFactorDetails(w){
  if(!state.setup.adaptive||w<=1)return{factor:1,rawFactor:1,baseFactor:1,items:[{name:'Baseline',adjustment:0,detail:w<=1?'No previous training week is available.':'Adaptive planning is disabled.'}],previousWeek:w-1,plannedKm:null,completedKm:null,status:w<=1?'baseline':'disabled'};
  let previousWeek=w-1,previousEnd=new Date(weekStart(previousWeek).getTime()+7*DAY);
@@ -150,8 +201,13 @@ function adaptiveFactorDetails(w){
  else if(drift<=3&&canReward)add('Cardiac drift',.01,`Average power-based drift ${drift.toFixed(1)}% with adequate completed load.`);
  else if(drift<=3)add('Cardiac drift',0,`Drift was ${drift.toFixed(1)}%, but positive adjustment requires 85–105% load completion and at least two qualifying aerobic runs.`);
  else add('Cardiac drift',0,`Average power-based drift ${drift.toFixed(1)}%.`);
+ let trainingResponse=f;
+ let hrv=hrvModel();
+ if(!hrv.ready)add('Garmin HRV',0,hrv.detail);
+ else if(hrv.factor<1)add('Garmin HRV',hrv.factor-1,`${hrv.detail} Recovery moderation is based on the rolling pattern, not one night.`);
+ else add('Garmin HRV',0,`${hrv.detail} No progression penalty applied.`);
  let rawFactor=f,boundedFactor=clamp(rawFactor,state.setup.minFactor,state.setup.maxFactor);
- return{factor:boundedFactor,rawFactor,baseFactor:1,items,previousWeek,plannedKm:prev.planned,completedKm:prev.actual,status:'calculated'};
+ return{factor:boundedFactor,rawFactor,baseFactor:1,trainingResponse,hrvFactor:hrv.factor,hrv,items,previousWeek,plannedKm:prev.planned,completedKm:prev.actual,status:'calculated'};
 }
 function adaptiveFactor(w){return adaptiveFactorDetails(w).factor}
 function validateWorkout(workout){
@@ -441,8 +497,9 @@ function confidence(){
  let consistency=executionEvidence?clamp(matched/opportunities*100,0,100):null;
  let adherence=executionEvidence&&plannedKm>0?clamp(actual/plannedKm*100,0,100):null;
  let scheduleAdherence=matchedRuns.length?avg(matchedRuns.map(x=>matchTimingCredit(x.r,x.p))):null;
- let recoveryValues=recent.map(r=>Number(r.recovery)).filter(v=>Number.isFinite(v)&&v>0),painValues=recent.map(r=>Number(r.pain)).filter(Number.isFinite);
- let recoveryScore=recoveryValues.length?clamp(avg(recoveryValues)/5*100,0,100):null;
+ let painValues=recent.map(r=>Number(r.pain)).filter(Number.isFinite);
+ let hrvState=hrvModel();
+ let recoveryScore=hrvState.ready?clamp(100+(hrvState.deviation||0)*100,0,100):null;
  let painScore=painValues.length?clamp((10-avg(painValues))/10*100,0,100):null;
  let typeTrends=[];
  ['Easy','Recovery','Long run'].forEach(type=>{
@@ -479,12 +536,12 @@ function confidence(){
  let physiological=weighted([{name:'Fitness',score:fitness,weight:.55,hasEvidence:Number.isFinite(testTime)&&testTime>0&&testDist>0},{name:'Endurance',score:endurance,weight:.30,hasEvidence:state.runs.some(r=>(Number(r.distanceKm)||0)>0)},{name:'Efficiency',score:efficiency,weight:.15,evidenceFraction:(Number.isFinite(effTrendScore)?.60:0)+(Number.isFinite(driftScore)?.40:0)}]);
  let marathonPreparation=weighted([{name:'Long-run execution',score:longRunExecution,weight:.45,hasEvidence:dueLongs.length>0},{name:'Volume progression',score:volumeProgression,weight:.30,hasEvidence:state.runs.some(r=>(Number(r.distanceKm)||0)>0)},{name:'Specificity',score:specificity,weight:.25,hasEvidence:specificDue.length>0}]);
  let planExecution=weighted([{name:'Adherence',score:adherence,weight:.45,hasEvidence:executionEvidence},{name:'Consistency',score:consistency,weight:.35,hasEvidence:executionEvidence},{name:'Schedule adherence',score:scheduleAdherence,weight:.20,hasEvidence:matchedRuns.length>0}]);
- let recoveryHealth=weighted([{name:'Recovery',score:recoveryScore,weight:.60,hasEvidence:recoveryValues.length>0},{name:'Pain status',score:painScore,weight:.40,hasEvidence:painValues.length>0}]);
+ let recoveryHealth=weighted([{name:'Garmin HRV trend',score:recoveryScore,weight:.60,hasEvidence:hrvState.ready},{name:'Pain status',score:painScore,weight:.40,hasEvidence:painValues.length>0}]);
  let performancePillar={name:'Physiological fitness',weight:1,color:'#2d82c7',description:'Demonstrated capability used to centre the marathon-time prediction.',...physiological};
  let pillars=[
   {name:'Marathon preparation',weight:.50,color:'#e49b35',description:'How much marathon-specific evidence supports sustaining the predicted pace for 42.2 km.',...marathonPreparation},
   {name:'Plan execution',weight:.30,color:'#159487',description:'How reliably completed volume, sessions and timing match the programme.',...planExecution},
-  {name:'Recovery & health',weight:.20,color:'#7457c8',description:'Whether recovery and pain evidence support delivering the predicted capability.',...recoveryHealth}
+  {name:'HRV & health',weight:.20,color:'#7457c8',description:'Whether the recent Garmin HRV pattern and pain evidence support absorbing training.',...recoveryHealth}
  ];
  let scoredPillars=pillars.filter(p=>Number.isFinite(p.score));
  let overall=scoredPillars.length?clamp(sum(scoredPillars.map(p=>p.score*p.weight))/sum(scoredPillars.map(p=>p.weight)),0,100):null;
@@ -539,13 +596,15 @@ function prediction(){
  return testTime*Math.pow(state.setup.raceDistance/testDist,exponent);
 }
 function scoreStatus(score,hasEvidence=true){if(!hasEvidence||!Number.isFinite(score))return'noEvidence';if(score>=80)return'good';if(score>=60)return'watch';return'action'}
-function recordPredictionSnapshot(date=iso(today()),source='Training update'){
+function recordPredictionSnapshot(date=iso(today()),source='Training update',entityId=null){
  const seconds=prediction();if(!Number.isFinite(seconds))return;
  state.predictionHistory=Array.isArray(state.predictionHistory)?state.predictionHistory:[];
- const existing=state.predictionHistory.find(x=>x.date===date&&x.source===source);
- if(existing){existing.seconds=seconds;existing.updatedAt=new Date().toISOString()}
- else state.predictionHistory.push({id:'pred-'+Date.now()+'-'+Math.random().toString(36).slice(2,7),date,seconds,source,updatedAt:new Date().toISOString()});
- state.predictionHistory=state.predictionHistory.sort((a,b)=>a.date.localeCompare(b.date)).slice(-60);
+ let existing=entityId?state.predictionHistory.find(x=>x.entityId===entityId):state.predictionHistory.find(x=>x.date===date&&x.source===source&&!x.entityId);
+ if(entityId&&!existing){const sameDateLegacy=state.predictionHistory.filter(x=>!x.entityId&&x.date===date);if(sameDateLegacy.length===1)existing=sameDateLegacy[0];else if((state.runs||[]).filter(r=>r.source!=='assessment').length+(state.assessments||[]).length===1){existing=[...state.predictionHistory].reverse().find(x=>!x.entityId)}}
+ if(existing){existing.date=date;existing.seconds=seconds;existing.source=source;existing.entityId=entityId||existing.entityId;existing.updatedAt=new Date().toISOString()}
+ else state.predictionHistory.push({id:'pred-'+Date.now()+'-'+Math.random().toString(36).slice(2,7),date,seconds,source,entityId,updatedAt:new Date().toISOString()});
+ // Remove legacy duplicates for the same run/entity and retain one chronological point per actual event.
+ const seen=new Set();state.predictionHistory=state.predictionHistory.sort((a,b)=>(a.updatedAt||'').localeCompare(b.updatedAt||'')).filter(x=>{let k=x.entityId?'e:'+x.entityId:`l:${x.date}|${x.source}`;if(seen.has(k))return false;seen.add(k);return true}).sort((a,b)=>a.date.localeCompare(b.date)).slice(-60);
 }
 const interpretations={
  'Fitness':s=>s>=85?'Recent assessment performance strongly supports the target.':s>=65?'Performance is credible but not yet comfortably above the target requirement.':'Current assessment evidence does not support the target.',
@@ -586,8 +645,9 @@ const componentDefinitions={
  'Schedule adherence':'Average timing credit for plan-linked completed sessions: full credit on the planned day, with progressively less credit as the session moves further away.',
  'Volume progression':'Score = best completed weekly distance during the latest four training weeks ÷ planned peak weekly distance × 100, limited to 0–100.',
  'Long-run execution':'Score = completed due long runs ÷ due long runs during the last 84 days × 100.',
- 'Recovery':'Score = average logged recovery rating ÷ 5 × 100.',
+ 'Garmin HRV trend':'Uses Garmin overnight HRV from the first logged value. Influence is staged from provisional to established as more values accumulate, with a slowly moving personal baseline.',
  'Pain status':'Score = (10 − average logged pain rating) ÷ 10 × 100, so lower pain scores higher.',
+ 'Garmin HRV trend':'Starts on day 1. One value is provisional with no penalty; 2–3 values can moderate by at most 1%, 4–6 by 3%, 7–20 by 6%, and 21+ by 10%.',
  'Preparation time':'Score compares usable build weeks before taper with estimated weeks needed to reach weekly-volume and peak-long-run targets safely.',
  'Training opportunity':'Base opportunity = (enabled days ÷ minimum effective days)^1.6, capped at 100%. Its consequence is scaled by race distance (5/8/12/18 points), phase (Base 0.7, Build 1.0, Peak 1.3, Taper 0.3) and peak-week ambition (0.6–1.5).',
  'Specificity':'Score = completed due tempo, interval and fitness-assessment sessions ÷ all such due sessions during the last 56 days × 100.'
@@ -597,7 +657,7 @@ function assessmentText(c){let weak=[...c.components].sort((a,b)=>a.score-b.scor
 function kpi(l,v,s=''){return`<div class="kpi"><label>${esc(l)}</label><strong>${esc(v)}</strong><small>${esc(s)}</small></div>`}
 function factorKpi(afd){
  const calc=`1.00 ${afd.items.map(i=>`${i.adjustment>=0?'+':'−'} ${Math.abs(i.adjustment).toFixed(2)}`).join(' ')} = ${afd.rawFactor.toFixed(2)} → applied ${afd.factor.toFixed(2)}`;
- return`<div class="kpi factorKpi"><button type="button" class="factorToggle" aria-expanded="false"><label>Training progression factor</label><strong>${afd.factor.toFixed(2)}</strong><small>Multiplies next-week training volume · Tap for calculation</small></button><div class="factorInlineDetail"><p class="muted compact">Conservative weekly load multiplier, bounded by ${state.setup.minFactor.toFixed(2)}–${state.setup.maxFactor.toFixed(2)}.</p><div class="adaptiveFormula"><b>Calculation</b><span>${calc}</span></div><div class="adaptiveBreakdown">${afd.items.map(i=>`<div class="adaptiveRow"><b>${i.name}</b><span class="${i.adjustment>0?'positive':i.adjustment<0?'negative':''}">${i.adjustment>0?'+':''}${i.adjustment.toFixed(2)}</span><small>${i.detail}</small></div>`).join('')}</div><p class="muted compact">This factor changes future training load only. It does not directly change race probability.</p></div></div>`
+ return`<div class="kpi factorKpi"><button type="button" class="factorToggle" aria-expanded="false"><label>Training progression factor</label><strong>${afd.factor.toFixed(2)}</strong><small>Multiplies next-week training volume · Tap for calculation</small></button><div class="factorInlineDetail"><p class="muted compact">Training response combined with the recent Garmin HRV recovery pattern, bounded by ${state.setup.minFactor.toFixed(2)}–${state.setup.maxFactor.toFixed(2)}.</p><div class="adaptiveFormula"><b>Calculation</b><span>${calc}</span></div><div class="adaptiveBreakdown">${afd.items.map(i=>`<div class="adaptiveRow"><b>${i.name}</b><span class="${i.adjustment>0?'positive':i.adjustment<0?'negative':''}">${i.adjustment>0?'+':''}${i.adjustment.toFixed(2)}</span><small>${i.detail}</small></div>`).join('')}</div><p class="muted compact">This factor changes future training load only. It does not directly change race probability.</p></div></div>`
 }
 function coachLabel(name,score){
  const labels={
@@ -695,7 +755,7 @@ function planSettingsProfile(c){
 function projectedPreparationModel(c){
  const profile=planSettingsProfile(c);
  const weeks=Math.max(0,c.usableBuildWeeks),timePotential=1-Math.exp(-.16*weeks);
- const healthPillar=c.pillars.find(p=>p.name==='Recovery & health');
+ const healthPillar=c.pillars.find(p=>p.name==='HRV & health');
  const health=healthPillar&&healthPillar.coverage>0?healthPillar.score:75;
  const tolerance=clamp((health/100)*(.82+Math.min(1,c.trainingOpportunity/100)*.18),.45,1);
  const completionAssumption=1;
@@ -703,7 +763,7 @@ function projectedPreparationModel(c){
   let score=Number.isFinite(p.score)?p.score:50;
   if(p.name==='Marathon preparation')score=clamp(score+(profile.score-score)*timePotential*tolerance,0,100);
   if(p.name==='Plan execution')score=100;
-  if(p.name==='Recovery & health')score=health;
+  if(p.name==='HRV & health')score=health;
   return{...p,currentScore:p.score,projectedScore:score};
  });
  const overall=clamp(sum(projectedPillars.map(p=>p.projectedScore*p.weight))/sum(projectedPillars.map(p=>p.weight)),0,100);
@@ -814,7 +874,7 @@ function renderDashboard(){
  const trendHistory=(state.predictionHistory||[]).slice().sort((a,b)=>a.date.localeCompare(b.date));
  const firstTrend=trendHistory[0]?.seconds,trendChange=Number.isFinite(firstTrend)?pred-firstTrend:null;
  const trendDirection=!Number.isFinite(trendChange)||Math.abs(trendChange)<30?'Stable':trendChange<0?'Improving':'Slower';
- $('predictionSummary').innerHTML=`<div class="predictionPrimary"><span>Latest central marathon estimate</span><strong>${fmtTime(pred)}</strong><small>${pace(pred/state.setup.raceDistance)} · ${trendHistory.length?`based on ${trendHistory.length} saved prediction point${trendHistory.length===1?'':'s'}`:'save runs or assessments to start the trend'}</small></div><div class="predictionComparison"><span>Change from first saved estimate</span><strong>${Number.isFinite(trendChange)?`${trendChange<0?'Faster by ':trendChange>0?'Slower by ':'No change · '}${fmtTime(Math.abs(trendChange))}`:'More history needed'}</strong><small>Each dot is the central marathon-time estimate saved after a qualifying run, assessment or edit. A downward line means the predicted finish is getting faster. The dashed line is your target time.</small></div>`;
+ $('predictionSummary').innerHTML=`<div class="predictionPrimary"><span>Latest central marathon estimate</span><strong>${fmtTime(pred)}</strong><small>${pace(pred/state.setup.raceDistance)} · ${trendHistory.length?`based on ${trendHistory.length} saved prediction point${trendHistory.length===1?'':'s'}`:'save runs or assessments to start the trend'}</small></div><div class="predictionComparison"><span>Change from first saved estimate</span><strong>${Number.isFinite(trendChange)?`${trendChange<0?'Faster by ':trendChange>0?'Slower by ':'No change · '}${fmtTime(Math.abs(trendChange))}`:'More history needed'}</strong><small>Each dot is one unique run or assessment event. Editing that same item updates its existing dot instead of creating another. A downward line means the predicted finish is getting faster. The dashed line is your target time.</small></div>`;
  if($('componentGuide'))$('componentGuide').innerHTML=c.components.map(x=>`<div><b>${x.name}</b><p>${componentDefinitions[x.name]}</p><small class="${x.hasEvidence?'muted':'metricMissing'}">${x.hasEvidence?`Current score: ${Math.round(x.displayScore)} / 100 · evidence ${Math.round((x.evidenceFraction??1)*100)}%`:'No evidence yet'} · within-component weight ${Math.round(x.weight*100)}%</small></div>`).join('');
  let missing=uniqueComponents(c.components.filter(x=>!x.hasEvidence));
  $('dataNeeded').innerHTML=missing.length?missing.map(x=>`<div class="note"><b>${x.name}</b><br>${componentDefinitions[x.name]}</div>`).join(''):'<p class="muted">All preparation-model components currently have evidence.</p>';
@@ -1069,7 +1129,7 @@ function summariseCSV(rows){
  };
 }
 
-function renderRuns(){$('runList').innerHTML=state.runs.slice().sort((a,b)=>b.date.localeCompare(a.date)).map(r=>{let m=metrics(r);return`<div class="runCard clickable" data-run="${r.id}"><div class="runSummary"><div><h3>${fmtDate(r.date)} · ${esc(r.type)}</h3><p>${r.distanceKm.toFixed(2)} km · ${fmtTime(r.durationSec)} · ${pace(m.pace)}</p><p class="muted compact"><b>Plan:</b> ${esc(matchSummary(r))}</p><div class="runStats"><span>HR ${r.avgHr?Math.round(r.avgHr):'—'}</span><span>${r.avgPower?Math.round(r.avgPower):'—'} W</span><span>${dec(m.efficiencyJ,1)} J/beat</span><span>${Number.isFinite(r.powerDrift)?r.powerDrift.toFixed(1)+'% drift':'— drift'}</span></div></div><span>›</span></div></div>`}).join('')||'<div class="panel">No completed runs saved yet.</div>'}
+function renderRuns(){$('runList').innerHTML=state.runs.slice().sort((a,b)=>b.date.localeCompare(a.date)).map(r=>{let m=metrics(r);return`<div class="runCard clickable" data-run="${r.id}"><div class="runSummary"><div><h3>${fmtDate(r.date)} · ${esc(r.type)}</h3><p>${r.distanceKm.toFixed(2)} km · ${fmtTime(r.durationSec)} · ${pace(m.pace)}</p><p class="muted compact"><b>Plan:</b> ${esc(matchSummary(r))}</p><div class="runStats"><span>HR ${r.avgHr?Math.round(r.avgHr):'—'}</span><span>${r.avgPower?Math.round(r.avgPower):'—'} W</span><span>${dec(m.efficiencyJ,1)} J/beat</span><span>${Number.isFinite(r.powerDrift)?r.powerDrift.toFixed(1)+'% drift':'— drift'}</span><span>${Number.isFinite(Number(r.hrv))?Math.round(Number(r.hrv))+' ms HRV':'— HRV'}</span></div></div><span>›</span></div></div>`}).join('')||'<div class="panel">No completed runs saved yet.</div>'}
 function migrateImportedPower(){
  let changed=false,weight=Number(state.setup.bodyWeight)||0;
  if(!weight)return;
@@ -1153,7 +1213,7 @@ function renderSettings(){let defs=[['planStart','Plan start','date'],['raceDate
  let raceDistanceInput=document.querySelector('[data-setting="raceDistance"]');
  const inputSetup=()=>{let x={...state.setup};document.querySelectorAll('[data-setting]').forEach(el=>{let v=el.value,t=el.dataset.type;if(t==='number')v=Number(v);if(t==='time')v=parseTime(v);if(t==='percent')v=Number(v)/100;x[el.dataset.setting]=v});return x};
  const showRecommendedDate=()=>{let r=recommendedRaceDate(inputSetup()),box=$('raceDateRecommendation');if(box)box.innerHTML=`<b>Model-recommended race date: ${fmtDate(r.date)}</b><p class="muted compact">${r.totalWeeks} weeks total: ${r.requiredBuildWeeks.toFixed(1)} estimated build weeks, ${r.taperWeeks.toFixed(1)} taper weeks and an ideal-scenario buffer.</p><button id="recommendRaceDate" type="button" class="secondary">Use this date</button>`;let btn=$('recommendRaceDate');if(btn)btn.onclick=()=>{let dateInput=document.querySelector('[data-setting="raceDate"]');if(dateInput)dateInput.value=r.date;toast(`Recommended race date applied: ${fmtDate(r.date)}.`)};return r};
- $('raceDateRecommendation')?.remove();$('raceDefaultsNote')?.remove();$('settingsGrid').insertAdjacentHTML('afterend',`<div id="raceDefaultsNote" class="note"><b>${raceProfile(state.setup.raceDistance).label} training defaults</b><p class="muted compact">Changing race distance applies conservative recreational defaults for weekly distance, long run, growth, taper, training frequency and session types. Adjust them for injury history, experience and available time.</p></div>`);
+ $('raceDateRecommendation')?.remove();$('raceDefaultsNote')?.remove();$('settingsGrid').insertAdjacentHTML('afterend',`<div id="raceDefaultsNote" class="note"><b>${raceProfile(state.setup.raceDistance).label} training defaults</b><p class="muted compact">Changing race distance from 5 km through 100 km applies conservative recreational defaults for weekly distance, long run, growth, taper, training frequency and session types. Adjust them for injury history, experience and available time.</p></div>`);
  if(!$('raceDateRecommendation'))if(!$('raceDateRecommendation'))$('settingsGrid').insertAdjacentHTML('afterend','<div id="raceDateRecommendation" class="note"></div>');
  raceDistanceInput?.addEventListener('change',()=>{let d=Number(raceDistanceInput.value);if(!(d>0))return;let profile=raceProfile(d),values=raceProfileValues(d);Object.entries(values).forEach(([key,value])=>{let input=document.querySelector(`[data-setting="${key}"]`);if(input)input.value=key==='growth'?Math.round(value*100):value});applyRaceProfileDays(profile);$('daysGrid').innerHTML=state.days.map((d,i)=>`<div class="panelHead" style="padding:7px 0;border-bottom:1px solid var(--line)"><b>${d[0]}</b><label><input data-day="${i}" type="checkbox" ${d[1]?'checked':''}> Train</label><select data-session="${i}"><option ${d[2]=='Easy'?'selected':''}>Easy</option><option ${d[2]=='Intervals'?'selected':''}>Intervals</option><option ${d[2]=='Tempo'?'selected':''}>Tempo</option><option ${d[2]=='Long run'?'selected':''}>Long run</option></select></div>`).join('');let r=showRecommendedDate(),dateInput=document.querySelector('[data-setting="raceDate"]');if(dateInput)dateInput.value=r.date;toast(`${profile.label} defaults and recommended race date ${fmtDate(r.date)} applied.`)});
  ['planStart','currentWeekly','currentLongest','maxWeekly','growth','peakLong','taperDays','testDistance','testTime','targetTime'].forEach(key=>document.querySelector(`[data-setting="${key}"]`)?.addEventListener('change',showRecommendedDate));
@@ -1192,7 +1252,7 @@ function runEditorHtml(r){
   <div class="field"><label>Average power</label><input id="erPower" type="number" value="${Number.isFinite(r.avgPower)?Math.round(r.avgPower):''}"></div>
   <div class="field"><label>RPE 1–10 <small class="muted">1 easy · 10 maximal</small></label><input id="erRpe" type="number" min="1" max="10" value="${r.rpe??''}"></div>
   <div class="field"><label>Pain 0–10 <small class="muted">0 none · 5 affects form</small></label><input id="erPain" type="number" min="0" max="10" value="${r.pain??''}"></div>
-  <div class="field"><label>Recovery 1–5 <small class="muted">1 poor · 3 normal · 5 excellent</small></label><input id="erRecovery" type="number" min="1" max="5" value="${r.recovery??''}"></div>
+  <div class="field"><label>Previous-night Garmin HRV (ms)</label><input id="erHrv" type="number" min="1" max="250" value="${r.hrv??''}"><small class="muted">Enter Garmin's Overnight Average from the night before this run.</small></div>
   <div class="field"><label>Link to planned workout</label><select id="erPlanMatch">${planMatchOptions(r,r.planId||(r.matchStatus==='unresolved'?'unresolved':'adhoc'))}</select><small class="muted">You control the link. Timing and workout-type differences are scored automatically.</small></div>
   <div class="field"><label>Notes</label><textarea id="erNotes">${esc(r.notes||'')}</textarea></div>
  </div>
@@ -1216,7 +1276,7 @@ function updatedRunFromForm(r){
  let updated={...r,date:$('erDate').value,type:$('erType').value,distanceKm:distance,durationSec:duration,
   avgHr:Number($('erHr').value)||null,avgPower:Number($('erPower').value)||null,
   rpe:Number($('erRpe').value)||null,pain:$('erPain').value===''?null:Number($('erPain').value),
-  recovery:Number($('erRecovery').value)||null,notes:$('erNotes').value};
+  hrv:$('erHrv').value===''?null:Number($('erHrv').value),recovery:null,notes:$('erNotes').value};
  applyRunMatch(updated,$('erPlanMatch').value,'user');
  return updated;
 }
@@ -1234,21 +1294,21 @@ $('runList').onclick=e=>{
    try{
     let updated=updatedRunFromForm(r),i=state.runs.findIndex(x=>x.id===r.id);
     if(i<0)throw Error('Run not found.');
-    state.runs[i]=updated;save();$('modal').className='modal hidden';renderAll();toast('Run updated.');
+    state.runs[i]=updated;recordPredictionSnapshot(updated.date,'Run update',updated.id);save();$('modal').className='modal hidden';renderAll();toast('Run updated.');
    }catch(err){toast(err.message,true)}
  };
  $('deleteEditedRun').onclick=()=>{
    if(!confirm('Delete this run?'))return;
-   state.runs=state.runs.filter(x=>x.id!==r.id);recordPredictionSnapshot(iso(today()),'Run deleted');save();$('modal').className='modal hidden';renderAll();toast('Run deleted.');
+   state.runs=state.runs.filter(x=>x.id!==r.id);state.predictionHistory=(state.predictionHistory||[]).filter(x=>x.entityId!==r.id);save();$('modal').className='modal hidden';renderAll();toast('Run deleted.');
  };
 };
 $('manualRunBtn').onclick=()=>{
- let r={id:'manual-'+Date.now(),date:iso(today()),type:'Easy',distanceKm:'',durationSec:null,avgHr:null,avgPower:null,rpe:null,pain:null,recovery:null,notes:''};
+ let r={id:'manual-'+Date.now(),date:iso(today()),type:'Easy',distanceKm:'',durationSec:null,avgHr:null,avgPower:null,rpe:null,pain:null,recovery:null,hrv:null,notes:''};
  $('modalContent').innerHTML=runEditorHtml(r);
  $('modal').className='modal';
  bindEditorPlanRefresh(r);
  $('saveRunEdit').onclick=()=>{
-   try{let created=updatedRunFromForm(r);state.runs.push(created);recordPredictionSnapshot(created.date,'Run saved');save();$('modal').className='modal hidden';renderAll();toast('Run saved.')}catch(err){toast(err.message,true)}
+   try{let created=updatedRunFromForm(r);state.runs.push(created);recordPredictionSnapshot(created.date,'Run saved',created.id);save();$('modal').className='modal hidden';renderAll();toast('Run saved.')}catch(err){toast(err.message,true)}
  };
 };
 $('closeModal').onclick=()=>{$('modal').className='modal hidden'};
@@ -1291,7 +1351,7 @@ $('activityFile').onchange=async e=>{
     <div class="field"><label>Link to planned workout</label><select id="iPlanMatch"></select><small class="muted">Confirm a planned workout, choose ad hoc, or leave unresolved.</small></div>
     <div class="field"><label>RPE 1–10 <small class="muted">1 very easy · 10 maximal</small></label><input id="iRpe" type="number" min="1" max="10"></div>
     <div class="field"><label>Pain 0–10 <small class="muted">0 none · 5 affects form · 10 extreme</small></label><input id="iPain" type="number" min="0" max="10"></div>
-    <div class="field"><label>Recovery 1–5 <small class="muted">1 very poor · 3 normal · 5 excellent</small></label><input id="iRecovery" type="number" min="1" max="5"></div>
+    <div class="field"><label>Previous-night Garmin HRV (ms)</label><input id="iHrv" type="number" min="1" max="250"><small class="muted">Garmin Overnight Average from the night before this run.</small></div>
     <div class="field"><label>Notes</label><input id="iNotes"></div>
    </div>
    <button id="saveImport" class="primary full">Save analysed run</button>`;
@@ -1308,7 +1368,7 @@ $('activityFile').onchange=async e=>{
         type:$('iType').value,
         rpe:Number($('iRpe').value)||null,
         pain:$('iPain').value===''?null:Number($('iPain').value),
-        recovery:Number($('iRecovery').value)||null,
+        hrv:$('iHrv').value===''?null:Number($('iHrv').value),recovery:null,
         notes:$('iNotes').value
       });
       preview.drift=preview.candidatePowerDrift;
@@ -1322,7 +1382,7 @@ $('activityFile').onchange=async e=>{
       applyRunMatch(preview,$('iPlanMatch').value,'user');
       state.runs.push({...preview});
       reconcileExactDateMatches();
-      recordPredictionSnapshot(preview.date,'Stryd import');
+      recordPredictionSnapshot(preview.date,'Stryd import',preview.id);
       save();
       $('importPreview').className='hidden';
       preview=null;
@@ -1340,7 +1400,7 @@ $('activityFile').onchange=async e=>{
    toast(err?.message||'The CSV could not be imported.',true);
  }
 };
-$('addAssessmentBtn').onclick=()=>{$('assessmentForm').className='panel';$('assessmentForm').innerHTML=`<h3>Fitness assessment result</h3><div class="formGrid"><div class="field"><label>Date</label><input id="aDate" type="date" value="${iso(today())}"></div><div class="field"><label>Distance km</label><input id="aDist" value="5"></div><div class="field"><label>Time</label><input id="aTime" placeholder="25:15"></div><div class="field"><label>Average / threshold HR</label><input id="aHr" value="${state.setup.thresholdHr}"></div><div class="field"><label>Average / critical power W</label><input id="aCp" value="${state.setup.criticalPower}"></div><div class="field"><label>Valid result</label><select id="aValid"><option value="true">Yes</option><option value="false">No</option></select></div></div><button id="saveAssessment" class="primary full">Save assessment and completed run</button>`;$('saveAssessment').onclick=()=>{let a={id:'a-'+Date.now(),date:$('aDate').value,distance:Number($('aDist').value),time:parseTime($('aTime').value),thresholdHr:Number($('aHr').value),criticalPower:Number($('aCp').value),valid:$('aValid').value==='true'};if(!a.date||!a.distance||!a.time)return toast('Complete date, distance and time.',true);state.assessments.push(a);syncAssessmentRun(a);buildPlan();syncAssessmentRun(a);recordPredictionSnapshot(a.date,'Fitness assessment');save();renderAll();$('assessmentForm').className='hidden';toast(a.valid?'Assessment saved, added to run history and applied to future targets.':'Assessment saved and added to run history, but not applied to prediction.')}};
+$('addAssessmentBtn').onclick=()=>{$('assessmentForm').className='panel';$('assessmentForm').innerHTML=`<h3>Fitness assessment result</h3><div class="formGrid"><div class="field"><label>Date</label><input id="aDate" type="date" value="${iso(today())}"></div><div class="field"><label>Distance km</label><input id="aDist" value="5"></div><div class="field"><label>Time</label><input id="aTime" placeholder="25:15"></div><div class="field"><label>Average / threshold HR</label><input id="aHr" value="${state.setup.thresholdHr}"></div><div class="field"><label>Average / critical power W</label><input id="aCp" value="${state.setup.criticalPower}"></div><div class="field"><label>Valid result</label><select id="aValid"><option value="true">Yes</option><option value="false">No</option></select></div></div><button id="saveAssessment" class="primary full">Save assessment and completed run</button>`;$('saveAssessment').onclick=()=>{let a={id:'a-'+Date.now(),date:$('aDate').value,distance:Number($('aDist').value),time:parseTime($('aTime').value),thresholdHr:Number($('aHr').value),criticalPower:Number($('aCp').value),valid:$('aValid').value==='true'};if(!a.date||!a.distance||!a.time)return toast('Complete date, distance and time.',true);state.assessments.push(a);syncAssessmentRun(a);buildPlan();syncAssessmentRun(a);recordPredictionSnapshot(a.date,'Fitness assessment',a.id);save();renderAll();$('assessmentForm').className='hidden';toast(a.valid?'Assessment saved, added to run history and applied to future targets.':'Assessment saved and added to run history, but not applied to prediction.')}};
 
 function validateSetup(candidate){
  const errors=[];
@@ -1357,14 +1417,14 @@ function validateBackup(obj){return obj&&typeof obj==='object'&&obj.setup&&Array
 $('saveSettings').onclick=()=>{let candidate={...state.setup};document.querySelectorAll('[data-setting]').forEach(el=>{let k=el.dataset.setting,t=el.dataset.type,v=el.value;if(t==='number')v=Number(v);if(t==='time')v=parseTime(v);if(t==='percent')v=Number(v)/100;candidate[k]=v});let errors=validateSetup(candidate);if(errors.length)return toast(errors[0],true);let selectedDays=[...document.querySelectorAll('[data-day]')].filter(el=>el.checked).length;if(selectedDays<1)return toast('Select at least one training day.',true);state.setup=candidate;document.querySelectorAll('[data-day]').forEach(el=>state.days[Number(el.dataset.day)][1]=el.checked);document.querySelectorAll('[data-session]').forEach(el=>state.days[Number(el.dataset.session)][2]=el.value);buildPlan();state.weekView=currentWeek();save();renderAll();toast('Settings saved. Training frequency and race outlook and preparation model were recalculated; future workouts rebuilt.')};
 function download(n,t,m){let a=document.createElement('a');a.href=URL.createObjectURL(new Blob([t],{type:m}));a.download=n;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
 $('planHealthBtn').onclick=()=>{renderPlanHealth();const ok=validatePlan(state.plan).valid;toast(ok?'Plan validation passed.':'Plan validation found issues.',!ok)};
-$('backupBtn').onclick=()=>download('ai-running-coach-backup.json',JSON.stringify(state,null,2),'application/json');$('restoreFile').onchange=e=>e.target.files[0]?.text().then(t=>{let candidate=JSON.parse(t);if(!validateBackup(candidate))throw new Error('Backup structure is incomplete.');let errors=validateSetup(candidate.setup);if(errors.length)throw new Error(errors[0]);candidate.schemaVersion=SCHEMA;candidate.plan=Array.isArray(candidate.plan)?candidate.plan:[];state=candidate;buildPlan();save();renderAll();toast('Backup restored and migrated.')}).catch(err=>toast(err?.message||'Invalid backup.',true));$('exportBtn').onclick=()=>download('run-log.csv',['Date,Type,Distance km,Duration sec,HR,Power,RPE,Pain,Recovery,Match status,Plan ID,Day offset,Notes',...state.runs.map(r=>[r.date,r.type,r.distanceKm,r.durationSec,r.avgHr,r.avgPower,r.rpe,r.pain,r.recovery,r.matchStatus||'',r.planId||'',r.dayOffset??'',`"${String(r.notes||'').replaceAll('"','""')}"`].join(','))].join('\n'),'text/csv');$('resetBtn').onclick=()=>{if(confirm('Delete all app data?')){state=defaults();buildPlan();save();renderAll();toast('App reset.')}};
+$('backupBtn').onclick=()=>download('ai-running-coach-backup.json',JSON.stringify(state,null,2),'application/json');$('restoreFile').onchange=e=>e.target.files[0]?.text().then(t=>{let candidate=JSON.parse(t);if(!validateBackup(candidate))throw new Error('Backup structure is incomplete.');let errors=validateSetup(candidate.setup);if(errors.length)throw new Error(errors[0]);candidate.schemaVersion=SCHEMA;candidate.plan=Array.isArray(candidate.plan)?candidate.plan:[];state=candidate;buildPlan();save();renderAll();toast('Backup restored and migrated.')}).catch(err=>toast(err?.message||'Invalid backup.',true));$('exportBtn').onclick=()=>download('run-log.csv',['Date,Type,Distance km,Duration sec,HR,Power,RPE,Pain,Previous-night Garmin HRV,Match status,Plan ID,Day offset,Notes',...state.runs.map(r=>[r.date,r.type,r.distanceKm,r.durationSec,r.avgHr,r.avgPower,r.rpe,r.pain,r.hrv??'',r.matchStatus||'',r.planId||'',r.dayOffset??'',`"${String(r.notes||'').replaceAll('"','""')}"`].join(','))].join('\n'),'text/csv');$('resetBtn').onclick=()=>{if(confirm('Delete all app data?')){state=defaults();buildPlan();save();renderAll();toast('App reset.')}};
 let deferred;window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferred=e;$('installBtn').className='install'});$('installBtn').onclick=()=>deferred?.prompt();
 $('pillarCards')?.addEventListener('click',e=>{const card=e.target.closest('.pillarCard');if(!card||e.target.closest('summary'))return;const detail=card.querySelector('.pillarExplain');if(!detail)return;card.classList.toggle('open');detail.open=card.classList.contains('open');card.setAttribute('aria-expanded',String(detail.open))});
 $('pillarCards')?.addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&e.target.classList.contains('pillarCard')){e.preventDefault();e.target.click()}});
-const brandVersion=document.querySelector('.brand-copy p');if(brandVersion)brandVersion.textContent=`Adaptive marathon planning • v8.7.5 · build ${BUILD}`;
+const brandVersion=document.querySelector('.brand-copy p');if(brandVersion)brandVersion.textContent=`Adaptive marathon planning • v8.7.8 · build ${BUILD}`;
 if('serviceWorker'in navigator&&location.protocol==='https:')navigator.serviceWorker.register(`service-worker.js?v=${BUILD}`,{updateViaCache:'none'}).then(reg=>reg.update()).catch(()=>{});
 migrateAssessmentRuns();
 migrateImportedPower();
 renderAll();
-console.info('AI Running Coach v8.7.5 stable build 8750');
+console.info('AI Running Coach v8.7.8 stable build 8780');
 })();
