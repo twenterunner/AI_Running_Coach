@@ -1,5 +1,4 @@
-AI Running Coach v8.6.4 Stable — build 8640
-Schema: 8500 (backwards compatible)
+AI Running Coach v8.7.0 Stable (build 8700)
 
 DEPLOYMENT
 Replace all six files together:
@@ -10,66 +9,40 @@ Replace all six files together:
 - service-worker.js
 - README.txt
 
-Keep the existing icon files in the repository. After GitHub Pages deploys, fully close and reopen the browser tab or installed PWA once so service-worker cache 8640 activates.
+Keep the existing icon files in the repository. After GitHub Pages deploys, fully close and reopen the browser tab or installed PWA once so service-worker cache 8700 activates.
 
-v8.6.4 DASHBOARD CLARITY UPDATE
+V8.7.0 DASHBOARD AND MODEL UPDATE
 
-The Dashboard is now ordered around the way a runner uses coaching information:
-1. Coach verdict — the immediate assessment and what matters now.
-2. Progress to goal — race requirements, timeline, weekly volume and long-run progression.
-3. Current training status — readiness pillars, completion, intensity mix and adaptive factor.
-4. Future outlook — readiness scenarios and race prediction trend.
-5. Performance analytics — efficiency, cardiac drift, run-type comparisons and definitions.
-6. What to do next — upcoming key sessions and direct access to the plan.
+Dashboard structure
+1. Marathon Outlook — compares the probability of meeting the target if racing today with the projected probability after completing the remaining programme.
+2. Coach Summary — shows the main positive, the current limiter and the highest-value next step.
+3. Race Preparation — one shared model with current and projected component scores.
+4. Progress to Race — time remaining, weekly volume, long-run progression, milestones, timeline and adaptive factor.
+5. Performance Trends — prediction history, intensity mix, efficiency and cardiac drift.
 
-Clear numbered section headings now separate each decision layer. The existing calculations, charts, IDs and stored athlete data are preserved; only the dashboard presentation order and section framing changed.
+Shared Race Preparation model
+- Physiological fitness: 40%
+- Marathon preparation: 30%
+- Plan execution: 20%
+- Recovery and health: 10%
 
-RELEASE NOTES
-- Reordered the Dashboard from summary through evidence to action.
-- Moved Coach assessment directly below the race overview.
-- Grouped Goal progress, Race timeline, weekly volume and long-run progression together.
-- Grouped readiness pillars, adherence, intensity mix and adaptive factor together.
-- Grouped the forward-looking race metrics under Future outlook in the earlier dashboard structure.
-- Kept technical efficiency and cardiac-drift analysis in a dedicated Performance analytics section.
-- Made Next key sessions the final dashboard section.
-- Added responsive styling for the numbered dashboard section headings.
-- Synchronized index, app, stylesheet, manifest, service worker and README to v8.6.4 build 8640.
+Target outlook scenarios
+- Race today uses the current predicted finish, current preparation-support score and current uncertainty.
+- Physiological fitness drives the predicted time and is therefore not counted a second time in the probability adjustment; marathon preparation, execution and health provide the limited supporting adjustment.
+- Follow programme assumes all remaining sessions are completed.
+- Plan execution becomes 100 only in the projected scenario.
+- Physiological fitness improves conservatively with diminishing returns, remaining build weeks, health and training opportunity.
+- Marathon preparation increases according to remaining long runs, race-specific sessions and usable build time.
+- Recovery and health are not automatically improved.
+- Evidence coverage widens or narrows uncertainty; missing evidence does not automatically reduce the preparation score.
+- Both probabilities remain capped at 5–95% to retain race-day uncertainty.
 
-No readiness calculation, race prediction calculation, workout-generation rule, schema or stored athlete data was changed. Schema remains 8500.
+VALIDATION
+- JavaScript syntax checked with Node.
+- Manifest JSON validated.
+- Static HTML IDs checked for duplicates.
+- Service-worker core cache restricted to the six release files so missing optional image assets cannot block installation.
+- Version, build and cache references synchronised to 8.7.0 / 8700.
 
-
-v8.6.4 CHANGES
-- Moved the adaptive-factor foldout into Section 2, Progress to goal.
-- Made the Training progression factor KPI tile open and close the calculation foldout.
-- Removed the Weekly completion rate graph. Completion evidence remains in the readiness model.
-- Removed Section 6, What to do next, and its Next key sessions panel.
-- Clarified that the prediction chart shows valid assessment history plus one automatically updated live estimate.
-- Fixed missing Schedule adherence interpretation, action and calculation-definition mappings that could display undefined.
-- Synchronized all six release files to v8.6.4 build 8640.
-
-
-v8.6.4 focused update
-- Readiness pillars are tappable and reveal their calculation in place.
-- All Progress KPIs remain visible on mobile and desktop.
-- Chart points can be tapped for date, value and context.
-- Prediction snapshots are stored after saved runs, Stryd imports and assessments.
-- Readiness colours consistently mean green/on track, amber/watch, red/action and grey/no evidence.
-
-
-v8.6.4 FOCUSED PATCH
-- Corrected the day-length constant from 86,401,000 ms to 86,400,000 ms.
-- Corrected manifest version metadata and synchronized all release references to v8.6.4 build 8640.
-- Removed the More details / Show less control; all Progress KPIs remain visible.
-- Moved the adaptive-factor foldout directly below the KPI grid.
-- Removed automatic scrolling when the Training progression factor tile is tapped.
-
-
-v8.6.4 TARGET PROBABILITY UPDATE
-- Removed all readiness forecast scenarios from the dashboard.
-- Replaced predicted race-day readiness with one Target Probability metric.
-- Target Probability starts with the probability that the target time falls within the predicted-time distribution.
-- Prediction uncertainty narrows with stronger evidence coverage and widens when short assessments are extrapolated to longer races.
-- Marathon preparation, recovery/pain and available training opportunity adjust the probability modestly; they cannot override the performance prediction.
-- The displayed value is capped at 5–95% to reflect unavoidable race-day uncertainty.
-- Labels: below 40% Unlikely; 40–59% Possible; 60–79% Good chance; 80–95% Very likely.
-- This is a coaching estimate, not a clinically or statistically validated probability.
+BACKWARDS COMPATIBILITY
+The existing storage key and schema remain unchanged. Existing setup, runs, assessments, plan data and prediction history are preserved.

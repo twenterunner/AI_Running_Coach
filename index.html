@@ -3,18 +3,18 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#0b3157"><title>AI Running Coach</title>
-<link rel="manifest" href="manifest.webmanifest?v=8640"><link rel="stylesheet" href="styles.css?v=8640">
+<link rel="manifest" href="manifest.webmanifest?v=8700"><link rel="stylesheet" href="styles.css?v=8700">
 
-<link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png?v=8640">
-<link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png?v=8640">
-<link rel="icon" href="favicon.ico?v=8640">
-<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=8640">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png?v=8700">
+<link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png?v=8700">
+<link rel="icon" href="favicon.ico?v=8700">
+<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=8700">
 <meta property="og:image" content="github-banner.png">
 
 </head>
 <body>
 <header class="topbar">
-  <div class="brand"><img class="logo" src="icon-192.png?v=8640" alt="AI Running Coach logo"><div class="brand-copy"><h1>AI Running Coach</h1><p>Adaptive marathon planning • v8.6.4 · build 8640</p></div></div>
+  <div class="brand"><img class="logo" src="icon-192.png?v=8700" alt="AI Running Coach logo"><div class="brand-copy"><h1>AI Running Coach</h1><p>Adaptive marathon planning • v8.7.0 · build 8700</p></div></div>
   <button id="installBtn" class="install hidden">Install</button>
 </header>
 <nav id="nav"></nav>
@@ -22,62 +22,78 @@
 <div id="toast" class="toast hidden"></div>
 
 <section id="dashboard" class="page active">
-  <div class="hero coachHero">
-    <div><span id="phaseBadge" class="badge"></span><h2 id="raceTitle"></h2><p id="raceSubtitle"></p><div id="trackStatus" class="trackStatus"></div></div>
-    <div class="heroScores">
-      <div class="confidenceRing"><div><strong id="confidenceValue"></strong><span>current</span></div></div>
-      <div class="forecastScore targetProbabilityScore"><span>Target probability</span><strong id="targetProbability"></strong><small id="targetProbabilityLabel"></small></div>
+  <div class="hero outlookHero">
+    <div class="outlookHeroIntro">
+      <span id="phaseBadge" class="badge"></span>
+      <h2 id="raceTitle"></h2>
+      <p id="raceSubtitle"></p>
+      <div id="trackStatus" class="trackStatus"></div>
     </div>
+    <div class="outlookComparison" aria-label="Target outlook comparison">
+      <article class="outlookCard currentOutlook">
+        <span>Race today</span>
+        <strong id="currentProbability">—</strong>
+        <b id="currentProbabilityLabel">—</b>
+        <small id="currentPrediction">—</small>
+        <small id="currentRange">—</small>
+      </article>
+      <div class="outlookArrow" aria-hidden="true">→</div>
+      <article class="outlookCard projectedOutlook">
+        <span>Follow programme</span>
+        <strong id="projectedProbability">—</strong>
+        <b id="projectedProbabilityLabel">—</b>
+        <small id="projectedPrediction">—</small>
+        <small id="projectedRange">—</small>
+      </article>
+    </div>
+    <div id="outlookGain" class="outlookGain"></div>
+    <p class="outlookAssumption">Programme scenario assumes every remaining session is completed, but not perfect adaptation, health or race-day conditions.</p>
   </div>
 
   <div class="dashboardSection firstDashboardSection">
-    <div class="dashboardSectionHead"><span>1</span><div><h3>Coach verdict</h3><p>What matters most right now.</p></div></div>
+    <div class="dashboardSectionHead"><span>1</span><div><h3>Coach summary</h3><p>The conclusion, the main limiter and the highest-value next step.</p></div></div>
     <div id="coachSnapshot" class="coachSnapshot"></div>
-    <article class="panel"><h3>Coach assessment</h3><div id="assessmentText" class="coachText"></div></article>
+    <article class="panel coachAssessmentPanel"><h3>Coach assessment</h3><div id="assessmentText" class="coachText"></div></article>
   </div>
 
   <div class="dashboardSection">
-    <div class="dashboardSectionHead"><span>2</span><div><h3>Progress to goal</h3><p>Whether your preparation is building as required.</p></div></div>
+    <div class="dashboardSectionHead"><span>2</span><div><h3>Race preparation</h3><p>The shared evidence model behind both outlook scenarios.</p></div></div>
+    <article class="panel readinessPanel">
+      <div class="panelHead"><div><h3>Preparation model</h3><p class="muted compact">Current evidence versus the projected state after full programme execution</p></div><div id="evidenceBadge" class="evidenceBadge"></div></div>
+      <div class="preparationHeadline"><div><span>Current preparation</span><strong id="currentPreparationScore">—</strong></div><div><span>Projected preparation</span><strong id="projectedPreparationScore">—</strong></div></div>
+      <div id="pillarCards" class="pillarGrid preparationGrid"></div>
+    </article>
+  </div>
+
+  <div class="dashboardSection">
+    <div class="dashboardSectionHead"><span>3</span><div><h3>Progress to race</h3><p>How the plan is progressing and what remains.</p></div></div>
     <div id="kpis" class="kpis"></div>
     <details id="adaptiveFactorDetail" class="panel adaptivePanel"></details>
-    <article class="panel"><div class="panelHead"><div><h3>Goal progress</h3><p class="muted compact">Progress toward the preparation requirements for this race.</p></div></div><div id="goalProgress" class="goalProgress"></div></article>
-    <article class="panel"><div class="panelHead"><div><h3>Race timeline</h3><p class="muted compact">Your current training phase and the path to race day.</p></div></div><div id="raceTimeline"></div></article>
+    <article class="panel"><div class="panelHead"><div><h3>Preparation milestones</h3><p class="muted compact">Completed evidence compared with the requirements of the programme.</p></div></div><div id="goalProgress" class="goalProgress"></div></article>
+    <article class="panel"><div class="panelHead"><div><h3>Race timeline</h3><p class="muted compact">Current phase and path to race day.</p></div></div><div id="raceTimeline"></div></article>
     <div class="grid2">
-      <article class="panel"><div class="panelHead"><h3>Weekly distance progression</h3><span class="muted">Planned vs completed</span></div><canvas id="volumeChart" width="1000" height="340"></canvas></article>
+      <article class="panel"><div class="panelHead"><h3>Weekly distance</h3><span class="muted">Planned vs completed</span></div><canvas id="volumeChart" width="1000" height="340"></canvas></article>
       <article class="panel"><div class="panelHead"><h3>Long-run progression</h3><span class="muted">Planned vs completed</span></div><canvas id="longRunChart" width="1000" height="340"></canvas></article>
     </div>
   </div>
 
   <div class="dashboardSection">
-    <div class="dashboardSectionHead"><span>3</span><div><h3>Current training status</h3><p>Why your readiness is where it is today.</p></div></div>
-    <article class="panel readinessPanel">
-      <div class="panelHead"><div><h3>Race readiness model</h3><p class="muted compact">Evidence-informed coaching score — not a probability of success</p></div><div id="evidenceBadge" class="evidenceBadge"></div></div>
-      <div id="pillarCards" class="pillarGrid"></div>
-    </article>
-    <article class="panel"><div class="panelHead"><h3>Training intensity mix</h3><span class="muted">Next four weeks by session type</span></div><canvas id="mixChart" width="1000" height="340"></canvas></article>
-  </div>
-
-  <div class="dashboardSection">
-    <div class="dashboardSectionHead"><span>4</span><div><h3>Future outlook</h3><p>Where your current trajectory is leading.</p></div></div>
+    <div class="dashboardSectionHead"><span>4</span><div><h3>Performance trends</h3><p>Evidence that explains changes in fitness and outlook.</p></div></div>
     <article class="panel predictionPanel">
-      <div class="panelHead"><div><h3>Race prediction trend</h3><p class="muted compact">Saved training-update history plus the live readiness-adjusted estimate</p></div></div>
+      <div class="panelHead"><div><h3>Race prediction trend</h3><p class="muted compact">Historical current-state predictions; projected programme outcome is shown separately above</p></div></div>
       <div id="predictionSummary" class="predictionSummary"></div>
       <canvas id="predictionChart" width="1000" height="340"></canvas>
     </article>
-  </div>
-
-  <div class="dashboardSection">
-    <div class="dashboardSectionHead"><span>5</span><div><h3>Performance analytics</h3><p>Supporting evidence behind the coaching assessment.</p></div></div>
+    <article class="panel"><div class="panelHead"><h3>Training intensity mix</h3><span class="muted">Next four weeks by session type</span></div><canvas id="mixChart" width="1000" height="340"></canvas></article>
     <div id="metricKpis" class="kpis"></div>
     <div class="grid2 metricCharts">
       <article class="panel"><div class="panelHead"><div><h3>Efficiency factor</h3><p class="muted compact">Joules of running power per heartbeat · higher is better</p></div></div><canvas id="efficiencyChart" width="1000" height="380"></canvas></article>
       <article class="panel"><div class="panelHead"><div><h3>Power-based cardiac drift</h3><p class="muted compact">Change in power–HR efficiency · lower is better</p></div></div><canvas id="driftChart" width="1000" height="380"></canvas></article>
     </div>
     <article class="panel"><div class="panelHead"><div><h3>Metrics by run type</h3><p class="muted compact">Average and best values calculated separately for each session category</p></div></div><div id="metricTypeSummary"></div></article>
-    <details class="panel modelDetails"><summary>Metric definitions</summary><div class="guideGrid componentGuide"><div><b>Efficiency factor · J/heartbeat</b><p>Average power × 60 ÷ average heart rate. It estimates the joules of external running work produced per heartbeat. Higher is better when comparing similar conditions and run types.</p></div><div><b>Power-based cardiac drift · %</b><p>The percentage deterioration in power per heartbeat from the first half to the second half after warm-up. Lower is better. It requires timestamped heart-rate and power data.</p></div></div></details>
+    <details class="panel modelDetails"><summary>Model and metric definitions</summary><div id="componentGuide" class="guideGrid componentGuide"></div><div class="guideGrid componentGuide"><div><b>Efficiency factor · J/heartbeat</b><p>Average power × 60 ÷ average heart rate. It estimates external running work per heartbeat. Compare only similar conditions and run types.</p></div><div><b>Power-based cardiac drift · %</b><p>Change in power per heartbeat from the first half to the second half after warm-up. Lower is better and timestamped heart-rate and power data are required.</p></div></div></details>
     <details class="panel modelDetails"><summary>Data needed</summary><div id="dataNeeded"></div></details>
   </div>
-
 </section>
 
 <section id="today" class="page">
@@ -158,5 +174,5 @@
 </main>
 
 <div id="modal" class="modal hidden"><div class="modalCard"><button id="closeModal" class="close">×</button><div id="modalContent"></div></div></div>
-<script src="app.js?v=8640"></script>
+<script src="app.js?v=8700"></script>
 </body></html>
