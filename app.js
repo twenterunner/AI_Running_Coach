@@ -627,6 +627,21 @@ function predictionEvidencePolicy(source,entityId){
  return{type,...(policies[type]||{weight:.10,cap:45,quality:'Low',reason:'This activity provides limited direct evidence about marathon capability.'})};
 }
 function scoreStatus(score,hasEvidence=true){if(!hasEvidence||!Number.isFinite(score))return'noEvidence';if(score>=80)return'good';if(score>=60)return'watch';return'action'}
+function reconcilePredictionHistory(){
+ const history=Array.isArray(state.predictionHistory)?state.predictionHistory:[];
+ const invalid=history.some(x=>{
+  const cap=Number(x.maxChange),delta=Math.abs(Number(x.updateDelta));
+  return !Number.isFinite(Number(x.evidenceWeight))||!Number.isFinite(cap)||!Number.isFinite(delta)||delta>cap+.5;
+ });
+ if(!invalid)return false;
+ state.predictionHistory=[];
+ const events=[];
+ (state.runs||[]).filter(r=>r&&r.id&&r.date&&r.source!=='assessment').forEach(r=>events.push({date:r.date,source:r.source==='stryd'?'Stryd import':'Run update',entityId:r.id,order:r.updatedAt||r.date}));
+ (state.assessments||[]).filter(a=>a&&a.valid&&a.id&&a.date).forEach(a=>events.push({date:a.date,source:'Fitness assessment',entityId:a.id,order:a.updatedAt||a.date}));
+ events.sort((a,b)=>String(a.date).localeCompare(String(b.date))||String(a.order).localeCompare(String(b.order)));
+ events.forEach(e=>recordPredictionSnapshot(e.date,e.source,e.entityId));
+ return true;
+}
 function recordPredictionSnapshot(date=iso(today()),source='Training update',entityId=null){
  const raw=rawPrediction();if(!Number.isFinite(raw))return;
  state.predictionHistory=Array.isArray(state.predictionHistory)?state.predictionHistory:[];
@@ -1599,10 +1614,11 @@ $('backupBtn').onclick=()=>download('ai-running-coach-backup.json',JSON.stringif
 let deferred;window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferred=e;$('installBtn').className='install'});$('installBtn').onclick=()=>deferred?.prompt();
 $('pillarCards')?.addEventListener('click',e=>{const card=e.target.closest('.pillarCard');if(!card||e.target.closest('summary'))return;const detail=card.querySelector('.pillarExplain');if(!detail)return;card.classList.toggle('open');detail.open=card.classList.contains('open');card.setAttribute('aria-expanded',String(detail.open))});
 $('pillarCards')?.addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&e.target.classList.contains('pillarCard')){e.preventDefault();e.target.click()}});
-const brandVersion=document.querySelector('.brand-copy p');if(brandVersion)brandVersion.textContent=`Adaptive marathon planning • v9.1.0 · build ${BUILD}`;
+const brandVersion=document.querySelector('.brand-copy p');if(brandVersion)brandVersion.textContent=`Adaptive marathon planning • v9.1.1 · build ${BUILD}`;
 if('serviceWorker'in navigator&&location.protocol==='https:')navigator.serviceWorker.register(`service-worker.js?v=${BUILD}`,{updateViaCache:'none'}).then(reg=>reg.update()).catch(()=>{});
 migrateAssessmentRuns();
 migrateImportedPower();
+if(reconcilePredictionHistory())save();
 renderAll();
-console.info('AI Running Coach v9.1.0 stable build 9100');
+console.info('AI Running Coach v9.1.1 stable build 9110');
 })();
