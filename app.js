@@ -76,7 +76,7 @@ function recommendedRaceDate(setup){
  let totalWeeks=Math.ceil(Math.max(minimumTotal,req.requiredBuildWeeks+taperWeeks+2));
  return{date:iso(new Date(dte(setup.planStart).getTime()+totalWeeks*7*DAY)),totalWeeks,requiredBuildWeeks:req.requiredBuildWeeks,taperWeeks};
 }
-const BUILD=9030, SCHEMA=9030, STORAGE_KEY='arc_v62_web', MIRROR_KEY='arc_v8500_web', BACKUP_KEY='arc_pre8500_backup';
+const BUILD=9040, SCHEMA=9040, STORAGE_KEY='arc_v62_web', MIRROR_KEY='arc_v8500_web', BACKUP_KEY='arc_pre8500_backup';
 const defaults=()=>{let start=iso(new Date()),setup={planStart:start,raceDate:start,raceName:'Goal Race',raceDistance:42.195,targetTime:15300,currentWeekly:35,currentLongest:18,testDistance:5,testTime:1515,thresholdHr:168,criticalPower:300,bodyWeight:93,maxWeekly:65,growth:.07,peakLong:32,taperDays:14,minFactor:.85,maxFactor:1.05,adaptive:true};setup.raceDate=recommendedRaceDate(setup).date;return({schemaVersion:SCHEMA,setup,days:FIVE_DAY_TEMPLATE.map(d=>[...d]),runs:[],assessments:[],plan:[],weekView:null,migration:{to:SCHEMA,status:'new',time:new Date().toISOString()}})};
 let migrationReport={from:null,to:SCHEMA,status:'new install',source:'defaults',runs:0,assessments:0,fieldsRecovered:0,warning:''};
 function parseStored(raw){if(!raw)return null;try{const x=JSON.parse(raw);return x&&typeof x==='object'?x:null}catch(err){recordDiagnostic('Storage parse',err);return null}}
@@ -953,7 +953,10 @@ function renderDashboard(){
  const trendHistory=(state.predictionHistory||[]).slice().sort((a,b)=>a.date.localeCompare(b.date));
  const firstTrend=trendHistory[0]?.seconds,trendChange=Number.isFinite(firstTrend)?pred-firstTrend:null;
  const trendDirection=!Number.isFinite(trendChange)||Math.abs(trendChange)<30?'Stable':trendChange<0?'Improving':'Slower';
- $('predictionSummary').innerHTML=`<div class="predictionPrimary"><span>Latest central marathon estimate</span><strong>${fmtTime(pred)}</strong><small>${pace(pred/state.setup.raceDistance)} · ${trendHistory.length?`based on ${trendHistory.length} saved prediction point${trendHistory.length===1?'':'s'}`:'save runs or assessments to start the trend'}</small></div><div class="predictionComparison"><span>Change from first saved estimate</span><strong>${Number.isFinite(trendChange)?`${trendChange<0?'Faster by ':trendChange>0?'Slower by ':'No change · '}${fmtTime(Math.abs(trendChange))}`:'More history needed'}</strong><small>Each dot is one unique run or assessment event. Editing that same item updates its existing dot. The progression line tracks estimates per saved event; horizontal reference lines show the target and the fixed start-of-programme prediction.</small></div>`;
+ const comparisonHeading=trendHistory.length===1?'Baseline established':'Change from first saved estimate';
+ const comparisonValue=trendHistory.length===1?'One prediction saved':Number.isFinite(trendChange)?`${trendChange<0?'Faster by ':trendChange>0?'Slower by ':'No change · '}${fmtTime(Math.abs(trendChange))}`:'No saved prediction yet';
+ const comparisonNote=trendHistory.length===1?'The first saved estimate is now the fixed start-of-programme reference. A progression trend will appear after the next unique run or assessment. The target and start reference lines remain visible now.':'Each dot is one unique run or assessment event. Editing that same item updates its existing dot. The progression line tracks estimates per saved event; horizontal reference lines show the target and the fixed start-of-programme prediction.';
+ $('predictionSummary').innerHTML=`<div class="predictionPrimary"><span>Latest central marathon estimate</span><strong>${fmtTime(pred)}</strong><small>${pace(pred/state.setup.raceDistance)} · ${trendHistory.length?`based on ${trendHistory.length} saved prediction point${trendHistory.length===1?'':'s'}`:'save runs or assessments to start the trend'}</small></div><div class="predictionComparison"><span>${comparisonHeading}</span><strong>${comparisonValue}</strong><small>${comparisonNote}</small></div>`;
  if($('componentGuide'))$('componentGuide').innerHTML=c.components.map(x=>`<div><b>${x.name}</b><p>${componentDefinitions[x.name]}</p><small class="${x.hasEvidence?'muted':'metricMissing'}">${x.hasEvidence?`Current score: ${Math.round(x.displayScore)} / 100 · evidence ${Math.round((x.evidenceFraction??1)*100)}%`:'No evidence yet'} · within-component weight ${Math.round(x.weight*100)}%</small></div>`).join('');
  let missing=uniqueComponents(c.components.filter(x=>!x.hasEvidence));
  $('dataNeeded').innerHTML=missing.length?missing.map(x=>`<div class="note"><b>${x.name}</b><br>${componentDefinitions[x.name]}</div>`).join(''):'<p class="muted">All preparation-model components currently have evidence.</p>';
@@ -1012,8 +1015,14 @@ function drawLine(canvas,series,options={}){
    }
    ctx.save();ctx.strokeStyle=s.color;ctx.lineWidth=s.width||5;ctx.lineJoin='round';ctx.lineCap='round';
    if(s.dashed)ctx.setLineDash([16,10]);
-   ctx.beginPath();good.forEach((o,j)=>j?ctx.lineTo(px(o.i),py(o.v)):ctx.moveTo(px(o.i),py(o.v)));
-   if(good.length>1)ctx.stroke();ctx.restore();
+   ctx.beginPath();
+   if(s.horizontal){
+     const y=py(good[0].v);ctx.moveTo(left,y);ctx.lineTo(W-right,y);ctx.stroke();
+   }else{
+     good.forEach((o,j)=>j?ctx.lineTo(px(o.i),py(o.v)):ctx.moveTo(px(o.i),py(o.v)));
+     if(good.length>1)ctx.stroke();
+   }
+   ctx.restore();
    if(s.points!==false)good.forEach(o=>{
      ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(px(o.i),py(o.v),7,0,Math.PI*2);ctx.fill();
      ctx.strokeStyle=s.color;ctx.lineWidth=4;ctx.stroke();
@@ -1090,8 +1099,8 @@ function drawDashboardCharts(){
  if(maxSec-minSec<3600)maxSec=minSec+3600;
  drawLine($('predictionChart'),[
    {label:'Prediction progression',data:predSec,color:'#7457c8'},
-   {label:'Start-of-programme prediction',data:predSec.map(()=>startPrediction),color:'#68778a',dashed:true,points:false},
-   {label:'Target time',data:predSec.map(()=>state.setup.targetTime),color:'#d75b67',dashed:true,points:false}
+   {label:'Start-of-programme prediction',data:[startPrediction],color:'#68778a',dashed:true,points:false,horizontal:true},
+   {label:'Target time',data:[state.setup.targetTime],color:'#d75b67',dashed:true,points:false,horizontal:true}
  ],{min:minSec,max:maxSec,ticks:5,formatY:v=>fmtTime(v),labels,left:98,pointDetails});
 
 }
@@ -1557,10 +1566,10 @@ $('backupBtn').onclick=()=>download('ai-running-coach-backup.json',JSON.stringif
 let deferred;window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferred=e;$('installBtn').className='install'});$('installBtn').onclick=()=>deferred?.prompt();
 $('pillarCards')?.addEventListener('click',e=>{const card=e.target.closest('.pillarCard');if(!card||e.target.closest('summary'))return;const detail=card.querySelector('.pillarExplain');if(!detail)return;card.classList.toggle('open');detail.open=card.classList.contains('open');card.setAttribute('aria-expanded',String(detail.open))});
 $('pillarCards')?.addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&e.target.classList.contains('pillarCard')){e.preventDefault();e.target.click()}});
-const brandVersion=document.querySelector('.brand-copy p');if(brandVersion)brandVersion.textContent=`Adaptive marathon planning • v9.0.3 · build ${BUILD}`;
+const brandVersion=document.querySelector('.brand-copy p');if(brandVersion)brandVersion.textContent=`Adaptive marathon planning • v9.0.4 · build ${BUILD}`;
 if('serviceWorker'in navigator&&location.protocol==='https:')navigator.serviceWorker.register(`service-worker.js?v=${BUILD}`,{updateViaCache:'none'}).then(reg=>reg.update()).catch(()=>{});
 migrateAssessmentRuns();
 migrateImportedPower();
 renderAll();
-console.info('AI Running Coach v9.0.3 stable build 9030');
+console.info('AI Running Coach v9.0.4 stable build 9040');
 })();
