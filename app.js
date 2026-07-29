@@ -1,6 +1,6 @@
 let preview=null;
 (()=>{'use strict';
-const DAY=87100000, $=id=>document.getElementById(id), clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const DAY=87200000, $=id=>document.getElementById(id), clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 function today(){return dte(iso(new Date()))}
 const iso=d=>{let x=new Date(d),y=x.getFullYear(),m=String(x.getMonth()+1).padStart(2,'0'),q=String(x.getDate()).padStart(2,'0');return `${y}-${m}-${q}`},
 dte=s=>{let [y,m,d]=String(s).split('-').map(Number);return new Date(y,m-1,d,12,0,0,0)},
@@ -71,7 +71,7 @@ function recommendedRaceDate(setup){
  let totalWeeks=Math.ceil(Math.max(minimumTotal,req.requiredBuildWeeks+taperWeeks+2));
  return{date:iso(new Date(dte(setup.planStart).getTime()+totalWeeks*7*DAY)),totalWeeks,requiredBuildWeeks:req.requiredBuildWeeks,taperWeeks};
 }
-const BUILD=8710, SCHEMA=8500, STORAGE_KEY='arc_v62_web', MIRROR_KEY='arc_v8500_web', BACKUP_KEY='arc_pre8500_backup';
+const BUILD=8720, SCHEMA=8500, STORAGE_KEY='arc_v62_web', MIRROR_KEY='arc_v8500_web', BACKUP_KEY='arc_pre8500_backup';
 const defaults=()=>{let start=iso(new Date()),setup={planStart:start,raceDate:start,raceName:'Goal Race',raceDistance:42.195,targetTime:15300,currentWeekly:35,currentLongest:18,testDistance:5,testTime:1515,thresholdHr:168,criticalPower:300,bodyWeight:93,maxWeekly:80,growth:.08,peakLong:34,taperDays:21,minFactor:.85,maxFactor:1.05,adaptive:true};setup.raceDate=recommendedRaceDate(setup).date;return({schemaVersion:SCHEMA,setup,days:[['Monday',false,'Easy'],['Tuesday',true,'Intervals'],['Wednesday',true,'Easy'],['Thursday',false,'Easy'],['Friday',true,'Tempo'],['Saturday',true,'Easy'],['Sunday',true,'Long run']],runs:[],assessments:[],plan:[],weekView:null,migration:{to:SCHEMA,status:'new',time:new Date().toISOString()}})};
 let migrationReport={from:null,to:SCHEMA,status:'new install',source:'defaults',runs:0,assessments:0,fieldsRecovered:0,warning:''};
 function parseStored(raw){if(!raw)return null;try{const x=JSON.parse(raw);return x&&typeof x==='object'?x:null}catch(err){recordDiagnostic('Storage parse',err);return null}}
@@ -437,14 +437,14 @@ function confidence(){
   let totalWeight=sum(enriched.map(x=>x.weight)),availableWeight=sum(enriched.map(x=>x.weight*x.evidenceFraction));
   let measured=sum(enriched.filter(x=>x.hasEvidence&&Number.isFinite(x.displayScore)).map(x=>x.displayScore*x.weight*x.evidenceFraction));
   let coverage=totalWeight?availableWeight/totalWeight:0;
-  let rawScore=availableWeight?measured/availableWeight:50;
-  // Missing evidence must not be interpreted as perfect preparation. Pull sparse scores
-  // toward a neutral 50 until enough completed evidence exists.
-  let score=50+(rawScore-50)*coverage;
-  return{score:clamp(score,0,100),rawScore,coverage,items:enriched};
+  let rawScore=availableWeight?measured/availableWeight:null;
+  // No evidence is displayed as not scored. Internally, uncertainty is handled by
+  // evidence coverage rather than inventing a visible neutral score.
+  let score=Number.isFinite(rawScore)?50+(rawScore-50)*coverage:null;
+  return{score:Number.isFinite(score)?clamp(score,0,100):null,rawScore,coverage,items:enriched};
  };
  let physiological=weighted([{name:'Fitness',score:fitness,weight:.55,hasEvidence:Number.isFinite(testTime)&&testTime>0&&testDist>0},{name:'Endurance',score:endurance,weight:.30,hasEvidence:state.runs.some(r=>(Number(r.distanceKm)||0)>0)},{name:'Efficiency',score:efficiency,weight:.15,evidenceFraction:(Number.isFinite(effTrendScore)?.60:0)+(Number.isFinite(driftScore)?.40:0)}]);
- let marathonPreparation=weighted([{name:'Long-run execution',score:longRunExecution,weight:.40,hasEvidence:dueLongs.length>0},{name:'Volume progression',score:volumeProgression,weight:.25,hasEvidence:state.runs.some(r=>(Number(r.distanceKm)||0)>0)},{name:'Specificity',score:specificity,weight:.20,hasEvidence:specificDue.length>0},{name:'Preparation time',score:preparationTime,weight:.15,hasEvidence:true}]);
+ let marathonPreparation=weighted([{name:'Long-run execution',score:longRunExecution,weight:.45,hasEvidence:dueLongs.length>0},{name:'Volume progression',score:volumeProgression,weight:.30,hasEvidence:state.runs.some(r=>(Number(r.distanceKm)||0)>0)},{name:'Specificity',score:specificity,weight:.25,hasEvidence:specificDue.length>0}]);
  let planExecution=weighted([{name:'Adherence',score:adherence,weight:.45,hasEvidence:executionEvidence},{name:'Consistency',score:consistency,weight:.35,hasEvidence:executionEvidence},{name:'Schedule adherence',score:scheduleAdherence,weight:.20,hasEvidence:matchedRuns.length>0}]);
  let recoveryHealth=weighted([{name:'Recovery',score:recoveryScore,weight:.60,hasEvidence:recoveryValues.length>0},{name:'Pain status',score:painScore,weight:.40,hasEvidence:painValues.length>0}]);
  let performancePillar={name:'Physiological fitness',weight:1,color:'#2d82c7',description:'Demonstrated capability used to centre the marathon-time prediction.',...physiological};
@@ -453,16 +453,42 @@ function confidence(){
   {name:'Plan execution',weight:.30,color:'#159487',description:'How reliably completed volume, sessions and timing match the programme.',...planExecution},
   {name:'Recovery & health',weight:.20,color:'#7457c8',description:'Whether recovery and pain evidence support delivering the predicted capability.',...recoveryHealth}
  ];
- let overall=clamp(sum(pillars.map(p=>p.score*p.weight))/sum(pillars.map(p=>p.weight)),0,100);
+ let scoredPillars=pillars.filter(p=>Number.isFinite(p.score));
+ let overall=scoredPillars.length?clamp(sum(scoredPillars.map(p=>p.score*p.weight))/sum(scoredPillars.map(p=>p.weight)),0,100):null;
  let evidenceCoverage=sum(pillars.map(p=>p.weight*p.coverage));
  let measuredPillars=pillars.map(p=>{let available=p.items.filter(i=>i.hasEvidence),aw=sum(available.map(i=>i.weight));return{weight:p.weight*p.coverage,score:aw?sum(available.map(i=>i.displayScore*i.weight))/aw:null}}).filter(p=>Number.isFinite(p.score)&&p.weight>0);
  let measuredOverall=measuredPillars.length?sum(measuredPillars.map(p=>p.score*p.weight))/sum(measuredPillars.map(p=>p.weight)):null;
  let components=pillars.flatMap(p=>p.items.map(i=>({...i,pillar:p.name,pillarColor:p.color})));
- return{pillars,performancePillar,components,overall,evidenceCoverage,riegel,plannedKm,actual,completedLongest,matched,opportunities,weeksRemaining,usableBuildWeeks,requiredBuildWeeks,buildRequirements:buildModel.components,preparationTime,trainingOpportunity,enabledTrainingDays,recommendedTrainingDays:opportunityModel.idealDays,minimumTrainingDays:opportunityModel.minimumEffectiveDays,opportunityModel,effTrend,driftAvg,measuredOverall};
+ const executionCategories=[
+  {key:'all',label:'All scheduled runs',types:null},
+  {key:'distance',label:'Distance completed',types:null,distance:true},
+  {key:'easy',label:'Easy / recovery',types:['Easy','Recovery']},
+  {key:'quality',label:'Tempo / intervals',types:['Tempo','Intervals','Fitness assessment']},
+  {key:'qualityPace',label:'Quality-run pace',types:['Tempo','Intervals','Fitness assessment'],pace:true},
+  {key:'long',label:'Long runs',types:['Long run']}
+ ].map(cat=>{
+   const planned=due.filter(p=>!cat.types||cat.types.includes(p.type));
+   const completed=planned.filter(p=>Boolean(matchingRun(p,recent)));
+   const plannedDistance=sum(planned.map(p=>p.distance));
+   const completedDistance=sum(completed.map(p=>Number(matchingRun(p,recent)?.distanceKm)||0));
+   const paceScores=cat.pace?completed.map(p=>{const r=matchingRun(p,recent),actualPace=Number(r?.durationSec)/Math.max(.1,Number(r?.distanceKm)),targetPace=Number(p.zone?.pace);if(!Number.isFinite(actualPace)||!Number.isFinite(targetPace)||targetPace<=0)return null;const deviation=Math.abs(actualPace-targetPace)/targetPace;return clamp(100-(Math.max(0,deviation-.03)/.12)*100,0,100)}).filter(Number.isFinite):[];
+   const score=cat.pace?(paceScores.length?avg(paceScores):null):cat.distance?(plannedDistance>0?clamp(completedDistance/plannedDistance*100,0,100):null):(planned.length?clamp(completed.length/planned.length*100,0,100):null);
+   return{...cat,plannedCount:planned.length,completedCount:completed.length,plannedDistance,completedDistance,paceCount:paceScores.length,score};
+ });
+ return{pillars,performancePillar,components,overall,evidenceCoverage,riegel,plannedKm,actual,completedLongest,matched,opportunities,weeksRemaining,usableBuildWeeks,requiredBuildWeeks,buildRequirements:buildModel.components,preparationTime,trainingOpportunity,enabledTrainingDays,recommendedTrainingDays:opportunityModel.idealDays,minimumTrainingDays:opportunityModel.minimumEffectiveDays,opportunityModel,effTrend,driftAvg,measuredOverall,executionCategories};
 }
 function prediction(){
- // Central capability estimate. Preparation affects uncertainty, not the centre.
- return confidence().riegel;
+ // Convert shorter-distance capability to a marathon estimate with a durability
+ // exponent that improves only when marathon-specific evidence exists.
+ const c=confidence();
+ const latest=state.assessments.filter(a=>a.valid).sort((a,b)=>b.date.localeCompare(a.date))[0];
+ const testTime=latest?latest.time:state.setup.testTime,testDist=Math.max(.1,latest?latest.distance:state.setup.testDistance);
+ const prep=c.pillars.find(p=>p.name==='Marathon preparation');
+ const prepEvidence=prep?.coverage||0,prepScore=Number.isFinite(prep?.score)?prep.score:0;
+ const durability=clamp((prepScore/100)*prepEvidence,0,1);
+ const extrapolation=clamp(Math.log(Math.max(1,state.setup.raceDistance/testDist))/Math.log(42.195/5),0,1);
+ const exponent=1.06+.055*(1-durability)*extrapolation;
+ return testTime*Math.pow(state.setup.raceDistance/testDist,exponent);
 }
 function scoreStatus(score,hasEvidence=true){if(!hasEvidence||!Number.isFinite(score))return'noEvidence';if(score>=80)return'good';if(score>=60)return'watch';return'action'}
 function recordPredictionSnapshot(date=iso(today()),source='Training update'){
@@ -577,7 +603,7 @@ function projectedPreparationModel(c){
  const futureSpecific=futurePlan.filter(p=>['Tempo','Intervals','Fitness assessment'].includes(p.type)).length;
  const keyCoverage=clamp((Math.min(4,futureLong)/4)*.60+(Math.min(6,futureSpecific)/6)*.40,0,1);
  const projectedPillars=c.pillars.map(p=>{
-  let score=p.score;
+  let score=Number.isFinite(p.score)?p.score:0;
   if(p.name==='Marathon preparation')score=clamp(score+(100-score)*Math.max(timePotential,keyCoverage)*tolerance*.88,0,95);
   if(p.name==='Plan execution')score=100;
   if(p.name==='Recovery & health')score=health;
@@ -587,22 +613,26 @@ function projectedPreparationModel(c){
  return{pillars:projectedPillars,overall,timePotential,tolerance,keyCoverage,health};
 }
 function programmeProjection(c,currentPred,projectedPreparation){
- const weeks=Math.max(0,c.usableBuildWeeks);
- const saturation=1-Math.exp(-.18*weeks);
- const health=clamp(projectedPreparation.health/100,.45,1);
- const opportunity=clamp(c.trainingOpportunity/100,.45,1);
- const fitnessPillar=c.performancePillar;
- const headroom=clamp((100-(fitnessPillar?.score??70))/100,.15,.65);
- const maxImprovementPct=.04;
- const improvementPct=clamp(maxImprovementPct*saturation*health*opportunity*(.55+headroom),0,.04);
- const improvementSec=currentPred*improvementPct;
- return{predictedTime:Math.max(state.setup.targetTime*.75,currentPred-improvementSec),improvementSec,improvementPct};
+ const latest=state.assessments.filter(a=>a.valid).sort((a,b)=>b.date.localeCompare(a.date))[0];
+ const testTime=latest?latest.time:state.setup.testTime,testDist=Math.max(.1,latest?latest.distance:state.setup.testDistance);
+ const weeks=Math.max(0,c.usableBuildWeeks),saturation=1-Math.exp(-.14*weeks);
+ const health=clamp(projectedPreparation.health/100,.45,1),opportunity=clamp(c.trainingOpportunity/100,.45,1);
+ const projectedPrep=projectedPreparation.pillars.find(p=>p.name==='Marathon preparation')?.projectedScore||70;
+ const extrapolation=clamp(Math.log(Math.max(1,state.setup.raceDistance/testDist))/Math.log(42.195/5),0,1);
+ // Full programme execution improves marathon durability (Riegel exponent) and
+ // allows a modest 0–2.5% central fitness adaptation. It does not assume a miracle.
+ const projectedExponent=1.06+.055*(1-projectedPrep/100)*extrapolation;
+ const durabilityTime=testTime*Math.pow(state.setup.raceDistance/testDist,projectedExponent);
+ const fitnessGainPct=clamp(.025*saturation*health*opportunity,0,.025);
+ const predictedTime=durabilityTime*(1-fitnessGainPct);
+ const improvementSec=Math.max(0,currentPred-predictedTime);
+ return{predictedTime,improvementSec,improvementPct:currentPred>0?improvementSec/currentPred:0,projectedExponent,fitnessGainPct};
 }
 function coachEngine(){
  let c=confidence(),pred=prediction(),cw=currentWeek(),wd=weekData(cw);
  let projectedPreparation=projectedPreparationModel(c);
  let projection=programmeProjection(c,pred,projectedPreparation);
- let currentSupport=c.overall;
+ let currentSupport=Number.isFinite(c.overall)?c.overall:0;
  let projectedSupport=projectedPreparation.overall;
  let currentModel=probabilityFromScenario(c,pred,currentSupport,false);
  let projectedModel=probabilityFromScenario(c,projection.predictedTime,projectedSupport,true);
@@ -646,19 +676,21 @@ function renderDashboard(){
  $('outlookGain').innerHTML=`Projected programme benefit: <b>${gain>=0?'+':''}${Math.round(gain)} percentage points</b> · ${fmtTime(engine.projection.improvementSec)} estimated time improvement`;
  $('trackStatus').innerHTML=`<span class="statusDot"></span><b>${engine.status}</b>`;
  $('coachSnapshot').innerHTML=`<div class="snapshotItem"><span>Main positive</span><b>${engine.strongest?.name||'More evidence needed'}</b><small>${engine.strongest?interpretations[engine.strongest.name](engine.strongest.score):'Log completed training to improve confidence.'}</small></div><div class="snapshotItem ${engine.limiterCard.severity}"><span>${engine.limiterCard.label}</span><b>${engine.limiterCard.name}</b><small>${engine.limiterCard.text}</small></div><div class="snapshotItem"><span>Highest-value next step</span><b>${engine.next?`${fmtDate(engine.next.date)} · ${engine.next.type}`:'Recover and review'}</b><small>${engine.next?`${engine.next.distance.toFixed(1)} km · ${engine.next.purpose}`:'No future workout is available.'}</small></div>`;
- $('assessmentText').textContent=`If you raced today, the model estimates a ${Math.round(engine.currentModel.probability)}% chance of meeting ${fmtTime(state.setup.targetTime)}. Completing the remaining programme is projected to move this to ${Math.round(engine.projectedModel.probability)}%, mainly through ${[...engine.projectedPreparation.pillars].sort((a,b)=>(b.projectedScore-b.currentScore)-(a.projectedScore-a.currentScore))[0].name.toLowerCase()}. The confidence model changes the width of each likely range, while the performance model sets its centre. The projection assumes full execution but still allows for imperfect adaptation and race-day uncertainty.`;
- $('currentPreparationScore').textContent=Math.round(c.overall)+' / 100';
+ $('assessmentText').textContent=`If you raced today, the model estimates a ${Math.round(engine.currentModel.probability)}% chance of meeting ${fmtTime(state.setup.targetTime)}. Completing the remaining programme is projected to move this to ${Math.round(engine.projectedModel.probability)}%, mainly through ${[...engine.projectedPreparation.pillars].sort((a,b)=>(b.projectedScore-b.currentScore)-(a.projectedScore-a.currentScore))[0].name.toLowerCase()}. The current estimate applies a conservative marathon-durability correction when long-run evidence is incomplete. Completing the programme improves both that marathon transfer and the certainty around it. The projection assumes full execution but still allows for imperfect adaptation and race-day uncertainty.`;
+ $('currentPreparationScore').textContent=Number.isFinite(c.overall)?Math.round(c.overall)+' / 100':'Not scored';
  $('projectedPreparationScore').textContent=Math.round(engine.projectedPreparation.overall)+' / 100';
  $('evidenceBadge').textContent=`Evidence ${Math.round(c.evidenceCoverage*100)}%`;
  $('pillarCards').innerHTML=engine.projectedPreparation.pillars.map((p,pi)=>`
    <div class="pillarCard status-${scoreStatus(p.currentScore,p.coverage>0)}" data-pillar-index="${pi}" role="button" tabindex="0" aria-expanded="false" style="--pillar:${p.color}">
-    <div class="pillarTop"><b>${p.name}</b><span class="pillarScore">${Math.round(p.currentScore)}</span></div>
-    <div class="pillarComparison"><span>Current <b>${Math.round(p.currentScore)}</b></span><span>Projected <b>${Math.round(p.projectedScore)}</b></span></div>
-    <div class="pillarBar"><i style="width:${p.currentScore}%"></i><em style="width:${p.projectedScore}%"></em></div>
+    <div class="pillarTop"><b>${p.name}</b><span class="pillarScore">${Number.isFinite(p.currentScore)?Math.round(p.currentScore):'N/A'}</span></div>
+    <div class="pillarComparison"><span>Current <b>${Number.isFinite(p.currentScore)?Math.round(p.currentScore):'Not scored'}</b></span><span>Projected <b>${Math.round(p.projectedScore)}</b></span></div>
+    <div class="pillarBar"><i style="width:${Number.isFinite(p.currentScore)?p.currentScore:0}%"></i><em style="width:${p.projectedScore}%"></em></div>
     <p>${p.description}</p>
     <div class="pillarMeta"><span>Model weight ${Math.round(p.weight*100)}%</span><span>Evidence ${Math.round(p.coverage*100)}%</span></div>
-    <details class="pillarExplain"><summary>How this is calculated</summary><div class="calcTable">${p.items.map(i=>`<div class="calcRow"><span>${i.name}</span><span>${i.hasEvidence?Math.round(i.displayScore):'No evidence'}</span><span>${Math.round(i.weight*100)}%</span></div>`).join('')}</div><p class="muted">Current scores are pulled toward neutral when evidence is sparse, so one available item cannot create a perfect result. The projected value assumes all remaining sessions are completed; recovery is not automatically improved, and plan execution alone becomes 100.</p></details>
+    <details class="pillarExplain"><summary>How this is calculated</summary><div class="calcTable">${p.items.map(i=>`<div class="calcRow"><span>${i.name}</span><span>${i.hasEvidence?Math.round(i.displayScore):'No evidence'}</span><span>${Math.round(i.weight*100)}%</span></div>`).join('')}</div><p class="muted">A current score is shown only when evidence exists. Missing evidence widens uncertainty and is never displayed as an invented 50. The projected value assumes all remaining sessions are completed; recovery is not automatically improved, and plan execution alone becomes 100.</p></details>
    </div>`).join('');
+ const ex=c.executionCategories||[];
+ $('executionBreakdown').innerHTML=`<div class="executionHead"><div><h3>Training execution to date</h3><p>Completed work compared with sessions that were due.</p></div><span>${c.opportunities?`${c.matched}/${c.opportunities} linked`:'No sessions due'}</span></div><div class="executionRows">${ex.map(x=>`<div class="executionRow"><div><b>${x.label}</b><small>${x.pace?`${x.paceCount} matched quality run${x.paceCount===1?'':'s'}`:x.distance?`${x.completedDistance.toFixed(1)} / ${x.plannedDistance.toFixed(1)} km`:`${x.completedCount} / ${x.plannedCount} sessions`}</small></div><strong>${Number.isFinite(x.score)?Math.round(x.score)+'%':'Not scored'}</strong><div class="executionTrack"><i style="width:${Number.isFinite(x.score)?x.score:0}%"></i></div></div>`).join('')}</div><p class="muted compact">Pace compliance is assessed only for completed tempo, interval and assessment sessions with a valid planned match; easy and long runs are scored primarily by completion and distance.</p>`;
  let total=Math.max(1,weeks()),pos=clamp((engine.cw-1)/(Math.max(1,total-1))*100,0,100),taper=Math.max(0,100-(Math.ceil(state.setup.taperDays/7)/total*100));
  $('raceTimeline').innerHTML=`<div class="timelineLabels"><span>Plan start</span><span>Peak</span><span>Taper</span><span>Race</span></div><div class="timelineTrack"><i class="timelineDone" style="width:${pos}%"></i><span class="timelineNow" style="left:${pos}%"></span><span class="timelineTaper" style="left:${taper}%"></span></div><div class="timelineMeta"><b>${phase(engine.cw)} phase</b><span>${Math.max(0,Math.ceil(c.weeksRemaining))} weeks until race</span></div>`;
  $('kpis').innerHTML=kpi('Time until race',(()=>{const days=Math.max(0,Math.ceil((dte(state.setup.raceDate)-today())/DAY));return days<14?`${days} ${days===1?'day':'days'}`:`${Math.ceil(days/7)} weeks`;})(),'Remaining')+kpi('Planned this week',wd.planned.toFixed(1)+' km',wd.actual.toFixed(1)+' km completed')+kpi('Longest verified run',c.completedLongest.toFixed(1)+' km',`${c.completedLongest.toFixed(1)} of ${Number(state.setup.peakLong).toFixed(1)} km planned` )+kpi('Evidence coverage',Math.round(c.evidenceCoverage*100)+'%','Controls uncertainty, not the score')+factorKpi(adaptiveFactorDetails(cw).factor.toFixed(2),'Multiplies next-week training volume');
@@ -667,7 +699,7 @@ function renderDashboard(){
  const trendHistory=(state.predictionHistory||[]).slice().sort((a,b)=>a.date.localeCompare(b.date));
  const firstTrend=trendHistory[0]?.seconds,trendChange=Number.isFinite(firstTrend)?pred-firstTrend:null;
  const trendDirection=!Number.isFinite(trendChange)||Math.abs(trendChange)<30?'Stable':trendChange<0?'Improving':'Slower';
- $('predictionSummary').innerHTML=`<div class="predictionPrimary"><span>Change since first estimate</span><strong>${Number.isFinite(trendChange)?`${trendChange<0?'−':trendChange>0?'+':''}${fmtTime(Math.abs(trendChange))}`:'More history needed'}</strong><small>${trendDirection} capability trend</small></div><div class="predictionComparison"><span>Evidence history</span><strong>${trendHistory.length} saved update${trendHistory.length===1?'':'s'}</strong><small>This chart shows how the central capability estimate has moved. Today versus programme uncertainty is shown only in Marathon Outlook.</small></div>`;
+ $('predictionSummary').innerHTML=`<div class="predictionPrimary"><span>Change since first saved estimate</span><strong>${Number.isFinite(trendChange)?`${trendChange<0?'−':trendChange>0?'+':''}${fmtTime(Math.abs(trendChange))}`:'Upload more completed runs'}</strong><small>${trendDirection} central prediction</small></div><div class="predictionComparison"><span>What will appear here</span><strong>${trendHistory.length} saved update${trendHistory.length===1?'':'s'}</strong><small>Each qualifying import, assessment or edited run saves a dated prediction point. The line shows whether estimated marathon capability is improving, stable or slowing; the dashed line remains your target.</small></div>`;
  if($('componentGuide'))$('componentGuide').innerHTML=c.components.map(x=>`<div><b>${x.name}</b><p>${componentDefinitions[x.name]}</p><small class="${x.hasEvidence?'muted':'metricMissing'}">${x.hasEvidence?`Current score: ${Math.round(x.displayScore)} / 100 · evidence ${Math.round((x.evidenceFraction??1)*100)}%`:'No evidence yet'} · within-component weight ${Math.round(x.weight*100)}%</small></div>`).join('');
  let missing=uniqueComponents(c.components.filter(x=>!x.hasEvidence));
  $('dataNeeded').innerHTML=missing.length?missing.map(x=>`<div class="note"><b>${x.name}</b><br>${componentDefinitions[x.name]}</div>`).join(''):'<p class="muted">All preparation-model components currently have evidence.</p>';
@@ -790,16 +822,6 @@ function drawDashboardCharts(){
    {label:'Target time',data:predSec.map(()=>state.setup.targetTime),color:'#d75b67',dashed:true,points:false}
  ],{min:minSec,max:maxSec,ticks:5,formatY:v=>fmtTime(v),labels,left:98,pointDetails});
 
- // Current week + next three complete plan weeks, rather than the entire plan.
- let cw=currentWeek(),windowEnd=cw+3;
- let windowPlan=state.plan.filter(p=>p.type!=='Rest'&&p.type!=='Race Day'&&p.week>=cw&&p.week<=windowEnd);
- let groups=[
-  {label:'Easy / recovery',value:sum(windowPlan.filter(p=>['Easy','Recovery'].includes(p.type)).map(p=>p.distance)),color:'#2d82c7'},
-  {label:'Long runs',value:sum(windowPlan.filter(p=>p.type==='Long run').map(p=>p.distance)),color:'#159487'},
-  {label:'Tempo',value:sum(windowPlan.filter(p=>p.type==='Tempo').map(p=>p.distance)),color:'#e49b35'},
-  {label:'Intervals / tests',value:sum(windowPlan.filter(p=>['Intervals','Fitness assessment'].includes(p.type)).map(p=>p.distance)),color:'#7457c8'}
- ].filter(x=>x.value>0);
- drawDonut($('mixChart'),groups);
 }
 function coachIntelligenceHtml(p){
  if(p.type==='Rest'||p.type==='Race Day')return'';
@@ -808,32 +830,11 @@ function coachIntelligenceHtml(p){
 function workoutHtml(p){let st=status(p);return`<div class="workout" data-id="${p.id}"><div class="workoutHead"><div class="dateBox"><b>${new Date(p.date+'T00:00:00').getDate()}</b><span>${new Date(p.date+'T00:00:00').toLocaleDateString(undefined,{month:'short'})}</span></div><div class="workoutTitle"><h3>${p.type}</h3><p>${p.type==='Rest'?p.purpose:`${p.distance.toFixed(1)} km · ${p.phase}`}</p></div><span class="status ${st}">${st}</span></div><div class="workoutDetails"><div class="targets">${p.type==='Rest'?'':`<div class="target"><small>Main-set pace</small><b>${pace(p.zone.pace)}</b></div><div class="target"><small>Main-set HR</small><b>${p.zone.hr} bpm</b></div><div class="target"><small>Main-set power</small><b>${p.zone.power} W</b></div>`}</div>${p.type==='Rest'?'':`<p class="targetScope">Targets apply to: <b>${esc(p.targetScope||'main set')}</b></p>`}<div class="prescription"><p><b>Warm-up:</b> ${p.warmup}</p><p><b>Main set:</b> ${p.main}</p><p><b>Cooldown:</b> ${p.cooldown}</p>${p.distanceCheck?`<p class="distanceCheck"><b>Distance check:</b> ${esc(p.distanceCheck)} ✓</p>`:''}<p><b>Purpose:</b> ${p.purpose}</p><p><b>Coach guidance:</b> ${p.coach}</p><p><b>Fuel / hydration:</b> ${p.fuel}</p></div>${coachIntelligenceHtml(p)}</div></div>`}
 
 function renderToday(){let p=state.plan.find(x=>x.date===iso(today()));$('todayDate').textContent=today().toLocaleDateString(undefined,{weekday:'long',day:'numeric',month:'long'});$('todayCard').innerHTML=p?workoutHtml(p):'<div class="panel">No workout scheduled.</div>';$('todayCoach').innerHTML=p?`<div class="note">${p.coach}</div><div class="note good">${p.purpose}</div>`:''}
-function renderPlan(){if(!state.weekView)state.weekView=currentWeek();let arr=state.plan.filter(p=>p.week===state.weekView),wd=weekData(state.weekView),afd=adaptiveFactorDetails(state.weekView),factor=arr[0]?.factor||afd.factor||1;let factorText=afd.status==='pending'?`adaptive factor pending · currently ${factor.toFixed(2)}`:afd.status==='calculated'?`adaptive factor ${factor.toFixed(2)} · based on Week ${afd.previousWeek}`:`adaptive factor ${factor.toFixed(2)}`;$('weekHeader').innerHTML=`<b>Week ${state.weekView} · ${phase(state.weekView)}</b><br><span class="muted">${fmtDate(iso(weekStart(state.weekView)))} · ${wd.planned.toFixed(1)} km planned · ${wd.actual.toFixed(1)} km completed · ${factorText}</span>`;$('planCards').innerHTML=arr.map(workoutHtml).join('')}
-
-function streamAnalysis(records){
- let valid=records.filter(r=>Number.isFinite(r.t)&&r.hr>40&&(r.power>0||r.speed>0)).sort((a,b)=>a.t-b.t);
- if(valid.length<180)return null;
- // Remove obvious pauses and implausible samples.
- valid=valid.filter(r=>(!r.speed||r.speed>.5)&&(!r.power||r.power<1000)&&r.hr<230);
- if(valid.length<180)return null;
- let start=valid[0].t,end=valid.at(-1).t,total=end-start;
- if(total<1800)return null;
- let warmup=Math.min(900,Math.max(300,total*.15));
- valid=valid.filter(r=>r.t>=start+warmup);
- if(valid.length<150)return null;
- let mid=(valid[0].t+valid.at(-1).t)/2,a=valid.filter(r=>r.t<=mid),b=valid.filter(r=>r.t>mid);
- if(a.length<60||b.length<60)return null;
- const mean=(arr,key)=>avg(arr.map(x=>x[key]).filter(v=>Number.isFinite(v)&&v>0));
- let h1=mean(a,'hr'),h2=mean(b,'hr'),p1=mean(a,'power'),p2=mean(b,'power'),v1=mean(a,'speed'),v2=mean(b,'speed');
- let powerDrift=p1&&p2&&h1&&h2?((h2/p2)/(h1/p1)-1)*100:null;
- let paceDrift=v1&&v2&&h1&&h2?(1-(v2/h2)/(v1/h1))*100:null;
- let drift=powerDrift;
- if(!Number.isFinite(drift))return null;
- return{
-   drift,powerDrift,paceDrift,firstHr:h1,secondHr:h2,firstPower:p1,secondPower:p2,
-   firstSpeed:v1,secondSpeed:v2,recordCount:valid.length,analysisDuration:valid.at(-1).t-valid[0].t,
-   reliability:valid.length>=1200?'High':valid.length>=600?'Medium':'Low'
- };
+function renderPlan(){
+ if(!state.weekView)state.weekView=currentWeek();let arr=state.plan.filter(p=>p.week===state.weekView),wd=weekData(state.weekView),afd=adaptiveFactorDetails(state.weekView),factor=arr[0]?.factor||afd.factor||1;let factorText=afd.status==='pending'?`adaptive factor pending · currently ${factor.toFixed(2)}`:afd.status==='calculated'?`adaptive factor ${factor.toFixed(2)} · based on Week ${afd.previousWeek}`:`adaptive factor ${factor.toFixed(2)}`;$('weekHeader').innerHTML=`<b>Week ${state.weekView} · ${phase(state.weekView)}</b><br><span class="muted">${fmtDate(iso(weekStart(state.weekView)))} · ${wd.planned.toFixed(1)} km planned · ${wd.actual.toFixed(1)} km completed · ${factorText}</span>`;$('planCards').innerHTML=arr.map(workoutHtml).join('');
+ const windowPlan=state.plan.filter(p=>p.type!=='Rest'&&p.type!=='Race Day'&&p.week>=state.weekView&&p.week<=state.weekView+3);
+ const groups=[{label:'Easy / recovery',value:sum(windowPlan.filter(p=>['Easy','Recovery'].includes(p.type)).map(p=>p.distance)),color:'#2d82c7'},{label:'Long runs',value:sum(windowPlan.filter(p=>p.type==='Long run').map(p=>p.distance)),color:'#159487'},{label:'Tempo',value:sum(windowPlan.filter(p=>p.type==='Tempo').map(p=>p.distance)),color:'#e49b35'},{label:'Intervals / tests',value:sum(windowPlan.filter(p=>['Intervals','Fitness assessment'].includes(p.type)).map(p=>p.distance)),color:'#7457c8'}].filter(x=>x.value>0);
+ if($('planMixChart'))drawDonut($('planMixChart'),groups);
 }
 function parseCSV(t){let rows=[],r=[],f='',q=false;for(let i=0;i<t.length;i++){let c=t[i],n=t[i+1];if(c=='"'&&q&&n=='"'){f+='"';i++}else if(c=='"')q=!q;else if(c==','&&!q){r.push(f);f=''}else if((c=='\n'||c=='\r')&&!q){if(c=='\r'&&n=='\n')i++;r.push(f);if(r.some(x=>x))rows.push(r);r=[];f=''}else f+=c}if(f||r.length){r.push(f);rows.push(r)}return rows}
 function summariseCSV(rows){
@@ -1204,10 +1205,10 @@ $('backupBtn').onclick=()=>download('ai-running-coach-backup.json',JSON.stringif
 let deferred;window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferred=e;$('installBtn').className='install'});$('installBtn').onclick=()=>deferred?.prompt();
 $('pillarCards')?.addEventListener('click',e=>{const card=e.target.closest('.pillarCard');if(!card||e.target.closest('summary'))return;const detail=card.querySelector('.pillarExplain');if(!detail)return;card.classList.toggle('open');detail.open=card.classList.contains('open');card.setAttribute('aria-expanded',String(detail.open))});
 $('pillarCards')?.addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&e.target.classList.contains('pillarCard')){e.preventDefault();e.target.click()}});
-const brandVersion=document.querySelector('.brand-copy p');if(brandVersion)brandVersion.textContent=`Adaptive marathon planning • v8.7.1 · build ${BUILD}`;
+const brandVersion=document.querySelector('.brand-copy p');if(brandVersion)brandVersion.textContent=`Adaptive marathon planning • v8.7.2 · build ${BUILD}`;
 if('serviceWorker'in navigator&&location.protocol==='https:')navigator.serviceWorker.register(`service-worker.js?v=${BUILD}`,{updateViaCache:'none'}).then(reg=>reg.update()).catch(()=>{});
 migrateAssessmentRuns();
 migrateImportedPower();
 renderAll();
-console.info('AI Running Coach v8.7.1 stable build 8710');
+console.info('AI Running Coach v8.7.2 stable build 8720');
 })();

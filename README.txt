@@ -1,7 +1,6 @@
-AI Running Coach v8.7.1 Stable (build 8710)
+AI Running Coach v8.7.2 Stable (build 8720)
 
-DEPLOYMENT
-Replace all six files together:
+FILES
 - index.html
 - styles.css
 - app.js
@@ -9,40 +8,45 @@ Replace all six files together:
 - service-worker.js
 - README.txt
 
-Keep the existing icon files in the repository. After GitHub Pages deploys, fully close and reopen the browser tab or installed PWA once so service-worker cache 8710 activates.
+DEPLOYMENT
+Replace the six files in the GitHub Pages repository. Keep the existing icon files. After deployment, fully close and reopen the browser tab or installed PWA once so cache 8720 activates.
 
-V8.7.1 DASHBOARD AND MODEL UPDATE
+V8.7.2 MODEL AND DASHBOARD UPDATE
 
-Dashboard structure
-1. Marathon Outlook — compares the probability of meeting the target if racing today with the projected probability after completing the remaining programme.
-2. Coach Summary — shows the main positive, the current limiter and the highest-value next step.
-3. Race Preparation — one shared model with current and projected component scores.
-4. Progress to Race — time remaining, weekly volume, long-run progression, milestones, timeline and adaptive factor.
-5. Performance Trends — prediction history, intensity mix, efficiency and cardiac drift.
+1. Realistic race-today versus full-programme outlook
+- A short-distance assessment is no longer extrapolated to a marathon with one fixed exponent.
+- Race Today uses a conservative marathon-durability correction when long-run, volume and race-specific evidence are incomplete.
+- Follow Programme projects the durability correction after completing the planned long runs and quality work.
+- It also permits a modest, capped central fitness adaptation of up to 2.5%, with diminishing returns and health/training-opportunity limits.
+- Preparation therefore affects both marathon transfer and forecast uncertainty, but does not overwrite the underlying assessment result.
 
-Shared Race Preparation model
-- Physiological fitness: 40%
-- Marathon preparation: 30%
-- Plan execution: 20%
-- Recovery and health: 10%
+2. No invented 50 scores
+- A component with zero evidence now displays Not scored / N/A.
+- Missing evidence widens uncertainty instead of being shown as a neutral score.
+- Preparation time is future opportunity and no longer counts as proof of current marathon preparation.
 
-Target outlook scenarios
-- Race today uses the current predicted finish, current preparation-support score and current uncertainty.
-- Physiological fitness drives the predicted time and is therefore not counted a second time in the probability adjustment; marathon preparation, execution and health provide the limited supporting adjustment.
-- Follow programme assumes all remaining sessions are completed.
-- Plan execution becomes 100 only in the projected scenario.
-- Physiological fitness improves conservatively with diminishing returns, remaining build weeks, health and training opportunity.
-- Marathon preparation increases according to remaining long runs, race-specific sessions and usable build time.
-- Recovery and health are not automatically improved.
-- Evidence coverage widens or narrows uncertainty; missing evidence does not automatically reduce the preparation score.
-- Both probabilities remain capped at 5–95% to retain race-day uncertainty.
+3. Training execution breakdown
+- Shows completed versus due sessions for all runs.
+- Shows completed versus due distance.
+- Separates easy/recovery, tempo/interval/assessment, quality-run pace and long-run completion.
+- Quality pace uses matched completed workouts and a tolerance around the planned main-set pace. It is identified as an approximate whole-run check where split-level pace is unavailable.
+
+4. Prediction trend clarification
+- Each qualifying run import, edited run or assessment can save a dated prediction point.
+- The chart shows movement in the central marathon estimate over time against the target line.
+- It does not repeat the current versus programme uncertainty comparison from Marathon Outlook.
+
+5. Dashboard and plan cleanup
+- Training intensity mix moved from Dashboard to the Plan tab.
+- Longest verified run continues to show the planned peak-long-run distance.
+- Preparation milestone section remains removed.
+
+MODEL LIMITS
+This is a transparent coaching forecast, not a clinically or statistically validated individual race guarantee. The dynamic fatigue exponent, adaptation cap, uncertainty coefficients and probability labels are conservative model assumptions. They should be calibrated against actual marathon outcomes before being treated as population-validated coefficients.
 
 VALIDATION
-- JavaScript syntax checked with Node.
-- Manifest JSON validated.
-- Static HTML IDs checked for duplicates.
-- Service-worker core cache restricted to the six release files so missing optional image assets cannot block installation.
-- Version, build and cache references synchronised to 8.7.1 / 8710.
-
-BACKWARDS COMPATIBILITY
-The existing storage key and schema remain unchanged. Existing setup, runs, assessments, plan data and prediction history are preserved.
+- JavaScript syntax checked.
+- Manifest JSON checked.
+- Duplicate HTML IDs checked.
+- Version, build, service-worker and asset-cache references synchronised.
+- Existing storage schema and athlete data remain backwards compatible.

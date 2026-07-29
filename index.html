@@ -3,18 +3,18 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#0b3157"><title>AI Running Coach</title>
-<link rel="manifest" href="manifest.webmanifest?v=8710"><link rel="stylesheet" href="styles.css?v=8710">
+<link rel="manifest" href="manifest.webmanifest?v=8720"><link rel="stylesheet" href="styles.css?v=8720">
 
-<link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png?v=8710">
-<link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png?v=8710">
-<link rel="icon" href="favicon.ico?v=8710">
-<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=8710">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png?v=8720">
+<link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png?v=8720">
+<link rel="icon" href="favicon.ico?v=8720">
+<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=8720">
 <meta property="og:image" content="github-banner.png">
 
 </head>
 <body>
 <header class="topbar">
-  <div class="brand"><img class="logo" src="icon-192.png?v=8710" alt="AI Running Coach logo"><div class="brand-copy"><h1>AI Running Coach</h1><p>Adaptive marathon planning • v8.7.1 · build 8710</p></div></div>
+  <div class="brand"><img class="logo" src="icon-192.png?v=8720" alt="AI Running Coach logo"><div class="brand-copy"><h1>AI Running Coach</h1><p>Adaptive marathon planning • v8.7.2 · build 8720</p></div></div>
   <button id="installBtn" class="install hidden">Install</button>
 </header>
 <nav id="nav"></nav>
@@ -62,6 +62,7 @@
       <div class="panelHead"><div><h3>Execution-confidence model</h3><p class="muted compact">Controls prediction uncertainty; it does not change the central capability estimate</p></div><div id="evidenceBadge" class="evidenceBadge"></div></div>
       <div class="preparationHeadline"><div><span>Current confidence</span><strong id="currentPreparationScore">—</strong></div><div><span>Projected confidence</span><strong id="projectedPreparationScore">—</strong></div></div>
       <div id="pillarCards" class="pillarGrid preparationGrid"></div>
+      <div id="executionBreakdown" class="executionBreakdown"></div>
     </article>
   </div>
 
@@ -83,7 +84,6 @@
       <div id="predictionSummary" class="predictionSummary"></div>
       <canvas id="predictionChart" width="1000" height="340"></canvas>
     </article>
-    <article class="panel"><div class="panelHead"><h3>Training intensity mix</h3><span class="muted">Next four weeks by session type</span></div><canvas id="mixChart" width="1000" height="340"></canvas></article>
     <div id="metricKpis" class="kpis"></div>
     <div class="grid2 metricCharts">
       <article class="panel"><div class="panelHead"><div><h3>Efficiency factor</h3><p class="muted compact">Joules of running power per heartbeat · higher is better</p></div></div><canvas id="efficiencyChart" width="1000" height="380"></canvas></article>
@@ -105,6 +105,7 @@
   <div class="sectionTitle"><div><h2>Training plan</h2><p>Tap any workout for the full prescription.</p></div></div>
   <div class="weekNav"><button id="prevWeek">‹</button><button id="thisWeek">Current week</button><button id="nextWeek">›</button></div>
   <div id="weekHeader" class="weekHeader"></div>
+  <article class="panel planMixPanel"><div class="panelHead"><h3>Training intensity mix</h3><span class="muted">Selected week and next three weeks</span></div><canvas id="planMixChart" width="1000" height="340"></canvas></article>
   <div id="planCards"></div>
 </section>
 
@@ -173,5 +174,5 @@
 </main>
 
 <div id="modal" class="modal hidden"><div class="modalCard"><button id="closeModal" class="close">×</button><div id="modalContent"></div></div></div>
-<script src="app.js?v=8710"></script>
+<script src="app.js?v=8720"></script>
 </body></html>
