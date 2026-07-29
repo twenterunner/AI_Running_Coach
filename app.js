@@ -76,7 +76,7 @@ function recommendedRaceDate(setup){
  let totalWeeks=Math.ceil(Math.max(minimumTotal,req.requiredBuildWeeks+taperWeeks+2));
  return{date:iso(new Date(dte(setup.planStart).getTime()+totalWeeks*7*DAY)),totalWeeks,requiredBuildWeeks:req.requiredBuildWeeks,taperWeeks};
 }
-const BUILD=9000, SCHEMA=9000, STORAGE_KEY='arc_v62_web', MIRROR_KEY='arc_v8500_web', BACKUP_KEY='arc_pre8500_backup';
+const BUILD=9010, SCHEMA=9010, STORAGE_KEY='arc_v62_web', MIRROR_KEY='arc_v8500_web', BACKUP_KEY='arc_pre8500_backup';
 const defaults=()=>{let start=iso(new Date()),setup={planStart:start,raceDate:start,raceName:'Goal Race',raceDistance:42.195,targetTime:15300,currentWeekly:35,currentLongest:18,testDistance:5,testTime:1515,thresholdHr:168,criticalPower:300,bodyWeight:93,maxWeekly:65,growth:.07,peakLong:32,taperDays:14,minFactor:.85,maxFactor:1.05,adaptive:true};setup.raceDate=recommendedRaceDate(setup).date;return({schemaVersion:SCHEMA,setup,days:FIVE_DAY_TEMPLATE.map(d=>[...d]),runs:[],assessments:[],plan:[],weekView:null,migration:{to:SCHEMA,status:'new',time:new Date().toISOString()}})};
 let migrationReport={from:null,to:SCHEMA,status:'new install',source:'defaults',runs:0,assessments:0,fieldsRecovered:0,warning:''};
 function parseStored(raw){if(!raw)return null;try{const x=JSON.parse(raw);return x&&typeof x==='object'?x:null}catch(err){recordDiagnostic('Storage parse',err);return null}}
@@ -947,12 +947,10 @@ function renderDashboard(){
     <div class="pillarMeta"><span>Model weight ${Math.round(p.weight*100)}%</span><span>Evidence ${Math.round(p.coverage*100)}%</span></div>
     <details class="pillarExplain"><summary>How this is calculated</summary><div class="calcTable">${p.items.map(i=>`<div class="calcRow"><span>${i.name}</span><span>${i.hasEvidence?Math.round(i.displayScore):'No evidence'}</span><span>${Math.round(i.weight*100)}%</span></div>`).join('')}</div><p class="muted">Only current completed evidence is scored. Missing evidence is shown as missing and widens the prediction range; it does not receive a neutral or projected score.</p></details>
    </div>`).join('');
- const ex=c.executionCategories||[];
- $('executionBreakdown').innerHTML=`<div class="executionHead"><div><h3>Training execution to date</h3><p>Completed work compared with sessions that were due.</p></div><span>${c.opportunities?`${c.matched}/${c.opportunities} linked`:'No sessions due'}</span></div><div class="executionRows">${ex.map(x=>`<div class="executionRow"><div><b>${x.label}</b><small>${x.pace?`${x.paceCount} matched run${x.paceCount===1?'':'s'} with usable pace`:x.distance?`${x.completedDistance.toFixed(1)} / ${x.plannedDistance.toFixed(1)} km`:`${x.completedCount} / ${x.plannedCount} sessions`}</small></div><strong>${Number.isFinite(x.score)?Math.round(x.score)+'%':'Not scored'}</strong><div class="executionTrack"><i style="width:${Number.isFinite(x.barScore)?x.barScore:0}%"></i></div></div>`).join('')}</div><p class="muted compact">Pace adherence compares each linked run's whole-session pace with an estimated whole-session plan pace. Warm-up and cooldown are accounted for, but interval and tempo scores remain approximate unless the imported file contains lap-level targets.</p>`;
  let total=Math.max(1,weeks()),pos=clamp((engine.cw-1)/(Math.max(1,total-1))*100,0,100),taper=Math.max(0,100-(Math.ceil(state.setup.taperDays/7)/total*100));
  $('raceTimeline').innerHTML=`<div class="timelineLabels"><span>Plan start</span><span>Peak</span><span>Taper</span><span>Race</span></div><div class="timelineTrack"><i class="timelineDone" style="width:${pos}%"></i><span class="timelineNow" style="left:${pos}%"></span><span class="timelineTaper" style="left:${taper}%"></span></div><div class="timelineMeta"><b>${phase(engine.cw)} phase</b><span>${Math.max(0,Math.ceil(c.weeksRemaining))} weeks until race</span></div>`;
  let afd=adaptiveFactorDetails(cw);
- $('kpis').innerHTML=kpi('Time until race',(()=>{const days=Math.max(0,Math.ceil((dte(state.setup.raceDate)-today())/DAY));return days<14?`${days} ${days===1?'day':'days'}`:`${Math.ceil(days/7)} weeks`;})(),'Remaining')+kpi('Planned this week',wd.planned.toFixed(1)+' km',wd.actual.toFixed(1)+' km completed')+kpi('Longest verified run',c.completedLongest.toFixed(1)+' km',`${c.completedLongest.toFixed(1)} of ${Number(state.setup.peakLong).toFixed(1)} km planned` )+factorKpi(afd);
+ $('kpis').innerHTML=kpi('Time until race',(()=>{const days=Math.max(0,Math.ceil((dte(state.setup.raceDate)-today())/DAY));return days<14?`${days} ${days===1?'day':'days'}`:`${Math.ceil(days/7)} weeks`;})(),'Remaining')+kpi('Completed this week',wd.actual.toFixed(1)+' km',`${wd.planned.toFixed(1)} km planned`)+kpi('Longest verified run',c.completedLongest.toFixed(1)+' km',`${Number(state.setup.peakLong).toFixed(1)} km target`)+factorKpi(afd);
  const trendHistory=(state.predictionHistory||[]).slice().sort((a,b)=>a.date.localeCompare(b.date));
  const firstTrend=trendHistory[0]?.seconds,trendChange=Number.isFinite(firstTrend)?pred-firstTrend:null;
  const trendDirection=!Number.isFinite(trendChange)||Math.abs(trendChange)<30?'Stable':trendChange<0?'Improving':'Slower';
@@ -1556,5 +1554,5 @@ if('serviceWorker'in navigator&&location.protocol==='https:')navigator.serviceWo
 migrateAssessmentRuns();
 migrateImportedPower();
 renderAll();
-console.info('AI Running Coach v9.0.0 stable build 9000');
+console.info('AI Running Coach v9.0.0 stable build 9010');
 })();
