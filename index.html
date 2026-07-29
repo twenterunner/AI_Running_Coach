@@ -3,18 +3,18 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#0b3157"><title>AI Running Coach</title>
-<link rel="manifest" href="manifest.webmanifest?v=8720"><link rel="stylesheet" href="styles.css?v=8720">
+<link rel="manifest" href="manifest.webmanifest?v=8731"><link rel="stylesheet" href="styles.css?v=8731">
 
-<link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png?v=8720">
-<link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png?v=8720">
-<link rel="icon" href="favicon.ico?v=8720">
-<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=8720">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png?v=8731">
+<link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png?v=8731">
+<link rel="icon" href="favicon.ico?v=8731">
+<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=8731">
 <meta property="og:image" content="github-banner.png">
 
 </head>
 <body>
 <header class="topbar">
-  <div class="brand"><img class="logo" src="icon-192.png?v=8720" alt="AI Running Coach logo"><div class="brand-copy"><h1>AI Running Coach</h1><p>Adaptive marathon planning • v8.7.2 · build 8720</p></div></div>
+  <div class="brand"><img class="logo" src="icon-192.png?v=8731" alt="AI Running Coach logo"><div class="brand-copy"><h1>AI Running Coach</h1><p>Adaptive marathon planning • v8.7.3a · build 8731</p></div></div>
   <button id="installBtn" class="install hidden">Install</button>
 </header>
 <nav id="nav"></nav>
@@ -60,15 +60,15 @@
     <div class="dashboardSectionHead"><span>2</span><div><h3>Prediction confidence</h3><p>Why the likely finish-time range is wide or narrow.</p></div></div>
     <article class="panel readinessPanel">
       <div class="panelHead"><div><h3>Execution-confidence model</h3><p class="muted compact">Controls prediction uncertainty; it does not change the central capability estimate</p></div><div id="evidenceBadge" class="evidenceBadge"></div></div>
-      <div class="preparationHeadline"><div><span>Current confidence</span><strong id="currentPreparationScore">—</strong></div><div><span>Projected confidence</span><strong id="projectedPreparationScore">—</strong></div></div>
+      <div class="preparationHeadline single"><div><span>Current execution confidence</span><strong id="currentPreparationScore">—</strong></div></div>
       <div id="pillarCards" class="pillarGrid preparationGrid"></div>
-      <div id="executionBreakdown" class="executionBreakdown"></div>
     </article>
   </div>
 
   <div class="dashboardSection">
     <div class="dashboardSectionHead"><span>3</span><div><h3>Progress to race</h3><p>How the plan is progressing and what remains.</p></div></div>
     <div id="kpis" class="kpis"></div>
+    <article class="panel"><div id="executionBreakdown" class="executionBreakdown progressExecution"></div></article>
     <details id="adaptiveFactorDetail" class="panel adaptivePanel"></details>
     <article class="panel"><div class="panelHead"><div><h3>Race timeline</h3><p class="muted compact">Current phase and path to race day.</p></div></div><div id="raceTimeline"></div></article>
     <div class="grid2">
@@ -105,7 +105,7 @@
   <div class="sectionTitle"><div><h2>Training plan</h2><p>Tap any workout for the full prescription.</p></div></div>
   <div class="weekNav"><button id="prevWeek">‹</button><button id="thisWeek">Current week</button><button id="nextWeek">›</button></div>
   <div id="weekHeader" class="weekHeader"></div>
-  <article class="panel planMixPanel"><div class="panelHead"><h3>Training intensity mix</h3><span class="muted">Selected week and next three weeks</span></div><canvas id="planMixChart" width="1000" height="340"></canvas></article>
+  <article class="panel planMixPanel"><div class="panelHead"><div><h3>Training intensity mix</h3><p class="muted compact">Distance distribution by workout category</p></div></div><div class="mixGrid"><div><h4>Next week</h4><canvas id="nextWeekMixChart" width="1000" height="340"></canvas></div><div><h4>Completed to date</h4><canvas id="completedMixChart" width="1000" height="340"></canvas></div><div><h4>Overall programme</h4><canvas id="overallMixChart" width="1000" height="340"></canvas></div></div></article>
   <div id="planCards"></div>
 </section>
 
@@ -174,5 +174,5 @@
 </main>
 
 <div id="modal" class="modal hidden"><div class="modalCard"><button id="closeModal" class="close">×</button><div id="modalContent"></div></div></div>
-<script src="app.js?v=8720"></script>
+<script src="app.js?v=8731"></script>
 </body></html>

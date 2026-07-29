@@ -1,6 +1,6 @@
 let preview=null;
 (()=>{'use strict';
-const DAY=87200000, $=id=>document.getElementById(id), clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const DAY=87300000, $=id=>document.getElementById(id), clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 function today(){return dte(iso(new Date()))}
 const iso=d=>{let x=new Date(d),y=x.getFullYear(),m=String(x.getMonth()+1).padStart(2,'0'),q=String(x.getDate()).padStart(2,'0');return `${y}-${m}-${q}`},
 dte=s=>{let [y,m,d]=String(s).split('-').map(Number);return new Date(y,m-1,d,12,0,0,0)},
@@ -71,7 +71,7 @@ function recommendedRaceDate(setup){
  let totalWeeks=Math.ceil(Math.max(minimumTotal,req.requiredBuildWeeks+taperWeeks+2));
  return{date:iso(new Date(dte(setup.planStart).getTime()+totalWeeks*7*DAY)),totalWeeks,requiredBuildWeeks:req.requiredBuildWeeks,taperWeeks};
 }
-const BUILD=8720, SCHEMA=8500, STORAGE_KEY='arc_v62_web', MIRROR_KEY='arc_v8500_web', BACKUP_KEY='arc_pre8500_backup';
+const BUILD=8731, SCHEMA=8500, STORAGE_KEY='arc_v62_web', MIRROR_KEY='arc_v8500_web', BACKUP_KEY='arc_pre8500_backup';
 const defaults=()=>{let start=iso(new Date()),setup={planStart:start,raceDate:start,raceName:'Goal Race',raceDistance:42.195,targetTime:15300,currentWeekly:35,currentLongest:18,testDistance:5,testTime:1515,thresholdHr:168,criticalPower:300,bodyWeight:93,maxWeekly:80,growth:.08,peakLong:34,taperDays:21,minFactor:.85,maxFactor:1.05,adaptive:true};setup.raceDate=recommendedRaceDate(setup).date;return({schemaVersion:SCHEMA,setup,days:[['Monday',false,'Easy'],['Tuesday',true,'Intervals'],['Wednesday',true,'Easy'],['Thursday',false,'Easy'],['Friday',true,'Tempo'],['Saturday',true,'Easy'],['Sunday',true,'Long run']],runs:[],assessments:[],plan:[],weekView:null,migration:{to:SCHEMA,status:'new',time:new Date().toISOString()}})};
 let migrationReport={from:null,to:SCHEMA,status:'new install',source:'defaults',runs:0,assessments:0,fieldsRecovered:0,warning:''};
 function parseStored(raw){if(!raw)return null;try{const x=JSON.parse(raw);return x&&typeof x==='object'?x:null}catch(err){recordDiagnostic('Storage parse',err);return null}}
@@ -581,17 +581,34 @@ function predictionUncertainty(c,pred,confidenceScore,projected=false){
  const extrapolation=clamp(Math.log(Math.max(1,state.setup.raceDistance/testDistance))/Math.log(42.195/5),0,1);
  const evidence=projected?Math.max(c.evidenceCoverage,.82):c.evidenceCoverage;
  const execution=clamp(confidenceScore/100,0,1);
- // Sparse evidence, short-distance extrapolation and incomplete marathon preparation
- // widen the outcome distribution. Full-programme projection retains uncertainty.
  const extrapolationWeight=projected?.010:.024;
- const sigmaPct=.032 + extrapolationWeight*extrapolation + .040*(1-evidence) + .060*(1-execution) + (projected?.004:0);
- return Math.max(210,pred*sigmaPct);
+ const baseSigma=Math.max(210,pred*(.032+extrapolationWeight*extrapolation+.040*(1-evidence)+.060*(1-execution)+(projected?.004:0)));
+ // Marathon outcomes are not symmetric around the capability estimate. A large
+ // positive surprise is less common than under-performance caused by durability,
+ // pacing, fuelling, weather or health. Use a split-normal distribution with a
+ // shorter fast tail and a longer slow tail.
+ const fastSigma=baseSigma*(projected?.62:.58);
+ const slowSigma=baseSigma*(projected?1.22:1.38);
+ return{baseSigma,fastSigma,slowSigma};
+}
+function splitNormalCdf(x,mu,leftSigma,rightSigma){
+ const total=leftSigma+rightSigma;
+ if(x<=mu)return 2*leftSigma/total*normalCdf((x-mu)/leftSigma);
+ return (leftSigma-rightSigma)/total+2*rightSigma/total*normalCdf((x-mu)/rightSigma);
+}
+function splitNormalQuantile(p,mu,leftSigma,rightSigma){
+ const leftMass=leftSigma/(leftSigma+rightSigma);
+ let lo=mu-8*leftSigma,hi=mu+8*rightSigma;
+ for(let i=0;i<70;i++){const mid=(lo+hi)/2;if(splitNormalCdf(mid,mu,leftSigma,rightSigma)<p)lo=mid;else hi=mid}
+ return(lo+hi)/2;
 }
 function probabilityFromScenario(c,pred,confidenceScore,projected=false){
- const sigma=predictionUncertainty(c,pred,confidenceScore,projected);
- const z=(Number(state.setup.targetTime)-pred)/sigma;
- const probability=clamp(normalCdf(z)*100,5,95);
- return{probability,label:probabilityLabel(probability),sigma,rangeLow:Math.max(0,pred-1.28*sigma),rangeHigh:pred+1.28*sigma,z};
+ const uncertainty=predictionUncertainty(c,pred,confidenceScore,projected);
+ const target=Number(state.setup.targetTime);
+ const probability=clamp(splitNormalCdf(target,pred,uncertainty.fastSigma,uncertainty.slowSigma)*100,5,95);
+ const rangeLow=Math.max(0,splitNormalQuantile(.10,pred,uncertainty.fastSigma,uncertainty.slowSigma));
+ const rangeHigh=splitNormalQuantile(.90,pred,uncertainty.fastSigma,uncertainty.slowSigma);
+ return{probability,label:probabilityLabel(probability),sigma:uncertainty.baseSigma,fastSigma:uncertainty.fastSigma,slowSigma:uncertainty.slowSigma,rangeLow,rangeHigh};
 }
 function projectedPreparationModel(c){
  const weeks=Math.max(0,c.usableBuildWeeks),timePotential=1-Math.exp(-.20*weeks);
@@ -676,18 +693,16 @@ function renderDashboard(){
  $('outlookGain').innerHTML=`Projected programme benefit: <b>${gain>=0?'+':''}${Math.round(gain)} percentage points</b> · ${fmtTime(engine.projection.improvementSec)} estimated time improvement`;
  $('trackStatus').innerHTML=`<span class="statusDot"></span><b>${engine.status}</b>`;
  $('coachSnapshot').innerHTML=`<div class="snapshotItem"><span>Main positive</span><b>${engine.strongest?.name||'More evidence needed'}</b><small>${engine.strongest?interpretations[engine.strongest.name](engine.strongest.score):'Log completed training to improve confidence.'}</small></div><div class="snapshotItem ${engine.limiterCard.severity}"><span>${engine.limiterCard.label}</span><b>${engine.limiterCard.name}</b><small>${engine.limiterCard.text}</small></div><div class="snapshotItem"><span>Highest-value next step</span><b>${engine.next?`${fmtDate(engine.next.date)} · ${engine.next.type}`:'Recover and review'}</b><small>${engine.next?`${engine.next.distance.toFixed(1)} km · ${engine.next.purpose}`:'No future workout is available.'}</small></div>`;
- $('assessmentText').textContent=`If you raced today, the model estimates a ${Math.round(engine.currentModel.probability)}% chance of meeting ${fmtTime(state.setup.targetTime)}. Completing the remaining programme is projected to move this to ${Math.round(engine.projectedModel.probability)}%, mainly through ${[...engine.projectedPreparation.pillars].sort((a,b)=>(b.projectedScore-b.currentScore)-(a.projectedScore-a.currentScore))[0].name.toLowerCase()}. The current estimate applies a conservative marathon-durability correction when long-run evidence is incomplete. Completing the programme improves both that marathon transfer and the certainty around it. The projection assumes full execution but still allows for imperfect adaptation and race-day uncertainty.`;
+ $('assessmentText').textContent=`If you raced today, the model estimates a ${Math.round(engine.currentModel.probability)}% chance of meeting ${fmtTime(state.setup.targetTime)}. Completing the remaining programme is projected to move this to ${Math.round(engine.projectedModel.probability)}%, mainly through ${[...engine.projectedPreparation.pillars].sort((a,b)=>(b.projectedScore-b.currentScore)-(a.projectedScore-a.currentScore))[0].name.toLowerCase()}. The current estimate applies a conservative marathon-durability correction when long-run evidence is incomplete. Its finish-time distribution is deliberately asymmetric: unusually fast outcomes have a shorter tail, while under-performance has a longer tail. Completing the programme improves marathon transfer and narrows that downside uncertainty. The projection assumes full execution but still allows for imperfect adaptation and race-day uncertainty.`;
  $('currentPreparationScore').textContent=Number.isFinite(c.overall)?Math.round(c.overall)+' / 100':'Not scored';
- $('projectedPreparationScore').textContent=Math.round(engine.projectedPreparation.overall)+' / 100';
- $('evidenceBadge').textContent=`Evidence ${Math.round(c.evidenceCoverage*100)}%`;
+  $('evidenceBadge').textContent=`Evidence ${Math.round(c.evidenceCoverage*100)}%`;
  $('pillarCards').innerHTML=engine.projectedPreparation.pillars.map((p,pi)=>`
    <div class="pillarCard status-${scoreStatus(p.currentScore,p.coverage>0)}" data-pillar-index="${pi}" role="button" tabindex="0" aria-expanded="false" style="--pillar:${p.color}">
     <div class="pillarTop"><b>${p.name}</b><span class="pillarScore">${Number.isFinite(p.currentScore)?Math.round(p.currentScore):'N/A'}</span></div>
-    <div class="pillarComparison"><span>Current <b>${Number.isFinite(p.currentScore)?Math.round(p.currentScore):'Not scored'}</b></span><span>Projected <b>${Math.round(p.projectedScore)}</b></span></div>
-    <div class="pillarBar"><i style="width:${Number.isFinite(p.currentScore)?p.currentScore:0}%"></i><em style="width:${p.projectedScore}%"></em></div>
+    <div class="pillarBar"><i style="width:${Number.isFinite(p.currentScore)?p.currentScore:0}%"></i></div>
     <p>${p.description}</p>
     <div class="pillarMeta"><span>Model weight ${Math.round(p.weight*100)}%</span><span>Evidence ${Math.round(p.coverage*100)}%</span></div>
-    <details class="pillarExplain"><summary>How this is calculated</summary><div class="calcTable">${p.items.map(i=>`<div class="calcRow"><span>${i.name}</span><span>${i.hasEvidence?Math.round(i.displayScore):'No evidence'}</span><span>${Math.round(i.weight*100)}%</span></div>`).join('')}</div><p class="muted">A current score is shown only when evidence exists. Missing evidence widens uncertainty and is never displayed as an invented 50. The projected value assumes all remaining sessions are completed; recovery is not automatically improved, and plan execution alone becomes 100.</p></details>
+    <details class="pillarExplain"><summary>How this is calculated</summary><div class="calcTable">${p.items.map(i=>`<div class="calcRow"><span>${i.name}</span><span>${i.hasEvidence?Math.round(i.displayScore):'No evidence'}</span><span>${Math.round(i.weight*100)}%</span></div>`).join('')}</div><p class="muted">Only current completed evidence is scored. Missing evidence is shown as missing and widens the prediction range; it does not receive a neutral or projected score.</p></details>
    </div>`).join('');
  const ex=c.executionCategories||[];
  $('executionBreakdown').innerHTML=`<div class="executionHead"><div><h3>Training execution to date</h3><p>Completed work compared with sessions that were due.</p></div><span>${c.opportunities?`${c.matched}/${c.opportunities} linked`:'No sessions due'}</span></div><div class="executionRows">${ex.map(x=>`<div class="executionRow"><div><b>${x.label}</b><small>${x.pace?`${x.paceCount} matched quality run${x.paceCount===1?'':'s'}`:x.distance?`${x.completedDistance.toFixed(1)} / ${x.plannedDistance.toFixed(1)} km`:`${x.completedCount} / ${x.plannedCount} sessions`}</small></div><strong>${Number.isFinite(x.score)?Math.round(x.score)+'%':'Not scored'}</strong><div class="executionTrack"><i style="width:${Number.isFinite(x.score)?x.score:0}%"></i></div></div>`).join('')}</div><p class="muted compact">Pace compliance is assessed only for completed tempo, interval and assessment sessions with a valid planned match; easy and long runs are scored primarily by completion and distance.</p>`;
@@ -778,16 +793,25 @@ function drawLine(canvas,series,options={}){
 function completedWeekSeries(){
  return Array.from({length:weeks()},(_,i)=>weekData(i+1));
 }
-function drawDonut(canvas,segments){
+function drawDonut(canvas,segments,centerLabel='planned',emptyText='No training volume'){ 
  let ctx=canvas.getContext('2d'),W=canvas.width,H=canvas.height,cx=W*.32,cy=H*.52,r=105,total=sum(segments.map(s=>s.value));
  ctx.clearRect(0,0,W,H);
- if(!total){ctx.fillStyle='#8190a0';ctx.font='600 28px system-ui';ctx.textAlign='center';ctx.fillText('No planned training volume',W/2,H/2);return}
+ if(!total){ctx.fillStyle='#8190a0';ctx.font='600 28px system-ui';ctx.textAlign='center';ctx.fillText(emptyText,W/2,H/2);return}
  let a=-Math.PI/2;
  segments.forEach(s=>{let da=s.value/total*Math.PI*2;ctx.beginPath();ctx.strokeStyle=s.color;ctx.lineWidth=38;ctx.lineCap='butt';ctx.arc(cx,cy,r,a,a+da);ctx.stroke();a+=da});
  ctx.fillStyle='#172536';ctx.font='800 38px system-ui';ctx.textAlign='center';ctx.fillText(Math.round(total)+' km',cx,cy+8);
- ctx.font='20px system-ui';ctx.fillStyle='#748293';ctx.fillText('planned',cx,cy+37);
+ ctx.font='20px system-ui';ctx.fillStyle='#748293';ctx.fillText(centerLabel,cx,cy+37);
  ctx.textAlign='left';let y=82;
  segments.forEach(s=>{ctx.fillStyle=s.color;ctx.beginPath();ctx.arc(W*.58,y-6,8,0,Math.PI*2);ctx.fill();ctx.fillStyle='#314253';ctx.font='600 22px system-ui';ctx.fillText(s.label,W*.61,y);ctx.fillStyle='#748293';ctx.font='21px system-ui';ctx.fillText(`${s.value.toFixed(1)} km · ${Math.round(s.value/total*100)}%`,W*.61,y+28);y+=65});
+}
+function intensityGroups(items,distanceKey){
+ const dist=x=>Math.max(0,Number(x[distanceKey]??x.distance??x.distanceKm)||0);
+ return[
+  {label:'Easy / recovery',value:sum(items.filter(x=>['Easy','Recovery'].includes(x.type)).map(dist)),color:'#2d82c7'},
+  {label:'Long runs',value:sum(items.filter(x=>['Long run','Race'].includes(x.type)).map(dist)),color:'#159487'},
+  {label:'Tempo',value:sum(items.filter(x=>['Tempo','Marathon'].includes(x.type)).map(dist)),color:'#e49b35'},
+  {label:'Intervals / tests',value:sum(items.filter(x=>['Intervals','Fitness assessment'].includes(x.type)).map(dist)),color:'#7457c8'}
+ ].filter(x=>x.value>0);
 }
 function roundRect(ctx,x,y,w,h,r){w=Math.max(0,w);r=Math.min(r,w/2,h/2);ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath()}
 function drawDashboardCharts(){
@@ -832,9 +856,38 @@ function workoutHtml(p){let st=status(p);return`<div class="workout" data-id="${
 function renderToday(){let p=state.plan.find(x=>x.date===iso(today()));$('todayDate').textContent=today().toLocaleDateString(undefined,{weekday:'long',day:'numeric',month:'long'});$('todayCard').innerHTML=p?workoutHtml(p):'<div class="panel">No workout scheduled.</div>';$('todayCoach').innerHTML=p?`<div class="note">${p.coach}</div><div class="note good">${p.purpose}</div>`:''}
 function renderPlan(){
  if(!state.weekView)state.weekView=currentWeek();let arr=state.plan.filter(p=>p.week===state.weekView),wd=weekData(state.weekView),afd=adaptiveFactorDetails(state.weekView),factor=arr[0]?.factor||afd.factor||1;let factorText=afd.status==='pending'?`adaptive factor pending · currently ${factor.toFixed(2)}`:afd.status==='calculated'?`adaptive factor ${factor.toFixed(2)} · based on Week ${afd.previousWeek}`:`adaptive factor ${factor.toFixed(2)}`;$('weekHeader').innerHTML=`<b>Week ${state.weekView} · ${phase(state.weekView)}</b><br><span class="muted">${fmtDate(iso(weekStart(state.weekView)))} · ${wd.planned.toFixed(1)} km planned · ${wd.actual.toFixed(1)} km completed · ${factorText}</span>`;$('planCards').innerHTML=arr.map(workoutHtml).join('');
- const windowPlan=state.plan.filter(p=>p.type!=='Rest'&&p.type!=='Race Day'&&p.week>=state.weekView&&p.week<=state.weekView+3);
- const groups=[{label:'Easy / recovery',value:sum(windowPlan.filter(p=>['Easy','Recovery'].includes(p.type)).map(p=>p.distance)),color:'#2d82c7'},{label:'Long runs',value:sum(windowPlan.filter(p=>p.type==='Long run').map(p=>p.distance)),color:'#159487'},{label:'Tempo',value:sum(windowPlan.filter(p=>p.type==='Tempo').map(p=>p.distance)),color:'#e49b35'},{label:'Intervals / tests',value:sum(windowPlan.filter(p=>['Intervals','Fitness assessment'].includes(p.type)).map(p=>p.distance)),color:'#7457c8'}].filter(x=>x.value>0);
- if($('planMixChart'))drawDonut($('planMixChart'),groups);
+ const nextWeek=Math.min(weeks(),currentWeek()+1);
+ const nextWeekPlan=state.plan.filter(p=>p.type!=='Rest'&&p.type!=='Race Day'&&p.week===nextWeek);
+ const completedRuns=state.runs.filter(r=>Number(r.distanceKm)>0&&dte(r.date)<=today());
+ const entirePlan=state.plan.filter(p=>p.type!=='Rest'&&p.type!=='Race Day');
+ if($('nextWeekMixChart'))drawDonut($('nextWeekMixChart'),intensityGroups(nextWeekPlan,'distance'),`week ${nextWeek}`,'No sessions planned next week');
+ if($('completedMixChart'))drawDonut($('completedMixChart'),intensityGroups(completedRuns,'distanceKm'),'completed','No completed runs yet');
+ if($('overallMixChart'))drawDonut($('overallMixChart'),intensityGroups(entirePlan,'distance'),'full plan','No plan volume');
+}
+function streamAnalysis(records){
+ let valid=records.filter(r=>Number.isFinite(r.t)&&r.hr>40&&(r.power>0||r.speed>0)).sort((a,b)=>a.t-b.t);
+ if(valid.length<180)return null;
+ // Remove obvious pauses and implausible samples.
+ valid=valid.filter(r=>(!r.speed||r.speed>.5)&&(!r.power||r.power<1000)&&r.hr<230);
+ if(valid.length<180)return null;
+ let start=valid[0].t,end=valid.at(-1).t,total=end-start;
+ if(total<1800)return null;
+ let warmup=Math.min(900,Math.max(300,total*.15));
+ valid=valid.filter(r=>r.t>=start+warmup);
+ if(valid.length<150)return null;
+ let mid=(valid[0].t+valid.at(-1).t)/2,a=valid.filter(r=>r.t<=mid),b=valid.filter(r=>r.t>mid);
+ if(a.length<60||b.length<60)return null;
+ const mean=(arr,key)=>avg(arr.map(x=>x[key]).filter(v=>Number.isFinite(v)&&v>0));
+ let h1=mean(a,'hr'),h2=mean(b,'hr'),p1=mean(a,'power'),p2=mean(b,'power'),v1=mean(a,'speed'),v2=mean(b,'speed');
+ let powerDrift=p1&&p2&&h1&&h2?((h2/p2)/(h1/p1)-1)*100:null;
+ let paceDrift=v1&&v2&&h1&&h2?(1-(v2/h2)/(v1/h1))*100:null;
+ let drift=powerDrift;
+ if(!Number.isFinite(drift))return null;
+ return{
+   drift,powerDrift,paceDrift,firstHr:h1,secondHr:h2,firstPower:p1,secondPower:p2,
+   firstSpeed:v1,secondSpeed:v2,recordCount:valid.length,analysisDuration:valid.at(-1).t-valid[0].t,
+   reliability:valid.length>=1200?'High':valid.length>=600?'Medium':'Low'
+ };
 }
 function parseCSV(t){let rows=[],r=[],f='',q=false;for(let i=0;i<t.length;i++){let c=t[i],n=t[i+1];if(c=='"'&&q&&n=='"'){f+='"';i++}else if(c=='"')q=!q;else if(c==','&&!q){r.push(f);f=''}else if((c=='\n'||c=='\r')&&!q){if(c=='\r'&&n=='\n')i++;r.push(f);if(r.some(x=>x))rows.push(r);r=[];f=''}else f+=c}if(f||r.length){r.push(f);rows.push(r)}return rows}
 function summariseCSV(rows){
@@ -1205,10 +1258,10 @@ $('backupBtn').onclick=()=>download('ai-running-coach-backup.json',JSON.stringif
 let deferred;window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferred=e;$('installBtn').className='install'});$('installBtn').onclick=()=>deferred?.prompt();
 $('pillarCards')?.addEventListener('click',e=>{const card=e.target.closest('.pillarCard');if(!card||e.target.closest('summary'))return;const detail=card.querySelector('.pillarExplain');if(!detail)return;card.classList.toggle('open');detail.open=card.classList.contains('open');card.setAttribute('aria-expanded',String(detail.open))});
 $('pillarCards')?.addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&e.target.classList.contains('pillarCard')){e.preventDefault();e.target.click()}});
-const brandVersion=document.querySelector('.brand-copy p');if(brandVersion)brandVersion.textContent=`Adaptive marathon planning • v8.7.2 · build ${BUILD}`;
+const brandVersion=document.querySelector('.brand-copy p');if(brandVersion)brandVersion.textContent=`Adaptive marathon planning • v8.7.3a · build ${BUILD}`;
 if('serviceWorker'in navigator&&location.protocol==='https:')navigator.serviceWorker.register(`service-worker.js?v=${BUILD}`,{updateViaCache:'none'}).then(reg=>reg.update()).catch(()=>{});
 migrateAssessmentRuns();
 migrateImportedPower();
 renderAll();
-console.info('AI Running Coach v8.7.2 stable build 8720');
+console.info('AI Running Coach v8.7.3a stable build 8731');
 })();

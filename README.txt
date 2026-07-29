@@ -1,4 +1,4 @@
-AI Running Coach v8.7.2 Stable (build 8720)
+AI Running Coach v8.7.3a Stable (build 8731)
 
 FILES
 - index.html
@@ -9,9 +9,15 @@ FILES
 - README.txt
 
 DEPLOYMENT
-Replace the six files in the GitHub Pages repository. Keep the existing icon files. After deployment, fully close and reopen the browser tab or installed PWA once so cache 8720 activates.
+Replace the six files in the GitHub Pages repository. Keep the existing icon files. After deployment, fully close and reopen the browser tab or installed PWA once so cache 8731 activates.
 
-V8.7.2 MODEL AND DASHBOARD UPDATE
+V8.7.3 MODEL AND DASHBOARD UPDATE
+
+0. Asymmetric outcome range
+- Finish-time uncertainty now uses a split-normal distribution rather than a symmetric range.
+- The faster-than-predicted tail is shorter; the slower tail is longer to reflect the greater number of ways a marathon can underperform capability (durability, pacing, fuelling, weather, illness and pain).
+- Target probability is calculated from this same asymmetric distribution.
+
 
 1. Realistic race-today versus full-programme outlook
 - A short-distance assessment is no longer extrapolated to a marathon with one fixed exponent.
@@ -50,3 +56,8 @@ VALIDATION
 - Duplicate HTML IDs checked.
 - Version, build, service-worker and asset-cache references synchronised.
 - Existing storage schema and athlete data remain backwards compatible.
+
+5. Dashboard and Plan layout
+- Projected scores were removed from the visible execution-confidence model; it shows current evidence only.
+- Training execution to date now sits under Progress to race.
+- The Plan tab shows three intensity mixes: next week, all completed runs to date and the overall programme.
