@@ -1,4 +1,4 @@
-AI Running Coach v8.7.3a Stable (build 8731)
+AI Running Coach v8.7.4 Stable (build 8740)
 
 FILES
 - index.html
@@ -9,55 +9,35 @@ FILES
 - README.txt
 
 DEPLOYMENT
-Replace the six files in the GitHub Pages repository. Keep the existing icon files. After deployment, fully close and reopen the browser tab or installed PWA once so cache 8731 activates.
+Replace all six files in the GitHub Pages repository. Keep the existing icon files. Fully close and reopen the browser tab or installed PWA once so cache 8740 activates.
 
-V8.7.3 MODEL AND DASHBOARD UPDATE
+V8.7.4 PREDICTION AND EXECUTION UPDATE
 
-0. Asymmetric outcome range
-- Finish-time uncertainty now uses a split-normal distribution rather than a symmetric range.
-- The faster-than-predicted tail is shorter; the slower tail is longer to reflect the greater number of ways a marathon can underperform capability (durability, pacing, fuelling, weather, illness and pain).
-- Target probability is calculated from this same asymmetric distribution.
+1. Corrected asymmetric probability model
+- The central predicted time is now the median: 50% of outcomes lie faster and 50% slower before comparison with the target.
+- The faster tail remains narrower and the slower tail wider, but asymmetry no longer shifts most probability mass slower than the stated prediction.
+- This corrects the understated follow-programme probability in v8.7.3a.
 
+2. More useful uncertainty ranges
+- Dashboard ranges are now central 70% ranges rather than very broad 80% ranges.
+- Uncertainty is bounded and driven by assessment extrapolation, evidence coverage and current execution confidence.
+- Completing the programme narrows uncertainty but never eliminates race-day variability.
 
-1. Realistic race-today versus full-programme outlook
-- A short-distance assessment is no longer extrapolated to a marathon with one fixed exponent.
-- Race Today uses a conservative marathon-durability correction when long-run, volume and race-specific evidence are incomplete.
-- Follow Programme projects the durability correction after completing the planned long runs and quality work.
-- It also permits a modest, capped central fitness adaptation of up to 2.5%, with diminishing returns and health/training-opportunity limits.
-- Preparation therefore affects both marathon transfer and forecast uncertainty, but does not overwrite the underlying assessment result.
+3. Scientifically conservative programme outlook
+- Short-race Riegel extrapolation is corrected for marathon durability when long-run and volume evidence are incomplete.
+- Full programme execution improves durability and allows only a modest, capped central fitness gain.
+- A probability above 90% occurs only when projected capability has a sufficient margin over the target; it is not guaranteed merely for completing a plan.
 
-2. No invented 50 scores
-- A component with zero evidence now displays Not scored / N/A.
-- Missing evidence widens uncertainty instead of being shown as a neutral score.
-- Preparation time is future opportunity and no longer counts as proof of current marathon preparation.
+4. Training execution matching fix
+- Same-day imported runs are prioritised for matching to the same-day planned workout.
+- Existing unlinked runs are automatically reconciled only when there is one credible exact-date match.
+- Training execution to date now updates for today's completed workout.
 
-3. Training execution breakdown
-- Shows completed versus due sessions for all runs.
-- Shows completed versus due distance.
-- Separates easy/recovery, tempo/interval/assessment, quality-run pace and long-run completion.
-- Quality pace uses matched completed workouts and a tolerance around the planned main-set pace. It is identified as an approximate whole-run check where split-level pace is unavailable.
+5. Pace adherence
+- Added an overall pace-adherence row for matched runs.
+- It compares whole-session actual pace with a whole-session planned estimate that includes warm-up and cooldown.
+- Quality-session pace remains approximate without lap-level CSV targets.
 
-4. Prediction trend clarification
-- Each qualifying run import, edited run or assessment can save a dated prediction point.
-- The chart shows movement in the central marathon estimate over time against the target line.
-- It does not repeat the current versus programme uncertainty comparison from Marathon Outlook.
-
-5. Dashboard and plan cleanup
-- Training intensity mix moved from Dashboard to the Plan tab.
-- Longest verified run continues to show the planned peak-long-run distance.
-- Preparation milestone section remains removed.
-
-MODEL LIMITS
-This is a transparent coaching forecast, not a clinically or statistically validated individual race guarantee. The dynamic fatigue exponent, adaptation cap, uncertainty coefficients and probability labels are conservative model assumptions. They should be calibrated against actual marathon outcomes before being treated as population-validated coefficients.
-
-VALIDATION
-- JavaScript syntax checked.
-- Manifest JSON checked.
-- Duplicate HTML IDs checked.
-- Version, build, service-worker and asset-cache references synchronised.
-- Existing storage schema and athlete data remain backwards compatible.
-
-5. Dashboard and Plan layout
-- Projected scores were removed from the visible execution-confidence model; it shows current evidence only.
-- Training execution to date now sits under Progress to race.
-- The Plan tab shows three intensity mixes: next week, all completed runs to date and the overall programme.
+6. Dashboard cleanup and colour consistency
+- Removed Evidence coverage from Progress to race because it is already shown in Execution confidence.
+- The outlook hero, current scenario and programme scenario now use consistent green, amber or red status colouring.
