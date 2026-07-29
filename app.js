@@ -76,7 +76,7 @@ function recommendedRaceDate(setup){
  let totalWeeks=Math.ceil(Math.max(minimumTotal,req.requiredBuildWeeks+taperWeeks+2));
  return{date:iso(new Date(dte(setup.planStart).getTime()+totalWeeks*7*DAY)),totalWeeks,requiredBuildWeeks:req.requiredBuildWeeks,taperWeeks};
 }
-const BUILD=9050, SCHEMA=9050, STORAGE_KEY='arc_v62_web', MIRROR_KEY='arc_v8500_web', BACKUP_KEY='arc_pre8500_backup';
+const BUILD=9100, SCHEMA=9100, STORAGE_KEY='arc_v62_web', MIRROR_KEY='arc_v8500_web', BACKUP_KEY='arc_pre8500_backup';
 const defaults=()=>{let start=iso(new Date()),setup={planStart:start,raceDate:start,raceName:'Goal Race',raceDistance:42.195,targetTime:15300,currentWeekly:35,currentLongest:18,testDistance:5,testTime:1515,thresholdHr:168,criticalPower:300,bodyWeight:93,maxWeekly:65,growth:.07,peakLong:32,taperDays:14,minFactor:.85,maxFactor:1.05,adaptive:true};setup.raceDate=recommendedRaceDate(setup).date;return({schemaVersion:SCHEMA,setup,days:FIVE_DAY_TEMPLATE.map(d=>[...d]),runs:[],assessments:[],plan:[],weekView:null,migration:{to:SCHEMA,status:'new',time:new Date().toISOString()}})};
 let migrationReport={from:null,to:SCHEMA,status:'new install',source:'defaults',runs:0,assessments:0,fieldsRecovered:0,warning:''};
 function parseStored(raw){if(!raw)return null;try{const x=JSON.parse(raw);return x&&typeof x==='object'?x:null}catch(err){recordDiagnostic('Storage parse',err);return null}}
@@ -498,7 +498,7 @@ function confidence(){
  let consistency=executionEvidence?clamp(matched/opportunities*100,0,100):null;
  let adherence=executionEvidence&&plannedKm>0?clamp(actual/plannedKm*100,0,100):null;
  let scheduleAdherence=matchedRuns.length?avg(matchedRuns.map(x=>matchTimingCredit(x.r,x.p))):null;
- let painValues=recent.map(r=>Number(r.pain)).filter(Number.isFinite);
+ let painValues=state.runs.filter(r=>dte(r.date)>=new Date(today().getTime()-28*DAY)&&dte(r.date)<=today()&&r.pain!==null&&r.pain!==undefined&&r.pain!=='').map(r=>Number(r.pain)).filter(Number.isFinite);
  let hrvState=hrvModel();
  let recoveryScore=hrvState.ready?clamp(100+(hrvState.deviation||0)*100,0,100):null;
  let painScore=painValues.length?clamp((10-avg(painValues))/10*100,0,100):null;
@@ -593,9 +593,9 @@ function initialProgrammePrediction(setup=state.setup){
  const exponent=1.06+.055*(1-initialDurability)*extrapolation;
  return testTime*Math.pow(raceDist/testDist,exponent);
 }
-function prediction(){
- // Convert shorter-distance capability to a marathon estimate with a durability
- // exponent that improves only when marathon-specific evidence exists.
+function rawPrediction(){
+ // Raw model signal. This is not applied in full after every activity because
+ // ordinary training runs provide much weaker fitness evidence than assessments.
  const c=confidence();
  const latest=state.assessments.filter(a=>a.valid).sort((a,b)=>b.date.localeCompare(a.date))[0];
  const testTime=latest?latest.time:state.setup.testTime,testDist=Math.max(.1,latest?latest.distance:state.setup.testDistance);
@@ -606,16 +606,43 @@ function prediction(){
  const exponent=1.06+.055*(1-durability)*extrapolation;
  return testTime*Math.pow(state.setup.raceDistance/testDist,exponent);
 }
+function prediction(){
+ const history=(state.predictionHistory||[]).filter(x=>Number.isFinite(Number(x.seconds))).slice().sort((a,b)=>(a.date||'').localeCompare(b.date||'')||(a.updatedAt||'').localeCompare(b.updatedAt||''));
+ const saved=history.at(-1);
+ return saved?Number(saved.seconds):(Number(state.programStartPrediction)||initialProgrammePrediction(state.setup)||rawPrediction());
+}
+function predictionEvidencePolicy(source,entityId){
+ const run=(state.runs||[]).find(r=>r.id===entityId);
+ const assessment=(state.assessments||[]).find(a=>a.id===entityId);
+ const type=assessment?'Fitness assessment':(run?.type||source||'Training update');
+ const policies={
+  'Recovery':{weight:.05,cap:20,quality:'Low',reason:'Recovery runs confirm consistency but provide very little direct marathon-capability evidence.'},
+  'Easy':{weight:.08,cap:30,quality:'Low',reason:'Easy runs support aerobic consistency and adherence, but only weakly update marathon capability.'},
+  'Long run':{weight:.30,cap:150,quality:'Medium',reason:'Long runs provide meaningful evidence about marathon durability.'},
+  'Tempo':{weight:.20,cap:90,quality:'Medium',reason:'Tempo running provides moderate evidence about sustained aerobic capability.'},
+  'Intervals':{weight:.22,cap:90,quality:'Medium',reason:'Intervals provide moderate fitness evidence but are less race-specific than assessments.'},
+  'Fitness assessment':{weight:.70,cap:480,quality:'High',reason:'A valid assessment directly measures current performance and strongly updates the prediction.'},
+  'Race':{weight:.90,cap:900,quality:'Very high',reason:'A race result is high-quality direct performance evidence.'}
+ };
+ return{type,...(policies[type]||{weight:.10,cap:45,quality:'Low',reason:'This activity provides limited direct evidence about marathon capability.'})};
+}
 function scoreStatus(score,hasEvidence=true){if(!hasEvidence||!Number.isFinite(score))return'noEvidence';if(score>=80)return'good';if(score>=60)return'watch';return'action'}
 function recordPredictionSnapshot(date=iso(today()),source='Training update',entityId=null){
- const seconds=prediction();if(!Number.isFinite(seconds))return;
+ const raw=rawPrediction();if(!Number.isFinite(raw))return;
  state.predictionHistory=Array.isArray(state.predictionHistory)?state.predictionHistory:[];
  let existing=entityId?state.predictionHistory.find(x=>x.entityId===entityId):state.predictionHistory.find(x=>x.date===date&&x.source===source&&!x.entityId);
  if(entityId&&!existing){const sameDateLegacy=state.predictionHistory.filter(x=>!x.entityId&&x.date===date);if(sameDateLegacy.length===1)existing=sameDateLegacy[0];else if((state.runs||[]).filter(r=>r.source!=='assessment').length+(state.assessments||[]).length===1){existing=[...state.predictionHistory].reverse().find(x=>!x.entityId)}}
- if(existing){existing.date=date;existing.seconds=seconds;existing.source=source;existing.entityId=entityId||existing.entityId;existing.updatedAt=new Date().toISOString()}
- else state.predictionHistory.push({id:'pred-'+Date.now()+'-'+Math.random().toString(36).slice(2,7),date,seconds,source,entityId,updatedAt:new Date().toISOString()});
- // Remove legacy duplicates for the same run/entity and retain one chronological point per actual event.
- const seen=new Set();state.predictionHistory=state.predictionHistory.sort((a,b)=>(a.updatedAt||'').localeCompare(b.updatedAt||'')).filter(x=>{let k=x.entityId?'e:'+x.entityId:`l:${x.date}|${x.source}`;if(seen.has(k))return false;seen.add(k);return true}).sort((a,b)=>a.date.localeCompare(b.date)).slice(-60);
+ const other=state.predictionHistory.filter(x=>x!==existing&&Number.isFinite(Number(x.seconds))).slice().sort((a,b)=>(a.date||'').localeCompare(b.date||'')||(a.updatedAt||'').localeCompare(b.updatedAt||''));
+ const previous=other.at(-1)?.seconds??Number(state.programStartPrediction)??initialProgrammePrediction(state.setup)??raw;
+ const policy=predictionEvidencePolicy(source,entityId);
+ const requested=(raw-Number(previous))*policy.weight;
+ const applied=clamp(requested,-policy.cap,policy.cap);
+ const seconds=Number(previous)+applied;
+ const metadata={rawSeconds:raw,previousSeconds:Number(previous),updateDelta:applied,evidenceWeight:policy.weight,evidenceQuality:policy.quality,evidenceType:policy.type,evidenceReason:policy.reason,maxChange:policy.cap};
+ if(existing){Object.assign(existing,{date,seconds,source,entityId:entityId||existing.entityId,updatedAt:new Date().toISOString(),...metadata})}
+ else state.predictionHistory.push({id:'pred-'+Date.now()+'-'+Math.random().toString(36).slice(2,7),date,seconds,source,entityId,updatedAt:new Date().toISOString(),...metadata});
+ // Remove duplicates while retaining one prediction update per real run or assessment.
+ const seen=new Set();state.predictionHistory=state.predictionHistory.sort((a,b)=>(a.updatedAt||'').localeCompare(b.updatedAt||'')).filter(x=>{let k=x.entityId?'e:'+x.entityId:`l:${x.date}|${x.source}`;if(seen.has(k))return false;seen.add(k);return true}).sort((a,b)=>(a.date||'').localeCompare(b.date||'')||(a.updatedAt||'').localeCompare(b.updatedAt||'')).slice(-60);
 }
 const interpretations={
  'Fitness':s=>s>=85?'Recent assessment performance strongly supports the target.':s>=65?'Performance is credible but not yet comfortably above the target requirement.':'Current assessment evidence does not support the target.',
@@ -970,7 +997,7 @@ function renderDashboard(){
  const vsTarget=Number.isFinite(currentEstimate)?currentEstimate-targetTime:null;
  const eventCount=trendHistory.length;
  const deltaText=(v,betterLabel='faster',worseLabel='slower')=>!Number.isFinite(v)?'—':Math.abs(v)<30?'No material change':`${v<0?betterLabel:worseLabel} by ${fmtTime(Math.abs(v))}`;
- $('predictionSummary').innerHTML=`<div class="predictionReferences"><div><span>Target time</span><strong>${fmtTime(targetTime)}</strong><small>Fixed race goal</small></div><div><span>Predicted at programme start</span><strong>${fmtTime(startPrediction)}</strong><small>Fixed baseline from the plan-start inputs</small></div></div>${eventCount?`<div class="predictionCurrent"><span>Current prediction after ${eventCount} uploaded update${eventCount===1?'':'s'}</span><strong>${fmtTime(currentEstimate)}</strong><div class="predictionDeltas"><span><b>${deltaText(vsStart)}</b><small>versus programme start</small></span><span><b>${deltaText(vsTarget,'inside target','outside target')}</b><small>versus target</small></span></div><small>Latest update: ${esc(currentSaved.source||'Run update')} · ${fmtDate(currentSaved.date)}</small></div>`:`<div class="predictionAwaiting"><strong>No run-based prediction updates yet</strong><p>Upload or log a run, or save a valid assessment, to add the first progression point. The two horizontal lines below are the fixed programme-start prediction and target.</p></div>`}`;
+ $('predictionSummary').innerHTML=`<div class="predictionReferences"><div><span>Target time</span><strong>${fmtTime(targetTime)}</strong><small>Fixed race goal</small></div><div><span>Predicted at programme start</span><strong>${fmtTime(startPrediction)}</strong><small>Fixed baseline from the plan-start inputs</small></div></div>${eventCount?`<div class="predictionCurrent"><span>Current prediction after ${eventCount} uploaded update${eventCount===1?'':'s'}</span><strong>${fmtTime(currentEstimate)}</strong><div class="predictionDeltas"><span><b>${deltaText(vsStart)}</b><small>versus programme start</small></span><span><b>${deltaText(vsTarget,'inside target','outside target')}</b><small>versus target</small></span></div><small>Latest update: ${esc(currentSaved.source||'Run update')} · ${fmtDate(currentSaved.date)}</small>${currentSaved.evidenceReason?`<div class="predictionUpdateEvidence"><b>${esc(currentSaved.evidenceQuality||'Low')} evidence · ${Math.round((Number(currentSaved.evidenceWeight)||0)*100)}% update weight</b><span>${esc(currentSaved.evidenceReason)}</span><small>Applied change ${fmtTime(Math.abs(Number(currentSaved.updateDelta)||0))} ${Number(currentSaved.updateDelta)<0?'faster':'slower'}; single-update cap ${fmtTime(Number(currentSaved.maxChange)||0)}.</small></div>`:''}</div>`:`<div class="predictionAwaiting"><strong>No run-based prediction updates yet</strong><p>Upload or log a run, or save a valid assessment, to add the first progression point. The two horizontal lines below are the fixed programme-start prediction and target.</p></div>`}`;
  if($('componentGuide'))$('componentGuide').innerHTML=c.components.map(x=>`<div><b>${x.name}</b><p>${componentDefinitions[x.name]}</p><small class="${x.hasEvidence?'muted':'metricMissing'}">${x.hasEvidence?`Current score: ${Math.round(x.displayScore)} / 100 · evidence ${Math.round((x.evidenceFraction??1)*100)}%`:'No evidence yet'} · within-component weight ${Math.round(x.weight*100)}%</small></div>`).join('');
  let missing=uniqueComponents(c.components.filter(x=>!x.hasEvidence));
  $('dataNeeded').innerHTML=missing.length?missing.map(x=>`<div class="note"><b>${x.name}</b><br>${componentDefinitions[x.name]}</div>`).join(''):'<p class="muted">All preparation-model components currently have evidence.</p>';
@@ -1572,10 +1599,10 @@ $('backupBtn').onclick=()=>download('ai-running-coach-backup.json',JSON.stringif
 let deferred;window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferred=e;$('installBtn').className='install'});$('installBtn').onclick=()=>deferred?.prompt();
 $('pillarCards')?.addEventListener('click',e=>{const card=e.target.closest('.pillarCard');if(!card||e.target.closest('summary'))return;const detail=card.querySelector('.pillarExplain');if(!detail)return;card.classList.toggle('open');detail.open=card.classList.contains('open');card.setAttribute('aria-expanded',String(detail.open))});
 $('pillarCards')?.addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&e.target.classList.contains('pillarCard')){e.preventDefault();e.target.click()}});
-const brandVersion=document.querySelector('.brand-copy p');if(brandVersion)brandVersion.textContent=`Adaptive marathon planning • v9.0.5 · build ${BUILD}`;
+const brandVersion=document.querySelector('.brand-copy p');if(brandVersion)brandVersion.textContent=`Adaptive marathon planning • v9.1.0 · build ${BUILD}`;
 if('serviceWorker'in navigator&&location.protocol==='https:')navigator.serviceWorker.register(`service-worker.js?v=${BUILD}`,{updateViaCache:'none'}).then(reg=>reg.update()).catch(()=>{});
 migrateAssessmentRuns();
 migrateImportedPower();
 renderAll();
-console.info('AI Running Coach v9.0.5 stable build 9050');
+console.info('AI Running Coach v9.1.0 stable build 9100');
 })();

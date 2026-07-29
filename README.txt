@@ -1,16 +1,12 @@
-AI Running Coach v9.0.5 Stable — build 9050
+AI Running Coach v9.1.0 Stable — build 9100
 
-WHAT CHANGED
-- Rebuilt the predicted marathon-time trend around three clearly separated concepts:
-  1. Target time — a fixed horizontal reference line with its time in the legend.
-  2. Predicted at programme start — a fixed horizontal reference line with its time in the legend.
-  3. Prediction updates — event points added only after a run is uploaded/logged or a valid assessment is saved.
-- The programme-start prediction is now stored independently from prediction history. It is derived from the plan-start test, weekly-volume and longest-run inputs and remains fixed.
-- Before any uploaded event, the chart contains only the two horizontal reference lines and no artificial prediction point.
-- After events are saved, the current prediction is called out against both the programme-start prediction and the target.
-- Editing the same run or assessment updates its existing event point rather than creating a duplicate.
-- Changing core plan-start inputs creates a new fixed programme baseline and clears the old progression history so incompatible programmes are not mixed.
-- Updated schema, version labels, manifest and service-worker cache to v9.0.5 build 9050.
+Changes in this release
+- Fixed pain evidence detection. A supplied 0–10 pain rating is now recognised independently of plan matching and the due-workout window.
+- Added evidence-weighted prediction updates. Easy and recovery runs can move the central estimate only slightly; long runs, quality sessions, assessments and races have progressively greater influence.
+- Added per-activity change caps to prevent one ordinary run from causing an implausibly large prediction swing.
+- Added an explanation to the latest prediction update showing evidence quality, update weight, applied change and cap.
+- HRV and pain continue to affect recovery and training adaptation; they do not directly manufacture a race-time change.
+- Updated schema, version labels, manifest and service-worker cache to v9.1.0 build 9100.
 
-INSTALLATION
-Replace all six files in the GitHub Pages repository and retain the existing icon files. After deployment, fully close and reopen the browser or installed PWA so cache build 9050 activates.
+Deployment
+Replace all six files in the GitHub Pages repository and retain the existing icon files. After deployment, fully close and reopen the browser or installed PWA so cache build 9100 activates.
