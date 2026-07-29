@@ -1,4 +1,4 @@
-AI Running Coach v8.6.3 Stable — build 8630
+AI Running Coach v8.6.4 Stable — build 8640
 Schema: 8500 (backwards compatible)
 
 DEPLOYMENT
@@ -10,9 +10,9 @@ Replace all six files together:
 - service-worker.js
 - README.txt
 
-Keep the existing icon files in the repository. After GitHub Pages deploys, fully close and reopen the browser tab or installed PWA once so service-worker cache 8630 activates.
+Keep the existing icon files in the repository. After GitHub Pages deploys, fully close and reopen the browser tab or installed PWA once so service-worker cache 8640 activates.
 
-v8.6.3 DASHBOARD CLARITY UPDATE
+v8.6.4 DASHBOARD CLARITY UPDATE
 
 The Dashboard is now ordered around the way a runner uses coaching information:
 1. Coach verdict — the immediate assessment and what matters now.
@@ -29,26 +29,26 @@ RELEASE NOTES
 - Moved Coach assessment directly below the race overview.
 - Grouped Goal progress, Race timeline, weekly volume and long-run progression together.
 - Grouped readiness pillars, adherence, intensity mix and adaptive factor together.
-- Grouped readiness forecast and race prediction under Future outlook.
+- Grouped the forward-looking race metrics under Future outlook in the earlier dashboard structure.
 - Kept technical efficiency and cardiac-drift analysis in a dedicated Performance analytics section.
 - Made Next key sessions the final dashboard section.
 - Added responsive styling for the numbered dashboard section headings.
-- Synchronized index, app, stylesheet, manifest, service worker and README to v8.6.3 build 8630.
+- Synchronized index, app, stylesheet, manifest, service worker and README to v8.6.4 build 8640.
 
 No readiness calculation, race prediction calculation, workout-generation rule, schema or stored athlete data was changed. Schema remains 8500.
 
 
-v8.6.3 CHANGES
+v8.6.4 CHANGES
 - Moved the adaptive-factor foldout into Section 2, Progress to goal.
 - Made the Training progression factor KPI tile open and close the calculation foldout.
 - Removed the Weekly completion rate graph. Completion evidence remains in the readiness model.
 - Removed Section 6, What to do next, and its Next key sessions panel.
 - Clarified that the prediction chart shows valid assessment history plus one automatically updated live estimate.
 - Fixed missing Schedule adherence interpretation, action and calculation-definition mappings that could display undefined.
-- Synchronized all six release files to v8.6.3 build 8630.
+- Synchronized all six release files to v8.6.4 build 8640.
 
 
-v8.6.3 focused update
+v8.6.4 focused update
 - Readiness pillars are tappable and reveal their calculation in place.
 - All Progress KPIs remain visible on mobile and desktop.
 - Chart points can be tapped for date, value and context.
@@ -56,9 +56,20 @@ v8.6.3 focused update
 - Readiness colours consistently mean green/on track, amber/watch, red/action and grey/no evidence.
 
 
-v8.6.3 FOCUSED PATCH
+v8.6.4 FOCUSED PATCH
 - Corrected the day-length constant from 86,401,000 ms to 86,400,000 ms.
-- Corrected manifest version metadata and synchronized all release references to v8.6.3 build 8630.
+- Corrected manifest version metadata and synchronized all release references to v8.6.4 build 8640.
 - Removed the More details / Show less control; all Progress KPIs remain visible.
 - Moved the adaptive-factor foldout directly below the KPI grid.
 - Removed automatic scrolling when the Training progression factor tile is tapped.
+
+
+v8.6.4 TARGET PROBABILITY UPDATE
+- Removed all readiness forecast scenarios from the dashboard.
+- Replaced predicted race-day readiness with one Target Probability metric.
+- Target Probability starts with the probability that the target time falls within the predicted-time distribution.
+- Prediction uncertainty narrows with stronger evidence coverage and widens when short assessments are extrapolated to longer races.
+- Marathon preparation, recovery/pain and available training opportunity adjust the probability modestly; they cannot override the performance prediction.
+- The displayed value is capped at 5–95% to reflect unavoidable race-day uncertainty.
+- Labels: below 40% Unlikely; 40–59% Possible; 60–79% Good chance; 80–95% Very likely.
+- This is a coaching estimate, not a clinically or statistically validated probability.
