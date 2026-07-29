@@ -3,18 +3,18 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#0b3157"><title>AI Running Coach</title>
-<link rel="manifest" href="manifest.webmanifest?v=8780"><link rel="stylesheet" href="styles.css?v=8780">
+<link rel="manifest" href="manifest.webmanifest?v=8800"><link rel="stylesheet" href="styles.css?v=8800">
 
-<link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png?v=8780">
-<link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png?v=8780">
-<link rel="icon" href="favicon.ico?v=8780">
-<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=8780">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png?v=8800">
+<link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png?v=8800">
+<link rel="icon" href="favicon.ico?v=8800">
+<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=8800">
 <meta property="og:image" content="github-banner.png">
 
 </head>
 <body>
 <header class="topbar">
-  <div class="brand"><img class="logo" src="icon-192.png?v=8780" alt="AI Running Coach logo"><div class="brand-copy"><h1>AI Running Coach</h1><p>Adaptive marathon planning • v8.7.8 · build 8780</p></div></div>
+  <div class="brand"><img class="logo" src="icon-192.png?v=8800" alt="AI Running Coach logo"><div class="brand-copy"><h1>AI Running Coach</h1><p>Adaptive marathon planning • v8.8.0 · build 8800</p></div></div>
   <button id="installBtn" class="install hidden">Install</button>
 </header>
 <nav id="nav"></nav>
@@ -157,6 +157,19 @@
   <article class="panel"><h3>How to interpret the model</h3><p>The confidence score combines fitness, endurance, consistency, adherence, recovery and economy. The detailed component scores remain available in the readiness and metric sections. This page intentionally avoids repeating them as separate strengths, risks or action rankings.</p></article>
 </section>
 
+
+<section id="recovery" class="page">
+  <div class="sectionTitle"><div><h2>Recovery</h2><p>Garmin HRV, pain and their effect on future training adaptation in one place.</p></div></div>
+  <div id="recoveryStatus" class="recoveryStatus"></div>
+  <article class="panel recoveryTrendPanel">
+    <div class="panelHead"><div><h3>Garmin HRV trend</h3><p class="muted compact">Previous-night Overnight Average, recent average and personal baseline</p></div><div id="hrvTrendBadge" class="evidenceBadge"></div></div>
+    <canvas id="hrvChart" width="1000" height="420"></canvas>
+    <div id="hrvLegend" class="hrvLegend"></div>
+  </article>
+  <article class="panel"><div class="panelHead"><div><h3>Adaptive Factor contribution</h3><p class="muted compact">How recovery evidence changes future training load</p></div></div><div id="recoveryAdaptive"></div></article>
+  <details class="panel modelDetails"><summary>How Garmin HRV is used</summary><div id="hrvExplanation" class="guideGrid componentGuide"></div></details>
+</section>
+
 <section id="race" class="page">
   <div class="sectionTitle"><div><h2>Race day</h2><p>Execution plan based on the current target and readiness.</p></div></div>
   <div id="raceKpis" class="kpis"></div>
@@ -174,5 +187,5 @@
 </main>
 
 <div id="modal" class="modal hidden"><div class="modalCard"><button id="closeModal" class="close">×</button><div id="modalContent"></div></div></div>
-<script src="app.js?v=8780"></script>
+<script src="app.js?v=8800"></script>
 </body></html>

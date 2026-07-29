@@ -1,4 +1,4 @@
-AI Running Coach v8.7.8 Stable — build 8780
+AI Running Coach v8.8.0 Stable — build 8800
 
 Changes: Garmin previous-night HRV logging, baseline from first logged value, 7-value rolling average, HRV-informed adaptive factor, unique prediction-history points, race defaults through 100 km, and corrected version labels.
 
@@ -60,3 +60,11 @@ HRV UPDATE IN v8.7.8
 - 7–20 values: maximum HRV moderation 6%.
 - 21+ values: established model, maximum HRV moderation 10%.
 - Early estimates are labelled by maturity and remain deliberately low influence.
+
+
+v8.8.0 RECOVERY CONSOLIDATION
+- Added one dedicated Recovery tab rather than duplicating HRV cards across the Dashboard.
+- Consolidates Garmin HRV, pain status, overall recovery conclusion and Adaptive Factor contribution.
+- HRV trend graph shows nightly values, recent average and personal baseline.
+- HRV is used from the first logged value with staged influence: 0%, 1%, 3%, 6% and 10% maximum moderation as evidence matures.
+- Detailed explanation confirms HRV changes future training load only and does not directly alter race prediction.
