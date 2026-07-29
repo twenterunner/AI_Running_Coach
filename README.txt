@@ -1,11 +1,13 @@
-AI Running Coach v8.8.0 Stable — build 8800
+AI Running Coach v8.8.1 Stable — build 8810
 
-Changes: Garmin previous-night HRV logging, baseline from first logged value, 7-value rolling average, HRV-informed adaptive factor, unique prediction-history points, race defaults through 100 km, and corrected version labels.
-
-AI Running Coach v8.7.8 Stable (v8.7.8)
+Changes in v8.8.1:
+- Corrected the runtime title bar so JavaScript no longer overwrites v8.8.x with v8.7.8.
+- Moved Recovery to the second navigation position, directly after Dashboard.
+- Updated cache-busting references and service-worker cache to build 8810.
+- Rechecked JavaScript syntax, manifest validity, duplicate HTML IDs, referenced DOM IDs and ZIP integrity.
 
 INSTALLATION
-Replace all six files in the GitHub Pages repository. Keep the existing icon files. Fully close and reopen the browser tab or installed PWA once so cache 8780 activates.
+Replace all six files in the GitHub Pages repository. Keep the existing icon files. Fully close and reopen the browser tab or installed PWA once so cache build 8810 activates.
 
 V8.7.6 PLAN-SENSITIVE PREDICTION MODEL
 
