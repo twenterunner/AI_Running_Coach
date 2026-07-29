@@ -1,9 +1,9 @@
-AI Running Coach v8.7.5 Stable (build 8750)
+AI Running Coach v8.7.6 Stable (build 8760)
 
 INSTALLATION
-Replace all six files in the GitHub Pages repository. Keep the existing icon files. Fully close and reopen the browser tab or installed PWA once so cache 8750 activates.
+Replace all six files in the GitHub Pages repository. Keep the existing icon files. Fully close and reopen the browser tab or installed PWA once so cache 8760 activates.
 
-V8.7.5 PLAN-SENSITIVE PREDICTION MODEL
+V8.7.6 PLAN-SENSITIVE PREDICTION MODEL
 
 1. Plan settings now influence the projected race result
 - The full-programme scenario scores the actual planned peak weekly distance, peak long run, enabled running days, weekly growth limit, taper duration, intensity mix and whether the peak is reachable in the available build weeks.

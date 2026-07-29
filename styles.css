@@ -278,6 +278,9 @@ canvas{width:100%;height:auto;display:block}
 .factorToggle{width:100%;border:0;background:transparent;text-align:left;padding:16px 18px;font:inherit;color:inherit;cursor:pointer;display:flex;flex-direction:column;align-items:flex-start}
 .factorToggle label{pointer-events:none}.factorToggle strong{pointer-events:none}.factorToggle small{pointer-events:none}
 .factorInlineDetail{display:none;border-top:1px solid var(--line);padding:15px 18px 18px;background:rgba(242,247,250,.72)}
-.factorKpi.open{grid-column:1/-1}.factorKpi.open .factorInlineDetail{display:block}.factorKpi.open .factorToggle small:after{content:"  ⌃"}.factorKpi:not(.open) .factorToggle small:after{content:"  ›";font-weight:900;color:var(--blue)}
+.factorKpi.open .factorInlineDetail{display:block}.factorKpi.open{align-self:start}.factorKpi.open .factorToggle small:after{content:"  ⌃"}.factorKpi:not(.open) .factorToggle small:after{content:"  ›";font-weight:900;color:var(--blue)}
 .modelDetail{margin-top:14px}.modelDetail>summary{display:flex;justify-content:space-between;gap:12px;align-items:center;cursor:pointer;font-weight:850;color:var(--ink)}.modelDetail>summary small{color:var(--muted);font-weight:700}.modelDetailBody{padding-top:15px}.modelSteps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.modelSteps section{border:1px solid var(--line);border-radius:14px;padding:14px;background:var(--soft)}.modelSteps p{font-size:12px;line-height:1.5;color:var(--muted)}.modelSteps code{display:block;white-space:normal;font:700 12px/1.45 system-ui;color:var(--navy);background:#fff;border:1px solid var(--line);border-radius:9px;padding:9px}
-@media(max-width:760px){.modelSteps{grid-template-columns:1fr}.factorKpi.open{grid-column:1/-1}}
+@media(max-width:760px){.modelSteps{grid-template-columns:1fr}}
+
+/* v8.7.6 clarity and inline adaptive detail */
+.factorKpi{overflow:hidden}.factorInlineDetail{max-height:0;display:block!important;padding-top:0;padding-bottom:0;opacity:0;transition:max-height .25s ease,opacity .2s ease,padding .25s ease}.factorKpi.open .factorInlineDetail{max-height:900px;opacity:1;padding:15px 18px 18px}.outlookCard>span{line-height:1.35;min-height:30px}.predictionPrimary small,.predictionComparison small{line-height:1.45}
