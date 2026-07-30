@@ -1,8 +1,11 @@
-AI Running Coach v9.8.7 Stable — build 9870
+AI Running Coach v9.8.8 Stable — build 9880
 
 This release improves only the Injury tab and leaves all running-plan, recovery, assessment, race and dashboard calculations unchanged.
 
 Changes:
+- Restores the established tab order: Dashboard, Today, Plan, Runs, Assessments, Recovery, Injury, Race day, Settings.
+- Colour-codes rehabilitation completion using red, amber and green thresholds.
+- Restores the observed-versus-nominal recovery progress graph in the Injury tab.
 - Removes the large blue explanatory block from the Injury tab.
 - Shows only one Add injury control, and hides it once an injury is active.
 - Always produces a clearly labelled working diagnosis from the entered mechanism, location and symptoms when no clinician diagnosis is supplied.
@@ -13,4 +16,4 @@ Changes:
 - Keeps Injury data independent from plan generation and race prediction.
 
 Deployment:
-Replace all six application files in the GitHub Pages repository. Retain the existing icon files. Fully close and reopen the installed PWA after deployment so cache build 9870 activates.
+Replace all six application files in the GitHub Pages repository. Retain the existing icon files. Fully close and reopen the installed PWA after deployment so cache build 9880 activates.
