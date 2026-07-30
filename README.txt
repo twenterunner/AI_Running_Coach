@@ -1,4 +1,4 @@
-AI Running Coach v9.9.1 Stable — build 9910
+AI Running Coach v9.9.2 Stable — build 9920
 
 This release changes only the Injury tab and its supporting injury data model.
 
@@ -15,4 +15,11 @@ Injury-tab changes:
 - Keeps all non-Injury calculations, plans, predictions, tabs and workflows unchanged.
 
 Deployment:
-Replace all six application files in the GitHub Pages repository. Retain the existing icon files. Fully close and reopen the installed PWA after deployment so cache build 9910 activates.
+Replace all six application files in the GitHub Pages repository. Retain the existing icon files. Fully close and reopen the installed PWA after deployment so cache build 9920 activates.
+
+
+v9.9.2 Injury update
+- Body-region constrained pattern matching prevents knee entries from returning hip or hamstring patterns.
+- Injury library expanded to 50 running-related patterns.
+- Treatment guidance is selected by clinically coherent rehabilitation family and safety-held for higher-risk patterns.
+- Injury entry and review layouts reorganised around location, symptoms, current status, action and progression.
