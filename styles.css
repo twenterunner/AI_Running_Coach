@@ -415,7 +415,7 @@ canvas{width:100%;height:auto;display:block}
 .adaptationPath.pacePath{border-top:5px solid var(--blue)}
 .adaptationPath.loadPath{border-top:5px solid var(--teal)}
 .pathHeader{display:flex;justify-content:space-between;gap:12px;align-items:center}.pathHeader span{font-size:.76rem;letter-spacing:.06em;color:var(--muted);font-weight:800}.pathHeader strong{font-size:1.55rem;color:var(--navy)}
-.adaptationPath h3{margin:8px 0 6px}.adaptationPath>p{margin:0 0 14px;color:var(--muted)}
+.pathDecision{margin:10px 0 8px}.pathDecision h3{margin:0 0 3px}.pathDecision small{display:block;color:var(--muted);font-size:.76rem;font-weight:800;letter-spacing:.035em;text-transform:uppercase}.adaptationPath>p{margin:0 0 14px;color:var(--muted)}
 .pathStats{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}.pathStats span{background:var(--soft);border-radius:999px;padding:7px 10px;font-size:.78rem;color:var(--muted)}.pathStats b{color:var(--ink)}
 .pathAction{font-size:.88rem!important;color:var(--ink)!important;background:var(--soft);border-radius:14px;padding:10px 12px;margin-bottom:12px!important}
 .executionAssessment{margin:16px 0;padding:18px;border:1px solid var(--line);border-radius:18px;background:#fbfcfe}.executionHead{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}.executionHead h4{margin:0}.executionHead strong{font-size:1.45rem;color:var(--navy)}
@@ -437,3 +437,9 @@ canvas{width:100%;height:auto;display:block}
 @media(max-width:520px){.executionBreakdownHead strong{font-size:1.65rem}.runExecutionBreakdown{padding:15px}.evidenceCoverageExplain{padding:13px}}
 /* v9.3.8 session-specific execution and goal-aware coaching */
 .executionObjective{display:flex;flex-direction:column;gap:5px;padding:14px 16px;margin:14px 0;border-radius:15px;background:#eef5f8}.executionObjective small{font-weight:800;letter-spacing:.08em;color:#627181}.executionObjective b{font-size:1.02rem}.executionObjective span{color:#687686}.executionNotice{padding:12px 14px;margin:12px 0;border-left:4px solid #e3a52d;border-radius:12px;background:#fff7e8}.executionNotice p{margin:4px 0 0;color:#586575}
+
+/* v9.3.9: consistent pathway card hierarchy */
+.adaptationPath{display:flex;flex-direction:column}
+.adaptationPath .stateDetails{margin-top:auto}
+.adaptationPath .pathAction{min-height:68px;display:flex;align-items:center}
+@media(max-width:760px){.adaptationPath .pathAction{min-height:0}}

@@ -1,8 +1,11 @@
-AI Running Coach v9.3.8 Stable — build 9380
+AI Running Coach v9.3.9 Stable — build 9390
 
-This release upgrades execution scoring and the Evidence-based Assessment.
+This release aligns the Pace & Power and Distance & Load pathway cards for faster comparison.
 
 Changes:
+- Gives both pathways the same decision-first hierarchy: pathway label, current value, coaching decision, calibration label, explanation, KPI chips, action box and fold-out calculation.
+- Adds an explicit pace-and-power action statement so both cards show what the coach recommends now.
+- Keeps the underlying adaptation calculations unchanged.
 - Uses session-specific execution weights so recovery, easy, threshold, interval, long-run and race sessions are judged against their actual physiological purpose.
 - Does not reward excessive distance or values above 100.
 - Treats whole-run pace, power and HR averages as lower-reliability evidence for structured workouts containing warm-up, recoveries or cooldown.
@@ -12,7 +15,7 @@ Changes:
 - Keeps the pain cap but explains it as reduced training value rather than poor technical execution.
 - Makes the Evidence-based Assessment race-, phase- and goal-specific using race outlook, programme phase, weeks remaining, athlete state, execution patterns, recovery, pain, plan adherence, long-run evidence, specificity and the next planned session.
 - Identifies recurring execution weaknesses and produces prioritised, evidence-labelled actions.
-- Updates schema, manifest and service-worker cache to build 9380.
+- Updates schema, manifest and service-worker cache to build 9390.
 
 Deployment:
-Replace all six application files in the GitHub Pages repository. Retain the existing icon files. Fully close and reopen the installed PWA after deployment so cache build 9380 activates.
+Replace all six application files in the GitHub Pages repository. Retain the existing icon files. Fully close and reopen the installed PWA after deployment so cache build 9390 activates.
