@@ -1,10 +1,10 @@
-const CACHE='arc-v988-stable-9880';
+const CACHE='arc-v989-stable-9890';
 const ASSETS=[
   './',
   './index.html',
-  './styles.css?v=9880',
-  './app.js?v=9880',
-  './manifest.webmanifest?v=9880'
+  './styles.css?v=9890',
+  './app.js?v=9890',
+  './manifest.webmanifest?v=9890'
 ];
 
 self.addEventListener('install', event => {

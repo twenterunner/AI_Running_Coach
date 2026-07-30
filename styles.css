@@ -529,3 +529,24 @@ canvas{width:100%;height:auto;display:block}
 .injuryTrajectoryLegend .actual:before{background:var(--purple)}
 .injuryTrajectoryLegend .nominal:before{background:#8795a5}
 @media(max-width:480px){.injuryTrajectory{min-height:165px}.injuryTrajectory text{font-size:11px}}
+
+
+/* Build 9890: mobile-safe Projected Fitness detail */
+.outlookGain>*{min-width:0;max-width:100%;overflow:hidden}
+.outlookMetricDetail,.outlookMetricCalc,.outlookMetricCalc *{min-width:0;max-width:100%;box-sizing:border-box}
+.outlookMetricCalc{overflow-wrap:anywhere;word-break:normal}
+.outlookMetricCalc .calcRow span{min-width:0;overflow-wrap:anywhere}
+.outlookMetricDetail[open]{grid-column:1/-1;overflow:visible}
+.outlookMetricDetail[open] .outlookMetricCalc{background:rgba(8,38,67,.20);border-radius:0 0 13px 13px;padding:2px 14px 14px}
+@media(max-width:650px){
+ .outlookGain{grid-template-columns:repeat(2,minmax(0,1fr))!important;align-items:start}
+ .outlookMetricDetail[open]{grid-column:1/-1}
+ .outlookMetricCalc .calcRow{grid-template-columns:minmax(0,1fr) auto;gap:8px}
+ .outlookMetricCalc .calcRow span:nth-child(2){display:none}
+ .outlookMetricCalc .calcRow span:nth-child(3){text-align:right;white-space:nowrap}
+ .outlookMetricCalc p{line-height:1.4}
+}
+@media(max-width:390px){
+ .outlookGain{grid-template-columns:1fr!important}
+ .outlookMetricDetail[open]{grid-column:1}
+}

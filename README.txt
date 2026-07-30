@@ -1,4 +1,4 @@
-AI Running Coach v9.8.8 Stable — build 9880
+AI Running Coach v9.8.9 Stable — build 9890
 
 This release improves only the Injury tab and leaves all running-plan, recovery, assessment, race and dashboard calculations unchanged.
 
@@ -16,4 +16,10 @@ Changes:
 - Keeps Injury data independent from plan generation and race prediction.
 
 Deployment:
-Replace all six application files in the GitHub Pages repository. Retain the existing icon files. Fully close and reopen the installed PWA after deployment so cache build 9880 activates.
+Replace all six application files in the GitHub Pages repository. Retain the existing icon files. Fully close and reopen the installed PWA after deployment so cache build 9890 activates.
+
+
+Build 9890 fixes:
+- Keeps the expanded Projected Fitness explanation and calculation inside its tile on narrow screens.
+- Corrects banner, runtime, manifest and cache version mismatches.
+- Leaves all prediction calculations and non-layout functionality unchanged.
