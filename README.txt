@@ -1,4 +1,4 @@
-AI Running Coach v9.8.0 Stable — build 9800
+AI Running Coach v9.8.1 Stable — build 9810
 
 This release upgrades the independent Injury tab into an adaptive rehabilitation coach without changing the running programme, workout adaptation or race-prediction calculations.
 
@@ -21,3 +21,6 @@ The module follows criteria-based return-to-sport principles and symptom/capacit
 
 Deployment:
 Replace all six application files in the GitHub Pages repository. Retain the existing icon files. Fully close and reopen the installed PWA after deployment so cache build 9800 activates.
+
+
+Build 9810 fixes injury scoring before the first check-in, gates trajectory comparisons on observed data, adds explicit met/not-met progression criteria, reorders navigation, and improves mobile text containment.
