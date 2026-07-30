@@ -385,3 +385,24 @@ canvas{width:100%;height:auto;display:block}
  .timelineMeta{display:grid;grid-template-columns:1fr;gap:4px}
  .timelineMeta span{text-align:left}
 }
+
+/* v9.3.4 transparent weekly calculation, athlete-aware coach and unbroken timeline labels */
+.timelineBlock span{white-space:nowrap!important;word-break:keep-all!important;overflow-wrap:normal!important;hyphens:none!important}
+.coachStateStrip{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:12px 0 16px}
+.coachStateStrip>div{padding:10px 12px;border:1px solid var(--line);border-radius:14px;background:rgba(246,249,252,.88)}
+.coachStateStrip span{display:block;color:var(--muted);font-size:.7rem;text-transform:uppercase;letter-spacing:.04em}
+.coachStateStrip b{display:block;margin-top:4px;font-size:.95rem}
+.adjustmentCalcHeader,.adjustmentCalcTotal{display:flex;justify-content:space-between;gap:12px;align-items:center}
+.adjustmentCalcHeader{margin:14px 0 8px}.adjustmentCalcTable{display:grid;gap:8px}
+.adjustmentCalcRow,.adjustmentCalcTotal{display:grid;grid-template-columns:minmax(120px,1fr) auto;gap:2px 12px;padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:#f8fafc}
+.adjustmentCalcRow small,.adjustmentCalcTotal small{grid-column:1/-1;color:var(--muted);line-height:1.35}
+.adjustmentCalcTotal{border-left:4px solid var(--teal);background:#edf8f5}
+.confidenceBands{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:10px 0}
+.confidenceBands span{padding:9px;border-radius:10px;background:var(--soft);font-size:.78rem}.confidenceBands b{display:block}
+.evidenceEventList{display:grid;gap:8px;margin-top:10px}.evidenceEventList>div{display:grid;grid-template-columns:1fr auto;gap:3px 10px;padding:10px 12px;border:1px solid var(--line);border-radius:12px}.evidenceEventList small{grid-column:1/-1;color:var(--muted)}
+@media(max-width:600px){
+ .timelineBlocks{height:82px}
+ .timelineBlock span{font-size:.58rem!important;transform:rotate(-90deg)!important;writing-mode:horizontal-tb!important;width:auto!important;max-width:none!important;padding:0!important}
+ .coachStateStrip{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .confidenceBands{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
