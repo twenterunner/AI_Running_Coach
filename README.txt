@@ -1,4 +1,4 @@
-AI Running Coach v9.3.1 Stable — build 9310
+AI Running Coach v9.3.2 Stable — build 9320
 
 Major training-engine upgrade
 - Race-specific phase matrix for 5 km, 10 km, half marathon, marathon and ultra plans.
@@ -11,4 +11,4 @@ Major training-engine upgrade
 - Existing weekly distance adaptation, recovery logic, prediction model, imports and stored data remain compatible.
 
 Deployment
-Replace all six application files in the GitHub Pages repository. Retain the existing icon files. Fully close and reopen the installed PWA after deployment so cache build 9310 activates.
+Replace all six application files in the GitHub Pages repository. Retain the existing icon files. Fully close and reopen the installed PWA after deployment so cache build 9320 activates.
