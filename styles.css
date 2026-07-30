@@ -553,3 +553,17 @@ canvas{width:100%;height:auto;display:block}
 
 /* Build 9900: ranked runner-injury working diagnosis */
 .diagnosisRanking{display:grid;gap:8px;margin:14px 0}.diagnosisRanking>div{display:grid;grid-template-columns:28px minmax(0,1fr) auto;gap:10px;align-items:center;padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:#fff}.diagnosisRanking i{display:grid;place-items:center;width:26px;height:26px;border-radius:50%;background:#eaf4fb;color:var(--navy);font-style:normal;font-weight:900}.diagnosisRanking span{min-width:0}.diagnosisRanking span b,.diagnosisRanking span small{display:block}.diagnosisRanking span small{color:var(--muted);margin-top:2px}.diagnosisRanking>div>strong{white-space:nowrap;color:var(--navy)}.diagnosisMissing{margin-top:12px;padding:12px;border-left:4px solid var(--amber);background:#fff8ec;border-radius:10px}.diagnosisMissing p{margin:4px 0 0;color:var(--muted)}@media(max-width:480px){.diagnosisRanking>div{grid-template-columns:26px minmax(0,1fr)}.diagnosisRanking>div>strong{grid-column:2}}
+
+/* Build 9910: Injury-tab safety, evidence states and compact hierarchy */
+.injuryPrimaryAction{margin:12px 0 2px;position:sticky;top:8px;z-index:3;box-shadow:0 6px 18px rgba(11,49,87,.14)}
+.injuryActionSection{border-top:0;margin-top:10px;padding-top:10px}
+.injurySafetyHold{margin:14px 0}.injurySafetyHold p{margin:5px 0 0}
+.injuryMilestones{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.milestone{display:grid;grid-template-columns:28px minmax(0,1fr) auto;gap:8px;align-items:center;padding:10px;border-radius:11px;background:#f5f7f9}
+.milestone i{display:grid;place-items:center;width:26px;height:26px;border-radius:50%;font-style:normal;font-weight:900;background:#dfe6ec;color:#647383}
+.milestone b{font-size:.72rem;text-transform:uppercase}.milestone.met{background:#eef8f3}.milestone.met i{background:var(--green);color:#fff}.milestone.notMet{background:#fff7ed}.milestone.notMet i{background:var(--amber);color:#fff}.milestone.unknown{background:#f3f5f7;color:var(--muted)}
+.criterion.unknown{background:#f3f5f7;color:var(--muted)}.criterion.unknown i{background:#dfe6ec;color:#647383}.criterion.notMet{background:#fff7ed}.criterion.notMet i{background:var(--amber);color:#fff}
+.comparisonRow.unknown{border-left-color:#94a3b3;background:#f5f7f9}
+.injuryDisclosure{margin-top:14px;border:1px solid var(--line);border-radius:13px;overflow:hidden}.injuryDisclosure>summary{padding:13px 14px;background:#f8fafc;font-weight:800;color:#315a7c;cursor:pointer}.injuryDisclosure>[class],.injuryDisclosure>p,.injuryDisclosure>div{margin:12px}
+.injuryDateValue{font-size:.94rem!important;line-height:1.25!important}
+@media(max-width:620px){.injuryMilestones{grid-template-columns:1fr}.injuryPrimaryAction{top:4px}.injuryKpiGrid{grid-template-columns:1fr 1fr}.injuryKpiGrid .metric-card{min-width:0}.injuryKpiGrid strong{overflow-wrap:anywhere}.milestone{grid-template-columns:28px minmax(0,1fr)}.milestone b{grid-column:2}.injurySectionHead{display:grid}.injurySectionHead>strong{white-space:normal}}
