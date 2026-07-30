@@ -1,21 +1,20 @@
-AI Running Coach v9.3.4 Stable — build 9340
+AI Running Coach v9.3.5 Stable — build 9350
 
-Changes in this release:
-- Removes the non-actionable “One system, two outputs” explanation.
-- Replaces generic calculation text with the actual Weekly Plan Adjustment breakdown: starting factor, each applied input, bounded result and calculation timing.
-- Prevents an unfinished week from being labelled low tolerance or penalised before the weekly review.
-- Adds an expandable explanation of Fitness Evidence Confidence, including confidence bands, baseline date and the completed runs that contributed evidence.
-- Extends the evidence-based Dashboard and Coach assessments to include fitness calibration, recovery, pain and the Weekly Plan Adjustment decision.
-- Keeps programme-timeline phase names as whole words and rotates them on narrow mobile screens rather than breaking words.
-- Introduces no new health or recovery inputs; only existing HRV, pain, completed load, efficiency, cardiac drift, adherence and workout evidence are used.
-- Updates schema, manifest and service-worker cache to build 9340.
+Changes in this release
+- Replaces the nearly permanent “Pending review” card with the finalised current-week adjustment factor.
+- Keeps that current factor visible and active for the entire training week.
+- Shows the next review date and the date from which the next finalised factor applies.
+- Clarifies that evidence accumulates during the week while current-week completion is not penalised before week close.
+- Adds pain as an explicit numeric Weekly Plan Adjustment input, resolving the prior wording/calculation inconsistency.
+- Recovery now shows the combined quantified contribution from Garmin HRV and pain.
+- The weekly calculation continues to use only existing app inputs: completed load, efficiency, cardiac drift, Garmin HRV and pain.
+- Updates schema, manifest and service-worker cache to build 9350.
 
-Files:
-- index.html
-- styles.css
-- app.js
-- manifest.webmanifest
-- service-worker.js
-- README.txt
+Weekly display behaviour
+- During Week N, the card shows the finalised factor that is actively controlling Week N.
+- The next review remains open in the background and is finalised after the last day of Week N.
+- At the start of Week N+1, the newly finalised factor becomes the visible current-week factor and remains visible for that full week.
+- Therefore, a final result is not shown only briefly between two “Pending review” states.
 
-Replace all six application files in the GitHub Pages repository. Retain the existing icon files. Fully close and reopen the installed PWA after deployment so cache build 9340 activates.
+Deployment
+Replace all six application files in the GitHub Pages repository. Retain the existing icon files. Fully close and reopen the installed PWA after deployment so cache build 9350 activates.
