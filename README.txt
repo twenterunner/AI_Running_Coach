@@ -1,4 +1,4 @@
-AI Running Coach v9.8.1 Stable — build 9810
+AI Running Coach v9.8.2 Stable — build 9820
 
 This release upgrades the independent Injury tab into an adaptive rehabilitation coach without changing the running programme, workout adaptation or race-prediction calculations.
 
@@ -24,3 +24,6 @@ Replace all six application files in the GitHub Pages repository. Retain the exi
 
 
 Build 9810 fixes injury scoring before the first check-in, gates trajectory comparisons on observed data, adds explicit met/not-met progression criteria, reorders navigation, and improves mobile text containment.
+
+
+Build 9820 makes the Projected Fitness card compact by default, moves the detailed calculation behind a tap-to-expand control, uses single-column calculation rows on phones, and lets an expanded calculation span the available mobile width so it no longer overlaps the Plan Health tile.
