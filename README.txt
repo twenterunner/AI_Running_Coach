@@ -1,4 +1,12 @@
-AI Running Coach v9.8.5 Stable — build 9850
+AI Running Coach v9.8.6 Stable — build 9860
+Build 9860 changes:
+- Replaces all exercise pseudo-images with detailed, exercise-specific written instructions.
+- Removes the misleading “where you should feel it” dot graphic.
+- Adds target muscles, normal sensations and stop signals to every exercise sheet.
+- Adds a recorded or working clinical diagnosis card with confidence, evidence and alternatives.
+- Adds a fold-out explanation of the unrestricted-training forecast and every major timeline input.
+- Fixes banner, manifest, console and cache version mismatches.
+
 
 This release replaces abstract exercise animations with complete fold-out illustrated exercise sheets and makes the faster/slower-than-nominal assessment evidence-specific.
 
@@ -9,10 +17,10 @@ Changes:
 - Explains trajectory classification using the runner's actual pain, walking pain, strength control, hopping/impact tolerance, running exposure and next-morning response.
 - Shows each observed signal against the nominal expectation for the same injury day and labels which factors are ahead or behind.
 - Keeps rehabilitation data and calculations independent from training-plan generation, weekly adaptation, Plan Health and race prediction.
-- Updates schema, manifest and service-worker cache to build 9850.
+- Updates schema, manifest and service-worker cache to build 9860.
 
 Deployment:
-Replace all six application files in the GitHub Pages repository. Retain the existing icon files. Fully close and reopen the installed PWA after deployment so cache build 9850 activates.
+Replace all six application files in the GitHub Pages repository. Retain the existing icon files. Fully close and reopen the installed PWA after deployment so cache build 9860 activates.
 
 This release upgrades the independent Injury tab into an adaptive rehabilitation coach without changing the running programme, workout adaptation or race-prediction calculations.
 
@@ -45,4 +53,4 @@ Build 9820 makes the Projected Fitness card compact by default, moves the detail
 Build 9830 recalibrates the Injury score as criteria-based rehabilitation completion toward full unrestricted running, prevents pain-only scores from appearing nearly recovered, requires repeated observations before faster/slower claims, explains actual versus nominal progress, defines the forecast as the date full unrestricted running training can resume, and adds lightweight animated exercise illustrations.
 
 
-Build 9850 replaces the generic line drawings in rehabilitation exercise sheets with exercise-specific, filled athlete illustrations. The new visuals show body position, floor or equipment context, movement direction and the primary working area for bridges, curls, hinges, Nordic work, calf loading, steps, squats, running and hopping.
+Build 9860 replaces the generic line drawings in rehabilitation exercise sheets with exercise-specific, filled athlete illustrations. The new visuals show body position, floor or equipment context, movement direction and the primary working area for bridges, curls, hinges, Nordic work, calf loading, steps, squats, running and hopping.
