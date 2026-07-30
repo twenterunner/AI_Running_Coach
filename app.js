@@ -1,6 +1,6 @@
 let preview=null;
 (()=>{'use strict';
-const DAY=87300000, $=id=>document.getElementById(id), clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const DAY=86400000, $=id=>document.getElementById(id), clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 function today(){return dte(iso(new Date()))}
 const iso=d=>{let x=new Date(d),y=x.getFullYear(),m=String(x.getMonth()+1).padStart(2,'0'),q=String(x.getDate()).padStart(2,'0');return `${y}-${m}-${q}`},
 dte=s=>{let [y,m,d]=String(s).split('-').map(Number);return new Date(y,m-1,d,12,0,0,0)},
@@ -90,7 +90,7 @@ function recommendedRaceDate(setup){
  let totalWeeks=Math.ceil(Math.max(minimumTotal,req.requiredBuildWeeks+taperWeeks+2));
  return{date:iso(new Date(dte(setup.planStart).getTime()+totalWeeks*7*DAY)),totalWeeks,requiredBuildWeeks:req.requiredBuildWeeks,taperWeeks};
 }
-const BUILD=9410, SCHEMA=9410, STORAGE_KEY='arc_v62_web', MIRROR_KEY='arc_v8500_web', BACKUP_KEY='arc_pre8500_backup';
+const VERSION='9.4.2', BUILD=9420, SCHEMA=9420, STORAGE_KEY='arc_v62_web', MIRROR_KEY='arc_v8500_web', BACKUP_KEY='arc_pre8500_backup';
 const defaults=()=>{let start=iso(new Date()),setup={planStart:start,raceDate:start,raceName:'Goal Race',raceDistance:42.195,targetTime:15300,currentWeekly:35,currentLongest:18,testDistance:5,testTime:1515,thresholdHr:168,criticalPower:300,bodyWeight:93,maxWeekly:65,growth:.07,peakLong:32,taperDays:14,minFactor:.85,maxFactor:1.05,adaptive:true};setup.raceDate=recommendedRaceDate(setup).date;return({schemaVersion:SCHEMA,setup,days:FIVE_DAY_TEMPLATE.map(d=>[...d]),runs:[],assessments:[],plan:[],weekView:null,migration:{to:SCHEMA,status:'new',time:new Date().toISOString()}})};
 let migrationReport={from:null,to:SCHEMA,status:'new install',source:'defaults',runs:0,assessments:0,fieldsRecovered:0,warning:''};
 function parseStored(raw){if(!raw)return null;try{const x=JSON.parse(raw);return x&&typeof x==='object'?x:null}catch(err){recordDiagnostic('Storage parse',err);return null}}
@@ -1114,7 +1114,7 @@ function coachReportHtml(report,compact=false){
  const opportunities=report.opportunities.length?report.opportunities.map(x=>evidenceFindingHtml(x,false)).join(''):'<p class="muted">No material evidence-backed opportunity is currently identified.</p>';
  const ast=report.athleteState,ex=report.execution;
  const paceEvidence=ast.fitnessEvidence||{},paceCurrentFactor=Number(paceEvidence.index||100)/100,paceInProgressFactor=Number(paceEvidence.rawIndex||paceEvidence.index||100)/100;
- const loadCurrentFactor=Number(ast.adjustment||1),loadInProgressFactor=Number(ast.preview?.factor||ast.nextAfd?.factor||loadCurrentFactor);
+ const loadCurrentFactor=Number(ast.adjustment??1),loadCandidate=ast.weekComplete&&ast.nextAfd?.status==='calculated'?ast.nextAfd:ast.preview,loadInProgressFactor=Number(loadCandidate?.factor??loadCurrentFactor);
  const paceDecision=ast.fitnessDelta>0?'Increase targets':ast.fitnessDelta<0?'Reduce targets':'Maintain targets';
  const loadDecision=`${ast.direction}${ast.pct?` ${ast.pct}%`:''}`;
  const executionHtml=ex&&ex.count?`<section class="executionAssessment"><div class="executionHead"><div><h4>Workout execution</h4><p class="muted compact">How well recent completed sessions delivered their intended stimulus.</p></div><strong>${Number.isFinite(ex.average)?Math.round(ex.average):'—'}/100</strong></div><div class="executionKpis"><span>Recent average <b>${Number.isFinite(ex.average)?Math.round(ex.average):'—'}</b></span><span>Key sessions <b>${Number.isFinite(ex.keyAverage)?Math.round(ex.keyAverage):'—'}</b></span><span>Trend <b>${Number.isFinite(ex.trend)?`${ex.trend>=0?'+':''}${ex.trend.toFixed(0)} pts`:'Insufficient data'}</b></span></div><details class="executionDetails"><summary>Session-by-session evidence</summary>${ex.recent.map(x=>`<div class="executionRow"><span>${fmtDate(x.date)} · ${esc(x.type)}</span><b>${x.score}/100</b><small>${x.plan?`Planned ${x.plan.distance.toFixed(1)} km · actual ${Number(x.run.distanceKm).toFixed(1)} km`:'Ad hoc run'}${Number.isFinite(x.pain)?` · pain ${x.pain}/10`:''}${Number.isFinite(x.drift)?` · drift ${x.drift.toFixed(1)}%`:''}</small></div>`).join('')}</details></section>`:'<section class="executionAssessment"><h4>Workout execution</h4><p class="muted">No completed run has enough information for an execution score yet.</p></section>';
@@ -1810,11 +1810,11 @@ $('backupBtn').onclick=()=>download('ai-running-coach-backup.json',JSON.stringif
 let deferred;window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferred=e;$('installBtn').className='install'});$('installBtn').onclick=()=>deferred?.prompt();
 $('pillarCards')?.addEventListener('click',e=>{const card=e.target.closest('.pillarCard');if(!card||e.target.closest('summary'))return;const detail=card.querySelector('.pillarExplain');if(!detail)return;card.classList.toggle('open');detail.open=card.classList.contains('open');card.setAttribute('aria-expanded',String(detail.open))});
 $('pillarCards')?.addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&e.target.classList.contains('pillarCard')){e.preventDefault();e.target.click()}});
-const brandVersion=document.querySelector('.brand-copy p');if(brandVersion)brandVersion.textContent=`Race-specific adaptive planning • v9.4.0 · build ${BUILD}`;
+const brandVersion=document.querySelector('.brand-copy p');if(brandVersion)brandVersion.textContent=`Race-specific adaptive planning • v${VERSION} · build ${BUILD}`;
 if('serviceWorker'in navigator&&location.protocol==='https:')navigator.serviceWorker.register(`service-worker.js?v=${BUILD}`,{updateViaCache:'none'}).then(reg=>reg.update()).catch(()=>{});
 migrateAssessmentRuns();
 migrateImportedPower();
 if(reconcilePredictionHistory())save();
 renderAll();
-console.info('AI Running Coach v9.4.0 stable build 9400');
+console.info(`AI Running Coach v${VERSION} stable build ${BUILD}`);
 })();

@@ -1,10 +1,10 @@
-const CACHE='arc-v941-stable-9410';
+const CACHE='arc-v942-stable-9420';
 const ASSETS=[
   './',
   './index.html',
-  './styles.css?v=9410',
-  './app.js?v=9410',
-  './manifest.webmanifest?v=9410'
+  './styles.css?v=9420',
+  './app.js?v=9420',
+  './manifest.webmanifest?v=9420'
 ];
 
 self.addEventListener('install', event => {
@@ -25,8 +25,10 @@ self.addEventListener('fetch', event => {
     event.respondWith(
       fetch(event.request, {cache:'no-store'})
         .then(response => {
-          const copy = response.clone();
-          caches.open(CACHE).then(cache => cache.put('./index.html', copy));
+          if (response.ok) {
+            const copy = response.clone();
+            caches.open(CACHE).then(cache => cache.put('./index.html', copy));
+          }
           return response;
         })
         .catch(() => caches.match('./index.html'))
@@ -37,8 +39,10 @@ self.addEventListener('fetch', event => {
   event.respondWith(
     fetch(event.request, {cache:'no-store'})
       .then(response => {
-        const copy = response.clone();
-        caches.open(CACHE).then(cache => cache.put(event.request, copy));
+        if (response.ok) {
+          const copy = response.clone();
+          caches.open(CACHE).then(cache => cache.put(event.request, copy));
+        }
         return response;
       })
       .catch(() => caches.match(event.request))
