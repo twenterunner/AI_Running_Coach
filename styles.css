@@ -450,3 +450,19 @@ canvas{width:100%;height:auto;display:block}
 .pathFactorPair small{display:block;color:var(--muted);font-size:.72rem;font-weight:800;text-transform:uppercase;letter-spacing:.04em}
 .pathFactorPair strong{display:block;color:var(--navy);font-size:1.55rem;line-height:1.05;margin-top:5px}
 @media(max-width:420px){.pathFactorPair{grid-template-columns:1fr}.pathFactorPair strong{font-size:1.4rem}}
+
+
+/* v9.4.1 dashboard pathway summary */
+.coachPathwaySummary{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:14px 0 10px}
+.coachPathwayCard{border:1px solid var(--line);border-radius:17px;padding:14px;background:#fff;position:relative;overflow:hidden}
+.coachPathwayCard:before{content:"";position:absolute;left:0;right:0;top:0;height:4px;background:var(--blue)}
+.coachPathwayCard.loadSummary:before{background:var(--teal)}
+.coachPathwayLabel{display:block;margin-top:2px;color:var(--muted);font-size:.68rem;font-weight:850;letter-spacing:.055em}
+.coachPathwayDecision{display:block;margin:7px 0 10px;font-size:1rem;color:var(--ink)}
+.coachFactorPair{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.coachFactorPair>div{padding:9px 8px;border-radius:12px;background:var(--soft);min-width:0}
+.coachFactorPair small{display:block;color:var(--muted);font-size:.63rem;text-transform:uppercase;line-height:1.2}
+.coachFactorPair strong{display:block;margin-top:3px;font-size:1.1rem;color:var(--navy)}
+.coachPathwayCard p{margin:9px 0 0;color:var(--muted);font-size:.76rem;line-height:1.35}
+.coachPlanLink{width:100%;border:1px solid #cfe0ed;background:#eef5fb;color:var(--navy);border-radius:12px;padding:11px 13px;font-weight:850;text-align:center;cursor:pointer;margin-bottom:4px}
+@media(max-width:390px){.coachPathwaySummary{gap:8px}.coachPathwayCard{padding:11px}.coachFactorPair{grid-template-columns:1fr}.coachPathwayDecision{font-size:.9rem}.coachPathwayCard p{display:none}}
