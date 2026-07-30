@@ -550,3 +550,6 @@ canvas{width:100%;height:auto;display:block}
  .outlookGain{grid-template-columns:1fr!important}
  .outlookMetricDetail[open]{grid-column:1}
 }
+
+/* Build 9900: ranked runner-injury working diagnosis */
+.diagnosisRanking{display:grid;gap:8px;margin:14px 0}.diagnosisRanking>div{display:grid;grid-template-columns:28px minmax(0,1fr) auto;gap:10px;align-items:center;padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:#fff}.diagnosisRanking i{display:grid;place-items:center;width:26px;height:26px;border-radius:50%;background:#eaf4fb;color:var(--navy);font-style:normal;font-weight:900}.diagnosisRanking span{min-width:0}.diagnosisRanking span b,.diagnosisRanking span small{display:block}.diagnosisRanking span small{color:var(--muted);margin-top:2px}.diagnosisRanking>div>strong{white-space:nowrap;color:var(--navy)}.diagnosisMissing{margin-top:12px;padding:12px;border-left:4px solid var(--amber);background:#fff8ec;border-radius:10px}.diagnosisMissing p{margin:4px 0 0;color:var(--muted)}@media(max-width:480px){.diagnosisRanking>div{grid-template-columns:26px minmax(0,1fr)}.diagnosisRanking>div>strong{grid-column:2}}
