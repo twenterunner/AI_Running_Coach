@@ -90,7 +90,7 @@ function recommendedRaceDate(setup){
  let totalWeeks=Math.ceil(Math.max(minimumTotal,req.requiredBuildWeeks+taperWeeks+2));
  return{date:iso(new Date(dte(setup.planStart).getTime()+totalWeeks*7*DAY)),totalWeeks,requiredBuildWeeks:req.requiredBuildWeeks,taperWeeks};
 }
-const BUILD=9370, SCHEMA=9370, STORAGE_KEY='arc_v62_web', MIRROR_KEY='arc_v8500_web', BACKUP_KEY='arc_pre8500_backup';
+const BUILD=9380, SCHEMA=9380, STORAGE_KEY='arc_v62_web', MIRROR_KEY='arc_v8500_web', BACKUP_KEY='arc_pre8500_backup';
 const defaults=()=>{let start=iso(new Date()),setup={planStart:start,raceDate:start,raceName:'Goal Race',raceDistance:42.195,targetTime:15300,currentWeekly:35,currentLongest:18,testDistance:5,testTime:1515,thresholdHr:168,criticalPower:300,bodyWeight:93,maxWeekly:65,growth:.07,peakLong:32,taperDays:14,minFactor:.85,maxFactor:1.05,adaptive:true};setup.raceDate=recommendedRaceDate(setup).date;return({schemaVersion:SCHEMA,setup,days:FIVE_DAY_TEMPLATE.map(d=>[...d]),runs:[],assessments:[],plan:[],weekView:null,migration:{to:SCHEMA,status:'new',time:new Date().toISOString()}})};
 let migrationReport={from:null,to:SCHEMA,status:'new install',source:'defaults',runs:0,assessments:0,fieldsRecovered:0,warning:''};
 function parseStored(raw){if(!raw)return null;try{const x=JSON.parse(raw);return x&&typeof x==='object'?x:null}catch(err){recordDiagnostic('Storage parse',err);return null}}
@@ -120,25 +120,47 @@ let state;try{state=normaliseState(rawState||defaults())}catch(err){recordDiagno
 function save(){const text=JSON.stringify(state);try{localStorage.setItem(STORAGE_KEY,text);localStorage.setItem(MIRROR_KEY,text);return true}catch(err){recordDiagnostic('Save failure',err);toast('Data could not be saved on this device.',true);return false}}
 save();
 const EVIDENCE_WEIGHT={Recovery:.10,Easy:.16,'Easy + strides':.20,'Steady aerobic':.26,'Medium-long':.34,Progression:.34,'Long run':.34,'Specific long run':.48,'Race rehearsal':.52,Hills:.30,Fartlek:.30,Threshold:.48,'Threshold intervals':.55,'Half-marathon-specific':.55,'Marathon-specific':.55,'VO₂max intervals':.52,'Race-pace intervals':.58,Intervals:.48,Tempo:.48,'Fitness assessment':.90,Race:.95};
+const EXECUTION_PROFILES={
+ Recovery:{distance:.18,pace:.08,power:.08,hr:.32,drift:.24,rpe:.10,objective:'Promote recovery while keeping effort genuinely easy.'},
+ Easy:{distance:.24,pace:.12,power:.12,hr:.24,drift:.18,rpe:.10,objective:'Build aerobic fitness with controlled, conversational effort.'},
+ Steady:{distance:.25,pace:.18,power:.18,hr:.18,drift:.13,rpe:.08,objective:'Deliver a controlled moderate aerobic stimulus below threshold.'},
+ Marathon:{distance:.24,pace:.24,power:.26,hr:.12,drift:.08,rpe:.06,objective:'Hold race-specific effort economically and under control.'},
+ Tempo:{distance:.23,pace:.25,power:.28,hr:.10,drift:.07,rpe:.07,objective:'Accumulate sustainable threshold work without turning it into a race.'},
+ Intervals:{distance:.22,pace:.24,power:.30,hr:.08,drift:.04,rpe:.12,objective:'Complete repeatable high-quality repetitions at the intended intensity.'},
+ Repetition:{distance:.20,pace:.27,power:.27,hr:.05,drift:.03,rpe:.18,objective:'Develop relaxed speed and economy while preserving form.'},
+ 'Long run':{distance:.34,pace:.08,power:.08,hr:.18,drift:.24,rpe:.08,objective:'Build endurance, durability and late-run control without excess strain.'},
+ 'Fitness assessment':{distance:.20,pace:.28,power:.26,hr:.12,drift:.02,rpe:.12,objective:'Produce a valid, evenly paced benchmark that reflects current fitness.'},
+ Race:{distance:.18,pace:.28,power:.22,hr:.12,drift:.05,rpe:.15,objective:'Execute the goal race with controlled pacing and sustainable effort.'}
+};
+function executionProfile(type){const b=baseType(type);if(['Specific long run','Race rehearsal','Progression'].includes(type))return EXECUTION_PROFILES['Long run'];return EXECUTION_PROFILES[b]||EXECUTION_PROFILES.Easy}
+function expectedRpe(type){const b=baseType(type);return({Recovery:[1,3],Easy:[2,4],Steady:[4,6],Marathon:[5,7],Tempo:[7,8.5],Intervals:[7.5,9.5],Repetition:[8,10],'Long run':[3,6],'Fitness assessment':[9,10],Race:[8,10]})[b]||[2,6]}
+function scoreBand(score){return score>=95?'Excellent execution':score>=85?'Good execution':score>=70?'Useful session; improve control':score>=50?'Limited training benefit':'Session objective largely missed'}
+function targetMetricReliability(plan){if(!plan)return 0;const t=plan.type,b=baseType(t);if(['Recovery','Easy','Steady','Long run','Race'].includes(b)&&!['Progression','Specific long run','Race rehearsal'].includes(t))return .85;return .35}
 function workoutScoreDetails(run,plan=run?.planId?state.plan.find(p=>p.id===run.planId):null){
  if(!run)return null;
  const actualKm=Number(run.distanceKm)||0,dur=Number(run.durationSec)||0;
  if(!(actualKm>0&&dur>0))return null;
- const plannedKm=Math.max(.1,Number(plan?.distance)||actualKm),actualPace=dur/actualKm;
- const components=[];
- const add=(name,score,weight,detail)=>{if(Number.isFinite(score))components.push({name,score:clamp(score,0,110),weight,detail})};
- const completion=clamp(actualKm/plannedKm*100,0,110);
- add('Distance completion',completion,.38,plan?`${actualKm.toFixed(2)} km completed versus ${plannedKm.toFixed(2)} km planned.`:'Ad hoc run: completed distance is used as the reference, so this component is neutral.');
- if(plan?.zone?.pace>0){const ratio=plan.zone.pace/actualPace,score=clamp(100-Math.abs(1-ratio)*160,45,105);add('Pace execution',score,.20,`${pace(actualPace)} actual versus ${pace(plan.zone.pace)} prescribed for the target portion.`)}
- if(Number(run.avgPower)>0&&plan?.zone?.power>0){const ratio=Number(run.avgPower)/plan.zone.power,score=clamp(100-Math.abs(1-ratio)*150,45,105);add('Power execution',score,.22,`${Math.round(Number(run.avgPower))} W actual versus ${Math.round(plan.zone.power)} W prescribed.`)}
- if(Number(run.avgHr)>0&&plan?.zone?.hr>0){const excess=(Number(run.avgHr)-plan.zone.hr)/Math.max(1,plan.zone.hr),score=clamp(100-excess*180,55,105);add('Heart-rate control',score,.10,`${Math.round(Number(run.avgHr))} bpm actual versus ${Math.round(plan.zone.hr)} bpm guide. Lower-than-guide HR is not penalised.`)}
- if(Number.isFinite(Number(run.powerDrift))){const drift=Number(run.powerDrift),score=clamp(100-Math.max(0,drift-2)*6,55,102);add('Cardiac drift',score,.10,`${drift.toFixed(1)}% power-based drift; values up to about 2% receive full credit.`)}
- const weightTotal=sum(components.map(c=>c.weight));
+ const type=plan?.type||run.type||'Easy',profile=executionProfile(type),plannedKm=plan?Math.max(.1,Number(plan.distance)||0):null,actualPace=dur/actualKm;
+ const components=[],add=(key,name,score,baseWeight,detail,reliability=1)=>{if(Number.isFinite(score)&&baseWeight>0)components.push({key,name,score:clamp(score,0,100),baseWeight,weight:baseWeight*reliability,detail,reliability})};
+ if(plan){
+  const ratio=actualKm/plannedKm,diff=Math.abs(ratio-1),score=diff<=.05?100:ratio<1?clamp(100-(diff-.05)*125,35,100):clamp(100-(diff-.05)*95,35,100);
+  const direction=ratio>1.05?'Over-completion is not rewarded because it adds unplanned load.':ratio<.95?'The intended volume was not fully completed.':'Completed within the intended distance range.';
+  add('distance','Distance execution',score,profile.distance,`${actualKm.toFixed(2)} km completed versus ${plannedKm.toFixed(2)} km planned. ${direction}`);
+ }
+ const reliability=targetMetricReliability(plan),aggregateNote=reliability<.5?' Whole-run averages include warm-up, recoveries and cooldown, so this is supporting evidence only.':'';
+ if(plan?.zone?.pace>0){const ratio=plan.zone.pace/actualPace,score=clamp(100-Math.abs(1-ratio)*145,45,100);add('pace','Pace execution',score,profile.pace,`${pace(actualPace)} whole-run average versus ${pace(plan.zone.pace)} target for the prescribed target portion.${aggregateNote}`,reliability)}
+ if(Number(run.avgPower)>0&&plan?.zone?.power>0){const ratio=Number(run.avgPower)/plan.zone.power,score=clamp(100-Math.abs(1-ratio)*140,45,100);add('power','Power execution',score,profile.power,`${Math.round(Number(run.avgPower))} W whole-run average versus ${Math.round(plan.zone.power)} W target.${aggregateNote}`,reliability)}
+ if(Number(run.avgHr)>0&&plan?.zone?.hr>0){const hr=Number(run.avgHr),guide=plan.zone.hr,delta=(hr-guide)/Math.max(1,guide),score=hr<=guide?100:clamp(100-delta*180,55,100);add('hr','Heart-rate control',score,profile.hr,`${Math.round(hr)} bpm whole-run average versus ${Math.round(guide)} bpm guide. Lower-than-guide HR receives full, not extra, credit.${aggregateNote}`,reliability)}
+ if(Number.isFinite(Number(run.powerDrift))){const drift=Number(run.powerDrift),score=clamp(100-Math.max(0,drift-2)*6,55,100),relevance=['Intervals','Repetition','Fitness assessment'].includes(baseType(type))?.45:1;add('drift','Cardiac drift',score,profile.drift,`${drift.toFixed(1)}% power-based drift; values up to about 2% receive full credit.${relevance<1?' Drift has limited relevance for short-repetition sessions.':''}`,relevance)}
+ const rpe=Number(run.rpe),range=expectedRpe(type);if(Number.isFinite(rpe)&&rpe>0){const dist=rpe<range[0]?range[0]-rpe:rpe>range[1]?rpe-range[1]:0,score=clamp(100-dist*14,45,100);add('rpe','Effort appropriateness',score,profile.rpe,`RPE ${rpe}/10 versus expected ${range[0]}–${range[1]} for this session objective.`)}
+ const weightTotal=sum(components.map(c=>c.weight));components.forEach(c=>c.effectiveWeight=weightTotal?c.weight/weightTotal:0);
  let raw=weightTotal?sum(components.map(c=>c.score*c.weight))/weightTotal:null,cap=null,capReason='';
- if(Number(run.pain)>=5){cap=70;capReason=`Pain ${Number(run.pain)}/10 caps the execution score at 70.`}
- else if(Number(run.pain)>=3){cap=82;capReason=`Pain ${Number(run.pain)}/10 caps the execution score at 82.`}
+ if(Number(run.pain)>=7){cap=50;capReason=`Pain ${Number(run.pain)}/10 substantially reduced the training value and caps the final score at 50.`}
+ else if(Number(run.pain)>=5){cap=70;capReason=`Although the observable execution may have been sound, pain ${Number(run.pain)}/10 limits the training value and caps the final score at 70.`}
+ else if(Number(run.pain)>=3){cap=82;capReason=`Although the workout may have been executed well, pain ${Number(run.pain)}/10 limits progression and caps the final score at 82.`}
  const final=Number.isFinite(raw)?Math.round(clamp(cap==null?raw:Math.min(raw,cap),0,100)):null;
- return{score:final,rawScore:Number.isFinite(raw)?raw:null,components,cap,capReason,plan};
+ const evidenceQuality=plan?(reliability>=.8?'high':'moderate'):(components.length>=2?'low':'very low');
+ return{score:final,rawScore:Number.isFinite(raw)?raw:null,components,cap,capReason,plan,objective:plan?.purpose||profile.objective,interpretation:scoreBand(final),evidenceQuality};
 }
 function workoutScore(run,plan=run?.planId?state.plan.find(p=>p.id===run.planId):null){return workoutScoreDetails(run,plan)?.score??null}
 function trainingEvidence(asOf=iso(today())){let valid=state.assessments.filter(a=>a.valid&&a.date<=asOf).sort((a,b)=>a.date.localeCompare(b.date)),anchor=valid.at(-1),anchorDate=anchor?.date||state.setup.planStart,runs=state.runs.filter(r=>r.date>=anchorDate&&r.date<=asOf&&r.source!=='assessment').sort((a,b)=>a.date.localeCompare(b.date)),raw=100,evidence=0,events=[];runs.forEach(r=>{let p=r.planId?state.plan.find(x=>x.id===r.planId):null,score=workoutScore(r,p),weight=EVIDENCE_WEIGHT[r.type]??EVIDENCE_WEIGHT[baseType(r.type)]??.15;if(score==null)return;let confidence=weight;if(Number(r.pain)>=3||(!p&&r.type!=='Race'))confidence*=.35;if(p&&Number(r.distanceKm)<Number(p.distance)*.7)confidence*=.35;let maxMove=confidence*.65,signal=clamp((score-82)/18,-1,1);if(signal<0&&confidence<.35)signal=0;let delta=signal*maxMove;raw=clamp(raw+delta,95,105);evidence+=confidence;events.push({date:r.date,type:r.type,score,delta,confidence})});let applied=Math.round((raw-100)*2)/2+100;if(Math.abs(applied-100)<.75)applied=100;let confidence=clamp(Math.round(evidence/4*100),0,100);return{rawIndex:raw,index:applied,adjustment:applied/100,confidence,events,anchorDate,anchorType:anchor?'Fitness assessment':'Setup baseline'}}
@@ -1039,55 +1061,49 @@ function componentEvidence(c,item){
 function executionScoreSummary(days=42){
  const cutoff=new Date(today().getTime()-days*DAY);
  const rows=(state.runs||[]).filter(r=>dte(r.date)>=cutoff&&dte(r.date)<=today()).map(r=>{
-  const plan=r.planId?state.plan.find(p=>p.id===r.planId):null;
-  const score=workoutScore(r,plan);
-  return score==null?null:{run:r,plan,score,date:r.date,type:r.type,pain:Number(r.pain),drift:Number(r.powerDrift)};
+  const plan=r.planId?state.plan.find(p=>p.id===r.planId):null,details=workoutScoreDetails(r,plan),score=details?.score;
+  return score==null?null:{run:r,plan,details,score,date:r.date,type:plan?.type||r.type,pain:Number(r.pain),drift:Number(r.powerDrift)};
  }).filter(Boolean).sort((a,b)=>b.date.localeCompare(a.date));
  const recent=rows.slice(0,8),scores=recent.map(x=>x.score),average=avg(scores);
  const key=recent.filter(x=>x.plan&&['Tempo','Intervals','Threshold','Threshold intervals','VO₂max intervals','Race-pace intervals','Marathon-specific','Half-marathon-specific','Long run','Specific long run','Race rehearsal','Fitness assessment'].includes(x.plan.type));
- const keyAverage=avg(key.map(x=>x.score));
- const strong=recent.filter(x=>x.score>=90),limited=recent.filter(x=>x.score<75);
+ const keyAverage=avg(key.map(x=>x.score)),strong=recent.filter(x=>x.score>=90),limited=recent.filter(x=>x.score<75);
  const trend=recent.length>=4?avg(recent.slice(0,Math.ceil(recent.length/2)).map(x=>x.score))-avg(recent.slice(Math.ceil(recent.length/2)).map(x=>x.score)):null;
- return{rows,recent,average,keyAverage,strong,limited,trend,count:recent.length};
+ const objectiveMisses={};recent.forEach(x=>x.details.components.filter(c=>c.score<75).forEach(c=>objectiveMisses[c.key]=(objectiveMisses[c.key]||0)+1));
+ const recurringWeakness=Object.entries(objectiveMisses).sort((a,b)=>b[1]-a[1])[0]?.[0]||null;
+ return{rows,recent,average,keyAverage,strong,limited,trend,count:recent.length,recurringWeakness};
+}
+function raceSpecificPriority(){
+ const p=raceProfile(),dp=detailedPhase(currentWeek()),weeksLeft=Math.max(0,weeks()-currentWeek());
+ const map={
+  '5k':{Foundation:'easy consistency, hills and relaxed strides',Aerobic:'threshold development and aerobic support',Development:'VO₂max and repeatable speed',Specific:'5 km-pace execution and economy',Peak:'sharpness without excess fatigue',Taper:'freshness and short race-pace reminders'},
+  '10k':{Foundation:'aerobic consistency and relaxed speed',Aerobic:'threshold development',Development:'threshold durability with selective VO₂max work',Specific:'10 km-pace control',Peak:'race-specific sharpness',Taper:'freshness and pace confidence'},
+  half:{Foundation:'aerobic consistency',Aerobic:'threshold endurance and medium-long running',Development:'sustained threshold durability',Specific:'half-marathon-effort control under fatigue',Peak:'specific endurance with controlled recovery cost',Taper:'freshness while retaining race rhythm'},
+  marathon:{Foundation:'durable easy running and safe consistency',Aerobic:'aerobic volume and medium-long endurance',Endurance:'weekly-volume tolerance and long-run durability',Specific:'marathon-effort economy, fuelling and fatigue resistance',Peak:'race rehearsal and controlled peak endurance',Taper:'fatigue reduction while preserving marathon rhythm'},
+  ultra:{Foundation:'time-on-feet tolerance',Aerobic:'aerobic durability and terrain strength',Endurance:'long-run resilience and fuelling tolerance',Specific:'terrain, run-walk and race-execution rehearsal',Peak:'final durability rehearsal without overload',Taper:'freshness and logistical readiness'}
+ };
+ const key=profileMatrixKey(p);return{priority:(map[key]||map.marathon)[dp]||'consistent race-specific preparation',phase:dp,weeksLeft,profile:p};
 }
 function evidenceBasedCoach(engine){
- const c=engine.c,ast=athleteState(engine.cw),execution=executionScoreSummary(),components=uniqueComponents(c.components.filter(i=>i.hasEvidence&&Number.isFinite(i.displayScore)));
- let findings=components.map(item=>{
-  const evidence=componentEvidence(c,item),confidence=evidenceConfidence(item.evidenceFraction??1,evidence.facts.length),impact=impactForComponent(item.name),score=Number(item.displayScore);
-  return{...item,score,confidence,impact,evidence,status:score>=80?'strength':score<70?'opportunity':'watch',priority:(100-score)*impact*confidence.rank};
- });
- // Health constraints override progression recommendations when supported.
- const pain=findings.find(x=>x.name==='Pain status'),hrv=findings.find(x=>x.name==='Garmin HRV trend');
- const recoveryConstraint=(pain&&pain.score<60)||(hrv&&hrv.score<60);
- let strengths=findings.filter(x=>x.status==='strength').sort((a,b)=>b.score-a.score||b.confidence.rank-a.confidence.rank).slice(0,3);
- let opportunities=findings.filter(x=>x.status==='opportunity').sort((a,b)=>b.priority-a.priority).slice(0,3);
- if(!opportunities.length)opportunities=findings.filter(x=>x.status==='watch').sort((a,b)=>b.priority-a.priority).slice(0,2);
- const targetGap=engine.pred-state.setup.targetTime;
- const current=`Current central estimate: ${fmtTime(engine.pred)} (${targetGap<=0?`${fmtTime(Math.abs(targetGap))} inside`:`${fmtTime(targetGap)} outside`} the ${fmtTime(state.setup.targetTime)} target), with ${Math.round(engine.currentModel.probability)}% estimated target probability.`;
- const projected=`Full programme scenario: ${fmtTime(engine.projection.predictedTime)} and ${Math.round(engine.projectedModel.probability)}% estimated target probability.`;
- let conclusion;
- const planDecision=`The current week uses adjustment factor ${ast.adjustment.toFixed(2)} (${ast.direction}${ast.pct?` ${ast.pct}%`:''}); the next review is after ${fmtDate(ast.reviewDate)}.`;
- const executionText=Number.isFinite(execution.average)?` Recent execution averages ${Math.round(execution.average)}/100${Number.isFinite(execution.keyAverage)?`, with key sessions at ${Math.round(execution.keyAverage)}/100`:''}.`:'';
- if(recoveryConstraint)conclusion=`Recovery or pain evidence currently limits safe progression. ${planDecision}${executionText} ${current}`;
- else if(execution.limited.length)conclusion=`${planDecision}${executionText} The latest low-scoring execution requires attention before adding load. ${current}`;
- else if(opportunities[0])conclusion=`${planDecision}${executionText} ${current} The highest-priority verified opportunity is ${opportunities[0].name.toLowerCase()}.`;
- else conclusion=`${planDecision}${executionText} ${current} No major evidence-backed limiter is currently identified; preserve consistency and recovery.`;
+ const c=engine.c,ast=athleteState(engine.cw),execution=executionScoreSummary(),components=uniqueComponents(c.components.filter(i=>i.hasEvidence&&Number.isFinite(i.displayScore))),race=raceSpecificPriority();
+ let findings=components.map(item=>{const evidence=componentEvidence(c,item),confidence=evidenceConfidence(item.evidenceFraction??1,evidence.facts.length),impact=impactForComponent(item.name),score=Number(item.displayScore);return{...item,score,confidence,impact,evidence,status:score>=80?'strength':score<70?'opportunity':'watch',priority:(100-score)*impact*confidence.rank}});
+ const pain=findings.find(x=>x.name==='Pain status'),hrv=findings.find(x=>x.name==='Garmin HRV trend'),recoveryConstraint=(pain&&pain.score<60)||(hrv&&hrv.score<60);
+ let strengths=findings.filter(x=>x.status==='strength').sort((a,b)=>b.score-a.score||b.confidence.rank-a.confidence.rank).slice(0,3),opportunities=findings.filter(x=>x.status==='opportunity').sort((a,b)=>b.priority-a.priority).slice(0,3);if(!opportunities.length)opportunities=findings.filter(x=>x.status==='watch').sort((a,b)=>b.priority-a.priority).slice(0,2);
+ const targetGap=engine.pred-state.setup.targetTime,targetPosition=targetGap<=0?`${fmtTime(Math.abs(targetGap))} inside target`:`${fmtTime(targetGap)} outside target`,planDecision=`factor ${ast.adjustment.toFixed(2)} (${ast.direction}${ast.pct?` ${ast.pct}%`:''})`;
+ const executionSentence=Number.isFinite(execution.average)?`Recent execution is ${Math.round(execution.average)}/100 (${scoreBand(Math.round(execution.average)).toLowerCase()})${Number.isFinite(execution.keyAverage)?`; key sessions average ${Math.round(execution.keyAverage)}/100`:''}.`:'There is not yet enough completed-run detail to judge workout execution.';
+ let conclusion=`You are in the ${race.phase.toLowerCase()} phase with ${race.weeksLeft} week${race.weeksLeft===1?'':'s'} remaining before ${state.setup.raceName}. The present priority is ${race.priority}. Current race estimate is ${fmtTime(engine.pred)} (${targetPosition}), with ${Math.round(engine.currentModel.probability)}% estimated target probability. ${executionSentence} This week uses ${planDecision}.`;
+ if(recoveryConstraint)conclusion+=` Recovery or pain currently takes priority over progression.`;else if(execution.limited.length)conclusion+=` Improve execution consistency before adding training load or faster targets.`;else if(engine.currentModel.probability<50)conclusion+=` The goal is not yet well supported, so the next block should build the weakest race-relevant evidence rather than force the target pace.`;else conclusion+=` Continue building the phase-specific stimulus without exceeding the planned load.`;
+ const projected=`Completing the current programme as prescribed projects ${fmtTime(engine.projection.predictedTime)} and ${Math.round(engine.projectedModel.probability)}% estimated target probability; this remains conditional on healthy, consistent execution.`;
  let actionsList=[];
- if(recoveryConstraint){
-  if(pain&&pain.score<60)actionsList.push({title:'Protect pain-limited training',text:actions['Pain status'],source:'Pain status'});
-  else actionsList.push({title:'Let recovery govern the next hard session',text:'Reduce or postpone the next demanding session until the recorded recovery signal improves.',source:'Garmin HRV trend'});
- }
- if(execution.limited.length){const x=execution.limited[0];actionsList.push({title:'Improve the next session execution',text:`The ${fmtDate(x.date)} ${x.type} scored ${x.score}/100. Prioritise completing the intended distance at the prescribed effort; do not compensate with extra volume.`,source:'Workout execution score'});}
- else if(Number.isFinite(execution.trend)&&execution.trend>=5)actionsList.push({title:'Preserve improving execution',text:`Recent workout execution improved by about ${execution.trend.toFixed(0)} points. Keep the same controlled pacing and recovery discipline rather than forcing faster targets.`,source:'Workout execution trend'});
- for(const f of opportunities){
-  if(actionsList.length>=3)break;
-  if(recoveryConstraint&&['Adherence','Volume progression','Long-run execution','Specificity'].includes(f.name))continue;
-  if(actions[f.name])actionsList.push({title:f.name,text:actions[f.name],source:f.name});
- }
- if(actionsList.length<3&&engine.next)actionsList.push({title:'Complete the next suitable planned session',text:`${fmtDate(engine.next.date)} · ${engine.next.type} · ${engine.next.distance.toFixed(1)} km. ${engine.next.purpose}`,source:'Training plan'});
- if(actionsList.length<3)actionsList.push({title:'Improve evidence quality',text:'Keep completed runs, plan links, HRV and pain entries current so future conclusions can be verified.',source:'Data coverage'});
+ if(recoveryConstraint){if(pain&&pain.score<60)actionsList.push({title:'Protect the injury first',text:actions['Pain status'],source:'Recent pain and athlete state'});else actionsList.push({title:'Let recovery govern intensity',text:'Keep the next demanding session easy or postpone it until the recorded recovery signal returns toward baseline.',source:'Garmin HRV trend'});}
+ if(execution.limited.length){const x=execution.limited[0],weak=x.details.components.filter(c=>c.score<80).sort((a,b)=>a.score-b.score)[0];actionsList.push({title:`Improve ${weak?.name?.toLowerCase()||'session execution'}`,text:`The ${fmtDate(x.date)} ${x.type} scored ${x.score}/100. ${weak?weak.detail:''} Repeat the intended stimulus with control; do not compensate through extra distance.`,source:'Session-specific execution breakdown'});}
+ else if(execution.recurringWeakness){const labels={distance:'distance discipline',pace:'pace control',power:'power control',hr:'heart-rate control',drift:'aerobic durability',rpe:'effort selection'};actionsList.push({title:`Strengthen ${labels[execution.recurringWeakness]||'execution'}`,text:'This component has been the most repeated weak point across recent scored sessions. Focus on the prescribed objective rather than the headline pace alone.',source:'Repeated workout-execution pattern'});}
+ else if(Number.isFinite(execution.trend)&&execution.trend>=5)actionsList.push({title:'Preserve improving execution',text:`Execution has improved by about ${execution.trend.toFixed(0)} points. Keep the same pacing and recovery discipline; allow fitness calibration to move targets only after sufficient evidence accumulates.`,source:'Workout execution trend'});
+ const raceOpportunity=opportunities.find(f=>['Endurance','Long-run execution','Specificity','Volume progression','Adherence','Fitness'].includes(f.name))||opportunities[0];
+ if(actionsList.length<3&&raceOpportunity&&!(recoveryConstraint&&['Adherence','Volume progression','Long-run execution','Specificity'].includes(raceOpportunity.name)))actionsList.push({title:`Build ${raceOpportunity.name.toLowerCase()}`,text:actions[raceOpportunity.name]||interpretations[raceOpportunity.name]?.(raceOpportunity.score)||'Improve this verified limiter through the planned progression.',source:`${raceOpportunity.name} · ${raceOpportunity.confidence.label.toLowerCase()}-confidence evidence`});
+ if(actionsList.length<3&&engine.next)actionsList.push({title:'Execute the next purposeful session',text:`${fmtDate(engine.next.date)} · ${engine.next.type} · ${engine.next.distance.toFixed(1)} km. Objective: ${engine.next.purpose}`,source:`${race.phase} phase plan`});
+ if(actionsList.length<3)actionsList.push({title:'Improve evidence quality',text:'Keep plan links, distance, duration, power, HR, RPE, pain and HRV complete. Better evidence improves both target calibration and prediction certainty.',source:'Current data coverage'});
  actionsList=actionsList.filter((x,i,a)=>a.findIndex(y=>y.title===x.title)===i).slice(0,3);
- return{conclusion,current,projected,strengths,opportunities,actions:actionsList,evidenceCoverage:Math.round(c.evidenceCoverage*100),recoveryConstraint,athleteState:ast,execution};
+ return{conclusion,current:`Current estimate: ${fmtTime(engine.pred)} (${targetPosition}).`,projected,strengths,opportunities,actions:actionsList,evidenceCoverage:Math.round(c.evidenceCoverage*100),recoveryConstraint,athleteState:ast,execution,race};
 }
 function evidenceFindingHtml(f,positive=false){
  const cls=positive?'evidenceStrength':'evidenceOpportunity';
@@ -1437,8 +1453,10 @@ function summariseCSV(rows){
 function runExecutionBreakdownHtml(r){
  const plan=r.planId?state.plan.find(p=>p.id===r.planId):null,d=workoutScoreDetails(r,plan);
  if(!d)return'<section class="runExecutionBreakdown"><h3>Execution breakdown</h3><p class="muted">Not enough distance and duration information to calculate a score.</p></section>';
- const rows=d.components.map(c=>`<div class="executionCalcRow"><span>${esc(c.name)}</span><b>${Math.round(c.score)}/100</b><small>Weight ${Math.round(c.weight*100)}% · ${esc(c.detail)}</small></div>`).join('');
- return `<section class="runExecutionBreakdown"><div class="executionBreakdownHead"><div><h3>Execution breakdown</h3><p class="muted compact">How this run delivered the intended session.</p></div><strong>${d.score}/100</strong></div>${plan?`<p class="muted compact">Matched to ${fmtDate(plan.date)} · ${esc(plan.type)} · ${plan.distance.toFixed(1)} km.</p>`:'<p class="muted compact">Ad hoc run: target-based components are unavailable, so the score carries less fitness evidence.</p>'}<div class="executionCalcTable">${rows}</div><div class="adjustmentCalcTotal"><span>Weighted score before pain cap</span><b>${Math.round(d.rawScore)}/100</b>${d.capReason?`<small>${esc(d.capReason)}</small>`:'<small>No pain cap applied.</small>'}</div></section>`;
+ const rows=d.components.map(c=>`<div class="executionCalcRow"><span>${esc(c.name)}</span><b>${Math.round(c.score)}/100</b><small>Effective weight ${Math.round(c.effectiveWeight*100)}%${c.reliability<1?` · ${Math.round(c.reliability*100)}% metric reliability`:''} · ${esc(c.detail)}</small></div>`).join('');
+ const paceComp=d.components.find(c=>c.key==='pace'),powerComp=d.components.find(c=>c.key==='power');
+ const conflict=paceComp&&powerComp&&Math.abs(paceComp.score-powerComp.score)>=12?`<div class="executionNotice"><b>Pace and power disagree</b><p>Terrain, wind, GPS or whole-run averaging may explain the difference. The coach treats this as mixed evidence rather than assuming either metric is correct on its own.</p></div>`:'';
+ return `<section class="runExecutionBreakdown"><div class="executionBreakdownHead"><div><h3>Execution breakdown</h3><p class="muted compact">How this run delivered the intended physiological objective.</p></div><strong>${d.score}/100</strong></div><div class="executionObjective"><small>WORKOUT OBJECTIVE</small><b>${esc(d.objective)}</b><span>${esc(d.interpretation)} · ${esc(d.evidenceQuality)} evidence</span></div>${plan?`<p class="muted compact">Matched to ${fmtDate(plan.date)} · ${esc(plan.type)} · ${plan.distance.toFixed(1)} km.</p>`:'<p class="muted compact">Ad hoc run: only directly observable components are scored. Missing targets reduce evidence quality rather than being awarded neutral points.</p>'}${conflict}<div class="executionCalcTable">${rows}</div><div class="adjustmentCalcTotal"><span>Weighted score before pain adjustment</span><b>${Math.round(d.rawScore)}/100</b>${d.capReason?`<small>${esc(d.capReason)}</small>`:'<small>No pain-related cap applied.</small>'}</div></section>`;
 }
 function renderRuns(){$('runList').innerHTML=state.runs.slice().sort((a,b)=>b.date.localeCompare(a.date)).map(r=>{let m=metrics(r),ws=workoutScore(r);return`<div class="runCard clickable" data-run="${r.id}"><div class="runSummary"><div><h3>${fmtDate(r.date)} · ${esc(r.type)}</h3><p>${r.distanceKm.toFixed(2)} km · ${fmtTime(r.durationSec)} · ${pace(m.pace)}</p><p class="muted compact"><b>Plan:</b> ${esc(matchSummary(r))}${ws!=null?` · <b>Workout score ${ws}/100</b>`:''}</p><div class="runStats"><span>HR ${r.avgHr?Math.round(r.avgHr):'—'}</span><span>${r.avgPower?Math.round(r.avgPower):'—'} W</span><span>${dec(m.efficiencyJ,1)} J/beat</span><span>${Number.isFinite(r.powerDrift)?r.powerDrift.toFixed(1)+'% drift':'— drift'}</span><span>${Number.isFinite(Number(r.hrv))?Math.round(Number(r.hrv))+' ms HRV':'— HRV'}</span></div></div><span>›</span></div></div>`}).join('')||'<div class="panel">No completed runs saved yet.</div>'}
 function migrateImportedPower(){
@@ -1786,11 +1804,11 @@ $('backupBtn').onclick=()=>download('ai-running-coach-backup.json',JSON.stringif
 let deferred;window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferred=e;$('installBtn').className='install'});$('installBtn').onclick=()=>deferred?.prompt();
 $('pillarCards')?.addEventListener('click',e=>{const card=e.target.closest('.pillarCard');if(!card||e.target.closest('summary'))return;const detail=card.querySelector('.pillarExplain');if(!detail)return;card.classList.toggle('open');detail.open=card.classList.contains('open');card.setAttribute('aria-expanded',String(detail.open))});
 $('pillarCards')?.addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&e.target.classList.contains('pillarCard')){e.preventDefault();e.target.click()}});
-const brandVersion=document.querySelector('.brand-copy p');if(brandVersion)brandVersion.textContent=`Race-specific adaptive planning • v9.3.7 · build ${BUILD}`;
+const brandVersion=document.querySelector('.brand-copy p');if(brandVersion)brandVersion.textContent=`Race-specific adaptive planning • v9.3.8 · build ${BUILD}`;
 if('serviceWorker'in navigator&&location.protocol==='https:')navigator.serviceWorker.register(`service-worker.js?v=${BUILD}`,{updateViaCache:'none'}).then(reg=>reg.update()).catch(()=>{});
 migrateAssessmentRuns();
 migrateImportedPower();
 if(reconcilePredictionHistory())save();
 renderAll();
-console.info('AI Running Coach v9.3.7 stable build 9370');
+console.info('AI Running Coach v9.3.8 stable build 9380');
 })();

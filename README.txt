@@ -1,20 +1,18 @@
-AI Running Coach v9.3.7 Stable — build 9370
+AI Running Coach v9.3.8 Stable — build 9380
 
-Changes in this release
-- Replaces the nearly permanent “Pending review” card with the finalised current-week adjustment factor.
-- Keeps that current factor visible and active for the entire training week.
-- Shows the next review date and the date from which the next finalised factor applies.
-- Clarifies that evidence accumulates during the week while current-week completion is not penalised before week close.
-- Adds pain as an explicit numeric Weekly Plan Adjustment input, resolving the prior wording/calculation inconsistency.
-- Recovery now shows the combined quantified contribution from Garmin HRV and pain.
-- The weekly calculation continues to use only existing app inputs: completed load, efficiency, cardiac drift, Garmin HRV and pain.
-- Updates schema, manifest and service-worker cache to build 9370.
+This release upgrades execution scoring and the Evidence-based Assessment.
 
-Weekly display behaviour
-- During Week N, the card shows the finalised factor that is actively controlling Week N.
-- The next review remains open in the background and is finalised after the last day of Week N.
-- At the start of Week N+1, the newly finalised factor becomes the visible current-week factor and remains visible for that full week.
-- Therefore, a final result is not shown only briefly between two “Pending review” states.
+Changes:
+- Uses session-specific execution weights so recovery, easy, threshold, interval, long-run and race sessions are judged against their actual physiological purpose.
+- Does not reward excessive distance or values above 100.
+- Treats whole-run pace, power and HR averages as lower-reliability evidence for structured workouts containing warm-up, recoveries or cooldown.
+- Varies cardiac-drift relevance by workout type and adds RPE appropriateness when available.
+- Scores only observable evidence for ad hoc runs; missing planned targets reduce evidence quality rather than receiving neutral points.
+- Adds the workout objective, score interpretation, evidence quality and pace-versus-power conflict explanation to each run breakdown.
+- Keeps the pain cap but explains it as reduced training value rather than poor technical execution.
+- Makes the Evidence-based Assessment race-, phase- and goal-specific using race outlook, programme phase, weeks remaining, athlete state, execution patterns, recovery, pain, plan adherence, long-run evidence, specificity and the next planned session.
+- Identifies recurring execution weaknesses and produces prioritised, evidence-labelled actions.
+- Updates schema, manifest and service-worker cache to build 9380.
 
-Deployment
-Replace all six application files in the GitHub Pages repository. Retain the existing icon files. Fully close and reopen the installed PWA after deployment so cache build 9370 activates.
+Deployment:
+Replace all six application files in the GitHub Pages repository. Retain the existing icon files. Fully close and reopen the installed PWA after deployment so cache build 9380 activates.
