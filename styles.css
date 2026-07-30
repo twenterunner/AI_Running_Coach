@@ -339,3 +339,6 @@ canvas{width:100%;height:auto;display:block}
 .timelineBlocks .timelineNow{top:50%;z-index:5;width:20px;height:20px;border:4px solid #fff;background:var(--navy);box-shadow:0 2px 9px rgba(11,49,87,.45)}
 .timelineScale{display:flex;justify-content:space-between;color:var(--muted);font-size:.75rem;margin:0 4px 12px}
 @media(max-width:520px){.timelineBlocks{height:44px}.timelineBlock span{font-size:.68rem}.timelineMeta{align-items:flex-start}.timelineMeta span{text-align:right}}
+
+/* v9.2.2: programme timeline moved to Plan tab */
+.programmeTimelinePanel{margin-bottom:16px}
