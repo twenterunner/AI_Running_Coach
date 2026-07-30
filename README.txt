@@ -1,4 +1,4 @@
-AI Running Coach v9.5.8 Stable — build 9580
+AI Running Coach v9.5.9 Stable — build 9590
 
 This release aligns the Pace & Power and Distance & Load pathway cards for faster comparison.
 
@@ -15,9 +15,9 @@ Changes:
 - Keeps the pain cap but explains it as reduced training value rather than poor technical execution.
 - Makes the Evidence-based Assessment race-, phase- and goal-specific using race outlook, programme phase, weeks remaining, athlete state, execution patterns, recovery, pain, plan adherence, long-run evidence, specificity and the next planned session.
 - Identifies recurring execution weaknesses and produces prioritised, evidence-labelled actions.
-- Updates schema, manifest and service-worker cache to build 9580.
+- Updates schema, manifest and service-worker cache to build 9590.
 
 Deployment:
-Replace all six application files in the GitHub Pages repository. Retain the existing icon files. Fully close and reopen the installed PWA after deployment so cache build 9580 activates.
+Replace all six application files in the GitHub Pages repository. Retain the existing icon files. Fully close and reopen the installed PWA after deployment so cache build 9590 activates.
 
 - Restores the two-pathway Dashboard summary and adds compact Recovery and Pain summaries beneath it.
