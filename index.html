@@ -3,18 +3,18 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#0b3157"><title>AI Running Coach</title>
-<link rel="manifest" href="manifest.webmanifest?v=9520"><link rel="stylesheet" href="styles.css?v=9520">
+<link rel="manifest" href="manifest.webmanifest?v=9390"><link rel="stylesheet" href="styles.css?v=9390">
 
-<link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png?v=9520">
-<link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png?v=9520">
-<link rel="icon" href="favicon.ico?v=9520">
-<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=9520">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png?v=9390">
+<link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png?v=9390">
+<link rel="icon" href="favicon.ico?v=9390">
+<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=9390">
 <meta property="og:image" content="github-banner.png">
 
 </head>
 <body>
 <header class="topbar">
-  <div class="brand"><img class="logo" src="icon-192.png?v=9520" alt="AI Running Coach logo"><div class="brand-copy"><h1>AI Running Coach</h1><p>Race-specific adaptive planning • v9.5.2 · build 9520</p></div></div>
+  <div class="brand"><img class="logo" src="icon-192.png?v=9390" alt="AI Running Coach logo"><div class="brand-copy"><h1>AI Running Coach</h1><p>Race-specific adaptive planning • v9.3.9 · build 9390</p></div></div>
   <button id="installBtn" class="install hidden">Install</button>
 </header>
 <nav id="nav"></nav>
@@ -31,7 +31,7 @@
     </div>
     <div class="outlookComparison" aria-label="Target outlook comparison">
       <article class="outlookCard currentOutlook">
-        <span>Current race capability</span>
+        <span>Chance of meeting target if racing today</span>
         <strong id="currentProbability">—</strong>
         <b id="currentProbabilityLabel">—</b>
         <small id="currentPrediction">—</small>
@@ -39,7 +39,7 @@
       </article>
       <div class="outlookArrow" aria-hidden="true">→</div>
       <article class="outlookCard projectedOutlook">
-        <span>Expected programme outcome</span>
+        <span>Chance of meeting target after full programme</span>
         <strong id="projectedProbability">—</strong>
         <b id="projectedProbabilityLabel">—</b>
         <small id="projectedPrediction">—</small>
@@ -47,7 +47,7 @@
       </article>
     </div>
     <div id="outlookGain" class="outlookGain"></div>
-    <p class="outlookAssumption">Expected scenario uses realistic plan completion, plan-derived fitness and durability gains, and a taper benefit calculated from the actual taper structure.</p>
+    <p class="outlookAssumption">Programme scenario assumes every remaining session is completed, but not perfect adaptation, health or race-day conditions.</p>
   </div>
   <details id="predictionModelDetail" class="panel modelDetail"><summary><span>How time and probability are calculated</span><small>Tap to expand</small></summary><div id="predictionModelContent" class="modelDetailBody"></div></details>
 
@@ -69,8 +69,8 @@
     <div class="dashboardSectionHead"><span>3</span><div><h3>Progress to race</h3><p>How the plan is progressing and what remains.</p></div></div>
     <div id="kpis" class="kpis"></div>
     <div class="grid2">
-      <article class="panel"><div class="panelHead"><h3>Weekly distance</h3><span class="muted">Planned vs completed</span></div><canvas id="volumeChart" width="1000" height="340"></canvas></article>
-      <article class="panel"><div class="panelHead"><h3>Long-run progression</h3><span class="muted">Planned vs completed</span></div><canvas id="longRunChart" width="1000" height="340"></canvas></article>
+      <article class="panel progressChartPanel"><div class="panelHead progressChartHead"><div><h3>Weekly distance</h3><span class="muted">Planned vs completed</span></div><div id="weeklyDistanceSummary" class="chartMetric"></div></div><canvas id="volumeChart" width="1000" height="340"></canvas></article>
+      <article class="panel progressChartPanel"><div class="panelHead progressChartHead"><div><h3>Long-run progression</h3><span class="muted">Planned vs completed</span></div><div id="longRunSummary" class="chartMetric"></div></div><canvas id="longRunChart" width="1000" height="340"></canvas></article>
     </div>
   </div>
 
@@ -180,11 +180,11 @@
   <div class="sectionTitle"><div><h2>Settings</h2><p>Configure the training plan, targets and adaptive limits.</p></div></div>
   <article class="panel"><div id="settingsGrid" class="formGrid"></div><button id="saveSettings" class="primary full">Save and rebuild future plan</button></article>
   <article class="panel"><h3>Training days</h3><div id="daysGrid"></div></article>
-  <article class="panel"><div class="panelHead"><div><h3>Plan Health</h3><p class="muted compact">How well the configured plan is structured for the race, with transparent scoring and recommendations.</p></div><button id="planHealthBtn" class="secondary">Recalculate</button></div><div id="planHealthContent"></div></article>
+  <article class="panel"><div class="panelHead"><div><h3>Plan Health</h3><p class="muted compact">Final validation conclusion for the current plan.</p></div><button id="planHealthBtn" class="secondary">Validate plan</button></div><div id="planHealthContent"></div></article>
   <article class="panel"><h3>Data</h3><div class="buttonRow"><button id="backupBtn">Download backup</button><label for="restoreFile" class="buttonLike">Restore backup</label><input id="restoreFile" type="file" accept=".json"><button id="exportBtn">Export runs CSV</button><button id="resetBtn" class="danger">Reset app</button></div></article>
 </section>
 </main>
 
 <div id="modal" class="modal hidden"><div class="modalCard"><button id="closeModal" class="close">×</button><div id="modalContent"></div></div></div>
-<script src="app.js?v=9520"></script>
+<script src="app.js?v=9390"></script>
 </body></html>
