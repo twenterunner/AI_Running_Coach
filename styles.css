@@ -478,7 +478,7 @@ canvas{width:100%;height:auto;display:block}
 .planHealthRecommendations{margin-top:14px}.planHealthRecommendations h4{margin:0 0 9px}.planHealthRecommendations>div{display:grid;grid-template-columns:28px 1fr;gap:9px;align-items:start;padding:10px 0;border-bottom:1px solid var(--line)}.planHealthRecommendations strong{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;background:var(--navy);color:#fff;font-size:.75rem}.planHealthRecommendations p{margin:2px 0 0}
 @media(max-width:650px){.outlookHero{padding:18px!important}.outlookHeroIntro{display:block}.outlookHeroIntro h2{margin-top:8px}.outlookComparison{grid-template-columns:1fr!important}.outlookArrow{height:24px;transform:none!important}.outlookArrow:after{content:'↓'}.outlookGain{grid-template-columns:repeat(2,minmax(0,1fr))!important}.planHealthSummary{grid-template-columns:1fr;text-align:center}.planHealthScore{margin:auto}}
 
-/* v9.5.6 alignment and programme progress */
+/* v9.5.6 alignment and programme progress (retained) */
 .coachPathwaySummary{align-items:stretch}
 .coachPathwayCard{display:flex;flex-direction:column}
 .coachFactorPair{margin-top:2px;align-items:stretch}
@@ -489,3 +489,17 @@ canvas{width:100%;height:auto;display:block}
 #kpis .kpi{height:100%}
 .timelineMeta span{font-variant-numeric:tabular-nums}
 @media(max-width:390px){.coachFactorPair{grid-template-columns:repeat(2,minmax(0,1fr))}.coachPathwayCard p{display:block}.coachFactorPair>div{padding:8px 6px}.coachFactorPair small{font-size:.58rem}}
+
+/* v9.5.7 restore agreed finish-time-first race outlook */
+.outlookArrow{font-size:0!important;justify-self:center;align-self:center;width:44px;text-align:center}
+.outlookArrow:after{content:'→';font-size:2rem}
+.outlookGain{display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px!important;background:transparent!important;border:0!important;padding:0!important;text-align:left!important}
+.outlookGain>div{padding:12px 14px;border-radius:14px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.17)}
+.outlookGain span{display:block;font-size:.65rem;text-transform:uppercase;letter-spacing:.055em;opacity:.75}.outlookGain b{display:block;margin-top:4px;font-size:1rem;font-variant-numeric:tabular-nums}
+.outlookAssumption{text-align:left!important;margin:0!important;padding:0 2px;font-size:.72rem!important;line-height:1.4!important}
+.outlookCard>strong{font-variant-numeric:tabular-nums}
+.outlookMetricDetail{padding:0!important;border-radius:14px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.17);min-width:0}
+.outlookMetricDetail>summary{list-style:none;padding:12px 14px;cursor:pointer}.outlookMetricDetail>summary::-webkit-details-marker{display:none}
+.outlookMetricDetail>summary span{display:block;font-size:.65rem;text-transform:uppercase;letter-spacing:.055em;opacity:.75}.outlookMetricDetail>summary b{display:block;margin-top:4px;font-size:1rem}.outlookMetricDetail>summary small{display:block;margin-top:3px;font-size:.65rem;opacity:.75}
+.outlookMetricCalc{padding:0 14px 14px;font-size:.76rem}.outlookMetricCalc p{margin:0 0 10px}.outlookMetricCalc .calcTable{margin:8px 0}
+@media(max-width:650px){.outlookArrow{width:100%;justify-self:stretch;display:flex;align-items:center;justify-content:center;margin:0!important;height:24px;transform:none!important}.outlookArrow:after{content:'↓'}.outlookGain{grid-template-columns:repeat(2,minmax(0,1fr))!important}}

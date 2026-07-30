@@ -90,7 +90,7 @@ function recommendedRaceDate(setup){
  let totalWeeks=Math.ceil(Math.max(minimumTotal,req.requiredBuildWeeks+taperWeeks+2));
  return{date:iso(new Date(dte(setup.planStart).getTime()+totalWeeks*7*DAY)),totalWeeks,requiredBuildWeeks:req.requiredBuildWeeks,taperWeeks};
 }
-const BUILD=9560, SCHEMA=9560, STORAGE_KEY='arc_v62_web', MIRROR_KEY='arc_v8500_web', BACKUP_KEY='arc_pre8500_backup';
+const BUILD=9570, SCHEMA=9570, STORAGE_KEY='arc_v62_web', MIRROR_KEY='arc_v8500_web', BACKUP_KEY='arc_pre8500_backup';
 const defaults=()=>{let start=iso(new Date()),setup={planStart:start,raceDate:start,raceName:'Goal Race',raceDistance:42.195,targetTime:15300,currentWeekly:35,currentLongest:18,testDistance:5,testTime:1515,thresholdHr:168,criticalPower:300,bodyWeight:93,maxWeekly:65,growth:.07,peakLong:32,taperDays:14,minFactor:.85,maxFactor:1.05,adaptive:true};setup.raceDate=recommendedRaceDate(setup).date;return({schemaVersion:SCHEMA,setup,days:FIVE_DAY_TEMPLATE.map(d=>[...d]),runs:[],assessments:[],plan:[],weekView:null,migration:{to:SCHEMA,status:'new',time:new Date().toISOString()}})};
 let migrationReport={from:null,to:SCHEMA,status:'new install',source:'defaults',runs:0,assessments:0,fieldsRecovered:0,warning:''};
 function parseStored(raw){if(!raw)return null;try{const x=JSON.parse(raw);return x&&typeof x==='object'?x:null}catch(err){recordDiagnostic('Storage parse',err);return null}}
@@ -1156,18 +1156,19 @@ function renderDashboard(){
  $('phaseBadge').textContent=phase(cw);
  $('raceTitle').textContent=state.setup.raceName;
  $('raceSubtitle').textContent=`${dte(state.setup.raceDate).toLocaleDateString()} • ${state.setup.raceDistance.toFixed(1)} km • target ${fmtTime(state.setup.targetTime)} (${pace(state.setup.targetTime/state.setup.raceDistance)})`;
- document.querySelector('.currentOutlook>span').textContent=`Chance of meeting ${fmtTime(state.setup.targetTime)} if racing today`;
- document.querySelector('.projectedOutlook>span').textContent=`Chance of meeting ${fmtTime(state.setup.targetTime)} after full programme`;
- $('currentProbability').textContent=Math.round(engine.currentModel.probability)+'%';
- $('currentProbabilityLabel').textContent=engine.currentModel.label;
- $('currentPrediction').textContent=`${fmtTime(pred)} predicted · ${pace(pred/state.setup.raceDistance)}`;
+ document.querySelector('.currentOutlook>span').textContent='Current race capability';
+ document.querySelector('.projectedOutlook>span').textContent='Expected programme outcome';
+ $('currentProbability').textContent=fmtTime(pred);
+ $('currentProbabilityLabel').textContent=`Today · ${pace(pred/state.setup.raceDistance)}`;
+ $('currentPrediction').textContent=`${Math.round(engine.currentModel.probability)}% chance of ${fmtTime(state.setup.targetTime)} · ${engine.currentModel.label}`;
  $('currentRange').textContent=`Likely 70% range ${fmtTime(engine.currentModel.rangeLow)}–${fmtTime(engine.currentModel.rangeHigh)} · ${pace(engine.currentModel.rangeLow/state.setup.raceDistance)}–${pace(engine.currentModel.rangeHigh/state.setup.raceDistance)}`;
- $('projectedProbability').textContent=Math.round(engine.projectedModel.probability)+'%';
- $('projectedProbabilityLabel').textContent=engine.projectedModel.label;
- $('projectedPrediction').textContent=`${fmtTime(engine.projection.predictedTime)} projected · ${pace(engine.projection.predictedTime/state.setup.raceDistance)}`;
+ $('projectedProbability').textContent=fmtTime(engine.projection.predictedTime);
+ $('projectedProbabilityLabel').textContent=`Race-day scenario · ${pace(engine.projection.predictedTime/state.setup.raceDistance)}`;
+ $('projectedPrediction').textContent=`${Math.round(engine.projectedModel.probability)}% chance of target · ${engine.projectedModel.label}`;
  $('projectedRange').textContent=`Likely 70% range ${fmtTime(engine.projectedModel.rangeLow)}–${fmtTime(engine.projectedModel.rangeHigh)} · ${pace(engine.projectedModel.rangeLow/state.setup.raceDistance)}–${pace(engine.projectedModel.rangeHigh/state.setup.raceDistance)}`;
- const gain=engine.projectedModel.probability-engine.currentModel.probability;
- $('outlookGain').innerHTML=`Projected programme benefit: <b>${gain>=0?'+':''}${Math.round(gain)} percentage points</b> · ${fmtTime(engine.projection.improvementSec)} estimated time improvement`;
+ const gain=engine.projectedModel.probability-engine.currentModel.probability,targetMargin=state.setup.targetTime-engine.projection.predictedTime,health=planHealthAssessment(c);
+ $('outlookGain').innerHTML=`<div><span>Expected improvement</span><b>${fmtTime(engine.projection.improvementSec)}</b></div><div><span>Target margin</span><b>${targetMargin>=0?fmtTime(targetMargin)+' faster':fmtTime(-targetMargin)+' slower'}</b></div><details class="outlookMetricDetail"><summary><span>Projected fitness</span><b>${engine.projection.projectedFitnessIndex.toFixed(1)}</b><small>What does this mean?</small></summary><div class="outlookMetricCalc"><p><b>${engine.projection.projectedFitnessIndex.toFixed(1)}</b> means the model expects general race capability to be ${(engine.projection.projectedFitnessIndex-100).toFixed(1)}% above the latest assessment baseline of 100, before the separate durability and taper adjustments.</p><div class="calcTable">${engine.projection.fitnessProjection.contributions.map(x=>`<div class="calcRow"><span>${esc(x.name)}</span><span>${x.potential.toFixed(2)}% potential</span><span>${x.realised.toFixed(2)}%</span></div>`).join('')}<div class="calcRow total"><span>Projected Fitness gain</span><span></span><span>+${(engine.projection.fitnessGainPct*100).toFixed(2)}%</span></div></div><p class="muted compact">Realisation reflects plan health, expected completion, recovery, training opportunity and diminishing returns. Marathon durability and taper are calculated separately.</p></div></details><div><span>Plan health</span><b>${Math.round(health.score)}/100</b></div>`;
+ const assumption=document.querySelector('.outlookAssumption');if(assumption)assumption.textContent=`Expected scenario uses ${Math.round(engine.projection.completionAssumption*100)}% plan completion, plan-derived fitness and durability gains, and a taper benefit calculated from the actual taper structure.`;
  $('trackStatus').innerHTML=`<span class="statusDot"></span><b>${engine.status}</b>`;
  const hero=$('trackStatus').closest('.outlookHero');
  if(hero)hero.classList.remove('outlook-good','outlook-watch','outlook-action');
@@ -1846,11 +1847,11 @@ $('backupBtn').onclick=()=>download('ai-running-coach-backup.json',JSON.stringif
 let deferred;window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferred=e;$('installBtn').className='install'});$('installBtn').onclick=()=>deferred?.prompt();
 $('pillarCards')?.addEventListener('click',e=>{const card=e.target.closest('.pillarCard');if(!card||e.target.closest('summary'))return;const detail=card.querySelector('.pillarExplain');if(!detail)return;card.classList.toggle('open');detail.open=card.classList.contains('open');card.setAttribute('aria-expanded',String(detail.open))});
 $('pillarCards')?.addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&e.target.classList.contains('pillarCard')){e.preventDefault();e.target.click()}});
-const brandVersion=document.querySelector('.brand-copy p');if(brandVersion)brandVersion.textContent=`Race-specific adaptive planning • v9.5.6 · build ${BUILD}`;
+const brandVersion=document.querySelector('.brand-copy p');if(brandVersion)brandVersion.textContent=`Race-specific adaptive planning • v9.5.7 · build ${BUILD}`;
 if('serviceWorker'in navigator&&location.protocol==='https:')navigator.serviceWorker.register(`service-worker.js?v=${BUILD}`,{updateViaCache:'none'}).then(reg=>reg.update()).catch(()=>{});
 migrateAssessmentRuns();
 migrateImportedPower();
 if(reconcilePredictionHistory())save();
 renderAll();
-console.info('AI Running Coach v9.5.6 stable build 9560');
+console.info('AI Running Coach v9.5.7 stable build 9570');
 })();
