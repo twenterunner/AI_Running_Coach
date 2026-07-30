@@ -1,14 +1,20 @@
-AI Running Coach v9.3.2 Stable — build 9320
+AI Running Coach v9.3.3 Stable — build 9330
 
-Major training-engine upgrade
-- Race-specific phase matrix for 5 km, 10 km, half marathon, marathon and ultra plans.
-- Six internal phases: Foundation, Aerobic, Development/Endurance, Specific, Peak and Taper.
-- New session types including strides, hills, fartlek, threshold intervals, medium-long runs, race-specific workouts, specific long runs and race rehearsals.
-- Fitness assessments are now scheduled by race profile rather than every fourth week.
-- Training Evidence Engine scores completed workouts and gradually recalibrates future pace and power targets.
-- Low-confidence runs, pain and substantially shortened sessions cannot aggressively reduce targets.
-- Training targets change only after a meaningful accumulated fitness-index movement.
-- Existing weekly distance adaptation, recovery logic, prediction model, imports and stored data remain compatible.
+Changes in this release:
+- Consolidates adaptation into one detailed Weekly Plan Adjustment on the Plan tab.
+- Dashboard now shows only a compact adjustment summary and directs users to Plan for the calculation.
+- Recovery now shows only the quantified contribution of existing HRV and pain evidence; it no longer duplicates the final factor.
+- Uses no new recovery parameters. Existing HRV, pain, completed load, efficiency, cardiac drift, adherence and workout evidence remain the inputs.
+- Corrects programme-timeline phase labels with explicit horizontal two-line labels for narrow blocks.
+- Standardises terminology from Adaptive Factor to Weekly Plan Adjustment in visible plan summaries.
+- Updates schema, manifest and service-worker cache to build 9330.
 
-Deployment
-Replace all six application files in the GitHub Pages repository. Retain the existing icon files. Fully close and reopen the installed PWA after deployment so cache build 9320 activates.
+Files:
+- index.html
+- styles.css
+- app.js
+- manifest.webmanifest
+- service-worker.js
+- README.txt
+
+Replace all six application files in the GitHub Pages repository. Retain the existing icon files. Fully close and reopen the installed PWA after deployment so cache build 9330 activates.
