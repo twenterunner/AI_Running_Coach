@@ -1,15 +1,19 @@
-AI Running Coach v9.4.2 Stable — build 9420
+AI Running Coach v9.5.0 Stable — build 9500
 
-This maintenance release fixes verified date, version, pathway-state and cache inconsistencies without changing training-day flexibility or icon deployment.
+Prediction architecture update
 
-Changes:
-- Corrects the day-duration constant from 87,300,000 ms to 86,400,000 ms so week generation, race countdowns and rolling evidence windows do not drift over time.
-- Introduces one central VERSION constant and aligns the visible header and console diagnostics to v9.4.2 build 9420.
-- Makes the Dashboard Distance & Load pathway use the same final-versus-provisional factor selection as the Plan tab.
-- Uses nullish numeric fallbacks for pathway factors so valid numeric values are not incorrectly replaced.
-- Prevents the service worker from caching unsuccessful HTTP responses.
-- Updates schema, HTML asset references, manifest and service-worker cache to build 9420.
-- Deliberately preserves configurable training on any day and keeps icon files outside this six-file package.
+- Uses the latest valid assessment as the race-performance baseline.
+- Uses the existing Fitness Index as the single general-fitness update pathway for current race predictions.
+- Adds an explicit Durability Index derived from current volume, long-run execution and race-specific preparation.
+- Removes fixed seconds awarded to ordinary completed workouts, preventing duplicated training benefits.
+- Current race time is calculated from assessment capability, Fitness Index and distance-specific Durability.
+- Future race time projects both Fitness and Durability using plan quality, realistic expected execution, current health, training opportunity and diminishing returns.
+- Future execution is no longer assumed to be 100%; it is bounded using observed plan execution.
+- Prediction tolerances separately combine assessment age, distance transfer, Fitness evidence, Durability evidence and execution uncertainty.
+- Future tolerance additionally includes adherence and adaptation uncertainty and is therefore not automatically narrower than the current range.
+- Prediction-history entries now store model snapshots and index values rather than fixed workout rewards.
+- Existing configurable training days and external GitHub icon files are preserved.
 
-Deployment:
-Replace all six application files in the GitHub Pages repository. Retain the existing icon files. Fully close and reopen the installed PWA after deployment so cache build 9420 activates.
+Installation
+
+Replace all six application files in the GitHub Pages repository. Retain the existing icon files. Fully close and reopen the installed PWA after deployment so cache build 9500 activates.

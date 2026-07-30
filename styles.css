@@ -452,7 +452,7 @@ canvas{width:100%;height:auto;display:block}
 @media(max-width:420px){.pathFactorPair{grid-template-columns:1fr}.pathFactorPair strong{font-size:1.4rem}}
 
 
-/* v9.4.2 dashboard pathway summary */
+/* v9.5.0 dashboard pathway summary */
 .coachPathwaySummary{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:14px 0 10px}
 .coachPathwayCard{border:1px solid var(--line);border-radius:17px;padding:14px;background:#fff;position:relative;overflow:hidden}
 .coachPathwayCard:before{content:"";position:absolute;left:0;right:0;top:0;height:4px;background:var(--blue)}
