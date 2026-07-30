@@ -452,3 +452,22 @@ canvas{width:100%;height:auto;display:block}
 .chartMetric .chartSummaryLabel{display:block;color:var(--muted);font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px}
 .chartMetric strong{display:block;color:var(--text);font-size:15px}
 @media(max-width:520px){.progressChartHead{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px}.chartMetric{padding:7px 8px}.chartMetric strong{font-size:14px}}
+
+.coachPathwaySummary{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:14px 0 10px}
+.coachPathwayCard{border:1px solid var(--line);border-radius:17px;padding:14px;background:#fff;position:relative;overflow:hidden;min-width:0}
+.coachPathwayCard:before{content:"";position:absolute;left:0;right:0;top:0;height:4px;background:var(--blue)}
+.coachPathwayCard.loadSummary:before{background:var(--teal)}
+.coachPathwayLabel{display:block;margin-top:2px;color:var(--muted);font-size:.68rem;font-weight:850;letter-spacing:.055em}
+.coachPathwayDecision{display:block;margin:7px 0 10px;font-size:1rem;color:var(--ink)}
+.coachFactorPair{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.coachFactorPair>div{padding:9px 8px;border-radius:12px;background:var(--soft);min-width:0}
+.coachFactorPair small{display:block;color:var(--muted);font-size:.63rem;text-transform:uppercase;line-height:1.2}
+.coachFactorPair strong{display:block;margin-top:3px;font-size:1.1rem;color:var(--navy);font-variant-numeric:tabular-nums}
+.coachPathwayCard p{margin:9px 0 0;color:var(--muted);font-size:.76rem;line-height:1.35}
+.coachRecoverySummary{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:0 0 10px}
+.coachRecoverySummary>div{border:1px solid var(--line);border-radius:14px;background:var(--soft);padding:10px 12px;min-width:0}
+.coachRecoverySummary span{display:block;color:var(--muted);font-size:.68rem;text-transform:uppercase;letter-spacing:.04em}
+.coachRecoverySummary b{display:block;margin-top:3px;font-size:.95rem;color:var(--ink)}
+.coachRecoverySummary small{display:block;margin-top:3px;color:var(--muted);font-size:.7rem;line-height:1.3}
+.coachPlanLink{width:100%;border:1px solid #cfe0ed;background:#eef5fb;color:var(--navy);border-radius:12px;padding:11px 13px;font-weight:850;text-align:center;cursor:pointer;margin-bottom:4px}
+@media(max-width:390px){.coachPathwaySummary{gap:8px}.coachPathwayCard{padding:11px}.coachFactorPair{grid-template-columns:1fr}.coachPathwayDecision{font-size:.9rem}.coachPathwayCard p{display:none}.coachRecoverySummary{gap:8px}}
