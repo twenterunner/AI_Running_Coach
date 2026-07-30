@@ -443,3 +443,10 @@ canvas{width:100%;height:auto;display:block}
 .adaptationPath .stateDetails{margin-top:auto}
 .adaptationPath .pathAction{min-height:68px;display:flex;align-items:center}
 @media(max-width:760px){.adaptationPath .pathAction{min-height:0}}
+
+/* v9.4.0: consistent current and in-progress factors for both pathways */
+.pathFactorPair{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 0 14px}
+.pathFactorPair>div{border:1px solid var(--line);border-radius:16px;padding:12px 14px;background:var(--soft)}
+.pathFactorPair small{display:block;color:var(--muted);font-size:.72rem;font-weight:800;text-transform:uppercase;letter-spacing:.04em}
+.pathFactorPair strong{display:block;color:var(--navy);font-size:1.55rem;line-height:1.05;margin-top:5px}
+@media(max-width:420px){.pathFactorPair{grid-template-columns:1fr}.pathFactorPair strong{font-size:1.4rem}}
