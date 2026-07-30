@@ -90,7 +90,7 @@ function recommendedRaceDate(setup){
  let totalWeeks=Math.ceil(Math.max(minimumTotal,req.requiredBuildWeeks+taperWeeks+2));
  return{date:iso(new Date(dte(setup.planStart).getTime()+totalWeeks*7*DAY)),totalWeeks,requiredBuildWeeks:req.requiredBuildWeeks,taperWeeks};
 }
-const BUILD=9930, SCHEMA=9930, STORAGE_KEY='arc_v62_web', MIRROR_KEY='arc_v8500_web', BACKUP_KEY='arc_pre8500_backup';
+const BUILD=9940, SCHEMA=9940, STORAGE_KEY='arc_v62_web', MIRROR_KEY='arc_v8500_web', BACKUP_KEY='arc_pre8500_backup';
 const defaults=()=>{let start=iso(new Date()),setup={planStart:start,raceDate:start,raceName:'Goal Race',raceDistance:42.195,targetTime:15300,currentWeekly:35,currentLongest:18,testDistance:5,testTime:1515,thresholdHr:168,criticalPower:300,bodyWeight:93,maxWeekly:65,growth:.07,peakLong:32,taperDays:14,minFactor:.85,maxFactor:1.05,adaptive:true};setup.raceDate=recommendedRaceDate(setup).date;return({schemaVersion:SCHEMA,setup,days:FIVE_DAY_TEMPLATE.map(d=>[...d]),runs:[],assessments:[],injuries:[],plan:[],weekView:null,migration:{to:SCHEMA,status:'new',time:new Date().toISOString()}})};
 let migrationReport={from:null,to:SCHEMA,status:'new install',source:'defaults',runs:0,assessments:0,fieldsRecovered:0,warning:''};
 function parseStored(raw){if(!raw)return null;try{const x=JSON.parse(raw);return x&&typeof x==='object'?x:null}catch(err){recordDiagnostic('Storage parse',err);return null}}
@@ -1851,7 +1851,56 @@ function injuryText(i){return [i.bodyRegion,i.location,i.mechanism,i.onset,i.ini
 function injuryMatchText(i){return [i.location,i.mechanism,i.onset,i.initialSymptoms,i.currentSymptoms,i.painTriggers].filter(Boolean).join(' ').toLowerCase()}
 function nullableNumber(v){return v===''||v===null||v===undefined?null:(Number.isFinite(Number(v))?Number(v):null)}
 function valueText(v,suffix='/10'){return Number.isFinite(v)?`${v}${suffix}`:'Not assessed'}
-function termHits(text,terms=[]){return terms.filter(x=>text.includes(String(x).toLowerCase()))}
+function normaliseInjuryLanguage(v){return String(v||'').toLowerCase().replace(/[–—-]/g,' ').replace(/[^a-z0-9\s/]/g,' ').replace(/\s+/g,' ').trim()}
+function injuryPhraseMatch(text,phrase){
+ const t=normaliseInjuryLanguage(text),p=normaliseInjuryLanguage(phrase);if(!t||!p)return false;if(t.includes(p))return true;
+ const words=p.split(' ').filter(w=>w.length>2&&!['pain','injury','running','pattern','possible'].includes(w));
+ return words.length>1&&words.every(w=>t.includes(w));
+}
+function termHits(text,terms=[]){return terms.filter(x=>injuryPhraseMatch(text,x))}
+function contextualInjuryBonus(i,key){
+ const location=normaliseInjuryLanguage(i.location),triggers=normaliseInjuryLanguage(i.painTriggers),symptoms=normaliseInjuryLanguage(`${i.initialSymptoms||''} ${i.currentSymptoms||''}`),all=`${location} ${triggers} ${symptoms}`;
+ const hit=(rx,points)=>rx.test(all)?points:0;
+ const rules={
+  pfp:()=>hit(/front|around|behind.*(knee ?cap|patella)|knee ?cap|stairs|squat|downhill|after sitting|theater sign/,8),
+  patellar_tend:()=>hit(/below.*(knee ?cap|patella)|patellar tendon|jump|hop|accelerat/,9),
+  itbs:()=>hit(/outside|outer|lateral.*knee|downhill|after.*(run|kilomet|mile)/,8),
+  pes:()=>hit(/inside.*below.*knee|medial.*below|pes anserine/,9),
+  meniscus:()=>hit(/joint line|locking|catching|twist|deep squat|giving way|swelling/,8),
+  mcl:()=>hit(/inside|inner|medial.*knee|valgus|side impact/,6),
+  quad_tend:()=>hit(/above.*(knee ?cap|patella)|quadriceps tendon/,9),
+  fat_pad:()=>hit(/under.*(knee ?cap|patella)|fully straighten|extension|pinch.*front/,8),
+  popliteus:()=>hit(/back|behind|posterior.*knee|downhill|unlock/,7),
+  prox_ham_strain:()=>hit(/sit bone|lower buttock|upper hamstring|sprint|sudden|pop|bruis/,8),
+  ham_strain:()=>hit(/back.*thigh|posterior thigh|hamstring|sprint|sudden|pop|bruis/,7),
+  prox_ham_tend:()=>hit(/sit bone|lower buttock|sitting|gradual|uphill|fast running/,8),
+  gtps:()=>hit(/outside|side|lateral.*hip|lying.*side|single leg|stairs/,8),
+  hip_flexor:()=>hit(/front.*hip|lifting.*knee|hip flex|sprint/,8),
+  adductor_strain:()=>hit(/inner thigh|groin|adductor|side step|change direction|sudden/,7),
+  adductor_tend:()=>hit(/inner thigh|groin|adductor|squeeze|gradual/,7),
+  pfp_unused:()=>0,
+  mtss:()=>hit(/inside.*shin|medial.*shin|diffuse|long area|warm.*up/,8),
+  tibial_bsi:()=>hit(/focal|one spot|point tender|bone|hop|night pain/,10),
+  fibular_bsi:()=>hit(/outside.*lower leg|fibula|focal|one spot|hop/,9),
+  cecs:()=>hit(/tight|pressure|same distance|resolves.*stop|numb|weak/,9),
+  gastroc:()=>hit(/upper calf|back.*calf|push off|sudden|pop/,8),
+  soleus:()=>hit(/deep calf|lower calf|bent knee|slow running|gradual/,8),
+  achilles_mid:()=>hit(/mid.*achilles|2.*6.*cm|morning stiffness|first steps|tendon/,9),
+  achilles_ins:()=>hit(/heel insertion|back.*heel|insertion|shoe pressure|uphill/,9),
+  achilles_rupture:()=>hit(/pop|kicked.*calf|cannot.*toe|unable.*push|gap/,13),
+  ankle_sprain:()=>hit(/rolled|inversion|twist|outside.*ankle|swelling|bruis/,9),
+  plantar:()=>hit(/under.*heel|bottom.*heel|arch|first steps|morning/,9),
+  peroneal:()=>hit(/outside.*ankle|outer.*ankle|peroneal|eversion/,8),
+  post_tib:()=>hit(/inside.*ankle|medial.*ankle|arch collapse|single leg heel raise/,9),
+  met_bsi:()=>hit(/top.*foot|forefoot|metatarsal|focal|hop/,8),
+  fifth_met_bsi:()=>hit(/outside.*foot|base.*fifth|fifth metatarsal|focal/,10),
+  navicular_bsi:()=>hit(/top.*midfoot|navicular|n spot|focal/,10),
+  sesamoid:()=>hit(/under.*big toe|ball.*foot|sesamoid|push off/,9),
+  mortons:()=>hit(/between.*toes|pebble|burning|numb.*toes|tight shoes/,9),
+  lumbar_radicular:()=>hit(/low back|radiat|below knee|tingl|numb|electric/,10)
+ };
+ return rules[key]?rules[key]():0;
+}
 function diagnosisFamily(key=''){
  const d=RUNNER_INJURY_LIBRARY.find(x=>x.key===key);if(d?.family)return d.family;
  if(/bsi|sesamoid/.test(key))return'bone';
@@ -1886,9 +1935,9 @@ function workingDiagnosis(i){
  const clinician=String(i.clinicalDiagnosis||'').trim();
  if(clinician){const mapped=clinicianLibraryMatch(clinician),hasMap=!!mapped?.hits,entered=nullableNumber(i.clinicianExpectedDays),days=entered??(hasMap?mapped.days:56);return{name:clinician,source:'Clinician-entered',strength:'Clinician-entered',evidence:['diagnosis entered from clinician information'],alternatives:['The app does not independently verify clinician information'],nominalDays:days,minDays:entered??(hasMap?mapped.minDays:Math.round(days*.7)),maxDays:entered??(hasMap?mapped.maxDays:Math.round(days*1.5)),key:hasMap?mapped.key:'',family:hasMap?diagnosisFamily(mapped.key):'generic',ranked:[],missing:hasMap?[]:['expected recovery duration from the clinician'],urgent:!!mapped?.urgent,safetyReasons:explicitRedFlags(i,hasMap?[mapped]:[])};}
  const text=injuryMatchText(i),initialPain=nullableNumber(i.initialPain),walk=nullableNumber(i.initialWalkPain),bodyRegion=i.bodyRegion||'';
- let ranked=RUNNER_INJURY_LIBRARY.filter(d=>regionCompatible(bodyRegion,d.key)).map(d=>{const location=termHits(text,d.terms),mechanism=termHits(text,d.mechanisms),features=termHits(text,d.features);let score=location.length*5+mechanism.length*2.5+features.length*3;if(i.onset&&d.mechanisms.some(x=>String(i.onset).toLowerCase().includes(x)))score+=2;if(i.pop&&/strain|rupture|tear|sprain/.test(d.name.toLowerCase()))score+=3;if(i.bruising&&/strain|rupture|tear|sprain|stress injury/.test(d.name.toLowerCase()))score+=2;if(Number.isFinite(initialPain)&&initialPain>=7&&/strain|rupture|stress injury|sprain/.test(d.name.toLowerCase()))score+=1.5;if(Number.isFinite(walk)&&walk>=5&&/stress injury|rupture|strain|sprain/.test(d.name.toLowerCase()))score+=1;return{...d,score,location,mechanism,features};}).filter(x=>x.score>=4.5&&(x.location.length||x.features.length||x.score>=8)).sort((a,b)=>b.score-a.score);
+ let ranked=RUNNER_INJURY_LIBRARY.filter(d=>regionCompatible(bodyRegion,d.key)).map(d=>{const location=termHits(text,d.terms),mechanism=termHits(text,d.mechanisms),features=termHits(text,d.features),contextBonus=contextualInjuryBonus(i,d.key);let score=location.length*5+mechanism.length*2.5+features.length*3+contextBonus;if(i.onset&&d.mechanisms.some(x=>injuryPhraseMatch(i.onset,x)))score+=2;if(i.pop&&/strain|rupture|tear|sprain/.test(d.name.toLowerCase()))score+=3;if(i.bruising&&/strain|rupture|tear|sprain|stress injury/.test(d.name.toLowerCase()))score+=2;if(Number.isFinite(initialPain)&&initialPain>=7&&/strain|rupture|stress injury|sprain/.test(d.name.toLowerCase()))score+=1.5;if(Number.isFinite(walk)&&walk>=5&&/stress injury|rupture|strain|sprain/.test(d.name.toLowerCase()))score+=1;return{...d,score,location,mechanism,features,contextBonus};}).filter(x=>x.score>=5&&(x.location.length||x.features.length||x.contextBonus>=6)).sort((a,b)=>b.score-a.score);
  if(!ranked.length){const region=(bodyRegion||i.location||'lower limb').trim();return{name:`Undifferentiated ${region.toLowerCase()} running-injury pattern`,source:'App pattern match',strength:'Limited',evidence:['the selected region is known, but differentiating symptom detail is insufficient'],alternatives:RUNNER_INJURY_LIBRARY.filter(d=>regionCompatible(bodyRegion,d.key)).slice(0,4).map(d=>d.name),nominalDays:56,key:'',family:bodyRegion==='Knee'?'knee':'generic',ranked:[],missing:['more precise pain location','activities that reproduce symptoms','specific features such as swelling, locking, morning stiffness or focal tenderness'],urgent:false,safetyReasons:explicitRedFlags(i,[])};}
- const top=ranked[0],second=ranked[1],margin=top.score-(second?.score||0),evidence=[...top.location.map(x=>`location: ${x}`),...top.mechanism.map(x=>`mechanism: ${x}`),...top.features.map(x=>`feature: ${x}`)];if(i.pop)evidence.push('pop/snap reported');if(i.bruising)evidence.push('bruising/swelling reported');if(Number.isFinite(initialPain))evidence.push(`initial pain ${initialPain}/10`);if(Number.isFinite(walk))evidence.push(`initial walking pain ${walk}/10`);
+ const top=ranked[0],second=ranked[1],margin=top.score-(second?.score||0),evidence=[...top.location.map(x=>`location: ${x}`),...top.mechanism.map(x=>`mechanism: ${x}`),...top.features.map(x=>`feature: ${x}`)];if(top.contextBonus>=6)evidence.push('the described pain location and aggravating activities match this pattern');if(i.pop)evidence.push('pop/snap reported');if(i.bruising)evidence.push('bruising/swelling reported');if(Number.isFinite(initialPain))evidence.push(`initial pain ${initialPain}/10`);if(Number.isFinite(walk))evidence.push(`initial walking pain ${walk}/10`);
  const displayRanked=ranked.slice(0,3).map(x=>({name:x.name,region:x.region,strength:matchStrength(x.score,margin),urgent:!!x.urgent,key:x.key}));const missing=[];if(!i.onset)missing.push('whether onset was sudden or gradual');if(!i.painTriggers)missing.push('which activities reproduce pain');if(!i.location||i.location.trim().length<4)missing.push('a more precise pain location');const safetyReasons=explicitRedFlags(i,ranked.slice(0,3));return{name:top.name,source:'App pattern match',strength:matchStrength(top.score,margin),evidence:evidence.length?evidence:['location and symptom pattern'],alternatives:[...(top.alternatives||[]),...displayRanked.slice(1).map(x=>x.name)].filter((x,n,a)=>a.indexOf(x)===n).slice(0,4),nominalDays:top.days,minDays:top.minDays||Math.round(top.days*.7),maxDays:top.maxDays||Math.round(top.days*1.5),key:top.key,family:diagnosisFamily(top.key),ranked:displayRanked,missing,urgent:safetyReasons.length>0,safetyReasons};
 }
 function known(v){return v!==null&&v!==undefined}
@@ -2169,11 +2218,11 @@ $('backupBtn').onclick=()=>download('ai-running-coach-backup.json',JSON.stringif
 let deferred;window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferred=e;$('installBtn').className='install'});$('installBtn').onclick=()=>deferred?.prompt();
 $('pillarCards')?.addEventListener('click',e=>{const card=e.target.closest('.pillarCard');if(!card||e.target.closest('summary'))return;const detail=card.querySelector('.pillarExplain');if(!detail)return;card.classList.toggle('open');detail.open=card.classList.contains('open');card.setAttribute('aria-expanded',String(detail.open))});
 $('pillarCards')?.addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&e.target.classList.contains('pillarCard')){e.preventDefault();e.target.click()}});
-const brandVersion=document.querySelector('.brand-copy p');if(brandVersion)brandVersion.textContent=`Race-specific adaptive planning • v9.9.3 · build ${BUILD}`;
+const brandVersion=document.querySelector('.brand-copy p');if(brandVersion)brandVersion.textContent=`Race-specific adaptive planning • v9.9.4 · build ${BUILD}`;
 if('serviceWorker'in navigator&&location.protocol==='https:')navigator.serviceWorker.register(`service-worker.js?v=${BUILD}`,{updateViaCache:'none'}).then(reg=>reg.update()).catch(()=>{});
 migrateAssessmentRuns();
 migrateImportedPower();
 if(reconcilePredictionHistory())save();
 renderAll();
-console.info('AI Running Coach v9.9.3 stable build 9930');
+console.info('AI Running Coach v9.9.4 stable build 9940');
 })();
