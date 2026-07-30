@@ -1,4 +1,18 @@
-AI Running Coach v9.8.3 Stable — build 9830
+AI Running Coach v9.8.4 Stable — build 9840
+
+This release replaces abstract exercise animations with complete fold-out illustrated exercise sheets and makes the faster/slower-than-nominal assessment evidence-specific.
+
+Changes:
+- Adds one expandable exercise sheet for every prescribed rehabilitation exercise.
+- Each sheet includes three illustrated movement steps, purpose, dosage, pain limit, next-morning rule, coaching cues, common mistakes, regression and progression guidance.
+- Removes reliance on exercise video and animated stick figures; all guidance remains lightweight and available offline.
+- Explains trajectory classification using the runner's actual pain, walking pain, strength control, hopping/impact tolerance, running exposure and next-morning response.
+- Shows each observed signal against the nominal expectation for the same injury day and labels which factors are ahead or behind.
+- Keeps rehabilitation data and calculations independent from training-plan generation, weekly adaptation, Plan Health and race prediction.
+- Updates schema, manifest and service-worker cache to build 9840.
+
+Deployment:
+Replace all six application files in the GitHub Pages repository. Retain the existing icon files. Fully close and reopen the installed PWA after deployment so cache build 9840 activates.
 
 This release upgrades the independent Injury tab into an adaptive rehabilitation coach without changing the running programme, workout adaptation or race-prediction calculations.
 
