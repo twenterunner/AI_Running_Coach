@@ -76,7 +76,7 @@ function recommendedRaceDate(setup){
  let totalWeeks=Math.ceil(Math.max(minimumTotal,req.requiredBuildWeeks+taperWeeks+2));
  return{date:iso(new Date(dte(setup.planStart).getTime()+totalWeeks*7*DAY)),totalWeeks,requiredBuildWeeks:req.requiredBuildWeeks,taperWeeks};
 }
-const BUILD=9200, SCHEMA=9200, STORAGE_KEY='arc_v62_web', MIRROR_KEY='arc_v8500_web', BACKUP_KEY='arc_pre8500_backup';
+const BUILD=9210, SCHEMA=9210, STORAGE_KEY='arc_v62_web', MIRROR_KEY='arc_v8500_web', BACKUP_KEY='arc_pre8500_backup';
 const defaults=()=>{let start=iso(new Date()),setup={planStart:start,raceDate:start,raceName:'Goal Race',raceDistance:42.195,targetTime:15300,currentWeekly:35,currentLongest:18,testDistance:5,testTime:1515,thresholdHr:168,criticalPower:300,bodyWeight:93,maxWeekly:65,growth:.07,peakLong:32,taperDays:14,minFactor:.85,maxFactor:1.05,adaptive:true};setup.raceDate=recommendedRaceDate(setup).date;return({schemaVersion:SCHEMA,setup,days:FIVE_DAY_TEMPLATE.map(d=>[...d]),runs:[],assessments:[],plan:[],weekView:null,migration:{to:SCHEMA,status:'new',time:new Date().toISOString()}})};
 let migrationReport={from:null,to:SCHEMA,status:'new install',source:'defaults',runs:0,assessments:0,fieldsRecovered:0,warning:''};
 function parseStored(raw){if(!raw)return null;try{const x=JSON.parse(raw);return x&&typeof x==='object'?x:null}catch(err){recordDiagnostic('Storage parse',err);return null}}
@@ -900,7 +900,7 @@ function coachEngine(){
   {label:'Race-specific sessions',value:completedSpecific,target:Math.max(4,Math.ceil(weeks()*.30)),unit:'sessions'},
   {label:'Plan-linked workouts',value:matched,target:Math.max(1,dueWorkouts),unit:'workouts'}
  ];
- let next=state.plan.filter(p=>p.type!=='Rest'&&dte(p.date)>=today()).sort((a,b)=>a.date.localeCompare(b.date))[0];
+ let next=state.plan.filter(p=>p.type!=='Rest'&&p.type!=='Race Day'&&dte(p.date)>=today()&&!matchingRun(p)).sort((a,b)=>a.date.localeCompare(b.date))[0];
  return{c,pred,cw,wd,projectedPreparation,projection,currentSupport,projectedSupport,currentModel,projectedModel,scored,strongest,weakest,limiterCard,coachConfidencePct,status,progress,next};
 }
 
@@ -1029,8 +1029,19 @@ function renderDashboard(){
     <div class="pillarMeta"><span>Model weight ${Math.round(p.weight*100)}%</span><span>Evidence ${Math.round(p.coverage*100)}%</span></div>
     <details class="pillarExplain"><summary>How this is calculated</summary><div class="calcTable">${p.items.map(i=>`<div class="calcRow"><span>${i.name}</span><span>${i.hasEvidence?Math.round(i.displayScore):'No evidence'}</span><span>${Math.round(i.weight*100)}%</span></div>`).join('')}</div><p class="muted">Only current completed evidence is scored. Missing evidence is shown as missing and widens the prediction range; it does not receive a neutral or projected score.</p></details>
    </div>`).join('');
- let total=Math.max(1,weeks()),pos=clamp((engine.cw-1)/(Math.max(1,total-1))*100,0,100),taper=Math.max(0,100-(Math.ceil(state.setup.taperDays/7)/total*100));
- $('raceTimeline').innerHTML=`<div class="timelineLabels"><span>Plan start</span><span>Peak</span><span>Taper</span><span>Race</span></div><div class="timelineTrack"><i class="timelineDone" style="width:${pos}%"></i><span class="timelineNow" style="left:${pos}%"></span><span class="timelineTaper" style="left:${taper}%"></span></div><div class="timelineMeta"><b>${phase(engine.cw)} phase</b><span>${Math.max(0,Math.ceil(c.weeksRemaining))} weeks until race</span></div>`;
+ let total=Math.max(1,weeks()),pos=clamp((engine.cw-1)/(Math.max(1,total-1))*100,0,100);
+ const taperWeeks=Math.max(1,Math.ceil(state.setup.taperDays/7));
+ const baseEnd=Math.min(3,total),taperStart=Math.max(1,total-taperWeeks+1),peakStart=Math.max(baseEnd+1,taperStart-3);
+ const pct=w=>clamp((w-1)/Math.max(1,total-1)*100,0,100);
+ const baseWidth=pct(Math.min(baseEnd+1,total));
+ const buildStart=baseWidth,buildEnd=pct(peakStart),peakEnd=pct(taperStart);
+ const blocks=[
+  {name:'Base',start:0,end:baseWidth,cls:'base'},
+  {name:'Build',start:buildStart,end:buildEnd,cls:'build'},
+  {name:'Peak',start:buildEnd,end:peakEnd,cls:'peak'},
+  {name:'Taper',start:peakEnd,end:100,cls:'taper'}
+ ].filter(b=>b.end>b.start+.1);
+ $('raceTimeline').innerHTML=`<div class="timelineBlocks">${blocks.map(b=>`<div class="timelineBlock timeline-${b.cls}" style="left:${b.start}%;width:${b.end-b.start}%"><span>${b.name}</span></div>`).join('')}<i class="timelineProgress" style="width:${pos}%"></i><span class="timelineNow" style="left:${pos}%" aria-label="Current programme position"></span></div><div class="timelineScale"><span>Plan start</span><span>Race day</span></div><div class="timelineMeta"><b>${phase(engine.cw)} phase · week ${engine.cw} of ${total}</b><span>${Math.max(0,Math.ceil(c.weeksRemaining))} weeks until race</span></div>`;
  let afd=adaptiveFactorDetails(cw);
  $('kpis').innerHTML=kpi('Time until race',(()=>{const days=Math.max(0,Math.ceil((dte(state.setup.raceDate)-today())/DAY));return days<14?`${days} ${days===1?'day':'days'}`:`${Math.ceil(days/7)} weeks`;})(),'Remaining')+kpi('Completed this week',wd.actual.toFixed(1)+' km',`${wd.planned.toFixed(1)} km planned`)+kpi('Longest verified run',c.completedLongest.toFixed(1)+' km',`${Number(state.setup.peakLong).toFixed(1)} km target`)+factorKpi(afd);
  const trendHistory=(state.predictionHistory||[]).filter(x=>Number.isFinite(Number(x.seconds))).slice().sort((a,b)=>a.date.localeCompare(b.date));
@@ -1644,11 +1655,11 @@ $('backupBtn').onclick=()=>download('ai-running-coach-backup.json',JSON.stringif
 let deferred;window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferred=e;$('installBtn').className='install'});$('installBtn').onclick=()=>deferred?.prompt();
 $('pillarCards')?.addEventListener('click',e=>{const card=e.target.closest('.pillarCard');if(!card||e.target.closest('summary'))return;const detail=card.querySelector('.pillarExplain');if(!detail)return;card.classList.toggle('open');detail.open=card.classList.contains('open');card.setAttribute('aria-expanded',String(detail.open))});
 $('pillarCards')?.addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&e.target.classList.contains('pillarCard')){e.preventDefault();e.target.click()}});
-const brandVersion=document.querySelector('.brand-copy p');if(brandVersion)brandVersion.textContent=`Adaptive marathon planning • v9.2.0 · build ${BUILD}`;
+const brandVersion=document.querySelector('.brand-copy p');if(brandVersion)brandVersion.textContent=`Adaptive marathon planning • v9.2.1 · build ${BUILD}`;
 if('serviceWorker'in navigator&&location.protocol==='https:')navigator.serviceWorker.register(`service-worker.js?v=${BUILD}`,{updateViaCache:'none'}).then(reg=>reg.update()).catch(()=>{});
 migrateAssessmentRuns();
 migrateImportedPower();
 if(reconcilePredictionHistory())save();
 renderAll();
-console.info('AI Running Coach v9.2.0 stable build 9200');
+console.info('AI Running Coach v9.2.1 stable build 9210');
 })();

@@ -328,3 +328,14 @@ canvas{width:100%;height:auto;display:block}
 .predictionCurrent[data-update-mode="maintained"] .predictionUpdateEvidence{border-left-color:#68778a;background:rgba(104,119,138,.08)}
 .predictionCurrent[data-update-mode="improved"] .predictionUpdateEvidence{border-left-color:#159487;background:rgba(21,148,135,.08)}
 .predictionCurrent[data-update-mode="slower"] .predictionUpdateEvidence{border-left-color:#d75b67;background:rgba(215,91,103,.08)}
+
+/* v9.2.1 programme timeline */
+.timelineBlocks{height:48px;border-radius:14px;position:relative;overflow:visible;margin:16px 4px 8px;background:#e4ebf1;box-shadow:inset 0 0 0 1px rgba(11,49,87,.08)}
+.timelineBlock{position:absolute;top:0;height:100%;display:flex;align-items:center;justify-content:center;border-right:2px solid rgba(255,255,255,.75);overflow:hidden}
+.timelineBlock:first-child{border-radius:14px 0 0 14px}.timelineBlock:last-of-type{border-radius:0 14px 14px 0;border-right:0}
+.timelineBlock span{font-size:.76rem;font-weight:800;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.2);white-space:nowrap;padding:0 4px;position:relative;z-index:2}
+.timeline-base{background:#4b9bd5}.timeline-build{background:#20a486}.timeline-peak{background:#7658c8}.timeline-taper{background:#e49b35}
+.timelineProgress{position:absolute;left:0;bottom:-5px;height:5px;background:var(--navy);border-radius:999px;z-index:3}
+.timelineBlocks .timelineNow{top:50%;z-index:5;width:20px;height:20px;border:4px solid #fff;background:var(--navy);box-shadow:0 2px 9px rgba(11,49,87,.45)}
+.timelineScale{display:flex;justify-content:space-between;color:var(--muted);font-size:.75rem;margin:0 4px 12px}
+@media(max-width:520px){.timelineBlocks{height:44px}.timelineBlock span{font-size:.68rem}.timelineMeta{align-items:flex-start}.timelineMeta span{text-align:right}}
