@@ -90,7 +90,7 @@ function recommendedRaceDate(setup){
  let totalWeeks=Math.ceil(Math.max(minimumTotal,req.requiredBuildWeeks+taperWeeks+2));
  return{date:iso(new Date(dte(setup.planStart).getTime()+totalWeeks*7*DAY)),totalWeeks,requiredBuildWeeks:req.requiredBuildWeeks,taperWeeks};
 }
-const BUILD=9840, SCHEMA=9840, STORAGE_KEY='arc_v62_web', MIRROR_KEY='arc_v8500_web', BACKUP_KEY='arc_pre8500_backup';
+const BUILD=9850, SCHEMA=9850, STORAGE_KEY='arc_v62_web', MIRROR_KEY='arc_v8500_web', BACKUP_KEY='arc_pre8500_backup';
 const defaults=()=>{let start=iso(new Date()),setup={planStart:start,raceDate:start,raceName:'Goal Race',raceDistance:42.195,targetTime:15300,currentWeekly:35,currentLongest:18,testDistance:5,testTime:1515,thresholdHr:168,criticalPower:300,bodyWeight:93,maxWeekly:65,growth:.07,peakLong:32,taperDays:14,minFactor:.85,maxFactor:1.05,adaptive:true};setup.raceDate=recommendedRaceDate(setup).date;return({schemaVersion:SCHEMA,setup,days:FIVE_DAY_TEMPLATE.map(d=>[...d]),runs:[],assessments:[],injuries:[],plan:[],weekView:null,migration:{to:SCHEMA,status:'new',time:new Date().toISOString()}})};
 let migrationReport={from:null,to:SCHEMA,status:'new install',source:'defaults',runs:0,assessments:0,fieldsRecovered:0,warning:''};
 function parseStored(raw){if(!raw)return null;try{const x=JSON.parse(raw);return x&&typeof x==='object'?x:null}catch(err){recordDiagnostic('Storage parse',err);return null}}
@@ -1859,18 +1859,73 @@ function exerciseSheetData(e){
  let progression=kind==='run'?'Increase total easy running time by one small step after a stable next morning.':kind==='hop'?'Add contacts before height, speed or single-leg loading.':kind==='bridge'?'Add hold time, repetitions, lever length or single-leg loading—one at a time.':kind==='strength'?'Add repetitions, then resistance, while preserving technique.':'Increase range or repetitions only after symptoms remain stable.';
  return{kind,purpose,steps,feel,mistakes,regression,progression};
 }
-function exerciseStepVisual(kind,step){
- const common=`<circle cx="48" cy="25" r="10"/><path d="M48 36L58 66"/><path d="M54 48L30 58"/><path d="M54 48L76 58"/>`;
- const svg={
-  bridge:[`<circle cx="32" cy="66" r="9"/><path d="M42 67L76 67L98 48L118 68"/><path d="M76 67L94 88"/><path class="floor" d="M18 91H132"/>`,`<circle cx="32" cy="64" r="9"/><path d="M42 65L77 48L101 48L121 70"/><path d="M77 48L95 84"/><path class="accent" d="M75 78V52"/><path class="floor" d="M18 91H132"/>`,`<circle cx="32" cy="64" r="9"/><path d="M42 65L77 48L101 48L121 70"/><path d="M77 48L95 84"/><path class="accent dashed" d="M43 61L102 47"/><path class="floor" d="M18 91H132"/>`],
-  strength:[`${common}<path d="M58 66L42 93M58 66L78 93"/><path class="floor" d="M25 96H95"/>`,`${common}<path d="M58 66L40 90M58 66L80 90"/><path class="accent" d="M93 22V73"/><path class="floor" d="M25 96H95"/>`,`${common}<path d="M58 66L42 93M58 66L78 93"/><path class="accent dashed" d="M88 76V38"/><path class="floor" d="M25 96H95"/>`],
-  hop:[`${common}<path d="M58 66L44 91M58 66L73 91"/><path class="floor" d="M30 96H86"/>`,`${common}<path d="M58 66L45 87M58 66L73 87"/><path class="accent" d="M58 96V73"/><path class="floor" d="M30 101H86"/>`,`${common}<path d="M58 66L44 91M58 66L73 91"/><path class="accent dashed" d="M38 83Q58 66 79 83"/><path class="floor" d="M30 96H86"/>`],
-  run:[`<circle cx="48" cy="24" r="9"/><path d="M48 35L57 58L78 68M56 47L33 57M57 58L37 83M78 68L98 85"/><path class="floor" d="M22 92H116"/>`,`<circle cx="56" cy="21" r="9"/><path d="M54 33L45 56L67 65M47 44L25 50M45 56L27 78M67 65L94 78"/><path class="accent" d="M15 86H103"/><path class="floor" d="M20 92H116"/>`,`<circle cx="63" cy="24" r="9"/><path d="M60 35L72 57L92 66M67 45L45 58M72 57L51 82M92 66L108 84"/><path class="accent dashed" d="M22 83H104"/><path class="floor" d="M20 92H116"/>`],
-  mobility:[`${common}<path d="M58 66L44 93M58 66L73 93"/><path class="floor" d="M28 96H88"/>`,`${common}<path d="M58 66L44 93M58 66L73 93"/><path class="accent" d="M24 31Q48 10 78 31"/><path class="floor" d="M28 96H88"/>`,`${common}<path d="M58 66L44 93M58 66L73 93"/><path class="accent dashed" d="M30 34Q48 20 72 34"/><path class="floor" d="M28 96H88"/>`]
- }[kind][step];
- return `<svg viewBox="0 0 140 108" aria-hidden="true">${svg}</svg>`;
+function exerciseVisualType(name,kind){
+ const n=String(name||'').toLowerCase();
+ if(/bridge|heel-dig/.test(n))return'bridge';
+ if(/curl|slider/.test(n))return'curl';
+ if(/romanian|hinge|deadlift/.test(n))return'hinge';
+ if(/nordic/.test(n))return'nordic';
+ if(/calf raise|calf isometric|ankle/.test(n))return'calf';
+ if(/step-up|step-down/.test(n))return'step';
+ if(/split squat|sit-to-stand|wall sit|squat/.test(n))return'squat';
+ if(/balance|quadriceps set/.test(n))return'balance';
+ if(/run|walk|stride|acceleration|hill/.test(n))return'run';
+ if(/hop|pogo|skip|bound|contact/.test(n))return'hop';
+ return kind==='bridge'?'bridge':kind==='run'?'run':kind==='hop'?'hop':kind==='strength'?'hinge':'balance';
 }
-function exerciseSheet(e,n){const d=exerciseSheetData(e);return `<details class="exerciseSheet"><summary><span class="exerciseIndex">${n+1}</span><span class="exerciseSummary"><b>${esc(e.name)}</b><small>${esc(d.purpose)}</small></span><span class="exerciseDose">${esc(e.dose)}</span><span class="sheetChevron">⌄</span></summary><div class="exerciseSheetBody"><div class="exerciseMeta"><span><b>${esc(e.dose)}</b><small>Prescription</small></span><span><b>0–2/10</b><small>Pain guideline</small></span><span><b>No flare</b><small>Next morning</small></span></div><div class="exerciseSteps">${d.steps.map((x,k)=>`<div class="exerciseStep"><div class="stepVisual"><span>${k+1}</span>${exerciseStepVisual(d.kind,k)}</div><div><b>${esc(x[0])}</b><p>${esc(x[1])}</p></div></div>`).join('')}</div><div class="exerciseSheetGrid"><div class="sheetPanel muscle"><h4>Where you should feel it</h4><p>${esc(d.feel)}</p><div class="muscleMap ${d.kind}"><span></span><i></i></div></div><div class="sheetPanel cues"><h4>Coaching cues</h4><ul><li>${esc(e.cue)}</li><li>Use slow, controlled repetitions.</li><li>Keep breathing normally.</li></ul></div><div class="sheetPanel mistakes"><h4>Common mistakes</h4><ul>${d.mistakes.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div></div><div class="exerciseDecision"><div><small>Pain guideline</small><b>Keep pain at 0–2/10</b><p>Stop for sharp pain, altered gait or symptoms that worsen later or next morning.</p></div><div><small>Regress</small><b>Make it easier</b><p>${esc(d.regression)}</p></div><div><small>Progress</small><b>When stable</b><p>${esc(d.progression)}</p></div></div></div></details>`}
+function exerciseStepVisual(name,kind,step){
+ const type=exerciseVisualType(name,kind),skin='#d7a078',shirt='#2f78a8',shorts='#172536',shoe='#252a31',outline='#18324a',muscle='#e96555',accent='#159487';
+ const defs=`<defs><linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f7f9fb"/><stop offset="1" stop-color="#e8edf2"/></linearGradient><filter id="sh"><feDropShadow dx="0" dy="2" stdDeviation="2" flood-opacity=".18"/></filter><marker id="arr" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8Z" fill="${accent}"/></marker></defs>`;
+ const head=(x,y)=>`<circle cx="${x}" cy="${y}" r="11" fill="${skin}" stroke="${outline}" stroke-width="2"/><path d="M${x-8} ${y-7}Q${x} ${y-16} ${x+9} ${y-6}" fill="#382c29"/>`;
+ const limb=(x1,y1,x2,y2,w=11,fill=skin)=>`<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${outline}" stroke-width="${w+3}" stroke-linecap="round"/><line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${fill}" stroke-width="${w}" stroke-linecap="round"/>`;
+ const shoeEl=(x,y,flip=0)=>`<path d="M${x} ${y}h${flip?-19:19}q5 0 6 5h${flip?-26:26}q-3-4 1-5z" fill="${shoe}"/>`;
+ let body='',arrow='',props='';
+ if(type==='bridge'){
+  const lift=step===0?0:step===1?22:18;
+  body=`<g filter="url(#sh)"><ellipse cx="78" cy="113" rx="62" ry="7" fill="#000" opacity=".12"/>${head(38,80)}<path d="M49 83L88 ${84-lift}L116 ${83-lift}" stroke="${outline}" stroke-width="18" stroke-linecap="round"/><path d="M49 83L88 ${84-lift}L116 ${83-lift}" stroke="${shirt}" stroke-width="14" stroke-linecap="round"/>${limb(82,84-lift,111,94,13,shorts)}${limb(111,94,137,103,11,skin)}${shoeEl(137,104)}${limb(91,84-lift,116,63-lift,12,shorts)}${limb(116,63-lift,143,43-lift,10,skin)}${shoeEl(143,44-lift)}${limb(53,84,31,100,8,skin)}${limb(53,84,76,101,8,skin)}<path d="M86 ${78-lift}Q102 ${73-lift} 114 ${78-lift}" stroke="${muscle}" stroke-width="7" stroke-linecap="round" opacity=".9"/></g>`;
+  if(step===1)arrow=`<path d="M91 105Q92 78 93 60" stroke="${accent}" stroke-width="4" fill="none" marker-end="url(#arr)"/>`;
+  if(step===2)arrow=`<path d="M72 ${67-lift}L118 ${67-lift}" stroke="${accent}" stroke-width="3" stroke-dasharray="6 5"/>`;
+ }else if(type==='curl'){
+  const bend=[5,35,55][step];
+  body=`<g filter="url(#sh)"><ellipse cx="86" cy="116" rx="46" ry="6" fill="#000" opacity=".12"/>${head(73,30)}<path d="M73 43L74 73" stroke="${outline}" stroke-width="20"/><path d="M73 43L74 73" stroke="${shirt}" stroke-width="16"/>${limb(74,70,60,104,14,shorts)}${limb(60,104,58,115,11,skin)}${shoeEl(58,115,1)}${limb(77,70,101,92,14,shorts)}${limb(101,92,118-bend*.35,112-bend,11,skin)}${shoeEl(118-bend*.35,112-bend)}${limb(70,51,48,72,8,skin)}${limb(76,51,98,72,8,skin)}<path d="M91 86Q103 ${87-bend*.15} ${112-bend*.25} ${98-bend*.55}" stroke="${muscle}" stroke-width="7" stroke-linecap="round"/></g>`;
+  if(step>0)arrow=`<path d="M126 104Q137 80 122 57" stroke="${accent}" stroke-width="4" fill="none" marker-end="url(#arr)"/>`;
+ }else if(type==='hinge'){
+  const tilt=[0,28,18][step],hipY=64+tilt*.35;
+  props=`<line x1="38" y1="96" x2="128" y2="96" stroke="#adb8c3" stroke-width="3"/>`;
+  body=`<g filter="url(#sh)"><ellipse cx="83" cy="111" rx="43" ry="6" fill="#000" opacity=".12"/>${head(76+tilt*.55,25+tilt*.45)}<path d="M76 39L${76+tilt*.7} ${hipY}" stroke="${outline}" stroke-width="20"/><path d="M76 39L${76+tilt*.7} ${hipY}" stroke="${shirt}" stroke-width="16"/>${limb(76+tilt*.7,hipY,62,93,14,shorts)}${limb(62,93,58,109,11,skin)}${shoeEl(58,109,1)}${limb(79+tilt*.7,hipY,101,93,14,shorts)}${limb(101,93,106,109,11,skin)}${shoeEl(106,109)}${limb(78+tilt*.4,49+tilt*.3,104+tilt*.5,75+tilt*.35,9,skin)}${limb(73+tilt*.4,49+tilt*.3,92+tilt*.4,78+tilt*.35,9,skin)}<rect x="87" y="77" width="31" height="6" rx="3" fill="#394655"/><path d="M73 ${hipY-2}Q82 ${hipY+8} 94 ${hipY+5}" stroke="${muscle}" stroke-width="7" stroke-linecap="round"/></g>`;
+  if(step===1)arrow=`<path d="M116 35Q136 58 119 81" stroke="${accent}" stroke-width="4" fill="none" marker-end="url(#arr)"/>`;
+ }else if(type==='nordic'){
+  const ang=[0,18,34][step];
+  props=`<rect x="38" y="91" width="34" height="10" rx="5" fill="#8895a2"/><line x1="24" y1="103" x2="140" y2="103" stroke="#adb8c3" stroke-width="3"/>`;
+  body=`<g filter="url(#sh)">${head(82+ang*.7,32+ang*.65)}<path d="M80 45L${79+ang*.7} ${76+ang*.35}" stroke="${outline}" stroke-width="20"/><path d="M80 45L${79+ang*.7} ${76+ang*.35}" stroke="${shirt}" stroke-width="16"/>${limb(79+ang*.7,76+ang*.35,63,92,14,shorts)}${limb(63,92,54,98,11,skin)}${shoeEl(54,99,1)}${limb(82+ang*.7,76+ang*.35,79,94,14,shorts)}${limb(79,94,71,99,11,skin)}${limb(82+ang*.45,52+ang*.35,102+ang*.75,72+ang*.55,8,skin)}<path d="M72 80Q79 85 88 83" stroke="${muscle}" stroke-width="7" stroke-linecap="round"/></g>`;
+  if(step>0)arrow=`<path d="M105 30Q129 48 126 76" stroke="${accent}" stroke-width="4" fill="none" marker-end="url(#arr)"/>`;
+ }else if(type==='calf'){
+  const rise=[0,11,7][step];
+  props=`<line x1="26" y1="106" x2="136" y2="106" stroke="#adb8c3" stroke-width="3"/>`;
+  body=`<g filter="url(#sh)"><ellipse cx="82" cy="112" rx="35" ry="5" fill="#000" opacity=".12"/>${head(78,25-rise)}<path d="M78 ${38-rise}L78 ${70-rise}" stroke="${outline}" stroke-width="20"/><path d="M78 ${38-rise}L78 ${70-rise}" stroke="${shirt}" stroke-width="16"/>${limb(75,68-rise,63,99-rise,14,shorts)}${limb(63,99-rise,60,106-rise,11,skin)}${shoeEl(60,106-rise,1)}${limb(81,68-rise,96,99-rise,14,shorts)}${limb(96,99-rise,101,106-rise,11,skin)}${shoeEl(101,106-rise)}${limb(73,49-rise,51,65-rise,8,skin)}${limb(82,49-rise,104,65-rise,8,skin)}<path d="M91 ${89-rise}Q100 ${91-rise} 102 ${100-rise}" stroke="${muscle}" stroke-width="7" stroke-linecap="round"/></g>`;
+  if(step===1)arrow=`<path d="M119 97Q120 73 119 54" stroke="${accent}" stroke-width="4" fill="none" marker-end="url(#arr)"/>`;
+ }else if(type==='step'){
+  const up=step===0?0:step===1?22:18;
+  props=`<rect x="88" y="84" width="48" height="22" rx="3" fill="#8fa0ae"/><line x1="25" y1="106" x2="139" y2="106" stroke="#adb8c3" stroke-width="3"/>`;
+  body=`<g filter="url(#sh)">${head(67,26-up*.35)}<path d="M67 ${39-up*.35}L70 ${70-up*.35}" stroke="${outline}" stroke-width="20"/><path d="M67 ${39-up*.35}L70 ${70-up*.35}" stroke="${shirt}" stroke-width="16"/>${limb(68,68-up*.35,54,99,14,shorts)}${limb(54,99,52,106,11,skin)}${shoeEl(52,106,1)}${limb(73,68-up*.35,99,79-up*.15,14,shorts)}${limb(99,79-up*.15,111,85,11,skin)}${shoeEl(111,85)}${limb(64,50-up*.3,43,67-up*.2,8,skin)}${limb(72,50-up*.3,91,65-up*.2,8,skin)}<path d="M86 ${71-up*.2}Q97 ${72-up*.2} 103 ${79-up*.15}" stroke="${muscle}" stroke-width="7" stroke-linecap="round"/></g>`;
+  if(step===1)arrow=`<path d="M119 78Q121 55 111 40" stroke="${accent}" stroke-width="4" fill="none" marker-end="url(#arr)"/>`;
+ }else if(type==='squat'){
+  const dep=[0,22,14][step];
+  props=`<line x1="24" y1="106" x2="140" y2="106" stroke="#adb8c3" stroke-width="3"/>`;
+  body=`<g filter="url(#sh)">${head(78,25+dep*.35)}<path d="M78 ${38+dep*.35}L78 ${68+dep*.45}" stroke="${outline}" stroke-width="20"/><path d="M78 ${38+dep*.35}L78 ${68+dep*.45}" stroke="${shirt}" stroke-width="16"/>${limb(75,67+dep*.45,54,89+dep*.25,14,shorts)}${limb(54,89+dep*.25,47,106,11,skin)}${shoeEl(47,106,1)}${limb(81,67+dep*.45,104,89+dep*.25,14,shorts)}${limb(104,89+dep*.25,112,106,11,skin)}${shoeEl(112,106)}${limb(72,49+dep*.35,48,66+dep*.35,8,skin)}${limb(84,49+dep*.35,108,66+dep*.35,8,skin)}<path d="M73 ${70+dep*.35}Q82 ${77+dep*.3} 92 ${70+dep*.35}" stroke="${muscle}" stroke-width="7" stroke-linecap="round"/></g>`;
+  if(step===1)arrow=`<path d="M127 45Q139 68 127 91" stroke="${accent}" stroke-width="4" fill="none" marker-end="url(#arr)"/>`;
+ }else if(type==='run'||type==='hop'){
+  const shift=step*8,air=type==='hop'&&step===1?10:0;
+  props=`<line x1="20" y1="106" x2="142" y2="106" stroke="#adb8c3" stroke-width="3"/>`;
+  body=`<g filter="url(#sh)">${head(58+shift,25-air)}<path d="M59 ${38-air}L68 ${66-air}" stroke="${outline}" stroke-width="20"/><path d="M59 ${38-air}L68 ${66-air}" stroke="${shirt}" stroke-width="16"/>${limb(66,64-air,47+shift*.2,88-air,14,shorts)}${limb(47+shift*.2,88-air,32+shift*.2,103-air,11,skin)}${shoeEl(32+shift*.2,103-air,1)}${limb(71,64-air,94+shift*.25,80-air,14,shorts)}${limb(94+shift*.25,80-air,118+shift*.2,99-air,11,skin)}${shoeEl(118+shift*.2,99-air)}${limb(61,49-air,38+shift*.1,60-air,8,skin)}${limb(65,48-air,89+shift*.1,42-air,8,skin)}<path d="M79 ${69-air}Q91 ${73-air} 99 ${81-air}" stroke="${muscle}" stroke-width="7" stroke-linecap="round"/></g>`;
+  arrow=type==='run'?`<path d="M24 91H132" stroke="${accent}" stroke-width="4" marker-end="url(#arr)"/>`:`<path d="M132 94Q139 72 128 53" stroke="${accent}" stroke-width="4" fill="none" marker-end="url(#arr)"/>`;
+ }else{
+  props=`<line x1="24" y1="106" x2="140" y2="106" stroke="#adb8c3" stroke-width="3"/>`;
+  body=`<g filter="url(#sh)">${head(78,25)}<path d="M78 38L78 70" stroke="${outline}" stroke-width="20"/><path d="M78 38L78 70" stroke="${shirt}" stroke-width="16"/>${limb(75,68,59,101,14,shorts)}${limb(59,101,58,106,11,skin)}${shoeEl(58,106,1)}${limb(81,68,97,101,14,shorts)}${limb(97,101,101,106,11,skin)}${shoeEl(101,106)}${limb(73,50,51,69,8,skin)}${limb(83,50,105,69,8,skin)}<path d="M71 72Q79 79 88 72" stroke="${muscle}" stroke-width="7" stroke-linecap="round"/></g>`;
+ }
+ return `<svg viewBox="0 0 160 122" role="img" aria-label="${esc(name)} step ${step+1} illustration">${defs}<rect width="160" height="122" rx="12" fill="url(#bg)"/>${props}${body}${arrow}</svg>`;
+}
+function exerciseSheet(e,n){const d=exerciseSheetData(e);return `<details class="exerciseSheet"><summary><span class="exerciseIndex">${n+1}</span><span class="exerciseSummary"><b>${esc(e.name)}</b><small>${esc(d.purpose)}</small></span><span class="exerciseDose">${esc(e.dose)}</span><span class="sheetChevron">⌄</span></summary><div class="exerciseSheetBody"><div class="exerciseMeta"><span><b>${esc(e.dose)}</b><small>Prescription</small></span><span><b>0–2/10</b><small>Pain guideline</small></span><span><b>No flare</b><small>Next morning</small></span></div><div class="exerciseSteps">${d.steps.map((x,k)=>`<div class="exerciseStep"><div class="stepVisual"><span>${k+1}</span>${exerciseStepVisual(e.name,d.kind,k)}</div><div><b>${esc(x[0])}</b><p>${esc(x[1])}</p></div></div>`).join('')}</div><div class="exerciseSheetGrid"><div class="sheetPanel muscle"><h4>Where you should feel it</h4><p>${esc(d.feel)}</p><div class="muscleMap ${d.kind}"><span></span><i></i></div></div><div class="sheetPanel cues"><h4>Coaching cues</h4><ul><li>${esc(e.cue)}</li><li>Use slow, controlled repetitions.</li><li>Keep breathing normally.</li></ul></div><div class="sheetPanel mistakes"><h4>Common mistakes</h4><ul>${d.mistakes.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div></div><div class="exerciseDecision"><div><small>Pain guideline</small><b>Keep pain at 0–2/10</b><p>Stop for sharp pain, altered gait or symptoms that worsen later or next morning.</p></div><div><small>Regress</small><b>Make it easier</b><p>${esc(d.regression)}</p></div><div><small>Progress</small><b>When stable</b><p>${esc(d.progression)}</p></div></div></div></details>`}
 function rehabExercises(i,p){const list=(REHAB_EXERCISES[injuryProfile(i)]||REHAB_EXERCISES.generic)[p.stage]||[];return list.map((e,n)=>exerciseSheet(e,n)).join('')}
 function nominalEvidence(p){
  const l=p.checks.at(-1)||{},expectedStage=p.nominalStage,signals=[];

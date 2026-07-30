@@ -561,3 +561,11 @@ canvas{width:100%;height:auto;display:block}
 .evidenceRows{display:grid;gap:7px;margin-top:12px}.evidenceRow{display:grid;grid-template-columns:130px 190px minmax(0,1fr);gap:10px;align-items:start;padding:10px;border-radius:11px;background:#fff;border:1px solid var(--line)}.evidenceRow span{font-weight:900}.evidenceRow b{font-size:12px}.evidenceRow b em{display:block;font-style:normal;color:var(--muted);font-weight:500;margin-top:2px}.evidenceRow small{line-height:1.4;color:var(--muted)}.evidenceRow.ahead{border-left:5px solid var(--green)}.evidenceRow.behind{border-left:5px solid var(--amber)}
 @media(max-width:700px){.exerciseSteps,.exerciseSheetGrid,.exerciseDecision{grid-template-columns:1fr}.exerciseDecision>div+div{border-left:0;border-top:1px solid var(--line)}.evidenceRow{grid-template-columns:1fr}.exerciseMeta{grid-template-columns:1fr 1fr 1fr}.stepVisual{height:138px}.stepVisual svg{height:120px}}
 @media(max-width:430px){.exerciseSheet summary{grid-template-columns:32px minmax(0,1fr) 20px}.exerciseDose{grid-column:2;grid-row:2;text-align:left}.sheetChevron{grid-column:3;grid-row:1/3}.exerciseMeta{grid-template-columns:1fr}.exerciseSummary small{font-size:10.5px}}
+
+/* Build 9850: exercise-specific illustrated athlete sheets */
+.stepVisual{height:178px;background:#eef2f6;padding:8px}
+.stepVisual svg{width:100%;height:160px;display:block}
+.stepVisual svg *{stroke-linecap:round;stroke-linejoin:round}
+.stepVisual>span{z-index:2;box-shadow:0 2px 8px #17253626}
+.exerciseStep{box-shadow:0 4px 12px #1725360a}
+@media(max-width:700px){.stepVisual{height:190px}.stepVisual svg{height:172px}}
