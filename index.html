@@ -3,18 +3,18 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#0b3157"><title>AI Running Coach</title>
-<link rel="manifest" href="manifest.webmanifest?v=9580"><link rel="stylesheet" href="styles.css?v=9580">
+<link rel="manifest" href="manifest.webmanifest?v=9700"><link rel="stylesheet" href="styles.css?v=9700">
 
-<link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png?v=9580">
-<link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png?v=9580">
-<link rel="icon" href="favicon.ico?v=9580">
-<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=9580">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png?v=9700">
+<link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png?v=9700">
+<link rel="icon" href="favicon.ico?v=9700">
+<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=9700">
 <meta property="og:image" content="github-banner.png">
 
 </head>
 <body>
 <header class="topbar">
-  <div class="brand"><img class="logo" src="icon-192.png?v=9580" alt="AI Running Coach logo"><div class="brand-copy"><h1>AI Running Coach</h1><p>Race-specific adaptive planning • v9.5.8 · build 9580</p></div></div>
+  <div class="brand"><img class="logo" src="icon-192.png?v=9700" alt="AI Running Coach logo"><div class="brand-copy"><h1>AI Running Coach</h1><p>Race-specific adaptive planning • v9.7.0 · build 9700</p></div></div>
   <button id="installBtn" class="install hidden">Install</button>
 </header>
 <nav id="nav"></nav>
@@ -156,6 +156,13 @@
 </section>
 
 
+<section id="injury" class="page">
+  <div class="sectionTitle"><div><h2>Injury</h2><p>Symptom-guided rehabilitation tracking, independent from your running programme.</p></div><button id="addInjuryBtn" class="primary small">+ Add injury</button></div>
+  <div id="injuryIntro"></div>
+  <div id="injuryList"></div>
+  <details class="panel modelDetails"><summary>How the rehabilitation prediction works</summary><div class="guideGrid"><div><b>Initial estimate</b><p>Uses injury-day pain, walking limitation, bruising/swelling and a pop or snap as broad severity signals.</p></div><div><b>Daily adjustment</b><p>Updates the timeline from pain trend, walking tolerance, basic function, running exposure and next-morning response.</p></div><div><b>Criteria before dates</b><p>Stages advance only when function and symptom-response criteria are met. A date alone never clears running.</p></div><div><b>Clinical boundary</b><p>The app does not diagnose injury grade. Severe, worsening or persistent symptoms require assessment by a qualified clinician.</p></div></div></details>
+</section>
+
 <section id="recovery" class="page">
   <div class="sectionTitle"><div><h2>Recovery</h2><p>Garmin HRV, pain and their quantified contribution to the next weekly review.</p></div></div>
   <div id="recoveryStatus" class="recoveryStatus"></div>
@@ -185,5 +192,5 @@
 </main>
 
 <div id="modal" class="modal hidden"><div class="modalCard"><button id="closeModal" class="close">×</button><div id="modalContent"></div></div></div>
-<script src="app.js?v=9580"></script>
+<script src="app.js?v=9700"></script>
 </body></html>

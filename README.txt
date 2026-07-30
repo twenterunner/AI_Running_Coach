@@ -1,23 +1,15 @@
-AI Running Coach v9.6.1 Stable — build 9610
+AI Running Coach v9.7.0 Stable — build 9700
 
-This release aligns the Pace & Power and Distance & Load pathway cards for faster comparison.
+This release adds an independent, evidence-informed Injury tab without changing the running programme or race-prediction calculations.
 
 Changes:
-- Gives both pathways the same decision-first hierarchy: pathway label, current value, coaching decision, calibration label, explanation, KPI chips, action box and fold-out calculation.
-- Adds an explicit pace-and-power action statement so both cards show what the coach recommends now.
-- Keeps the underlying adaptation calculations unchanged.
-- Uses session-specific execution weights so recovery, easy, threshold, interval, long-run and race sessions are judged against their actual physiological purpose.
-- Does not reward excessive distance or values above 100.
-- Treats whole-run pace, power and HR averages as lower-reliability evidence for structured workouts containing warm-up, recoveries or cooldown.
-- Varies cardiac-drift relevance by workout type and adds RPE appropriateness when available.
-- Scores only observable evidence for ad hoc runs; missing planned targets reduce evidence quality rather than receiving neutral points.
-- Adds the workout objective, score interpretation, evidence quality and pace-versus-power conflict explanation to each run breakdown.
-- Keeps the pain cap but explains it as reduced training value rather than poor technical execution.
-- Makes the Evidence-based Assessment race-, phase- and goal-specific using race outlook, programme phase, weeks remaining, athlete state, execution patterns, recovery, pain, plan adherence, long-run evidence, specificity and the next planned session.
-- Identifies recurring execution weaknesses and produces prioritised, evidence-labelled actions.
-- Updates schema, manifest and service-worker cache to build 9610.
+- Records injury date, mechanism, symptoms at onset, symptoms now, pain, walking limitation, bruising/swelling and pop/snap.
+- Predicts a conservative return-to-running window and displays six rehabilitation stages with criteria.
+- Adds daily check-ins for pain, walking, functional loading, walk-run exposure and next-morning response.
+- Recalculates the timeline from symptom trend and criteria achieved; regressions move the athlete back a stage.
+- Keeps injury rehabilitation data fully independent from plan generation, workout adaptation, plan health and race outlook.
+- Includes urgent-assessment red flags and clearly states that the app does not diagnose or medically clear an athlete.
+- Migrates existing local data to schema/build 9700 and preserves all prior runs, assessments, plan data and settings.
 
 Deployment:
-Replace all six application files in the GitHub Pages repository. Retain the existing icon files. Fully close and reopen the installed PWA after deployment so cache build 9610 activates.
-
-- Restores the two-pathway Dashboard summary and adds compact Recovery and Pain summaries beneath it.
+Replace all six application files in the GitHub Pages repository. Retain the existing icon files. Fully close and reopen the installed PWA after deployment so cache build 9700 activates.
