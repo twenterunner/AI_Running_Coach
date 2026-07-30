@@ -1,12 +1,14 @@
-AI Running Coach v9.2.2 Stable — build 9220
+AI Running Coach v9.3.0 Stable — build 9300
 
-Changes in this release
-- Moved Programme timeline from the Dashboard Progress section to the Plan tab.
-- Programme timeline now appears directly below the week navigation and week header, before the training intensity mix and workout cards.
-- Retained the coloured Base, Build, Peak and Taper blocks, current-position marker, week number and weeks-to-race information.
-- Preserved the v9.2.1 completed-session recommendation fix. A linked partial run counts as the attempted planned session and is not recommended again.
-- No training-plan, prediction, import or stored-data logic was otherwise changed.
-- Updated HTML/CSS/JS/service worker/manifest/README cache and build references to 9220.
+Major training-engine upgrade
+- Race-specific phase matrix for 5 km, 10 km, half marathon, marathon and ultra plans.
+- Six internal phases: Foundation, Aerobic, Development/Endurance, Specific, Peak and Taper.
+- New session types including strides, hills, fartlek, threshold intervals, medium-long runs, race-specific workouts, specific long runs and race rehearsals.
+- Fitness assessments are now scheduled by race profile rather than every fourth week.
+- Training Evidence Engine scores completed workouts and gradually recalibrates future pace and power targets.
+- Low-confidence runs, pain and substantially shortened sessions cannot aggressively reduce targets.
+- Training targets change only after a meaningful accumulated fitness-index movement.
+- Existing weekly distance adaptation, recovery logic, prediction model, imports and stored data remain compatible.
 
 Deployment
-Replace all six files in the GitHub Pages repository and retain the existing icon files. After deployment, fully close and reopen the browser or installed PWA so cache build 9220 activates.
+Replace all six application files in the GitHub Pages repository. Retain the existing icon files. Fully close and reopen the installed PWA after deployment so cache build 9300 activates.
