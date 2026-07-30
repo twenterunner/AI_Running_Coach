@@ -90,7 +90,7 @@ function recommendedRaceDate(setup){
  let totalWeeks=Math.ceil(Math.max(minimumTotal,req.requiredBuildWeeks+taperWeeks+2));
  return{date:iso(new Date(dte(setup.planStart).getTime()+totalWeeks*7*DAY)),totalWeeks,requiredBuildWeeks:req.requiredBuildWeeks,taperWeeks};
 }
-const VERSION='9.5.0', BUILD=9500, SCHEMA=9500, STORAGE_KEY='arc_v62_web', MIRROR_KEY='arc_v8500_web', BACKUP_KEY='arc_pre8500_backup';
+const VERSION='9.5.1', BUILD=9510, SCHEMA=9510, STORAGE_KEY='arc_v62_web', MIRROR_KEY='arc_v8500_web', BACKUP_KEY='arc_pre8500_backup';
 const defaults=()=>{let start=iso(new Date()),setup={planStart:start,raceDate:start,raceName:'Goal Race',raceDistance:42.195,targetTime:15300,currentWeekly:35,currentLongest:18,testDistance:5,testTime:1515,thresholdHr:168,criticalPower:300,bodyWeight:93,maxWeekly:65,growth:.07,peakLong:32,taperDays:14,minFactor:.85,maxFactor:1.05,adaptive:true};setup.raceDate=recommendedRaceDate(setup).date;return({schemaVersion:SCHEMA,setup,days:FIVE_DAY_TEMPLATE.map(d=>[...d]),runs:[],assessments:[],plan:[],weekView:null,migration:{to:SCHEMA,status:'new',time:new Date().toISOString()}})};
 let migrationReport={from:null,to:SCHEMA,status:'new install',source:'defaults',runs:0,assessments:0,fieldsRecovered:0,warning:''};
 function parseStored(raw){if(!raw)return null;try{const x=JSON.parse(raw);return x&&typeof x==='object'?x:null}catch(err){recordDiagnostic('Storage parse',err);return null}}
@@ -939,19 +939,78 @@ function projectedPreparationModel(c){
  const overall=clamp(sum(projectedPillars.map(p=>p.projectedScore*p.weight))/sum(projectedPillars.map(p=>p.weight)),0,100);
  return{pillars:projectedPillars,overall,timePotential,tolerance,health,profile,completionAssumption};
 }
+function fitnessProjectionModel(c,projectedPreparation){
+ const profile=projectedPreparation.profile,weeks=Math.max(0,c.usableBuildWeeks),timePotential=1-Math.exp(-.14*weeks);
+ const completion=projectedPreparation.completionAssumption,health=clamp(projectedPreparation.health/100,.45,1),opportunity=clamp(c.trainingOpportunity/100,.45,1),planQuality=clamp(profile.score/100,.25,1);
+ const currentFitness=trainingEvidence().adjustment,currentWeekly=Math.max(1,Number(state.setup.currentWeekly)||1),plannedPeak=Math.max(currentWeekly,profile.plannedPeak);
+ const volumeRise=clamp(plannedPeak/currentWeekly-1,0,1.5),volumePotential=2.25*(1-Math.exp(-1.25*volumeRise))*timePotential;
+ const qualityFit=clamp(1-Math.abs(profile.qualityShare-.20)/.20,0,1),qualityPotential=1.35*qualityFit*timePotential;
+ const frequencyPotential=.75*clamp((profile.enabledDays-2)/3,0,1)*timePotential;
+ const durationPotential=1.10*timePotential;
+ const specificityPotential=.85*clamp((profile.longScore+profile.intensityScore)/200,0,1)*timePotential;
+ const common=planQuality*health*opportunity*completion;
+ const diminishing=clamp(1-(currentFitness-1)*4,.55,1.10);
+ const contributions=[
+  {name:'Weekly-volume progression',potential:volumePotential},
+  {name:'Quality-session stimulus',potential:qualityPotential},
+  {name:'Training frequency',potential:frequencyPotential},
+  {name:'Time available to adapt',potential:durationPotential},
+  {name:'Race-specific stimulus',potential:specificityPotential}
+ ].map(x=>({...x,realised:x.potential*common*diminishing}));
+ const rawPercent=sum(contributions.map(x=>x.realised));
+ // Broad physiological guardrail only; the result is plan-derived rather than a fixed expected-gain cap.
+ const expectedGain=clamp(rawPercent/100,0,.08);
+ return{expectedGain,projectedFitness:clamp(currentFitness*(1+expectedGain),.90,1.15),contributions,common,diminishing,timePotential,currentFitness,rawPercent};
+}
+function taperProjectionModel(profile,completion){
+ const total=weeks(),taperWeeks=Math.max(1,Math.ceil((Number(state.setup.taperDays)||0)/7)),start=Math.max(1,total-taperWeeks+1);
+ const weekly=[];for(let w=1;w<=total;w++)weekly.push({week:w,km:sum(state.plan.filter(p=>p.week===w&&p.type!=='Rest'&&p.type!=='Race Day').map(p=>Number(p.distance)||0)),quality:state.plan.filter(p=>p.week===w&&['Tempo','Intervals','Threshold','Threshold intervals','Marathon-specific','Half-marathon-specific','Hills','Fartlek','VO₂max intervals','Race-pace intervals','Specific long run','Race rehearsal'].includes(p.type)).length});
+ const pre=weekly.filter(x=>x.week<start&&x.km>0).slice(-4),taper=weekly.filter(x=>x.week>=start&&x.km>0);
+ const baseline=pre.length?sum(pre.map(x=>x.km))/pre.length:Math.max(1,Number(state.setup.currentWeekly)||1);
+ const ratios=taper.map(x=>x.km/Math.max(1,baseline));
+ const avgRatio=ratios.length?sum(ratios)/ratios.length:1,averageReduction=clamp(1-avgRatio,0,1);
+ const durationScore=profile.taperDays>=10&&profile.taperDays<=21?100:profile.taperDays>=7&&profile.taperDays<=28?70:35;
+ const reductionScore=clamp(100-Math.abs(averageReduction-.48)*220,0,100);
+ const progressive=ratios.length<2?70:sum(ratios.slice(1).map((r,i)=>r<=ratios[i]+.08?1:0))/Math.max(1,ratios.length-1)*100;
+ const intensityScore=taper.length?clamp(sum(taper.map(x=>x.quality))/Math.max(1,taper.length)*85,25,100):35;
+ const score=.30*durationScore+.35*reductionScore+.20*progressive+.15*intensityScore;
+ const preLoad=clamp(baseline/Math.max(20,Number(state.setup.currentWeekly)||20),.55,1.35);
+ const gain=clamp(.022*(score/100)*completion*preLoad,0,.025);
+ return{gain,score,durationScore,reductionScore,progressiveScore:progressive,intensityScore,averageReduction,baseline,taperWeeks,ratios};
+}
+function planHealthAssessment(c=confidence()){
+ const profile=planSettingsProfile(c),validation=validatePlan(state.plan);
+ const components=[
+  {name:'Weekly-volume design',score:profile.volumeScore,weight:.18,detail:`Peak ${profile.plannedPeak.toFixed(1)} km/week compared with the configured starting load and race profile.`},
+  {name:'Long-run progression',score:profile.longScore,weight:.18,detail:`Peak long run ${profile.peakLong.toFixed(1)} km compared with the target-distance requirement.`},
+  {name:'Progression safety',score:profile.progressionScore,weight:.16,detail:`Configured maximum weekly growth ${(profile.growth*100).toFixed(1)}%.`},
+  {name:'Intensity distribution',score:profile.intensityScore,weight:.14,detail:`${Math.round(profile.qualityShare*100)}% quality and ${Math.round(profile.easyShare*100)}% easy/long-run distance.`},
+  {name:'Taper structure',score:profile.taperScore,weight:.14,detail:`${profile.taperDays} taper days with generated volume reduction.`},
+  {name:'Training frequency',score:profile.frequencyScore,weight:.10,detail:`${profile.enabledDays} enabled running days per week.`},
+  {name:'Target reachability',score:profile.reachabilityScore,weight:.10,detail:'Available build time compared with the progression needed to reach the planned peak safely.'}
+ ];
+ let score=sum(components.map(x=>x.score*x.weight));
+ score=clamp(score-validation.errors*8-validation.warnings*2,0,100);
+ const recommendations=[];
+ if(profile.volumeScore<70)recommendations.push(`Align peak weekly distance more closely with the ${raceProfile().label} requirement while respecting your current ${Number(state.setup.currentWeekly).toFixed(0)} km/week baseline.`);
+ if(profile.longScore<70)recommendations.push(`Increase the peak long run gradually toward a race-appropriate level, provided pain and recovery remain acceptable.`);
+ if(profile.progressionScore<75)recommendations.push(`Reduce maximum weekly growth from ${(profile.growth*100).toFixed(0)}% to approximately 5–10% and use recovery weeks.`);
+ if(profile.intensityScore<75)recommendations.push('Keep most distance easy and limit demanding quality work to a sustainable share of total volume.');
+ if(profile.taperScore<75)recommendations.push('Use a progressive 10–21 day taper with reduced volume while retaining small doses of intensity.');
+ if(profile.frequencyScore<60)recommendations.push('Distribute the planned load across an additional running day if your schedule and injury history allow.');
+ if(profile.reachabilityScore<75)recommendations.push('Extend the preparation period or reduce peak targets so the plan does not require rushed progression.');
+ if(validation.errors)recommendations.unshift(`Resolve ${validation.errors} structural validation error${validation.errors===1?'':'s'} before following the plan.`);
+ if(!recommendations.length)recommendations.push('No material structural change is recommended. Continue to let recovery and execution govern weekly adaptation.');
+ const label=score>=90?'Excellent':score>=80?'Strong':score>=70?'Good':score>=60?'Needs refinement':'High risk';
+ return{score,label,components,recommendations,validation,profile};
+}
 function programmeProjection(c,currentPred,projectedPreparation){
- const profile=projectedPreparation.profile,weeks=Math.max(0,c.usableBuildWeeks),saturation=1-Math.exp(-.12*weeks);
- const health=clamp(projectedPreparation.health/100,.45,1),opportunity=clamp(c.trainingOpportunity/100,.45,1),planQuality=clamp(profile.score/100,.25,1),completion=projectedPreparation.completionAssumption;
- const currentFitness=trainingEvidence().adjustment;
- const volumeLift=clamp((profile.plannedPeak-Math.max(25,Number(state.setup.currentWeekly)||0))/40,0,1);
- const gainCap=.008+.027*planQuality;
- const expectedGain=clamp(gainCap*saturation*health*opportunity*completion*(.55+.45*volumeLift),0,.035);
- const projectedFitness=clamp(currentFitness*(1+expectedGain),.90,1.12);
+ const fitness=fitnessProjectionModel(c,projectedPreparation);
  const projectedDurability=durabilityModel(c,true,projectedPreparation);
- const model=racePredictionModel(iso(today()),{confidence:c,fitnessAdjustment:projectedFitness,durability:projectedDurability,projected:true,projectedPreparation});
- const taperGain=(profile.taperScore/100)*clamp(.006*saturation*completion,0,.006);
- const predictedTime=model.seconds*(1-taperGain),improvementSec=Math.max(0,currentPred-predictedTime);
- return{predictedTime,improvementSec,improvementPct:currentPred>0?improvementSec/currentPred:0,projectedExponent:model.exponent,fitnessGainPct:expectedGain,taperGain,planQuality:profile.score,profile,projectedFitnessIndex:projectedFitness*100,projectedDurabilityIndex:projectedDurability.index,completionAssumption:completion,adaptationConfidence:clamp(planQuality*health*completion,0,1),model};
+ const model=racePredictionModel(iso(today()),{confidence:c,fitnessAdjustment:fitness.projectedFitness,durability:projectedDurability,projected:true,projectedPreparation});
+ const taper=taperProjectionModel(projectedPreparation.profile,projectedPreparation.completionAssumption);
+ const predictedTime=model.seconds*(1-taper.gain),improvementSec=Math.max(0,currentPred-predictedTime);
+ return{predictedTime,improvementSec,improvementPct:currentPred>0?improvementSec/currentPred:0,projectedExponent:model.exponent,fitnessGainPct:fitness.expectedGain,taperGain:taper.gain,planQuality:projectedPreparation.profile.score,profile:projectedPreparation.profile,projectedFitnessIndex:fitness.projectedFitness*100,projectedDurabilityIndex:projectedDurability.index,completionAssumption:projectedPreparation.completionAssumption,adaptationConfidence:clamp((projectedPreparation.profile.score/100)*(projectedPreparation.health/100)*projectedPreparation.completionAssumption,0,1),model,fitnessProjection:fitness,taperProjection:taper};
 }
 function coachEngine(){
  let c=confidence(),currentRaceModel=racePredictionModel(),pred=currentRaceModel?.seconds??prediction(),cw=currentWeek(),wd=weekData(cw);
@@ -1094,18 +1153,19 @@ function renderDashboard(){
  $('phaseBadge').textContent=phase(cw);
  $('raceTitle').textContent=state.setup.raceName;
  $('raceSubtitle').textContent=`${dte(state.setup.raceDate).toLocaleDateString()} • ${state.setup.raceDistance.toFixed(1)} km • target ${fmtTime(state.setup.targetTime)} (${pace(state.setup.targetTime/state.setup.raceDistance)})`;
- document.querySelector('.currentOutlook>span').textContent=`Chance of meeting ${fmtTime(state.setup.targetTime)} if racing today`;
- document.querySelector('.projectedOutlook>span').textContent=`Chance of meeting ${fmtTime(state.setup.targetTime)} after full programme`;
- $('currentProbability').textContent=Math.round(engine.currentModel.probability)+'%';
- $('currentProbabilityLabel').textContent=engine.currentModel.label;
- $('currentPrediction').textContent=`${fmtTime(pred)} predicted · ${pace(pred/state.setup.raceDistance)}`;
- $('currentRange').textContent=`Likely 70% range ${fmtTime(engine.currentModel.rangeLow)}–${fmtTime(engine.currentModel.rangeHigh)} · ${pace(engine.currentModel.rangeLow/state.setup.raceDistance)}–${pace(engine.currentModel.rangeHigh/state.setup.raceDistance)}`;
- $('projectedProbability').textContent=Math.round(engine.projectedModel.probability)+'%';
- $('projectedProbabilityLabel').textContent=engine.projectedModel.label;
- $('projectedPrediction').textContent=`${fmtTime(engine.projection.predictedTime)} projected · ${pace(engine.projection.predictedTime/state.setup.raceDistance)}`;
- $('projectedRange').textContent=`Likely 70% range ${fmtTime(engine.projectedModel.rangeLow)}–${fmtTime(engine.projectedModel.rangeHigh)} · ${pace(engine.projectedModel.rangeLow/state.setup.raceDistance)}–${pace(engine.projectedModel.rangeHigh/state.setup.raceDistance)}`;
- const gain=engine.projectedModel.probability-engine.currentModel.probability;
- $('outlookGain').innerHTML=`Projected programme benefit: <b>${gain>=0?'+':''}${Math.round(gain)} percentage points</b> · ${fmtTime(engine.projection.improvementSec)} estimated time improvement`;
+ document.querySelector('.currentOutlook>span').textContent='Current race capability';
+ document.querySelector('.projectedOutlook>span').textContent='Expected programme outcome';
+ $('currentProbability').textContent=fmtTime(pred);
+ $('currentProbabilityLabel').textContent=`Today · ${pace(pred/state.setup.raceDistance)}`;
+ $('currentPrediction').textContent=`${Math.round(engine.currentModel.probability)}% chance of ${fmtTime(state.setup.targetTime)} · ${engine.currentModel.label}`;
+ $('currentRange').textContent=`Likely 70% range ${fmtTime(engine.currentModel.rangeLow)}–${fmtTime(engine.currentModel.rangeHigh)}`;
+ $('projectedProbability').textContent=fmtTime(engine.projection.predictedTime);
+ $('projectedProbabilityLabel').textContent=`Race-day scenario · ${pace(engine.projection.predictedTime/state.setup.raceDistance)}`;
+ $('projectedPrediction').textContent=`${Math.round(engine.projectedModel.probability)}% chance of target · ${engine.projectedModel.label}`;
+ $('projectedRange').textContent=`Likely 70% range ${fmtTime(engine.projectedModel.rangeLow)}–${fmtTime(engine.projectedModel.rangeHigh)}`;
+ const gain=engine.projectedModel.probability-engine.currentModel.probability,targetMargin=state.setup.targetTime-engine.projection.predictedTime,health=planHealthAssessment(c);
+ $('outlookGain').innerHTML=`<div><span>Expected improvement</span><b>${fmtTime(engine.projection.improvementSec)}</b></div><div><span>Target margin</span><b>${targetMargin>=0?fmtTime(targetMargin)+' faster':fmtTime(-targetMargin)+' slower'}</b></div><div><span>Projected fitness</span><b>${engine.projection.projectedFitnessIndex.toFixed(1)}</b></div><div><span>Plan health</span><b>${Math.round(health.score)}/100</b></div>`;
+ const assumption=document.querySelector('.outlookAssumption');if(assumption)assumption.textContent=`Expected scenario uses ${Math.round(engine.projection.completionAssumption*100)}% plan completion, plan-derived fitness and durability gains, and a taper benefit calculated from the actual taper structure.`;
  $('trackStatus').innerHTML=`<span class="statusDot"></span><b>${engine.status}</b>`;
  const hero=$('trackStatus').closest('.outlookHero');
  if(hero)hero.classList.remove('outlook-good','outlook-watch','outlook-action');
@@ -1117,7 +1177,7 @@ function renderDashboard(){
  const coachReport=evidenceBasedCoach(engine);
  $('assessmentText').innerHTML=coachReportHtml(coachReport,true);
  const pf=engine.projection.profile;
- $('predictionModelContent').innerHTML=`<div class="modelSteps"><section><b>Race today — central time</b><p>The latest valid assessment supplies the performance baseline. The Fitness Index updates general capability after completed runs, while the Durability Index measures how strongly current volume, long runs and race-specific work support carrying that capability over ${state.setup.raceDistance.toFixed(1)} km. Ordinary workouts no longer receive fixed seconds.</p><code>${fmtTime(engine.pred)} · Fitness Index ${engine.currentRaceModel.fitnessIndex.toFixed(1)} · Durability ${engine.currentRaceModel.durabilityIndex}/100 · exponent ${engine.currentRaceModel.exponent.toFixed(3)}</code></section><section><b>Follow programme — central time</b><p>Plan quality determines the available stimulus; realistic expected completion, current health, training opportunity and diminishing returns determine how much of it is expected to become fitness and durability.</p><code>${fmtTime(engine.projection.predictedTime)} · projected Fitness ${engine.projection.projectedFitnessIndex.toFixed(1)} · projected Durability ${engine.projection.projectedDurabilityIndex}/100 · expected completion ${Math.round(engine.projection.completionAssumption*100)}%</code></section><section><b>Prediction tolerance</b><p>The central time and its range are separate. Assessment age, distance transfer, Fitness evidence, Durability evidence and execution widen or narrow the current range. The programme range also includes future adherence and adaptation uncertainty, so it is not automatically narrower than today's range.</p><code>Today ${fmtTime(engine.currentModel.rangeLow)}–${fmtTime(engine.currentModel.rangeHigh)} · programme ${fmtTime(engine.projectedModel.rangeLow)}–${fmtTime(engine.projectedModel.rangeHigh)}</code></section></div><p class="muted compact">The relationships are evidence-informed calibration assumptions and should be validated against future assessment and race outcomes.</p>`;
+ $('predictionModelContent').innerHTML=`<div class="modelSteps"><section><b>Race today — central time</b><p>The latest valid assessment supplies the performance baseline. The Fitness Index updates general capability after completed runs, while the Durability Index measures how strongly current volume, long runs and race-specific work support carrying that capability over ${state.setup.raceDistance.toFixed(1)} km. Ordinary workouts no longer receive fixed seconds.</p><code>${fmtTime(engine.pred)} · Fitness Index ${engine.currentRaceModel.fitnessIndex.toFixed(1)} · Durability ${engine.currentRaceModel.durabilityIndex}/100 · exponent ${engine.currentRaceModel.exponent.toFixed(3)}</code></section><section><b>Follow programme — central time</b><p>Projected Fitness is now calculated from the actual plan: volume progression, quality stimulus, running frequency, time available and race specificity. Plan quality, expected completion, health, training opportunity and diminishing returns determine how much is realised. Taper improvement is calculated separately from taper duration, volume reduction, progression and intensity retention.</p><code>${fmtTime(engine.projection.predictedTime)} · Fitness ${engine.projection.projectedFitnessIndex.toFixed(1)} (+${(engine.projection.fitnessGainPct*100).toFixed(1)}%) · Durability ${engine.projection.projectedDurabilityIndex}/100 · taper ${(engine.projection.taperGain*100).toFixed(1)}% · completion ${Math.round(engine.projection.completionAssumption*100)}%</code><details><summary>Show projected fitness and taper calculation</summary><div class="calcTable">${engine.projection.fitnessProjection.contributions.map(x=>`<div class="calcRow"><span>${esc(x.name)}</span><span>${x.potential.toFixed(2)}% potential</span><span>${x.realised.toFixed(2)}% realised</span></div>`).join('')}<div class="calcRow total"><span>Projected Fitness gain</span><span></span><span>${(engine.projection.fitnessGainPct*100).toFixed(2)}%</span></div></div><p class="muted compact">Common realisation factor ${(engine.projection.fitnessProjection.common*100).toFixed(0)}% · diminishing-return factor ${engine.projection.fitnessProjection.diminishing.toFixed(2)}.</p><div class="calcTable"><div class="calcRow"><span>Taper duration</span><span></span><span>${Math.round(engine.projection.taperProjection.durationScore)}/100</span></div><div class="calcRow"><span>Volume reduction</span><span>${Math.round(engine.projection.taperProjection.averageReduction*100)}%</span><span>${Math.round(engine.projection.taperProjection.reductionScore)}/100</span></div><div class="calcRow"><span>Progressive reduction</span><span></span><span>${Math.round(engine.projection.taperProjection.progressiveScore)}/100</span></div><div class="calcRow"><span>Intensity retained</span><span></span><span>${Math.round(engine.projection.taperProjection.intensityScore)}/100</span></div><div class="calcRow total"><span>Projected taper benefit</span><span></span><span>${(engine.projection.taperGain*100).toFixed(2)}%</span></div></div></details></section><section><b>Prediction tolerance</b><p>The central time and its range are separate. Assessment age, distance transfer, Fitness evidence, Durability evidence and execution widen or narrow the current range. The programme range also includes future adherence and adaptation uncertainty, so it is not automatically narrower than today's range.</p><code>Today ${fmtTime(engine.currentModel.rangeLow)}–${fmtTime(engine.currentModel.rangeHigh)} · programme ${fmtTime(engine.projectedModel.rangeLow)}–${fmtTime(engine.projectedModel.rangeHigh)}</code></section></div><p class="muted compact">The relationships are evidence-informed calibration assumptions and should be validated against future assessment and race outcomes.</p>`;
  $('currentPreparationScore').textContent=Number.isFinite(c.overall)?Math.round(c.overall)+' / 100':'Not scored';
   $('evidenceBadge').textContent=`Evidence ${Math.round(c.evidenceCoverage*100)}%`;
  const evidenceContributions=engine.projectedPreparation.pillars.map(p=>({name:p.name,points:p.weight*p.coverage*100,weight:p.weight,coverage:p.coverage}));
@@ -1585,9 +1645,9 @@ function drawHrvChart(){
 }
 function renderPlanHealth(){
  const box=$('planHealthContent');if(!box)return;
- const report=validatePlan(state.plan);state.lastPlanHealth=report;
- const cls=report.errors?'bad':report.warnings?'warn':'good';
- box.innerHTML=`<div class="healthConclusion ${cls}"><b>${report.valid?'✓ Plan passed all validation checks':'⚠ Plan validation needs attention'}</b>${report.valid?'':`<span>${report.errors} error${report.errors===1?'':'s'} · ${report.warnings} warning${report.warnings===1?'':'s'}</span>`}</div>`;
+ const health=planHealthAssessment(),report=health.validation;state.lastPlanHealth=report;
+ const cls=health.score>=80?'good':health.score>=65?'warn':'bad';
+ box.innerHTML=`<div class="planHealthSummary ${cls}"><div class="planHealthScore"><strong>${Math.round(health.score)}</strong><span>/100</span></div><div><b>${esc(health.label)} plan structure</b><p>${report.valid?'The generated plan is structurally valid.':'Validation found issues that reduce the health score.'} This score evaluates the plan design, not whether you have completed it.</p></div></div><details class="planHealthDetails"><summary>How the score is calculated</summary><div class="planHealthComponents">${health.components.map(x=>`<div><span>${esc(x.name)} <small>${Math.round(x.weight*100)}% weight</small></span><b>${Math.round(x.score)}/100</b><i><em style="width:${clamp(x.score,0,100)}%"></em></i><p>${esc(x.detail)}</p></div>`).join('')}</div><p class="muted compact">Structural validation deductions: ${report.errors} errors × 8 points and ${report.warnings} warnings × 2 points.</p></details><div class="planHealthRecommendations"><h4>Improvement recommendations</h4>${health.recommendations.map((x,i)=>`<div><strong>${i+1}</strong><p>${esc(x)}</p></div>`).join('')}</div>`;
 }
 function renderMigrationReport(){const box=$('migrationReport');if(!box)return;const m=state.migration||migrationReport;box.innerHTML=`<div class="migrationStatus good"><b>Upgrade status: ${esc(m.status||'ready')}</b><span>Schema ${esc(m.from??'new')} → ${SCHEMA}</span><span>${Number(m.runs)||0} runs · ${Number(m.assessments)||0} assessments preserved</span><span>${Number(m.fieldsRecovered)||0} invalid or missing fields repaired</span><small>Storage source: ${esc(m.source||migrationReport.source||STORAGE_KEY)}</small></div>`;}
 function renderAll(){[renderDashboard,renderToday,renderPlan,renderRuns,renderMetrics,renderAssessments,renderCoach,renderRecovery,renderRace,renderSettings,renderPlanHealth,renderMigrationReport].forEach(fn=>{try{fn()}catch(err){recordDiagnostic('Render failure in '+fn.name,err)}});renderDiagnostics()}
