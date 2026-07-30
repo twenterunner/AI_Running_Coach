@@ -90,7 +90,7 @@ function recommendedRaceDate(setup){
  let totalWeeks=Math.ceil(Math.max(minimumTotal,req.requiredBuildWeeks+taperWeeks+2));
  return{date:iso(new Date(dte(setup.planStart).getTime()+totalWeeks*7*DAY)),totalWeeks,requiredBuildWeeks:req.requiredBuildWeeks,taperWeeks};
 }
-const BUILD=9550, SCHEMA=9550, STORAGE_KEY='arc_v62_web', MIRROR_KEY='arc_v8500_web', BACKUP_KEY='arc_pre8500_backup';
+const BUILD=9560, SCHEMA=9560, STORAGE_KEY='arc_v62_web', MIRROR_KEY='arc_v8500_web', BACKUP_KEY='arc_pre8500_backup';
 const defaults=()=>{let start=iso(new Date()),setup={planStart:start,raceDate:start,raceName:'Goal Race',raceDistance:42.195,targetTime:15300,currentWeekly:35,currentLongest:18,testDistance:5,testTime:1515,thresholdHr:168,criticalPower:300,bodyWeight:93,maxWeekly:65,growth:.07,peakLong:32,taperDays:14,minFactor:.85,maxFactor:1.05,adaptive:true};setup.raceDate=recommendedRaceDate(setup).date;return({schemaVersion:SCHEMA,setup,days:FIVE_DAY_TEMPLATE.map(d=>[...d]),runs:[],assessments:[],plan:[],weekView:null,migration:{to:SCHEMA,status:'new',time:new Date().toISOString()}})};
 let migrationReport={from:null,to:SCHEMA,status:'new install',source:'defaults',runs:0,assessments:0,fieldsRecovered:0,warning:''};
 function parseStored(raw){if(!raw)return null;try{const x=JSON.parse(raw);return x&&typeof x==='object'?x:null}catch(err){recordDiagnostic('Storage parse',err);return null}}
@@ -964,6 +964,32 @@ function projectedPreparationModel(c){
  const overall=clamp(sum(projectedPillars.map(p=>p.projectedScore*p.weight))/sum(projectedPillars.map(p=>p.weight)),0,100);
  return{pillars:projectedPillars,overall,timePotential,tolerance,health,profile,completionAssumption};
 }
+function planHealthAssessment(c=confidence()){
+ const profile=planSettingsProfile(c),validation=validatePlan(state.plan);
+ const components=[
+  {name:'Weekly-volume design',score:profile.volumeScore,weight:.18,detail:`Peak ${profile.plannedPeak.toFixed(1)} km/week compared with the configured starting load and race profile.`},
+  {name:'Long-run progression',score:profile.longScore,weight:.18,detail:`Peak long run ${profile.peakLong.toFixed(1)} km compared with the target-distance requirement.`},
+  {name:'Progression safety',score:profile.progressionScore,weight:.16,detail:`Configured maximum weekly growth ${(profile.growth*100).toFixed(1)}%.`},
+  {name:'Intensity distribution',score:profile.intensityScore,weight:.14,detail:`${Math.round(profile.qualityShare*100)}% quality and ${Math.round(profile.easyShare*100)}% easy/long-run distance.`},
+  {name:'Taper structure',score:profile.taperScore,weight:.14,detail:`${profile.taperDays} taper days with generated volume reduction.`},
+  {name:'Training frequency',score:profile.frequencyScore,weight:.10,detail:`${profile.enabledDays} enabled running days per week.`},
+  {name:'Target reachability',score:profile.reachabilityScore,weight:.10,detail:'Available build time compared with the progression needed to reach the planned peak safely.'}
+ ];
+ let score=sum(components.map(x=>x.score*x.weight));
+ score=clamp(score-validation.errors*8-validation.warnings*2,0,100);
+ const recommendations=[];
+ if(profile.volumeScore<70)recommendations.push(`Align peak weekly distance more closely with the ${raceProfile().label} requirement while respecting your current ${Number(state.setup.currentWeekly).toFixed(0)} km/week baseline.`);
+ if(profile.longScore<70)recommendations.push(`Increase the peak long run gradually toward a race-appropriate level, provided pain and recovery remain acceptable.`);
+ if(profile.progressionScore<75)recommendations.push(`Reduce maximum weekly growth from ${(profile.growth*100).toFixed(0)}% to approximately 5–10% and use recovery weeks.`);
+ if(profile.intensityScore<75)recommendations.push('Keep most distance easy and limit demanding quality work to a sustainable share of total volume.');
+ if(profile.taperScore<75)recommendations.push('Use a progressive 10–21 day taper with reduced volume while retaining small doses of intensity.');
+ if(profile.frequencyScore<60)recommendations.push('Distribute the planned load across an additional running day if your schedule and injury history allow.');
+ if(profile.reachabilityScore<75)recommendations.push('Extend the preparation period or reduce peak targets so the plan does not require rushed progression.');
+ if(validation.errors)recommendations.unshift(`Resolve ${validation.errors} structural validation error${validation.errors===1?'':'s'} before following the plan.`);
+ if(!recommendations.length)recommendations.push('No material structural change is recommended. Continue to let recovery and execution govern weekly adaptation.');
+ const label=score>=90?'Excellent':score>=80?'Strong':score>=70?'Good':score>=60?'Needs refinement':'High risk';
+ return{score,label,components,recommendations,validation,profile};
+}
 function programmeProjection(c,currentPred,projectedPreparation){
  const latest=state.assessments.filter(a=>a.valid).sort((a,b)=>b.date.localeCompare(a.date))[0];
  const testTime=latest?latest.time:state.setup.testTime,testDist=Math.max(.1,latest?latest.distance:state.setup.testDistance);
@@ -1171,9 +1197,13 @@ function renderDashboard(){
  const pctStart=w=>(w-1)/total*100,pctEnd=w=>w/total*100;
  const timelineLabel=name=>({'Foundation':'Foundation','Aerobic':'Aerobic','Development':'Development','Endurance':'Endurance','Specific':'Specific','Peak':'Peak','Taper':'Taper'}[name]||esc(name));
  const blocks=blockNames.map(b=>({name:b.name,label:timelineLabel(b.name),start:pctStart(b.startWeek),end:pctEnd(b.endWeek),cls:phaseClass(b.name)}));
- $('raceTimeline').innerHTML=`<div class="timelineBlocks">${blocks.map(b=>`<div class="timelineBlock timeline-${b.cls}" style="left:${b.start}%;width:${b.end-b.start}%" title="${esc(b.name)}"><span>${b.label}</span></div>`).join('')}<i class="timelineProgress" style="width:${pos}%"></i><span class="timelineNow" style="left:${pos}%" aria-label="Current programme position"></span></div><div class="timelineScale"><span>Plan start</span><span>Race day</span></div><div class="timelineMeta"><b>${detailedPhase(engine.cw)} phase · week ${engine.cw} of ${total}</b><span>${Math.max(0,Math.ceil(c.weeksRemaining))} weeks until race</span></div>`;
+ const programmeStart=state.plan.length?dte(state.plan.map(x=>x.date).sort()[0]):today();
+ const programmeEnd=dte(state.setup.raceDate);
+ const programmeSpan=Math.max(DAY,programmeEnd-programmeStart);
+ const programmeCompletion=clamp((today()-programmeStart)/programmeSpan*100,0,100);
+ $('raceTimeline').innerHTML=`<div class="timelineBlocks">${blocks.map(b=>`<div class="timelineBlock timeline-${b.cls}" style="left:${b.start}%;width:${b.end-b.start}%" title="${esc(b.name)}"><span>${b.label}</span></div>`).join('')}<i class="timelineProgress" style="width:${pos}%"></i><span class="timelineNow" style="left:${pos}%" aria-label="Current programme position"></span></div><div class="timelineScale"><span>Plan start</span><span>Race day</span></div><div class="timelineMeta"><b>${detailedPhase(engine.cw)} phase · week ${engine.cw} of ${total}</b><span>${Math.round(programmeCompletion)}% complete · ${Math.max(0,Math.ceil(c.weeksRemaining))} weeks until race</span></div>`;
  let afd=adaptiveFactorDetails(cw);
- $('kpis').innerHTML=kpi('Time until race',(()=>{const days=Math.max(0,Math.ceil((dte(state.setup.raceDate)-today())/DAY));return days<14?`${days} ${days===1?'day':'days'}`:`${Math.ceil(days/7)} weeks`;})(),'Remaining');
+ $('kpis').innerHTML=kpi('Time until race',(()=>{const days=Math.max(0,Math.ceil((programmeEnd-today())/DAY));return days<14?`${days} ${days===1?'day':'days'}`:`${Math.ceil(days/7)} weeks`;})(),'Remaining')+kpi('Programme completion',`${Math.round(programmeCompletion)}%`,'Elapsed on timeline');
  $('weeklyDistanceSummary').innerHTML=`<span class="chartSummaryLabel">This week</span><strong>${wd.actual.toFixed(1)} / ${wd.planned.toFixed(1)} km</strong>`;
  $('longRunSummary').innerHTML=`<span class="chartSummaryLabel">Longest verified</span><strong>${c.completedLongest.toFixed(1)} / ${Number(state.setup.peakLong).toFixed(1)} km</strong>`;
  const trendHistory=(state.predictionHistory||[]).filter(x=>Number.isFinite(Number(x.seconds))).slice().sort((a,b)=>a.date.localeCompare(b.date));
@@ -1623,9 +1653,9 @@ function drawHrvChart(){
 }
 function renderPlanHealth(){
  const box=$('planHealthContent');if(!box)return;
- const report=validatePlan(state.plan);state.lastPlanHealth=report;
- const cls=report.errors?'bad':report.warnings?'warn':'good';
- box.innerHTML=`<div class="healthConclusion ${cls}"><b>${report.valid?'✓ Plan passed all validation checks':'⚠ Plan validation needs attention'}</b>${report.valid?'':`<span>${report.errors} error${report.errors===1?'':'s'} · ${report.warnings} warning${report.warnings===1?'':'s'}</span>`}</div>`;
+ const health=planHealthAssessment(),report=health.validation;state.lastPlanHealth=report;
+ const cls=health.score>=80?'good':health.score>=65?'warn':'bad';
+ box.innerHTML=`<div class="planHealthSummary ${cls}"><div class="planHealthScore"><strong>${Math.round(health.score)}</strong><span>/100</span></div><div><b>${esc(health.label)} plan structure</b><p>${report.valid?'The generated plan is structurally valid.':'Validation found issues that reduce the health score.'} This score evaluates plan design, not programme completion.</p></div></div><details class="planHealthDetails"><summary>How the score is calculated</summary><div class="planHealthComponents">${health.components.map(x=>`<div><span>${esc(x.name)} <small>${Math.round(x.weight*100)}% weight</small></span><b>${Math.round(x.score)}/100</b><i><em style="width:${clamp(x.score,0,100)}%"></em></i><p>${esc(x.detail)}</p></div>`).join('')}</div><p class="muted compact">Structural validation deductions: ${report.errors} errors × 8 points and ${report.warnings} warnings × 2 points.</p></details><div class="planHealthRecommendations"><h4>Improvement recommendations</h4>${health.recommendations.map((x,i)=>`<div><strong>${i+1}</strong><p>${esc(x)}</p></div>`).join('')}</div>`;
 }
 function renderMigrationReport(){const box=$('migrationReport');if(!box)return;const m=state.migration||migrationReport;box.innerHTML=`<div class="migrationStatus good"><b>Upgrade status: ${esc(m.status||'ready')}</b><span>Schema ${esc(m.from??'new')} → ${SCHEMA}</span><span>${Number(m.runs)||0} runs · ${Number(m.assessments)||0} assessments preserved</span><span>${Number(m.fieldsRecovered)||0} invalid or missing fields repaired</span><small>Storage source: ${esc(m.source||migrationReport.source||STORAGE_KEY)}</small></div>`;}
 function renderAll(){[renderDashboard,renderToday,renderPlan,renderRuns,renderMetrics,renderAssessments,renderCoach,renderRecovery,renderRace,renderSettings,renderPlanHealth,renderMigrationReport].forEach(fn=>{try{fn()}catch(err){recordDiagnostic('Render failure in '+fn.name,err)}});renderDiagnostics()}
@@ -1816,11 +1846,11 @@ $('backupBtn').onclick=()=>download('ai-running-coach-backup.json',JSON.stringif
 let deferred;window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferred=e;$('installBtn').className='install'});$('installBtn').onclick=()=>deferred?.prompt();
 $('pillarCards')?.addEventListener('click',e=>{const card=e.target.closest('.pillarCard');if(!card||e.target.closest('summary'))return;const detail=card.querySelector('.pillarExplain');if(!detail)return;card.classList.toggle('open');detail.open=card.classList.contains('open');card.setAttribute('aria-expanded',String(detail.open))});
 $('pillarCards')?.addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&e.target.classList.contains('pillarCard')){e.preventDefault();e.target.click()}});
-const brandVersion=document.querySelector('.brand-copy p');if(brandVersion)brandVersion.textContent=`Race-specific adaptive planning • v9.5.5 · build ${BUILD}`;
+const brandVersion=document.querySelector('.brand-copy p');if(brandVersion)brandVersion.textContent=`Race-specific adaptive planning • v9.5.6 · build ${BUILD}`;
 if('serviceWorker'in navigator&&location.protocol==='https:')navigator.serviceWorker.register(`service-worker.js?v=${BUILD}`,{updateViaCache:'none'}).then(reg=>reg.update()).catch(()=>{});
 migrateAssessmentRuns();
 migrateImportedPower();
 if(reconcilePredictionHistory())save();
 renderAll();
-console.info('AI Running Coach v9.5.5 stable build 9550');
+console.info('AI Running Coach v9.5.6 stable build 9560');
 })();
