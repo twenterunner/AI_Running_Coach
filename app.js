@@ -90,7 +90,7 @@ function recommendedRaceDate(setup){
  let totalWeeks=Math.ceil(Math.max(minimumTotal,req.requiredBuildWeeks+taperWeeks+2));
  return{date:iso(new Date(dte(setup.planStart).getTime()+totalWeeks*7*DAY)),totalWeeks,requiredBuildWeeks:req.requiredBuildWeeks,taperWeeks};
 }
-const BUILD=9700, SCHEMA=9700, STORAGE_KEY='arc_v62_web', MIRROR_KEY='arc_v8500_web', BACKUP_KEY='arc_pre8500_backup';
+const BUILD=9710, SCHEMA=9710, STORAGE_KEY='arc_v62_web', MIRROR_KEY='arc_v8500_web', BACKUP_KEY='arc_pre8500_backup';
 const defaults=()=>{let start=iso(new Date()),setup={planStart:start,raceDate:start,raceName:'Goal Race',raceDistance:42.195,targetTime:15300,currentWeekly:35,currentLongest:18,testDistance:5,testTime:1515,thresholdHr:168,criticalPower:300,bodyWeight:93,maxWeekly:65,growth:.07,peakLong:32,taperDays:14,minFactor:.85,maxFactor:1.05,adaptive:true};setup.raceDate=recommendedRaceDate(setup).date;return({schemaVersion:SCHEMA,setup,days:FIVE_DAY_TEMPLATE.map(d=>[...d]),runs:[],assessments:[],injuries:[],plan:[],weekView:null,migration:{to:SCHEMA,status:'new',time:new Date().toISOString()}})};
 let migrationReport={from:null,to:SCHEMA,status:'new install',source:'defaults',runs:0,assessments:0,fieldsRecovered:0,warning:''};
 function parseStored(raw){if(!raw)return null;try{const x=JSON.parse(raw);return x&&typeof x==='object'?x:null}catch(err){recordDiagnostic('Storage parse',err);return null}}
@@ -765,12 +765,15 @@ function trainingUpdateAssessment(policy){
 function scoreStatus(score,hasEvidence=true){if(!hasEvidence||!Number.isFinite(score))return'noEvidence';if(score>=80)return'good';if(score>=60)return'watch';return'action'}
 function reconcilePredictionHistory(){
  const history=Array.isArray(state.predictionHistory)?state.predictionHistory:[];
- const invalid=history.some(x=>Number(x.predictionModelVersion)!==2||!Number.isFinite(Number(x.updateDelta)));
- if(!invalid)return false;
- state.predictionHistory=[];
  const events=[];
  (state.runs||[]).filter(r=>r&&r.id&&r.date&&r.source!=='assessment').forEach(r=>events.push({date:r.date,source:r.source==='stryd'?'Stryd import':'Run update',entityId:r.id,order:r.updatedAt||r.date}));
  (state.assessments||[]).filter(a=>a&&a.valid&&a.id&&a.date).forEach(a=>events.push({date:a.date,source:'Fitness assessment',entityId:a.id,order:a.updatedAt||a.date}));
+ const validIds=new Set(events.map(e=>e.entityId));
+ const invalid=history.some(x=>Number(x.predictionModelVersion)!==2||!Number.isFinite(Number(x.updateDelta)));
+ const missing=events.some(e=>!history.some(x=>x.entityId===e.entityId));
+ const orphaned=history.some(x=>x.entityId&&!validIds.has(x.entityId));
+ if(!invalid&&!missing&&!orphaned)return false;
+ state.predictionHistory=[];
  events.sort((a,b)=>String(a.date).localeCompare(String(b.date))||String(a.order).localeCompare(String(b.order)));
  events.forEach(e=>recordPredictionSnapshot(e.date,e.source,e.entityId));
  return true;
@@ -1932,11 +1935,11 @@ $('backupBtn').onclick=()=>download('ai-running-coach-backup.json',JSON.stringif
 let deferred;window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferred=e;$('installBtn').className='install'});$('installBtn').onclick=()=>deferred?.prompt();
 $('pillarCards')?.addEventListener('click',e=>{const card=e.target.closest('.pillarCard');if(!card||e.target.closest('summary'))return;const detail=card.querySelector('.pillarExplain');if(!detail)return;card.classList.toggle('open');detail.open=card.classList.contains('open');card.setAttribute('aria-expanded',String(detail.open))});
 $('pillarCards')?.addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&e.target.classList.contains('pillarCard')){e.preventDefault();e.target.click()}});
-const brandVersion=document.querySelector('.brand-copy p');if(brandVersion)brandVersion.textContent=`Race-specific adaptive planning • v9.7.0 · build ${BUILD}`;
+const brandVersion=document.querySelector('.brand-copy p');if(brandVersion)brandVersion.textContent=`Race-specific adaptive planning • v9.7.1 · build ${BUILD}`;
 if('serviceWorker'in navigator&&location.protocol==='https:')navigator.serviceWorker.register(`service-worker.js?v=${BUILD}`,{updateViaCache:'none'}).then(reg=>reg.update()).catch(()=>{});
 migrateAssessmentRuns();
 migrateImportedPower();
 if(reconcilePredictionHistory())save();
 renderAll();
-console.info('AI Running Coach v9.7.0 stable build 9700');
+console.info('AI Running Coach v9.7.1 stable build 9710');
 })();
