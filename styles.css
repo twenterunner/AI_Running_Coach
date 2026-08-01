@@ -631,3 +631,14 @@ canvas{width:100%;height:auto;display:block}
 .rehabCompletionClarifier{border-top:1px solid var(--line);padding-top:12px}.rehabCompletionClarifier p{margin:5px 0 0;line-height:1.5}
 .adherencePeriods{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.adherencePeriods span{background:#f6f9fb;border-radius:12px;padding:11px;color:var(--muted)}.adherencePeriods b{display:block;color:var(--ink);font-size:18px;margin-top:3px}
 @media(max-width:480px){.rehabDayTitle small{white-space:normal}.rehabStatusPair{display:grid;grid-template-columns:1fr}.checkinBadge,.executionBadge{width:max-content;max-width:100%}.adherencePeriods{grid-template-columns:1fr 1fr}}
+
+/* v10.0.0 Injury clinical reasoning */
+.clinicalReasoningStep{border-color:#cfe0ec;background:#f8fbfe}
+.clinicalReasoningSummary{border:1px solid var(--line);border-radius:17px;padding:15px;background:#fbfdff}
+.clinicalReasoningGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:12px}
+.clinicalReasoningGrid>div{border:1px solid var(--line);border-radius:13px;padding:12px;background:#fff;min-width:0}
+.clinicalReasoningGrid b{display:block;margin-bottom:6px}.clinicalReasoningGrid p,.clinicalReasoningGrid ul{margin:0;color:var(--muted);font-size:12px;line-height:1.5}.clinicalReasoningGrid ul{padding-left:18px}
+.clinicianVerification{margin:12px 0;padding:12px;border-radius:12px;border-left:5px solid var(--amber);background:#fff8ec}
+.clinicianVerification.supported{border-left-color:var(--green);background:#f1faf5}.clinicianVerification.conflict{border-left-color:var(--red);background:#fff2f2}.clinicianVerification p{margin:6px 0;font-size:12px}.clinicianVerification small{color:var(--muted)}
+.rehabDayStatus:empty{display:none}
+@media(max-width:620px){.clinicalReasoningGrid{grid-template-columns:1fr}.clinicalReasoningSummary .injurySectionHead{align-items:flex-start}.clinicalReasoningSummary .injurySectionHead>strong{font-size:12px}}
