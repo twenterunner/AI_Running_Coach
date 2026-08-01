@@ -90,7 +90,7 @@ function recommendedRaceDate(setup){
  let totalWeeks=Math.ceil(Math.max(minimumTotal,req.requiredBuildWeeks+taperWeeks+2));
  return{date:iso(new Date(dte(setup.planStart).getTime()+totalWeeks*7*DAY)),totalWeeks,requiredBuildWeeks:req.requiredBuildWeeks,taperWeeks};
 }
-const BUILD=10170, SCHEMA=10170, STORAGE_KEY='arc_v62_web', MIRROR_KEY='arc_v8500_web', BACKUP_KEY='arc_pre8500_backup';
+const BUILD=10180, SCHEMA=10180, STORAGE_KEY='arc_v62_web', MIRROR_KEY='arc_v8500_web', BACKUP_KEY='arc_pre8500_backup';
 const defaults=()=>{let start=iso(new Date()),setup={planStart:start,raceDate:start,raceName:'Goal Race',raceDistance:42.195,targetTime:15300,currentWeekly:35,currentLongest:18,testDistance:5,testTime:1515,thresholdHr:168,criticalPower:300,bodyWeight:93,maxWeekly:65,growth:.07,peakLong:32,taperDays:14,minFactor:.85,maxFactor:1.05,adaptive:true};setup.raceDate=recommendedRaceDate(setup).date;return({schemaVersion:SCHEMA,setup,days:FIVE_DAY_TEMPLATE.map(d=>[...d]),runs:[],assessments:[],injuries:[],activeInjuryPlanId:null,plan:[],weekView:null,migration:{to:SCHEMA,status:'new',time:new Date().toISOString()}})};
 let migrationReport={from:null,to:SCHEMA,status:'new install',source:'defaults',runs:0,assessments:0,fieldsRecovered:0,warning:''};
 function parseStored(raw){if(!raw)return null;try{const x=JSON.parse(raw);return x&&typeof x==='object'?x:null}catch(err){recordDiagnostic('Storage parse',err);return null}}
@@ -2393,7 +2393,7 @@ function openInjuryCheck(i,existing=null){
  const prev=existing||{};
  const progress=injuryPrediction(i);
  const planForDate=date=>{if(existing?.planSnapshot&&existing.date===date)return existing.planSnapshot;return rehabCalendarDay(i,progress,date,rehabPlanDayIndex(i,date))};
- const scheduledMeta=plan=>{const walkingItem=(plan.items||[]).find(x=>/^Walk \d+ minutes/i.test(x))||plan.walkingTarget||'';const walkingMatch=String(walkingItem).match(/Walk (\d+) minutes/i);const walkingTargetMinutes=walkingMatch?Number(walkingMatch[1]):null;const exerciseItems=(plan.items||[]).filter(x=>x!==walkingItem&&!/^Walk \d+ minutes/i.test(x));const runningPlanned=['assessment','run'].includes(plan.type);const strengthPlanned=exerciseItems.some(x=>/bridge|strength|hinge|raise|curl|squat|isometric|loading/i.test(x));const impactPlanned=plan.type==='impact'||runningPlanned||exerciseItems.some(x=>/hop|jog|impact/i.test(x));return{walkingPlanned:!!walkingItem,walkingItem,walkingTargetMinutes,exercisePlanned:exerciseItems.length>0,exerciseItems,runningPlanned,strengthPlanned,impactPlanned,stretchPlanned:!!walkingItem}};
+ const scheduledMeta=plan=>{const walkingItem=(plan.items||[]).find(x=>/^Walk \d+ minutes/i.test(x))||plan.walkingTarget||'';const walkingMatch=String(walkingItem).match(/Walk (\d+) minutes/i);const walkingTargetMinutes=walkingMatch?Number(walkingMatch[1]):null;const exerciseItems=(plan.items||[]).filter(x=>x!==walkingItem&&!/^Walk \d+ minutes/i.test(x));const runningPlanned=['assessment','run'].includes(plan.type);const strengthPlanned=exerciseItems.some(x=>/bridge|strength|hinge|raise|curl|squat|isometric|loading/i.test(x));const impactPlanned=plan.type==='impact'||exerciseItems.some(x=>/hop|jog|impact/i.test(x));return{walkingPlanned:!!walkingItem,walkingItem,walkingTargetMinutes,exercisePlanned:exerciseItems.length>0,exerciseItems,runningPlanned,strengthPlanned,impactPlanned,stretchPlanned:!!walkingItem}};
  const initialPlan=planForDate(existing?.date||iso(today())),initialScheduled=scheduledMeta(initialPlan);
  $('modalContent').innerHTML=`<div class="injuryCheckHeader"><h3>${editing?'Edit':'Daily'} injury check-in</h3><p>Questions are generated from the rehabilitation activities scheduled for the selected date. Unscheduled components are hidden and recorded as not planned.</p></div>
  <div id="icScheduledPlan" class="note good"></div>
@@ -2401,10 +2401,10 @@ function openInjuryCheck(i,existing=null){
  <section class="injuryCheckSection"><h4>2. Daily function</h4><div class="formGrid"><div class="field"><label>Comfortable walking completed (minutes)</label><input id="icWalkMinutes" type="number" min="0" value="${prev.walkMinutes??''}"></div>${triSelect('icStairs','Stairs tolerated with normal movement?',prev.stairs)}<div class="field"><label>Confidence in injured area 0–10</label><input id="icConfidence" type="number" min="0" max="10" value="${prev.confidence??''}"></div></div></section>
  <section class="injuryCheckSection"><h4>3. Scheduled rehabilitation execution</h4><p class="muted compact">Only activities scheduled for this date are shown. Report completion separately from symptom tolerance.</p><div class="formGrid"><div id="icExerciseExecutionBlock">${selectField('icRehabExercises','Scheduled rehab exercises',prev.rehabExerciseStatus||'', [['','Not assessed'],['all','All scheduled rehab exercises completed'],['some','Some scheduled rehab exercises completed'],['stopped','Started but stopped because of symptoms'],['none','Scheduled rehab exercises not started']])}</div><div id="icWalkingExecutionBlock">${selectField('icLocomotion','Scheduled walking target',prev.locomotionStatus||'', [['','Not assessed'],['completed','Full walking target completed'],['partial','Part of walking target completed — not stopped by symptoms'],['stopped','Started but stopped because of symptoms'],['none','Walking target not started']])}</div><div id="icStretchExecutionBlock">${selectField('icStretchGoal','Optional stretch goal',prev.stretchGoalStatus||'', [['','Not assessed / not attempted'],['achieved','Stretch goal achieved'],['not_achieved','Stretch goal not achieved']])}</div><div id="icStrengthToleranceBlock">${triSelect('icBridge','Scheduled strength work tolerated with control?',prev.bridge,'Tolerated','Not tolerated')}</div><div id="icImpactToleranceBlock">${triSelect('icHop','Scheduled impact assessment completed and tolerated?',prev.hop,'Tolerated','Not tolerated')}</div></div></section>
  <section id="icRunningSection" class="injuryCheckSection"><h4>4. Scheduled running exposure</h4><div class="formGrid">${selectField('icRunStatus','Scheduled run',prev.runStatus,[['not_assessed','Not assessed'],['completed','Run completed'],['stopped','Started but stopped due to symptoms'],['unable','Unable to start because of symptoms']])}<div class="field"><label>Running completed (minutes)</label><input id="icRun" type="number" min="0" value="${prev.runMinutes??''}" placeholder="Enter actual minutes"></div><div class="field"><label>Highest pain during run 0–10</label><input id="icRunPain" type="number" min="0" max="10" value="${prev.runPain??''}"></div>${triSelect('icGait','Was gait or running technique altered?',prev.alteredGait)}</div></section>
- <section class="injuryCheckSection"><h4>5. Response to the previous load</h4><div class="formGrid">${triSelect('icWorse','Were symptoms worse later or the next morning?',prev.nextDayWorse)}${selectField('icResponse','Overall response to previous load',prev.loadResponse,[['','Not assessed'],['better','Better than before load'],['stable','Returned to baseline'],['mild_flare','Mild temporary flare'],['sustained_flare','Still worse after 24 hours']])}<div class="field fieldWide"><label>Symptoms / notes</label><textarea id="icSymptoms" placeholder="What changed, what activity caused it, and how long did the response last?">${esc(prev.symptoms||'')}</textarea></div></div></section>
+ <section class="injuryCheckSection"><h4>5. Response to the previous load</h4><div class="formGrid">${triSelect('icWorse','Were symptoms worse later or the next morning?',prev.nextDayWorse)}${selectField('icResponse','Overall response to previous load',prev.loadResponse,[['','Not assessed'],['better','Better than before the previous load'],['stable','No meaningful worsening after the previous load'],['mild_flare','Temporary worsening, back to baseline within 24 hours'],['sustained_flare','Still worse more than 24 hours later']])}<div class="field fieldWide"><label>Symptoms / notes</label><textarea id="icSymptoms" placeholder="What changed, what activity caused it, and how long did the response last?">${esc(prev.symptoms||'')}</textarea></div></div></section>
  <div id="icConsistency" class="note"><b>Consistency check</b><p>The form will automatically align related answers.</p></div><button id="saveCheck" class="primary full">${editing?'Update check-in':'Save and recalculate timeline'}</button>${editing?'<button id="deleteCheck" class="danger full">Delete this check-in</button>':''}`;
  $('modal').className='modal';
- const runStatusField=$('icRunStatus'),runMinutesField=$('icRun'),runPainField=$('icRunPain'),gaitField=$('icGait'),walkMinutesField=$('icWalkMinutes'),locomotionField=$('icLocomotion'),exerciseField=$('icRehabExercises'),stretchField=$('icStretchGoal'),consistencyBox=$('icConsistency'),dateField=$('icDate');
+ const runStatusField=$('icRunStatus'),runMinutesField=$('icRun'),runPainField=$('icRunPain'),gaitField=$('icGait'),walkMinutesField=$('icWalkMinutes'),locomotionField=$('icLocomotion'),exerciseField=$('icRehabExercises'),stretchField=$('icStretchGoal'),strengthField=$('icBridge'),impactField=$('icHop'),worseField=$('icWorse'),responseField=$('icResponse'),consistencyBox=$('icConsistency'),dateField=$('icDate');
  let activePlan=initialPlan,activeScheduled=initialScheduled,syncing=false;
  const showBlock=(id,show)=>{const el=$(id);if(el)el.classList.toggle('hidden',!show)};
  const applyScheduledQuestions=(date,preserve=true)=>{activePlan=planForDate(date);activeScheduled=scheduledMeta(activePlan);$('icScheduledPlan').innerHTML=`<b>Scheduled for ${esc(fmtDate(date))}: ${esc(activePlan.title)}</b><p>${activeScheduled.walkingPlanned?esc(activeScheduled.walkingItem)+' (record actual minutes below)':'No walking target.'}${activeScheduled.exercisePlanned?`<br>Exercises: ${activeScheduled.exerciseItems.map(esc).join(' · ')}`:'<br>No rehabilitation exercises scheduled.'}${activeScheduled.runningPlanned?`<br>Running/impact exposure is scheduled.`:'<br>No run is scheduled.'}</p>`;
@@ -2412,8 +2412,8 @@ function openInjuryCheck(i,existing=null){
   if(!activeScheduled.exercisePlanned)exerciseField.value='not_planned';else if(exerciseField.value==='not_planned')exerciseField.value='';
   if(!activeScheduled.walkingPlanned)locomotionField.value='not_planned';else if(locomotionField.value==='not_planned')locomotionField.value='';
   if(!activeScheduled.stretchPlanned)stretchField.value='';
-  if(!activeScheduled.strengthPlanned)$('icBridge').value='';
-  if(!activeScheduled.impactPlanned)$('icHop').value='';
+  if(!activeScheduled.strengthPlanned){strengthField.value='';strengthField.disabled=true;}else strengthField.disabled=false;
+  if(!activeScheduled.impactPlanned){impactField.value='';impactField.disabled=true;}else impactField.disabled=false;
   if(!activeScheduled.runningPlanned){runStatusField.value='not_planned';clearRunDetail();}else if(runStatusField.value==='not_planned')runStatusField.value='not_assessed';
  };
  const clearRunDetail=()=>{runMinutesField.value='';runPainField.value='';gaitField.value='';};
@@ -2424,27 +2424,38 @@ function openInjuryCheck(i,existing=null){
   if(sg==='achieved')parts.push('Optional stretch goal achieved.');
   consistencyBox.innerHTML=`<b>Current interpretation</b><p>${esc(parts.join(' '))}</p>`;
  };
- const normalizeCheckIn=source=>{if(syncing)return;syncing=true;let rs=runStatusField.value,mins=nullableNumber(runMinutesField.value),walkMins=nullableNumber(walkMinutesField.value),target=activeScheduled.walkingTargetMinutes,lo=locomotionField.value,ex=exerciseField.value,sg=stretchField.value;
+ const normalizeCheckIn=source=>{if(syncing)return;syncing=true;let rs=runStatusField.value,mins=nullableNumber(runMinutesField.value),walkMins=nullableNumber(walkMinutesField.value),target=activeScheduled.walkingTargetMinutes,lo=locomotionField.value,ex=exerciseField.value,sg=stretchField.value,bridge=readTri('icBridge'),hop=readTri('icHop'),worse=readTri('icWorse'),response=responseField.value;
   // Walking status and actual minutes are one coherent record.
   if(activeScheduled.walkingPlanned){
    if(source==='locomotion'){
     if(lo==='completed'&&(!Number.isFinite(walkMins)||walkMins<=0)){walkMins=target||1;walkMinutesField.value=walkMins;}
     else if(lo==='none'){walkMins=0;walkMinutesField.value='0';}
-    else if(lo==='partial'||lo==='stopped'){if(Number.isFinite(target)&&Number.isFinite(walkMins)&&walkMins>=target){walkMins=Math.max(1,target-1);walkMinutesField.value=walkMins;}}
+    else if((lo==='partial'||lo==='stopped')&&Number.isFinite(target)&&Number.isFinite(walkMins)&&walkMins>=target){walkMins=Math.max(1,target-1);walkMinutesField.value=walkMins;}
    }
    if(source==='walkMinutes'){
     if(Number.isFinite(walkMins)&&walkMins<=0)lo='none';
-    else if(Number.isFinite(walkMins)&&walkMins>0){
-     if(Number.isFinite(target)&&walkMins>=target)lo='completed';
-     else if(lo!=='stopped')lo='partial';
-    }
+    else if(Number.isFinite(walkMins)&&walkMins>0){if(Number.isFinite(target)&&walkMins>=target)lo='completed';else if(lo!=='stopped')lo='partial';}
    }
-  }else{lo='not_planned';}
-  // Running status and minutes are one coherent record.
+  }else{lo='not_planned';walkMinutesField.value='';walkMins=null;}
+
+  // Exercise execution controls whether strength and impact tolerance can be assessed.
+  if(!activeScheduled.exercisePlanned)ex='not_planned';
+  const performedExercises=ex==='all'||ex==='some';
+  if(activeScheduled.strengthPlanned){
+   if(ex==='stopped'){strengthField.value='false';strengthField.disabled=true;bridge=false;}
+   else if(ex==='none'||ex==='not_planned'||!ex){strengthField.value='';strengthField.disabled=true;bridge=null;}
+   else{strengthField.disabled=false;}
+  }else{strengthField.value='';strengthField.disabled=true;bridge=null;}
+  if(activeScheduled.impactPlanned){
+   if(ex==='stopped'){impactField.value='false';impactField.disabled=true;hop=false;}
+   else if(ex==='none'||ex==='not_planned'||!ex){impactField.value='';impactField.disabled=true;hop=null;}
+   else{impactField.disabled=false;}
+  }else{impactField.value='';impactField.disabled=true;hop=null;}
+
+  // Running status and details are one coherent record. Completion and tolerance remain separate.
   if(activeScheduled.runningPlanned){
    if(source==='runStatus'){
-    if(rs==='not_assessed'){clearRunDetail();mins=null;}
-    else if(rs==='unable'){clearRunDetail();mins=null;}
+    if(rs==='not_assessed'||rs==='unable'){clearRunDetail();mins=null;}
     else if(rs==='completed'&&(!Number.isFinite(mins)||mins<=0)){runMinutesField.value='';mins=null;}
     else if(rs==='stopped'&&(!Number.isFinite(mins)||mins<=0)){rs='unable';clearRunDetail();mins=null;}
    }
@@ -2453,14 +2464,23 @@ function openInjuryCheck(i,existing=null){
     else if(Number.isFinite(mins)&&mins<=0){rs=rs==='stopped'?'unable':'not_assessed';clearRunDetail();mins=null;}
    }
    if(Number.isFinite(mins)&&mins>0&&rs!=='stopped')rs='completed';
+   if(rs==='unable'||rs==='not_assessed'){runPainField.value='';gaitField.value='';}
   }else{rs='not_planned';clearRunDetail();mins=null;}
-  if(!activeScheduled.exercisePlanned)ex='not_planned';
-  if(sg==='achieved'){
-   if(activeScheduled.exercisePlanned&&ex!=='all')ex='all';
-   if(activeScheduled.walkingPlanned&&lo!=='completed'){lo='completed';walkMins=target||Math.max(1,walkMins||0);walkMinutesField.value=walkMins;}
-   if(activeScheduled.runningPlanned&&rs!=='completed')sg='not_achieved';
+
+  // Stretch goal can only be achieved after all mandatory scheduled components were fully completed.
+  const mandatoryComplete=(!activeScheduled.exercisePlanned||ex==='all')&&(!activeScheduled.walkingPlanned||lo==='completed')&&(!activeScheduled.runningPlanned||rs==='completed');
+  if(sg==='achieved'&&!mandatoryComplete)sg='not_achieved';
+  if(ex==='stopped'||lo==='stopped'||rs==='stopped'||rs==='unable')sg='not_achieved';
+
+  // Previous-load fields describe one response and cannot contradict each other.
+  if(source==='response'){
+   if(response==='better'||response==='stable')worse=false;
+   else if(response==='mild_flare'||response==='sustained_flare')worse=true;
+  }else if(source==='worse'){
+   if(worse===false&&(response==='mild_flare'||response==='sustained_flare'))response='stable';
+   if(worse===true&&(response==='better'||response==='stable'||!response))response='mild_flare';
   }
-  if((ex==='stopped'||lo==='stopped'||rs==='stopped'||rs==='unable')&&sg==='achieved')sg='not_achieved';
+  worseField.value=known(worse)?String(worse):'';responseField.value=response;
   runStatusField.value=rs;locomotionField.value=lo;exerciseField.value=ex;stretchField.value=sg;syncing=false;setConsistencyMessage();
  };
  runMinutesField.addEventListener('input',()=>normalizeCheckIn('minutes'));
@@ -2469,7 +2489,11 @@ function openInjuryCheck(i,existing=null){
  runStatusField.addEventListener('change',()=>normalizeCheckIn('runStatus'));
  locomotionField.addEventListener('change',()=>normalizeCheckIn('locomotion'));
  exerciseField.addEventListener('change',()=>normalizeCheckIn('exercise'));
+ strengthField.addEventListener('change',()=>normalizeCheckIn('strength'));
+ impactField.addEventListener('change',()=>normalizeCheckIn('impact'));
  stretchField.addEventListener('change',()=>normalizeCheckIn('stretch'));
+ worseField.addEventListener('change',()=>normalizeCheckIn('worse'));
+ responseField.addEventListener('change',()=>normalizeCheckIn('response'));
  dateField.addEventListener('change',()=>{applyScheduledQuestions(dateField.value);normalizeCheckIn('date')});
  applyScheduledQuestions(dateField.value);
  normalizeCheckIn('initial');
@@ -2479,15 +2503,17 @@ function openInjuryCheck(i,existing=null){
  if(activeScheduled.exercisePlanned&&!rehabExerciseStatus)return toast('Answer whether the scheduled rehab exercises were completed.',true);
  if(activeScheduled.walkingPlanned&&!locomotionStatus)return toast('Answer whether the scheduled walking target was completed.',true);
  if(activeScheduled.runningPlanned&&runStatus==='not_assessed')return toast('Answer the scheduled running-exposure question.',true);
- if(activeScheduled.strengthPlanned&&!known(readTri('icBridge')))return toast('Answer whether the scheduled strength work was tolerated.',true);
- if(activeScheduled.impactPlanned&&!known(readTri('icHop')))return toast('Answer whether the scheduled impact assessment was tolerated.',true);
+ if(activeScheduled.strengthPlanned&&['all','some'].includes(rehabExerciseStatus)&&!known(readTri('icBridge')))return toast('Because strength work was performed, state whether it was tolerated with control.',true);
+ if(activeScheduled.impactPlanned&&['all','some'].includes(rehabExerciseStatus)&&!known(readTri('icHop')))return toast('Because the impact assessment was performed, state whether it was tolerated.',true);
+ if(activeScheduled.strengthPlanned&&['none','not_planned'].includes(rehabExerciseStatus)&&known(readTri('icBridge')))return toast('Strength tolerance cannot be recorded when the strength exercises were not performed.',true);
+ if(activeScheduled.impactPlanned&&['none','not_planned'].includes(rehabExerciseStatus)&&known(readTri('icHop')))return toast('Impact tolerance cannot be recorded when the impact assessment was not performed.',true);
  if(locomotionStatus==='completed'&&(!Number.isFinite(walkMinutes)||walkMinutes<=0))return toast('A completed walking target requires positive walking minutes.',true);
  if(locomotionStatus==='completed'&&Number.isFinite(walkTarget)&&walkMinutes<walkTarget)return toast(`The full walking target is ${walkTarget} minutes. Choose partial completion or enter at least ${walkTarget} minutes.`,true);
  if(['partial','stopped'].includes(locomotionStatus)&&(!Number.isFinite(walkMinutes)||walkMinutes<=0))return toast('Enter the walking minutes completed before selecting partial or stopped.',true);
  if(locomotionStatus==='none'&&Number.isFinite(walkMinutes)&&walkMinutes>0)return toast('Walking minutes must be zero when the walking target was not started.',true);
  if(runStatus==='completed'&&(!Number.isFinite(runMinutes)||runMinutes<=0))return toast('A completed run requires positive running minutes.',true);
  if(runStatus==='stopped'&&(!Number.isFinite(runMinutes)||runMinutes<=0))return toast('Enter the minutes completed before the run was stopped.',true);
- let legacyRehabStatus=rehabExerciseStatus==='not_planned'&&locomotionStatus==='not_planned'?'not_planned':stretchGoalStatus==='achieved'&&rehabExerciseStatus==='all'&&locomotionStatus==='completed'?'stretch':rehabExerciseStatus==='all'&&locomotionStatus==='completed'?'completed':rehabExerciseStatus==='some'||locomotionStatus==='partial'?'reduced':rehabExerciseStatus==='none'&&locomotionStatus==='completed'?'walking_only':rehabExerciseStatus==='stopped'||locomotionStatus==='stopped'?'stopped':rehabExerciseStatus==='none'&&locomotionStatus==='none'?'not_completed':null;let c={date:$('icDate').value,pain:nullableNumber($('icPain').value),walkPain:nullableNumber($('icWalk').value),morningStiffness:nullableNumber($('icStiff').value),symptomTrend:$('icTrend').value||null,newSwelling:readTri('icSwelling'),walkMinutes,stairs:readTri('icStairs'),confidence:nullableNumber($('icConfidence').value),rehabExerciseStatus,locomotionStatus,stretchGoalStatus,rehabStatus:legacyRehabStatus,bridge:activeScheduled.strengthPlanned?readTri('icBridge'):null,hop:activeScheduled.impactPlanned?readTri('icHop'):null,runStatus,runMinutes,runPain:activeScheduled.runningPlanned?nullableNumber($('icRunPain').value):null,alteredGait:activeScheduled.runningPlanned?readTri('icGait'):null,planSnapshot:{date:activePlan.date,type:activePlan.type,title:activePlan.title,items:[...(activePlan.items||[])],walkingTarget:activePlan.walkingTarget,stretchGoal:activePlan.stretchGoal,running:activePlan.running,rationale:activePlan.rationale,rule:activePlan.rule,stage:activePlan.stage},nextDayWorse:readTri('icWorse'),loadResponse:$('icResponse').value||null,symptoms:$('icSymptoms').value.trim()};const executionCheck=rehabExecutionMeta(c);if((activeScheduled.exercisePlanned||activeScheduled.walkingPlanned||activeScheduled.runningPlanned)&&!executionCheck.assessed)return toast('Complete all scheduled execution questions so this check-in can be scored.',true);if(!c.date)return toast('Enter the check-in date.',true);if(dte(c.date)<dte(i.date))return toast('A check-in cannot be dated before the injury date.',true);const hasObs=Object.entries(c).some(([k,v])=>k!=='date'&&k!=='symptoms'&&v!==null&&v!==''&&v!==undefined);if(!hasObs&&!c.symptoms)return toast('Record at least one observation.',true);if(['stopped','unable'].includes(runStatus)&&Number.isFinite(runMinutes)&&runMinutes<0)return toast('Running minutes cannot be negative.',true);i.checkIns=i.checkIns||[];if(editing&&originalDate!==c.date&&i.checkIns.some(x=>x.date===c.date))return toast('A check-in already exists for that date.',true);let n=i.checkIns.findIndex(x=>x.date===(editing?originalDate:c.date));n>=0?i.checkIns[n]=c:i.checkIns.push(c);save();$('modal').className='modal hidden';renderInjury();toast(editing?'Check-in updated and full trajectory recalculated.':'Check-in saved. The full history—not this day alone—was used.');};if(editing)$('deleteCheck').onclick=()=>{if(confirm('Delete this check-in?')){i.checkIns=i.checkIns.filter(x=>x.date!==originalDate);save();$('modal').className='modal hidden';renderInjury();toast('Check-in deleted and trajectory recalculated.')}};
+ let legacyRehabStatus=rehabExerciseStatus==='not_planned'&&locomotionStatus==='not_planned'?'not_planned':stretchGoalStatus==='achieved'&&rehabExerciseStatus==='all'&&locomotionStatus==='completed'?'stretch':rehabExerciseStatus==='all'&&locomotionStatus==='completed'?'completed':rehabExerciseStatus==='some'||locomotionStatus==='partial'?'reduced':rehabExerciseStatus==='none'&&locomotionStatus==='completed'?'walking_only':rehabExerciseStatus==='stopped'||locomotionStatus==='stopped'?'stopped':rehabExerciseStatus==='none'&&locomotionStatus==='none'?'not_completed':null;let c={date:$('icDate').value,pain:nullableNumber($('icPain').value),walkPain:nullableNumber($('icWalk').value),morningStiffness:nullableNumber($('icStiff').value),symptomTrend:$('icTrend').value||null,newSwelling:readTri('icSwelling'),walkMinutes,stairs:readTri('icStairs'),confidence:nullableNumber($('icConfidence').value),rehabExerciseStatus,locomotionStatus,stretchGoalStatus,rehabStatus:legacyRehabStatus,bridge:activeScheduled.strengthPlanned?(rehabExerciseStatus==='stopped'?false:['all','some'].includes(rehabExerciseStatus)?readTri('icBridge'):null):null,hop:activeScheduled.impactPlanned?(rehabExerciseStatus==='stopped'?false:['all','some'].includes(rehabExerciseStatus)?readTri('icHop'):null):null,runStatus,runMinutes,runPain:activeScheduled.runningPlanned?nullableNumber($('icRunPain').value):null,alteredGait:activeScheduled.runningPlanned?readTri('icGait'):null,planSnapshot:{date:activePlan.date,type:activePlan.type,title:activePlan.title,items:[...(activePlan.items||[])],walkingTarget:activePlan.walkingTarget,stretchGoal:activePlan.stretchGoal,running:activePlan.running,rationale:activePlan.rationale,rule:activePlan.rule,stage:activePlan.stage},nextDayWorse:readTri('icWorse'),loadResponse:$('icResponse').value||null,symptoms:$('icSymptoms').value.trim()};const executionCheck=rehabExecutionMeta(c);if((activeScheduled.exercisePlanned||activeScheduled.walkingPlanned||activeScheduled.runningPlanned)&&!executionCheck.assessed)return toast('Complete all scheduled execution questions so this check-in can be scored.',true);if(!c.date)return toast('Enter the check-in date.',true);if(dte(c.date)<dte(i.date))return toast('A check-in cannot be dated before the injury date.',true);const hasObs=Object.entries(c).some(([k,v])=>k!=='date'&&k!=='symptoms'&&v!==null&&v!==''&&v!==undefined);if(!hasObs&&!c.symptoms)return toast('Record at least one observation.',true);if(['stopped','unable'].includes(runStatus)&&Number.isFinite(runMinutes)&&runMinutes<0)return toast('Running minutes cannot be negative.',true);i.checkIns=i.checkIns||[];if(editing&&originalDate!==c.date&&i.checkIns.some(x=>x.date===c.date))return toast('A check-in already exists for that date.',true);let n=i.checkIns.findIndex(x=>x.date===(editing?originalDate:c.date));n>=0?i.checkIns[n]=c:i.checkIns.push(c);save();$('modal').className='modal hidden';renderInjury();toast(editing?'Check-in updated and full trajectory recalculated.':'Check-in saved. The full history—not this day alone—was used.');};if(editing)$('deleteCheck').onclick=()=>{if(confirm('Delete this check-in?')){i.checkIns=i.checkIns.filter(x=>x.date!==originalDate);save();$('modal').className='modal hidden';renderInjury();toast('Check-in deleted and trajectory recalculated.')}};
 }
 function renderAll(){[renderDashboard,renderToday,renderPlan,renderRuns,renderMetrics,renderAssessments,renderCoach,renderInjury,renderRecovery,renderRace,renderSettings,renderPlanHealth,renderMigrationReport].forEach(fn=>{try{fn()}catch(err){recordDiagnostic('Render failure in '+fn.name,err)}});renderDiagnostics()}
 const pages=[['dashboard','Dashboard'],['today','Today'],['plan','Plan'],['runs','Runs'],['assessments','Assessments'],['recovery','Recovery'],['injury','Injury'],['race','Race day'],['settings','Settings']];
@@ -2677,11 +2703,11 @@ $('backupBtn').onclick=()=>download('ai-running-coach-backup.json',JSON.stringif
 let deferred;window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferred=e;$('installBtn').className='install'});$('installBtn').onclick=()=>deferred?.prompt();
 $('pillarCards')?.addEventListener('click',e=>{const card=e.target.closest('.pillarCard');if(!card||e.target.closest('summary'))return;const detail=card.querySelector('.pillarExplain');if(!detail)return;card.classList.toggle('open');detail.open=card.classList.contains('open');card.setAttribute('aria-expanded',String(detail.open))});
 $('pillarCards')?.addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&e.target.classList.contains('pillarCard')){e.preventDefault();e.target.click()}});
-const brandVersion=document.querySelector('.brand-copy p');if(brandVersion)brandVersion.textContent=`Race-specific adaptive planning • v10.0.17 · build ${BUILD}`;
+const brandVersion=document.querySelector('.brand-copy p');if(brandVersion)brandVersion.textContent=`Race-specific adaptive planning • v10.0.18 · build ${BUILD}`;
 if('serviceWorker'in navigator&&location.protocol==='https:')navigator.serviceWorker.register(`service-worker.js?v=${BUILD}`,{updateViaCache:'none'}).then(reg=>reg.update()).catch(()=>{});
 migrateAssessmentRuns();
 migrateImportedPower();
 if(reconcilePredictionHistory())save();
 renderAll();
-console.info('AI Running Coach v10.0.17 stable build 10170');
+console.info('AI Running Coach v10.0.18 stable build 10180');
 })();
