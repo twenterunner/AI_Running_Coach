@@ -689,3 +689,11 @@ canvas{width:100%;height:auto;display:block}
 .calendarCard{padding:0;overflow:hidden}.calendarCard>.rehabCalendarSection{margin:0;padding:16px;border-left:0}
 .todayExerciseGuides h5{margin:0 0 9px;font-size:14px;color:var(--navy)}
 @media(max-width:620px){.prognosisStrip{grid-template-columns:1fr}.planChoiceCard{align-items:flex-start;flex-direction:column}.planChoiceCard button{width:100%}.clinicianCompareGrid{grid-template-columns:1fr}.injuryCardHeader{align-items:flex-start}}
+
+/* Build 10060: clearer injury disclosure and calendar status */
+.diagnosisAgreementInline{margin-top:12px;border:1px solid var(--line);border-radius:14px;overflow:hidden;background:#f7fafc}
+.diagnosisAgreementInline summary{cursor:pointer;padding:13px 14px;display:flex;flex-direction:column;gap:4px;color:#315a7c}
+.diagnosisAgreementInline summary span{font-size:.82rem;font-weight:500;color:var(--muted)}
+.diagnosisAgreementInline>div,.diagnosisAgreementInline>p,.diagnosisAgreementInline>small{margin-left:14px;margin-right:14px}
+.diagnosisAgreementInline>small{display:block;margin-bottom:14px;color:var(--muted)}
+.executionBadge.unknown{white-space:normal;line-height:1.2;text-align:left}
