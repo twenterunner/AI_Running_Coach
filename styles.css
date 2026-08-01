@@ -653,3 +653,39 @@ canvas{width:100%;height:auto;display:block}
 .clinicalReasoningSummary .clinicalReasoningBody{padding-top:14px}
 .exerciseGuidesSection{margin-top:12px}
 @media(min-width:760px){.rehabTodayFocus .todayPlanGrid{grid-template-columns:1.1fr 1fr 1fr}}
+
+/* Build 10030: Injury topic-card hierarchy */
+.injuryTopicCard{background:#fff;border:1px solid var(--line);border-radius:18px;padding:16px;margin:14px 0;box-shadow:0 4px 14px #2134490a}
+.injuryTopicCard>h4,.injuryTopicCard .injurySectionHead h4{margin:0 0 6px}
+.adherenceSummary{border-left:5px solid var(--purple)}
+.rehabTodayFocus{border-left:5px solid var(--teal)}
+.rehabCalendarSection{border-left:5px solid var(--blue)}
+.todayExerciseGuides{margin-top:16px;padding-top:14px;border-top:1px solid var(--line)}
+.todayExerciseGuides>b{display:block;margin-bottom:8px}
+.clinicianAgreementCard{padding:14px 16px;border-left:5px solid var(--amber)}
+.clinicianAgreementCard.confirmed{border-left-color:var(--green);background:#f1faf5}
+.clinicianAgreementCard.partial{border-left-color:var(--amber);background:#fff8ec}
+.clinicianAgreementCard.contradicted{border-left-color:var(--red);background:#fff2f2}
+.clinicianAgreementCard div{display:grid;gap:5px}.clinicianAgreementCard small{font-weight:900;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+.clinicianAgreementCard strong{font-size:1.08rem}.clinicianAgreementCard p,.clinicianAgreementCard span{margin:0;font-size:.86rem;line-height:1.45}.clinicianAgreementCard span{color:var(--muted)}
+.injuryCard>.injurySection{background:#fff;border:1px solid var(--line);border-radius:18px;padding:16px;margin:14px 0;box-shadow:0 4px 14px #2134490a}
+@media(max-width:620px){.injuryTopicCard{padding:14px}.clinicianAgreementCard strong{font-size:1rem}}
+
+/* Build 10030: parallel injury assessments and one active recovery plan */
+.injuryCardHeader{gap:12px}
+.injuryPlanLabel{display:inline-flex;padding:5px 8px;border-radius:999px;font-size:10px;font-weight:900;letter-spacing:.05em;margin-bottom:7px}
+.injuryPlanLabel.active{background:#e5f6ec;color:#24734a}.injuryPlanLabel.inactive{background:#eef1f4;color:#657487}
+.injuryCard.activeRecoveryPlan{border:2px solid #b9dfc9}.injuryCard.assessmentOnly{background:#fbfcfd}
+.diagnosisOverview{border-left:5px solid var(--blue)}
+.prognosisStrip{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:12px}
+.prognosisStrip>div{background:#f6f9fb;border-radius:12px;padding:11px;min-width:0}.prognosisStrip small,.prognosisStrip b{display:block}.prognosisStrip small{color:var(--muted);font-size:10px;text-transform:uppercase;font-weight:800}.prognosisStrip b{margin-top:5px;overflow-wrap:anywhere}
+.diagnosisAgreementInline{margin-top:12px;padding:11px 12px;border-radius:11px;display:grid;gap:4px}.diagnosisAgreementInline span{font-size:12px;color:var(--muted)}
+.diagnosisAgreementInline.confirms{background:#eef9f3;border-left:4px solid var(--green)}.diagnosisAgreementInline.partly_agrees{background:#fff8ec;border-left:4px solid var(--amber)}.diagnosisAgreementInline.contradicts{background:#fff2f2;border-left:4px solid var(--red)}
+.clinicianComparison{border-left:5px solid var(--amber)}.clinicianComparison.confirms{border-left-color:var(--green)}.clinicianComparison.contradicts{border-left-color:var(--red)}
+.clinicianVerdict{padding:6px 9px;border-radius:999px;font-size:11px;font-weight:900}.clinicianVerdict.confirms{background:#e5f6ec;color:#24734a}.clinicianVerdict.partly_agrees{background:#fff0d5;color:#8d5e12}.clinicianVerdict.contradicts{background:#fde7e7;color:#a93030}
+.clinicianCompareGrid{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin:12px 0}.clinicianCompareGrid>div{background:#f6f9fb;border-radius:12px;padding:11px}.clinicianCompareGrid small,.clinicianCompareGrid b{display:block}.clinicianCompareGrid small{color:var(--muted);margin-bottom:4px}
+.planChoiceCard{display:flex;align-items:center;justify-content:space-between;gap:14px;border-left:5px solid var(--purple)}.planChoiceCard h4{margin:0 0 5px}.planChoiceCard p{margin:0;color:var(--muted);font-size:13px;line-height:1.45}.activePlanBadge{padding:7px 10px;border-radius:999px;background:#e5f6ec;color:#24734a;font-weight:900;white-space:nowrap}
+.recoveryOverview{border-left:5px solid var(--teal)}
+.calendarCard{padding:0;overflow:hidden}.calendarCard>.rehabCalendarSection{margin:0;padding:16px;border-left:0}
+.todayExerciseGuides h5{margin:0 0 9px;font-size:14px;color:var(--navy)}
+@media(max-width:620px){.prognosisStrip{grid-template-columns:1fr}.planChoiceCard{align-items:flex-start;flex-direction:column}.planChoiceCard button{width:100%}.clinicianCompareGrid{grid-template-columns:1fr}.injuryCardHeader{align-items:flex-start}}
