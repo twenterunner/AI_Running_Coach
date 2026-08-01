@@ -90,7 +90,7 @@ function recommendedRaceDate(setup){
  let totalWeeks=Math.ceil(Math.max(minimumTotal,req.requiredBuildWeeks+taperWeeks+2));
  return{date:iso(new Date(dte(setup.planStart).getTime()+totalWeeks*7*DAY)),totalWeeks,requiredBuildWeeks:req.requiredBuildWeeks,taperWeeks};
 }
-const BUILD=10200, SCHEMA=10200, STORAGE_KEY='arc_v62_web', MIRROR_KEY='arc_v8500_web', BACKUP_KEY='arc_pre8500_backup';
+const BUILD=10210, SCHEMA=10210, STORAGE_KEY='arc_v62_web', MIRROR_KEY='arc_v8500_web', BACKUP_KEY='arc_pre8500_backup';
 const defaults=()=>{let start=iso(new Date()),setup={planStart:start,raceDate:start,raceName:'Goal Race',raceDistance:42.195,targetTime:15300,currentWeekly:35,currentLongest:18,testDistance:5,testTime:1515,thresholdHr:168,criticalPower:300,bodyWeight:93,maxWeekly:65,growth:.07,peakLong:32,taperDays:14,minFactor:.85,maxFactor:1.05,adaptive:true};setup.raceDate=recommendedRaceDate(setup).date;return({schemaVersion:SCHEMA,setup,days:FIVE_DAY_TEMPLATE.map(d=>[...d]),runs:[],assessments:[],injuries:[],activeInjuryPlanId:null,plan:[],weekView:null,migration:{to:SCHEMA,status:'new',time:new Date().toISOString()}})};
 let migrationReport={from:null,to:SCHEMA,status:'new install',source:'defaults',runs:0,assessments:0,fieldsRecovered:0,warning:''};
 function parseStored(raw){if(!raw)return null;try{const x=JSON.parse(raw);return x&&typeof x==='object'?x:null}catch(err){recordDiagnostic('Storage parse',err);return null}}
@@ -2303,6 +2303,7 @@ function rehabExecutionMeta(check){
   else if(Number(check?.walkMinutes)>0)walking='completed';
  }
  if(!stretch&&legacy==='stretch')stretch='achieved';
+ if(stretch==='not_planned')stretch=null;
  if(Number.isFinite(runMinutes)&&runMinutes>0&&['not_assessed','not_planned'].includes(runStatus))runStatus='completed';
  const exerciseMap={
   all:{label:'All prescribed rehab exercises completed',short:'Rehab exercises completed',className:'completed',score:100,answered:true,planned:true},
@@ -2419,8 +2420,13 @@ function openInjuryCheck(i,existing=null){
  // New daily entries start blank for observations that were not actually assessed; stable history is preserved by the longitudinal model.
  const prev=existing||{};
  const progress=injuryPrediction(i);
- const planForDate=date=>{if(existing?.planSnapshot&&existing.date===date)return existing.planSnapshot;return rehabCalendarDay(i,progress,date,rehabPlanDayIndex(i,date))};
- const scheduledMeta=plan=>{const walkingItem=(plan.items||[]).find(x=>/^Walk \d+ minutes/i.test(x))||plan.walkingTarget||'';const walkingMatch=String(walkingItem).match(/Walk (\d+) minutes/i);const walkingTargetMinutes=walkingMatch?Number(walkingMatch[1]):null;const exerciseItems=(plan.items||[]).filter(x=>x!==walkingItem&&!/^Walk \d+ minutes/i.test(x));const runningPlanned=['assessment','run'].includes(plan.type);const strengthPlanned=exerciseItems.some(x=>/bridge|strength|hinge|raise|curl|squat|isometric|loading/i.test(x));const impactPlanned=plan.type==='impact'||exerciseItems.some(x=>/hop|jog|impact/i.test(x));const stretchPlanned=plan.stretchGoalOffered===true||(!('stretchGoalOffered' in plan)&&!/unavailable|no stretch goal|not offered/i.test(`${plan.stretchGoalTitle||''} ${plan.stretchGoal||''}`));return{walkingPlanned:!!walkingItem,walkingItem,walkingTargetMinutes,exercisePlanned:exerciseItems.length>0,exerciseItems,runningPlanned,strengthPlanned,impactPlanned,stretchPlanned}};
+ const planForDate=date=>{
+  if(existing?.planSnapshot&&existing.date===date)return existing.planSnapshot;
+  const displayed=(Array.isArray(i.rehabCalendar)?i.rehabCalendar:[]).find(day=>day.date===date);
+  if(displayed)return displayed;
+  return rehabCalendarDay(i,progress,date,rehabPlanDayIndex(i,date));
+ };
+ const scheduledMeta=plan=>{const walkingItem=(plan.items||[]).find(x=>/^Walk \d+ minutes/i.test(x))||plan.walkingTarget||'';const walkingMatch=String(walkingItem).match(/Walk (\d+) minutes/i);const walkingTargetMinutes=walkingMatch?Number(walkingMatch[1]):null;const exerciseItems=(plan.items||[]).filter(x=>x!==walkingItem&&!/^Walk \d+ minutes/i.test(x));const runningPlanned=['assessment','run'].includes(plan.type);const strengthPlanned=exerciseItems.some(x=>/bridge|strength|hinge|raise|curl|squat|isometric|loading/i.test(x));const impactPlanned=plan.type==='impact'||exerciseItems.some(x=>/hop|jog|impact/i.test(x));const stretchPlanned=plan.stretchGoalOffered===true;return{walkingPlanned:!!walkingItem,walkingItem,walkingTargetMinutes,exercisePlanned:exerciseItems.length>0,exerciseItems,runningPlanned,strengthPlanned,impactPlanned,stretchPlanned}};
  const initialPlan=planForDate(existing?.date||iso(today())),initialScheduled=scheduledMeta(initialPlan);
  $('modalContent').innerHTML=`<div class="injuryCheckHeader"><h3>${editing?'Edit':'Daily'} injury check-in</h3><p>Questions are generated from the rehabilitation activities scheduled for the selected date. Unscheduled components are hidden and recorded as not planned.</p></div>
  <div id="icScheduledPlan" class="note good"></div>
@@ -2434,7 +2440,7 @@ function openInjuryCheck(i,existing=null){
  const runStatusField=$('icRunStatus'),runMinutesField=$('icRun'),runPainField=$('icRunPain'),gaitField=$('icGait'),walkMinutesField=$('icWalkMinutes'),locomotionField=$('icLocomotion'),exerciseField=$('icRehabExercises'),stretchField=$('icStretchGoal'),strengthField=$('icBridge'),impactField=$('icHop'),worseField=$('icWorse'),responseField=$('icResponse'),consistencyBox=$('icConsistency'),dateField=$('icDate');
  let activePlan=initialPlan,activeScheduled=initialScheduled,syncing=false;
  const showBlock=(id,show)=>{const el=$(id);if(el)el.classList.toggle('hidden',!show)};
- const applyScheduledQuestions=(date,preserve=true)=>{activePlan=planForDate(date);activeScheduled=scheduledMeta(activePlan);$('icScheduledPlan').innerHTML=`<b>Scheduled for ${esc(fmtDate(date))}: ${esc(activePlan.title)}</b><p>${activeScheduled.walkingPlanned?esc(activeScheduled.walkingItem)+' (record actual minutes below)':'No walking target.'}${activeScheduled.exercisePlanned?`<br>Exercises: ${activeScheduled.exerciseItems.map(esc).join(' · ')}`:'<br>No rehabilitation exercises scheduled.'}${activeScheduled.runningPlanned?`<br>Running/impact exposure is scheduled.`:'<br>No run is scheduled.'}</p>`;
+ const applyScheduledQuestions=(date,preserve=true)=>{activePlan=planForDate(date);activeScheduled=scheduledMeta(activePlan);const planItems=(activePlan.items||[]).map(x=>`<li>${esc(x)}</li>`).join('');$('icScheduledPlan').innerHTML=`<b>Plan for ${esc(fmtDate(date))}: ${esc(activePlan.title)}</b>${planItems?`<ul>${planItems}</ul>`:'<p>No rehabilitation activity is scheduled.</p>'}${activePlan.stretchGoalOffered===true?`<p><b>Optional stretch goal:</b> ${esc(activePlan.stretchGoal||'')}</p>`:''}<p class="muted compact">This is the exact prescription shown on this date's seven-day plan card.</p>`;
   showBlock('icExerciseExecutionBlock',activeScheduled.exercisePlanned);showBlock('icWalkingExecutionBlock',activeScheduled.walkingPlanned);showBlock('icStretchExecutionBlock',activeScheduled.stretchPlanned);showBlock('icStrengthToleranceBlock',activeScheduled.strengthPlanned);showBlock('icImpactToleranceBlock',activeScheduled.impactPlanned);showBlock('icRunningSection',activeScheduled.runningPlanned);
   if(!activeScheduled.exercisePlanned)exerciseField.value='not_planned';else if(exerciseField.value==='not_planned')exerciseField.value='';
   if(!activeScheduled.walkingPlanned)locomotionField.value='not_planned';else if(locomotionField.value==='not_planned')locomotionField.value='';
@@ -2524,7 +2530,7 @@ function openInjuryCheck(i,existing=null){
  dateField.addEventListener('change',()=>{applyScheduledQuestions(dateField.value);normalizeCheckIn('date')});
  applyScheduledQuestions(dateField.value);
  normalizeCheckIn('initial');
- $('saveCheck').onclick=()=>{applyScheduledQuestions(dateField.value);normalizeCheckIn('save');let runStatus=activeScheduled.runningPlanned?runStatusField.value:'not_planned',runMinutes=nullableNumber(runMinutesField.value),rehabExerciseStatus=activeScheduled.exercisePlanned?(exerciseField.value||null):'not_planned',locomotionStatus=activeScheduled.walkingPlanned?(locomotionField.value||null):'not_planned',stretchGoalStatus=activeScheduled.stretchPlanned?(stretchField.value||null):null;
+ $('saveCheck').onclick=()=>{applyScheduledQuestions(dateField.value);normalizeCheckIn('save');let runStatus=activeScheduled.runningPlanned?runStatusField.value:'not_planned',runMinutes=nullableNumber(runMinutesField.value),rehabExerciseStatus=activeScheduled.exercisePlanned?(exerciseField.value||null):'not_planned',locomotionStatus=activeScheduled.walkingPlanned?(locomotionField.value||null):'not_planned',stretchGoalStatus=activeScheduled.stretchPlanned?(stretchField.value||null):'not_planned';
  if(['not_planned','not_assessed','unable'].includes(runStatus))runMinutes=null;
  const walkMinutes=nullableNumber(walkMinutesField.value),walkTarget=activeScheduled.walkingTargetMinutes;
  if(activeScheduled.exercisePlanned&&!rehabExerciseStatus)return toast('Answer whether the scheduled rehab exercises were completed.',true);
@@ -2534,6 +2540,8 @@ function openInjuryCheck(i,existing=null){
  if(activeScheduled.impactPlanned&&['all','some'].includes(rehabExerciseStatus)&&!known(readTri('icHop')))return toast('Because the impact assessment was performed, state whether it was tolerated.',true);
  if(activeScheduled.strengthPlanned&&['none','not_planned'].includes(rehabExerciseStatus)&&known(readTri('icBridge')))return toast('Strength tolerance cannot be recorded when the strength exercises were not performed.',true);
  if(activeScheduled.impactPlanned&&['none','not_planned'].includes(rehabExerciseStatus)&&known(readTri('icHop')))return toast('Impact tolerance cannot be recorded when the impact assessment was not performed.',true);
+ if(!activeScheduled.stretchPlanned&&stretchGoalStatus!=='not_planned')return toast('No stretch goal was planned for this date. The stretch-goal result has been cleared.',true);
+ if(activeScheduled.stretchPlanned&&stretchGoalStatus==='not_planned')return toast('Answer the optional stretch-goal question for this date.',true);
  if(locomotionStatus==='completed'&&(!Number.isFinite(walkMinutes)||walkMinutes<=0))return toast('A completed walking target requires positive walking minutes.',true);
  if(locomotionStatus==='completed'&&Number.isFinite(walkTarget)&&walkMinutes<walkTarget)return toast(`The full walking target is ${walkTarget} minutes. Choose partial completion or enter at least ${walkTarget} minutes.`,true);
  if(['partial','stopped'].includes(locomotionStatus)&&(!Number.isFinite(walkMinutes)||walkMinutes<=0))return toast('Enter the walking minutes completed before selecting partial or stopped.',true);
@@ -2730,11 +2738,11 @@ $('backupBtn').onclick=()=>download('ai-running-coach-backup.json',JSON.stringif
 let deferred;window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferred=e;$('installBtn').className='install'});$('installBtn').onclick=()=>deferred?.prompt();
 $('pillarCards')?.addEventListener('click',e=>{const card=e.target.closest('.pillarCard');if(!card||e.target.closest('summary'))return;const detail=card.querySelector('.pillarExplain');if(!detail)return;card.classList.toggle('open');detail.open=card.classList.contains('open');card.setAttribute('aria-expanded',String(detail.open))});
 $('pillarCards')?.addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&e.target.classList.contains('pillarCard')){e.preventDefault();e.target.click()}});
-const brandVersion=document.querySelector('.brand-copy p');if(brandVersion)brandVersion.textContent=`Race-specific adaptive planning • v10.0.20 · build ${BUILD}`;
+const brandVersion=document.querySelector('.brand-copy p');if(brandVersion)brandVersion.textContent=`Race-specific adaptive planning • v10.0.21 · build ${BUILD}`;
 if('serviceWorker'in navigator&&location.protocol==='https:')navigator.serviceWorker.register(`service-worker.js?v=${BUILD}`,{updateViaCache:'none'}).then(reg=>reg.update()).catch(()=>{});
 migrateAssessmentRuns();
 migrateImportedPower();
 if(reconcilePredictionHistory())save();
 renderAll();
-console.info('AI Running Coach v10.0.20 stable build 10200');
+console.info('AI Running Coach v10.0.21 stable build 10210');
 })();
