@@ -90,7 +90,7 @@ function recommendedRaceDate(setup){
  let totalWeeks=Math.ceil(Math.max(minimumTotal,req.requiredBuildWeeks+taperWeeks+2));
  return{date:iso(new Date(dte(setup.planStart).getTime()+totalWeeks*7*DAY)),totalWeeks,requiredBuildWeeks:req.requiredBuildWeeks,taperWeeks};
 }
-const BUILD=9970, SCHEMA=9970, STORAGE_KEY='arc_v62_web', MIRROR_KEY='arc_v8500_web', BACKUP_KEY='arc_pre8500_backup';
+const BUILD=9980, SCHEMA=9980, STORAGE_KEY='arc_v62_web', MIRROR_KEY='arc_v8500_web', BACKUP_KEY='arc_pre8500_backup';
 const defaults=()=>{let start=iso(new Date()),setup={planStart:start,raceDate:start,raceName:'Goal Race',raceDistance:42.195,targetTime:15300,currentWeekly:35,currentLongest:18,testDistance:5,testTime:1515,thresholdHr:168,criticalPower:300,bodyWeight:93,maxWeekly:65,growth:.07,peakLong:32,taperDays:14,minFactor:.85,maxFactor:1.05,adaptive:true};setup.raceDate=recommendedRaceDate(setup).date;return({schemaVersion:SCHEMA,setup,days:FIVE_DAY_TEMPLATE.map(d=>[...d]),runs:[],assessments:[],injuries:[],plan:[],weekView:null,migration:{to:SCHEMA,status:'new',time:new Date().toISOString()}})};
 let migrationReport={from:null,to:SCHEMA,status:'new install',source:'defaults',runs:0,assessments:0,fieldsRecovered:0,warning:''};
 function parseStored(raw){if(!raw)return null;try{const x=JSON.parse(raw);return x&&typeof x==='object'?x:null}catch(err){recordDiagnostic('Storage parse',err);return null}}
@@ -2050,28 +2050,51 @@ function recoveryScoreExplanation(i,p,factors=comparisonFactors(i,p)){
 }
 function exerciseList(i,p){if(p.safetyHold)return INJURY_EXERCISES.bone;let family=p.diag.family||'generic',list=INJURY_EXERCISES[family]||INJURY_EXERCISES.muscle,exact=list.filter(x=>x.stage===p.stage);if(!exact.length)exact=list.filter(x=>x.stage<=p.stage).slice(-1);return exact;}
 
-function rehabCalendarSignature(day){return JSON.stringify({type:day.type,title:day.title,items:day.items,running:day.running,rationale:day.rationale,rule:day.rule,stage:day.stage});}
+function rehabCalendarSignature(day){return JSON.stringify({type:day.type,title:day.title,items:day.items,running:day.running,rationale:day.rationale,rule:day.rule,stage:day.stage,walkingTarget:day.walkingTarget,stretchGoal:day.stretchGoal});}
+function walkingPrescription(i,p,offset,type){
+ const snap=p.snapshot||longitudinalSnapshot(i,p.checks),last=Number.isFinite(snap.walkMinutes)?snap.walkMinutes:null,stage=p.stage;
+ const defaults=[5,10,15,20,30,40],caps=[15,25,40,60,75,90];
+ let target=last!==null?last:defaults[stage];
+ // Recovery days consolidate rather than advance; load/run days retain demonstrated walking capacity.
+ if(type==='recovery')target=Math.max(defaults[stage],Math.round(target*.8));
+ if(type==='assessment'||type==='run')target=Math.max(defaults[stage],Math.round(target*.75));
+ const recent=(p.checks||[]).slice(-3),flare=recent.some(c=>c.nextDayWorse===true||c.newSwelling===true||c.alteredGait===true),walkPain=Number.isFinite(p.walkPain)?p.walkPain:null;
+ if(flare||walkPain>=4)target=Math.max(5,Math.round(target*.65));
+ else if(walkPain===3)target=Math.max(5,Math.round(target*.8));
+ target=Math.min(caps[stage],Math.max(5,Math.round(target/5)*5));
+ const favourable=!p.safetyHold&&!flare&&(walkPain===null||walkPain<=2)&&(Number.isFinite(p.currentPain)?p.currentPain<=2:true);
+ let stretch;
+ if(p.safetyHold)stretch='No stretch goal today—keep activity comfortable and await clinical guidance.';
+ else if(!favourable)stretch=`Repeat the ${target}-minute target only; do not extend it until pain, gait and delayed response are stable.`;
+ else {
+  const extra=target<20?5:Math.max(5,Math.round(target*.2/5)*5),stretchTarget=Math.min(caps[stage],target+extra);
+  stretch=stretchTarget>target?`If the target feels easier than expected and pain remains ≤2/10 with normal gait, extend to ${stretchTarget} minutes. Stop rather than complete the stretch goal if symptoms rise or movement changes.`:`If this feels easier than expected, keep the same ${target}-minute duration but use a slightly more natural pace; do not add hills or speed.`;
+ }
+ return{target,walkingTarget:`Walk ${target} minutes at a comfortable, even pace`,stretchGoal:stretch};
+}
 function rehabCalendarDay(i,p,date,offset){
  const exercises=exerciseList(i,p),stage=p.stage,safety=p.safetyHold,weekday=dte(date).toLocaleDateString(undefined,{weekday:'long'}),loadDay=offset%2===0;
  let type='recovery',title='Recovery and symptom response',items=[],running='No running planned',rationale='A lower-load day allows the response to the previous rehabilitation dose to become clear.',rule='Keep normal daily activity comfortable and record any delayed response.';
- if(safety){title='Protect and arrange assessment';items=['No running, hopping or impact testing','Use only comfortable daily activity','Follow professional guidance for loading'];rationale='The leading pattern or differential contains a higher-risk feature, so app-directed progression is paused.';rule='Do not progress until clinically assessed.';}
+ if(safety){title='Protect and arrange assessment';items=['No running, hopping or impact testing','Follow professional guidance for loading'];rationale='The leading pattern or differential contains a higher-risk feature, so app-directed progression is paused.';rule='Do not progress until clinically assessed.';}
  else if(stage<=2){
   if(loadDay){type='load';title=stage===0?'Settle symptoms and preserve movement':'Rehabilitation strength';items=exercises.map(x=>`${x.name} — ${x.dose}`);rationale=stage===0?'Comfortable movement is the current priority before meaningful strengthening.':'This dose targets the current stage criteria without increasing more than one loading variable at once.';rule='Pain should stay at 0–2/10 and be no worse later or the next morning.';}
-  else {items=['Comfortable walking as tolerated','Gentle mobility through a comfortable range','No progression test today'];}
+  else {items=['Gentle mobility through a comfortable range','No progression test today'];}
  } else if(stage===3){
   if([0,3,6].includes(offset)){type='assessment';title='Walk–run exposure';items=exercises.map(x=>`${x.name} — ${x.dose}`);running='Planned only if walking, pain and impact criteria remain stable';rationale='A spaced running exposure tests impact tolerance while preserving recovery days between attempts.';rule='Stop for pain above 2/10, altered gait or increasing tightness; progression depends on the next-morning response.';}
   else if([1,4].includes(offset)){type='load';title='Strength between running exposures';items=(INJURY_EXERCISES[p.diag.family]||INJURY_EXERCISES.muscle).filter(x=>x.stage<=2).slice(-2).map(x=>`${x.name} — ${x.dose}`);rationale='Strength is maintained between impact exposures without repeating running on consecutive days.';rule='Use the last tolerated dose; do not increase load after a flare.';}
-  else {items=['Comfortable walking','Mobility or light isometrics if symptom-neutral','Review response to the previous running exposure'];}
+  else {items=['Mobility or light isometrics if symptom-neutral','Review response to the previous running exposure'];}
  } else if(stage===4){
   if([0,3,6].includes(offset)){type='run';title='Easy running progression';items=exercises.map(x=>`${x.name} — ${x.dose}`);running='Easy continuous running planned';rationale='Running duration is rebuilt with at least one lower-load day between key exposures.';rule='Increase duration only after a stable same-day and next-morning response.';}
   else if([1,4].includes(offset)){type='load';title='Supporting strength';items=(INJURY_EXERCISES[p.diag.family]||INJURY_EXERCISES.muscle).filter(x=>x.stage===2).slice(0,2).map(x=>`${x.name} — ${x.dose}`);rationale='Strength work supports running capacity without adding another impact session.';rule='Keep the dose controlled and symptom-neutral.';}
-  else {items=['Recovery walking or easy cross-training if comfortable','No speed, hills or hard running','Record delayed symptoms'];}
+  else {items=['Easy cross-training if comfortable','No speed, hills or hard running','Record delayed symptoms'];}
  } else {
   if([0,2,4,6].includes(offset)){type='run';title=offset===4?'Controlled faster running':'Easy running';items=exercises.map(x=>`${x.name} — ${x.dose}`);running=offset===4?'Faster running only if easy running remains stable':'Easy run planned';rationale='The final phase alternates running exposure with recovery while restoring speed and normal training tolerance.';rule='Change one variable at a time and stop before maximal effort.';}
   else {type='load';title='Strength or recovery support';items=['Stage-appropriate strength maintenance','Comfortable mobility','No additional hard running'];rationale='A non-running day protects adaptation between running exposures.';rule='Use symptoms and the next-morning response to decide whether the next run progresses or repeats.';}
  }
- if(!items.length)items=['Follow the current exercise prescription','Comfortable walking as tolerated'];
- return{date,weekday,type,title,items,running,rationale,rule,stage};
+ const walk=walkingPrescription(i,p,offset,type);
+ items.unshift(walk.walkingTarget);
+ if(!items.length)items=['Follow the current exercise prescription',walk.walkingTarget];
+ return{date,weekday,type,title,items,running,rationale,rule,stage,walkingTarget:walk.walkingTarget,stretchGoal:walk.stretchGoal};
 }
 function buildRehabCalendar(i,p){
  const start=iso(today()),old=Array.isArray(i.rehabCalendar)?i.rehabCalendar:[],oldMap=new Map(old.map(x=>[x.date,x])),checks=new Map(sortedChecks(i).map(x=>[x.date,x])),days=[];
@@ -2084,7 +2107,7 @@ function buildRehabCalendar(i,p){
 }
 function rehabCalendarHtml(i,p){
  const days=buildRehabCalendar(i,p);
- return `<section class="injurySection rehabCalendarSection"><div class="injurySectionHead"><div><h4>Next 7 days</h4><p class="muted compact">A rolling plan that updates after each check-in. Completed days remain in the check-in history.</p></div><strong>${fmtDate(days[0].date)}–${fmtDate(days.at(-1).date)}</strong></div><div class="rehabCalendar">${days.map((d,n)=>`<details class="rehabDay ${d.type} ${d.completed?'completed':''}" ${n===0?'open':''}><summary><div class="rehabDate"><b>${esc(d.weekday.slice(0,3))}</b><span>${dte(d.date).getDate()}</span></div><div class="rehabDayTitle"><strong>${esc(d.title)}</strong><small>${d.completed?esc(d.checkSummary||'Check-in recorded'):esc(d.running)}</small></div><div class="rehabDayStatus">${d.completed?'✓ Done':d.updated?'Updated':'Planned'}</div></summary><div class="rehabDayBody"><div><b>Prescription</b><ul>${d.items.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div><div class="rehabDayWhy"><b>Why this day?</b><p>${esc(d.rationale)}</p></div><div class="rehabDayRule"><b>Adjustment rule</b><p>${esc(d.rule)}</p></div>${d.updated?'<p class="rehabUpdatedNote">Updated after new check-in evidence.</p>':''}</div></details>`).join('')}</div><p class="muted compact rehabCalendarFoot">The calendar is a seven-day planning horizon, not a promise of recovery within one week. The phase roadmap and unrestricted-running window continue beyond it.</p></section>`;
+ return `<section class="injurySection rehabCalendarSection"><div class="injurySectionHead"><div><h4>Next 7 days</h4><p class="muted compact">A rolling plan that updates after each check-in. Every day includes a walking target and an optional stretch goal.</p></div><strong>${fmtDate(days[0].date)}–${fmtDate(days.at(-1).date)}</strong></div><div class="rehabCalendar">${days.map((d,n)=>`<details class="rehabDay ${d.type} ${d.completed?'completed':''}" ${n===0?'open':''}><summary><div class="rehabDate"><b>${esc(d.weekday.slice(0,3))}</b><span>${dte(d.date).getDate()}</span></div><div class="rehabDayTitle"><strong>${esc(d.title)}</strong><small>${d.completed?esc(d.checkSummary||'Check-in recorded'):esc(d.walkingTarget)}</small></div><div class="rehabDayStatus">${d.completed?'✓ Done':d.updated?'Updated':'Planned'}</div></summary><div class="rehabDayBody"><div><b>Prescription</b><ul>${d.items.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div><div class="rehabStretchGoal"><b>Optional stretch goal</b><p>${esc(d.stretchGoal)}</p></div><div class="rehabDayWhy"><b>Why this day?</b><p>${esc(d.rationale)}</p></div><div class="rehabDayRule"><b>Adjustment rule</b><p>${esc(d.rule)}</p></div>${d.updated?'<p class="rehabUpdatedNote">Updated after new check-in evidence.</p>':''}</div></details>`).join('')}</div><p class="muted compact rehabCalendarFoot">Walking targets use the most recently demonstrated comfortable duration, current phase and symptom response. Stretch goals are optional and never override the pain, gait or next-morning rules.</p></section>`;
 }
 
 function injuryTrajectorySvg(i,p){
@@ -2325,11 +2348,11 @@ $('backupBtn').onclick=()=>download('ai-running-coach-backup.json',JSON.stringif
 let deferred;window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferred=e;$('installBtn').className='install'});$('installBtn').onclick=()=>deferred?.prompt();
 $('pillarCards')?.addEventListener('click',e=>{const card=e.target.closest('.pillarCard');if(!card||e.target.closest('summary'))return;const detail=card.querySelector('.pillarExplain');if(!detail)return;card.classList.toggle('open');detail.open=card.classList.contains('open');card.setAttribute('aria-expanded',String(detail.open))});
 $('pillarCards')?.addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&e.target.classList.contains('pillarCard')){e.preventDefault();e.target.click()}});
-const brandVersion=document.querySelector('.brand-copy p');if(brandVersion)brandVersion.textContent=`Race-specific adaptive planning • v9.9.7 · build ${BUILD}`;
+const brandVersion=document.querySelector('.brand-copy p');if(brandVersion)brandVersion.textContent=`Race-specific adaptive planning • v9.9.8 · build ${BUILD}`;
 if('serviceWorker'in navigator&&location.protocol==='https:')navigator.serviceWorker.register(`service-worker.js?v=${BUILD}`,{updateViaCache:'none'}).then(reg=>reg.update()).catch(()=>{});
 migrateAssessmentRuns();
 migrateImportedPower();
 if(reconcilePredictionHistory())save();
 renderAll();
-console.info('AI Running Coach v9.9.7 stable build 9970');
+console.info('AI Running Coach v9.9.8 stable build 9980');
 })();

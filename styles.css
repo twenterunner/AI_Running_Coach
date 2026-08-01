@@ -616,3 +616,9 @@ canvas{width:100%;height:auto;display:block}
 .rehabUpdatedNote{margin:0;color:var(--blue);font-weight:800}
 .rehabCalendarFoot{margin:9px 2px 0}
 @media(max-width:480px){.rehabDay>summary{grid-template-columns:44px minmax(0,1fr);}.rehabDayStatus{grid-column:2;justify-self:start}.rehabDate{grid-row:1/3}}
+
+
+/* Build 9980: explicit walking and stretch targets */
+.rehabStretchGoal{border-left:4px solid var(--teal);background:#eef9f7;border-radius:11px;padding:11px 12px;margin-top:10px}
+.rehabStretchGoal b{display:block;color:#176f69;margin-bottom:4px}
+.rehabStretchGoal p{margin:0;font-size:12px;line-height:1.45;color:var(--ink)}
