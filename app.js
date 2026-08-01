@@ -90,7 +90,7 @@ function recommendedRaceDate(setup){
  let totalWeeks=Math.ceil(Math.max(minimumTotal,req.requiredBuildWeeks+taperWeeks+2));
  return{date:iso(new Date(dte(setup.planStart).getTime()+totalWeeks*7*DAY)),totalWeeks,requiredBuildWeeks:req.requiredBuildWeeks,taperWeeks};
 }
-const BUILD=10120, SCHEMA=10120, STORAGE_KEY='arc_v62_web', MIRROR_KEY='arc_v8500_web', BACKUP_KEY='arc_pre8500_backup';
+const BUILD=10130, SCHEMA=10130, STORAGE_KEY='arc_v62_web', MIRROR_KEY='arc_v8500_web', BACKUP_KEY='arc_pre8500_backup';
 const defaults=()=>{let start=iso(new Date()),setup={planStart:start,raceDate:start,raceName:'Goal Race',raceDistance:42.195,targetTime:15300,currentWeekly:35,currentLongest:18,testDistance:5,testTime:1515,thresholdHr:168,criticalPower:300,bodyWeight:93,maxWeekly:65,growth:.07,peakLong:32,taperDays:14,minFactor:.85,maxFactor:1.05,adaptive:true};setup.raceDate=recommendedRaceDate(setup).date;return({schemaVersion:SCHEMA,setup,days:FIVE_DAY_TEMPLATE.map(d=>[...d]),runs:[],assessments:[],injuries:[],activeInjuryPlanId:null,plan:[],weekView:null,migration:{to:SCHEMA,status:'new',time:new Date().toISOString()}})};
 let migrationReport={from:null,to:SCHEMA,status:'new install',source:'defaults',runs:0,assessments:0,fieldsRecovered:0,warning:''};
 function parseStored(raw){if(!raw)return null;try{const x=JSON.parse(raw);return x&&typeof x==='object'?x:null}catch(err){recordDiagnostic('Storage parse',err);return null}}
@@ -2250,8 +2250,9 @@ function rehabCalendarDay(i,p,date,offset){
 }
 function rehabExecutionMeta(check){
  const legacy=check?.rehabStatus||null;
- let exercise=check?.rehabExerciseStatus||null, locomotion=check?.locomotionStatus||null, stretch=check?.stretchGoalStatus||null;
- // Backwards compatibility for check-ins saved before build 10120.
+ let exercise=check?.rehabExerciseStatus||null, walking=check?.locomotionStatus||null, stretch=check?.stretchGoalStatus||null;
+ let runStatus=check?.runStatus||'not_assessed', runMinutes=nullableNumber(check?.runMinutes);
+ // Backwards compatibility for check-ins saved before build 10130.
  if(!exercise){
   if(['completed','stretch'].includes(legacy))exercise='all';
   else if(legacy==='reduced')exercise='some';
@@ -2260,38 +2261,53 @@ function rehabExecutionMeta(check){
   else if(legacy==='not_completed')exercise='none';
   else if(legacy==='not_planned')exercise='not_planned';
  }
- if(!locomotion){
-  if(legacy==='walking_only'||['completed','stretch'].includes(legacy))locomotion='completed';
-  else if(legacy==='reduced')locomotion='partial';
-  else if(legacy==='stopped')locomotion='stopped';
-  else if(legacy==='not_completed')locomotion='none';
-  else if(legacy==='not_planned')locomotion='not_planned';
-  else if(Number(check?.runMinutes)>0||Number(check?.walkMinutes)>0)locomotion='completed';
+ if(!walking){
+  if(legacy==='walking_only'||['completed','stretch'].includes(legacy))walking='completed';
+  else if(legacy==='reduced')walking='partial';
+  else if(legacy==='stopped')walking='stopped';
+  else if(legacy==='not_completed')walking='none';
+  else if(legacy==='not_planned')walking='not_planned';
+  else if(Number(check?.walkMinutes)>0)walking='completed';
  }
  if(!stretch&&legacy==='stretch')stretch='achieved';
+ if(Number.isFinite(runMinutes)&&runMinutes>0&&['not_assessed','not_planned'].includes(runStatus))runStatus='completed';
  const exerciseMap={
-  all:{label:'All prescribed rehab exercises completed',short:'Rehab exercises completed',className:'completed',score:100,assessed:true},
-  some:{label:'Some prescribed rehab exercises completed',short:'Rehab exercises partially completed',className:'partial',score:60,assessed:true},
-  stopped:{label:'Rehab exercises started but stopped because of symptoms',short:'Exercises stopped',className:'stopped',score:25,assessed:true},
-  none:{label:'Prescribed rehab exercises not completed',short:'Rehab exercises not completed',className:'missed',score:0,assessed:true},
-  not_planned:{label:'No rehab exercises were planned',short:'No exercises planned',className:'rest',score:null,assessed:false}
+  all:{label:'All prescribed rehab exercises completed',short:'Rehab exercises completed',className:'completed',score:100,answered:true,planned:true},
+  some:{label:'Some prescribed rehab exercises completed',short:'Rehab exercises partially completed',className:'partial',score:60,answered:true,planned:true},
+  stopped:{label:'Rehab exercises started but stopped because of symptoms',short:'Exercises stopped due to symptoms',className:'stopped',score:25,answered:true,planned:true},
+  none:{label:'Prescribed rehab exercises were not started',short:'Rehab exercises not started',className:'missed',score:0,answered:true,planned:true},
+  not_planned:{label:'No rehab exercises were planned',short:'No exercises planned',className:'rest',score:null,answered:true,planned:false}
  };
- const locomotionMap={
-  completed:{label:'Walking or running target completed',short:'Walk/run target completed',className:'completed',score:100,assessed:true},
-  partial:{label:'Part of the prescribed walking or running target was completed; symptoms did not force the stop',short:'Part of walk/run target completed',className:'partial',score:60,assessed:true},
-  stopped:{label:'Walking or running was started but stopped because symptoms increased or movement changed',short:'Stopped due to symptoms',className:'stopped',score:25,assessed:true},
-  none:{label:'The planned walking or running target was not started',short:'Walk/run not started',className:'missed',score:0,assessed:true},
-  not_planned:{label:'No walking or running target was planned',short:'No walk/run planned',className:'rest',score:null,assessed:false}
+ const walkingMap={
+  completed:{label:'The full prescribed walking target was completed',short:'Walking target completed',className:'completed',score:100,answered:true,planned:true},
+  partial:{label:'Part of the prescribed walking target was completed without symptoms forcing the stop',short:'Walking target partially completed',className:'partial',score:60,answered:true,planned:true},
+  stopped:{label:'Walking was started but stopped because symptoms increased or movement changed',short:'Walking stopped due to symptoms',className:'stopped',score:25,answered:true,planned:true},
+  none:{label:'The prescribed walking target was not started',short:'Walking target not started',className:'missed',score:0,answered:true,planned:true},
+  not_planned:{label:'No walking target was planned',short:'No walking target planned',className:'rest',score:null,answered:true,planned:false}
  };
- const ex=exerciseMap[exercise]||{label:'Rehab exercise completion was not answered',short:'Exercises not reported',className:'unknown',score:null,assessed:false};
- const lo=locomotionMap[locomotion]||{label:'Walking/running target completion was not answered',short:'Walk/run not reported',className:'unknown',score:null,assessed:false};
- const assessedParts=[ex,lo].filter(x=>x.assessed&&Number.isFinite(x.score));
- let score=assessedParts.length?Math.round(avg(assessedParts.map(x=>x.score))):null;
+ const runMap={
+  completed:{label:`Run completed${Number.isFinite(runMinutes)?` (${runMinutes} min)`:''}; tolerance is assessed separately`,short:Number.isFinite(runMinutes)?`Run completed · ${runMinutes} min`:'Run completed',className:'completed',score:100,answered:true,planned:true},
+  stopped:{label:`Running was started but stopped because of symptoms${Number.isFinite(runMinutes)?` after ${runMinutes} min`:''}`,short:'Run stopped due to symptoms',className:'stopped',score:25,answered:true,planned:true},
+  unable:{label:'A planned run could not be started because of symptoms',short:'Run not started due to symptoms',className:'missed',score:0,answered:true,planned:true},
+  not_planned:{label:'No run was planned for this day',short:'No run planned',className:'rest',score:null,answered:true,planned:false},
+  not_assessed:{label:'Running was not assessed or reported for this day',short:'Running not assessed',className:'unknown',score:null,answered:false,planned:null}
+ };
+ const ex=exerciseMap[exercise]||{label:'Rehab exercise completion was not answered',short:'Exercises not assessed',className:'unknown',score:null,answered:false,planned:null};
+ const walk=walkingMap[walking]||{label:'Walking-target completion was not answered',short:'Walking not assessed',className:'unknown',score:null,answered:false,planned:null};
+ const run=runMap[runStatus]||runMap.not_assessed;
+ // An overall percentage is shown only when every component has an explicit answer.
+ // “Not planned” is an answer but is excluded from the weighted average.
+ const allAnswered=[ex,walk,run].every(x=>x.answered);
+ const scoredParts=[ex,walk,run].filter(x=>x.planned===true&&Number.isFinite(x.score));
+ let score=allAnswered&&scoredParts.length?Math.round(avg(scoredParts.map(x=>x.score))):null;
  if(stretch==='achieved'&&Number.isFinite(score))score=Math.min(100,score+10);
  const assessed=Number.isFinite(score);
- const label=!assessed?'Overall rehabilitation execution cannot yet be scored':score>=90?'Excellent rehabilitation execution':score>=75?'Good rehabilitation execution':score>=50?'Partial rehabilitation execution':score>=25?'Limited rehabilitation execution':'Minimal rehabilitation execution';
+ const missing=[!ex.answered?'rehab exercises':null,!walk.answered?'walking target':null,!run.answered?'running exposure':null].filter(Boolean);
+ const label=!assessed
+  ?(missing.length?`Overall execution not scored: ${missing.join(', ')} ${missing.length===1?'is':'are'} not assessed`:'No planned rehabilitation components were available to score')
+  :score>=90?'Excellent rehabilitation execution':score>=75?'Good rehabilitation execution':score>=50?'Partial rehabilitation execution':score>=25?'Limited rehabilitation execution':'Minimal rehabilitation execution';
  const className=!assessed?'unknown':score>=75?'completed':score>=50?'partial':score>=25?'stopped':'missed';
- return{exercise:ex,locomotion:lo,stretch,score,assessed,label,short:assessed?`${score}% overall execution`:'Overall not scored',className};
+ return{exercise:ex,locomotion:walk,walking:walk,running:run,stretch,score,assessed,label,short:assessed?`${score}% overall execution`:'Overall not scored',className,missing};
 }
 function rehabAdherenceSummary(i,days=7){
  const cutoff=new Date(today().getTime()-(days-1)*DAY),checks=sortedChecks(i).filter(c=>dte(c.date)>=cutoff&&dte(c.date)<=today());
@@ -2303,7 +2319,7 @@ function rehabAdherenceSummary(i,days=7){
 function buildRehabCalendar(i,p){
  const start=iso(today()),old=Array.isArray(i.rehabCalendar)?i.rehabCalendar:[],oldMap=new Map(old.map(x=>[x.date,x])),checks=new Map(sortedChecks(i).map(x=>[x.date,x])),days=[];
  for(let offset=0;offset<7;offset++){
-  const date=iso(new Date(today().getTime()+offset*DAY)),fresh=rehabCalendarDay(i,p,date,offset),previous=oldMap.get(date),check=checks.get(date),checkInCompleted=!!check;let execution=rehabExecutionMeta(check);if(!check){const pending=offset===0?'Rehab report pending':'Future rehab day';execution={label:offset===0?'Today’s rehabilitation completion has not been reported yet':'Rehabilitation completion will be reported after this day',short:pending,className:'unknown',score:null,assessed:false,exercise:{label:offset===0?'Rehab exercise completion has not been reported yet':'Future rehabilitation exercise day',short:pending,className:'unknown',score:null,assessed:false},locomotion:{label:offset===0?'Walking/running target completion has not been reported yet':'Future walking/running target day',short:pending,className:'unknown',score:null,assessed:false}};}else if(!check.rehabExerciseStatus&&!check.locomotionStatus&&!check.rehabStatus){execution={label:'The questionnaire was completed, but rehabilitation completion was not answered',short:'Rehab not answered',className:'unknown',score:null,assessed:false,exercise:{label:'Rehab exercise completion was not answered',short:'Exercises not reported',className:'unknown',score:null,assessed:false},locomotion:{label:'Walking/running target completion was not answered',short:'Walk/run not reported',className:'unknown',score:null,assessed:false}};}
+  const date=iso(new Date(today().getTime()+offset*DAY)),fresh=rehabCalendarDay(i,p,date,offset),previous=oldMap.get(date),check=checks.get(date),checkInCompleted=!!check;let execution=rehabExecutionMeta(check);if(!check){const pending=offset===0?'Rehab report pending':'Future rehab day';execution={label:offset===0?'Today’s rehabilitation completion has not been reported yet':'Rehabilitation completion will be reported after this day',short:pending,className:'unknown',score:null,assessed:false,exercise:{label:offset===0?'Rehab exercise completion has not been reported yet':'Future rehabilitation exercise day',short:pending,className:'unknown',score:null,assessed:false},locomotion:{label:offset===0?'Walking-target completion has not been reported yet':'Future walking-target day',short:pending,className:'unknown',score:null,assessed:false},walking:{label:offset===0?'Walking-target completion has not been reported yet':'Future walking-target day',short:pending,className:'unknown',score:null,assessed:false},running:{label:offset===0?'Running exposure has not been reported yet':'Future running-exposure day',short:pending,className:'unknown',score:null,assessed:false}};}else if(!check.rehabExerciseStatus&&!check.locomotionStatus&&!check.rehabStatus){execution={label:'The questionnaire was completed, but rehabilitation completion was not answered',short:'Rehab not answered',className:'unknown',score:null,assessed:false,exercise:{label:'Rehab exercise completion was not answered',short:'Exercises not reported',className:'unknown',score:null,assessed:false},locomotion:{label:'Walking-target completion was not answered',short:'Walking not assessed',className:'unknown',score:null,assessed:false},walking:{label:'Walking-target completion was not answered',short:'Walking not assessed',className:'unknown',score:null,assessed:false},running:{label:'Running exposure was not assessed',short:'Running not assessed',className:'unknown',score:null,assessed:false}};}
   const changed=!!previous&&rehabCalendarSignature(previous)!==rehabCalendarSignature(fresh);
   days.push({...fresh,checkInCompleted,execution,updated:changed});
  }
@@ -2311,14 +2327,14 @@ function buildRehabCalendar(i,p){
 }
 function rehabCalendarHtml(i,p){
  const days=buildRehabCalendar(i,p);
- return `<section class="injuryTopicCard rehabCalendarSection"><div class="injurySectionHead"><div><h4>Next 7 days</h4><p class="muted compact">The questionnaire and rehabilitation execution are tracked separately. A completed check-in does not mean the exercises were completed.</p></div><strong>${fmtDate(days[0].date)}–${fmtDate(days.at(-1).date)}</strong></div><div class="rehabCalendar">${days.map((d,n)=>`<details class="rehabDay ${d.type} rehab-${d.execution.className}"><summary><div class="rehabDate"><b>${esc(d.weekday.slice(0,3))}</b><span>${dte(d.date).getDate()}</span></div><div class="rehabDayTitle"><strong>${esc(d.title)}</strong><small>${esc(d.walkingTarget)}</small><div class="rehabStatusPair"><span class="checkinBadge ${d.checkInCompleted?'done':'pending'}">${d.checkInCompleted?'✓ Check-in completed':'Check-in pending'}</span><span class="executionBadge ${(d.execution.exercise||{className:'unknown'}).className}">${esc((d.execution.exercise||{short:'Exercises not reported'}).short)}</span><span class="executionBadge ${(d.execution.locomotion||{className:'unknown'}).className}">${esc((d.execution.locomotion||{short:'Walk/run not reported'}).short)}</span>${Number.isFinite(d.execution.score)?`<span class="executionBadge ${d.execution.className}">${d.execution.score}% overall</span>`:''}</div></div><div class="rehabDayStatus">${d.updated?'Updated':''}</div></summary><div class="rehabDayBody"><div><b>Prescription</b><ul>${d.items.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div><div class="rehabStretchGoal"><b>Optional stretch goal</b><p>${esc(d.stretchGoal)}</p></div><div class="rehabDayWhy"><b>Why this day?</b><p>${esc(d.rationale)}</p></div><div class="rehabDayRule"><b>Adjustment rule</b><p>${esc(d.rule)}</p></div><div class="rehabCompletionClarifier"><b>Recorded status</b><p><strong>Questionnaire:</strong> ${d.checkInCompleted?'completed':'not completed'}<br><strong>Rehab exercises:</strong> ${esc((d.execution.exercise||{label:'Rehab exercise completion was not answered'}).label)}<br><strong>Walking/running target:</strong> ${esc((d.execution.locomotion||{label:'Walking/running target completion was not answered'}).label)}<br><strong>Overall execution:</strong> ${esc(d.execution.label)}${Number.isFinite(d.execution.score)?` (${d.execution.score}%)`:''}</p></div>${d.updated?'<p class="rehabUpdatedNote">Updated after new check-in evidence.</p>':''}</div></details>`).join('')}</div><p class="muted compact rehabCalendarFoot">Rehabilitation status describes whether the prescribed plan was performed. Check-in status only confirms that the daily questionnaire was submitted. Future days remain pending until their date. ‘Part completed’ means some planned duration was done without symptom-limited stopping; ‘not started’ means none was done.</p></section>`;
+ return `<section class="injuryTopicCard rehabCalendarSection"><div class="injurySectionHead"><div><h4>Next 7 days</h4><p class="muted compact">The questionnaire and rehabilitation execution are tracked separately. A completed check-in does not mean the exercises were completed.</p></div><strong>${fmtDate(days[0].date)}–${fmtDate(days.at(-1).date)}</strong></div><div class="rehabCalendar">${days.map((d,n)=>`<details class="rehabDay ${d.type} rehab-${d.execution.className}"><summary><div class="rehabDate"><b>${esc(d.weekday.slice(0,3))}</b><span>${dte(d.date).getDate()}</span></div><div class="rehabDayTitle"><strong>${esc(d.title)}</strong><small>${esc(d.walkingTarget)}</small><div class="rehabStatusPair"><span class="checkinBadge ${d.checkInCompleted?'done':'pending'}">${d.checkInCompleted?'✓ Check-in completed':'Check-in pending'}</span><span class="executionBadge ${(d.execution.exercise||{className:'unknown'}).className}">${esc((d.execution.exercise||{short:'Exercises not reported'}).short)}</span><span class="executionBadge ${(d.execution.walking||d.execution.locomotion||{className:'unknown'}).className}">${esc((d.execution.walking||d.execution.locomotion||{short:'Walking not assessed'}).short)}</span><span class="executionBadge ${(d.execution.running||{className:'unknown'}).className}">${esc((d.execution.running||{short:'Running not assessed'}).short)}</span>${Number.isFinite(d.execution.score)?`<span class="executionBadge ${d.execution.className}">${d.execution.score}% overall</span>`:`<span class="executionBadge unknown">Overall not scored</span>`}</div></div><div class="rehabDayStatus">${d.updated?'Updated':''}</div></summary><div class="rehabDayBody"><div><b>Prescription</b><ul>${d.items.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div><div class="rehabStretchGoal"><b>Optional stretch goal</b><p>${esc(d.stretchGoal)}</p></div><div class="rehabDayWhy"><b>Why this day?</b><p>${esc(d.rationale)}</p></div><div class="rehabDayRule"><b>Adjustment rule</b><p>${esc(d.rule)}</p></div><div class="rehabCompletionClarifier"><b>Recorded status</b><p><strong>Questionnaire:</strong> ${d.checkInCompleted?'completed':'not completed'}<br><strong>Rehab exercises:</strong> ${esc((d.execution.exercise||{label:'Rehab exercise completion was not answered'}).label)}<br><strong>Walking target:</strong> ${esc((d.execution.walking||d.execution.locomotion||{label:'Walking-target completion was not answered'}).label)}<br><strong>Running exposure:</strong> ${esc((d.execution.running||{label:'Running exposure was not assessed'}).label)}<br><strong>Overall execution:</strong> ${esc(d.execution.label)}${Number.isFinite(d.execution.score)?` (${d.execution.score}%)`:''}</p></div>${d.updated?'<p class="rehabUpdatedNote">Updated after new check-in evidence.</p>':''}</div></details>`).join('')}</div><p class="muted compact rehabCalendarFoot">Rehabilitation status describes whether the prescribed plan was performed. Check-in status only confirms that the daily questionnaire was submitted. Future days remain pending until their date. A percentage is shown only after rehab exercises, walking and running each have an explicit answer. ‘Not planned’ is neutral; ‘not assessed’ prevents an overall score.</p></section>`;
 }
 
 function rehabTodayFocusHtml(i,p,exercises){
  const todayPlan=buildRehabCalendar(i,p)[0];
  const prescription=todayPlan.items.map(x=>`<li>${esc(x)}</li>`).join('');
  const guides=(exercises||[]).map(x=>`<details class="exerciseDetail"><summary><span><b>${esc(x.name)}</b><small>${esc(x.dose)} · ${esc(x.purpose)}</small></span><em>Technique</em></summary><div class="exerciseGuide"><div class="exerciseWhy"><b>Why this is prescribed today</b><p>${esc(x.why)}</p></div><div><b>How to perform</b><ol>${x.steps.map(y=>`<li>${esc(y)}</li>`).join('')}</ol></div><div class="exerciseRules"><div><b>Pain rule</b><p>${p.safetyHold?'Do not test impact or progress loading until assessed.':'Keep pain at 0–2/10. Stop for sharp pain, altered movement, or symptoms that worsen later or next morning.'}</p></div><div><b>Progress when</b><p>${esc(x.progress)}</p></div></div></div></details>`).join('');
- return `<section class="injuryTopicCard rehabTodayFocus"><div class="injurySectionHead"><div><h4>Today’s rehabilitation plan</h4><p class="muted compact">This is the same prescription shown for today in the seven-day calendar.</p></div><span class="status today">${esc(todayPlan.title)}</span></div><div class="todayFocus"><strong>${esc(todayPlan.title)}</strong><p>${esc(todayPlan.rationale)}</p></div><div class="todayPlanGrid"><div><b>Today’s prescription</b><ul>${prescription}</ul></div><div class="rehabStretchGoal"><b>Optional stretch goal</b><p>${esc(todayPlan.stretchGoal)}</p></div><div class="rehabDayRule"><b>Adjustment rule</b><p>${esc(todayPlan.rule)}</p></div></div><div class="rehabStatusPair"><span class="checkinBadge ${todayPlan.checkInCompleted?'done':'pending'}">${todayPlan.checkInCompleted?'✓ Check-in completed':'Check-in pending'}</span><span class="executionBadge ${(todayPlan.execution.exercise||{className:'unknown'}).className}">${esc((todayPlan.execution.exercise||{short:'Exercises not reported'}).short)}</span><span class="executionBadge ${(todayPlan.execution.locomotion||{className:'unknown'}).className}">${esc((todayPlan.execution.locomotion||{short:'Walk/run not reported'}).short)}</span>${Number.isFinite(todayPlan.execution.score)?`<span class="executionBadge ${todayPlan.execution.className}">${todayPlan.execution.score}% overall</span>`:''}</div>${guides?`<div class="todayExerciseGuides"><h5>Exercise technique</h5>${guides}</div>`:''}</section>`;
+ return `<section class="injuryTopicCard rehabTodayFocus"><div class="injurySectionHead"><div><h4>Today’s rehabilitation plan</h4><p class="muted compact">This is the same prescription shown for today in the seven-day calendar.</p></div><span class="status today">${esc(todayPlan.title)}</span></div><div class="todayFocus"><strong>${esc(todayPlan.title)}</strong><p>${esc(todayPlan.rationale)}</p></div><div class="todayPlanGrid"><div><b>Today’s prescription</b><ul>${prescription}</ul></div><div class="rehabStretchGoal"><b>Optional stretch goal</b><p>${esc(todayPlan.stretchGoal)}</p></div><div class="rehabDayRule"><b>Adjustment rule</b><p>${esc(todayPlan.rule)}</p></div></div><div class="rehabStatusPair"><span class="checkinBadge ${todayPlan.checkInCompleted?'done':'pending'}">${todayPlan.checkInCompleted?'✓ Check-in completed':'Check-in pending'}</span><span class="executionBadge ${(todayPlan.execution.exercise||{className:'unknown'}).className}">${esc((todayPlan.execution.exercise||{short:'Exercises not reported'}).short)}</span><span class="executionBadge ${(todayPlan.execution.walking||todayPlan.execution.locomotion||{className:'unknown'}).className}">${esc((todayPlan.execution.walking||todayPlan.execution.locomotion||{short:'Walking not assessed'}).short)}</span><span class="executionBadge ${(todayPlan.execution.running||{className:'unknown'}).className}">${esc((todayPlan.execution.running||{short:'Running not assessed'}).short)}</span>${Number.isFinite(todayPlan.execution.score)?`<span class="executionBadge ${todayPlan.execution.className}">${todayPlan.execution.score}% overall</span>`:`<span class="executionBadge unknown">Overall not scored</span>`}</div>${guides?`<div class="todayExerciseGuides"><h5>Exercise technique</h5>${guides}</div>`:''}</section>`;
 }
 
 function injuryTrajectorySvg(i,p){
@@ -2372,7 +2388,7 @@ function openInjuryCheck(i,existing=null){
  $('modalContent').innerHTML=`<div class="injuryCheckHeader"><h3>${editing?'Edit':'Daily'} injury check-in</h3><p>Record what was observed today. A rest day or “not assessed” does not erase capacity demonstrated on an earlier day.</p></div>
  <section class="injuryCheckSection"><h4>1. Symptoms today</h4><div class="formGrid"><div class="field"><label>Date</label><input id="icDate" type="date" value="${existing?.date||iso(today())}"></div><div class="field"><label>Pain at rest now 0–10</label><input id="icPain" type="number" min="0" max="10" value="${prev.pain??''}"></div><div class="field"><label>Pain during normal walking 0–10</label><input id="icWalk" type="number" min="0" max="10" value="${prev.walkPain??''}"></div><div class="field"><label>Morning stiffness (minutes)</label><input id="icStiff" type="number" min="0" value="${prev.morningStiffness??''}" placeholder="Leave blank if not relevant"></div>${selectField('icTrend','Compared with yesterday',prev.symptomTrend,[['','Not assessed'],['better','Better'],['same','About the same'],['worse','Worse']])}${triSelect('icSwelling','Any new swelling or bruising?',prev.newSwelling)}</div></section>
  <section class="injuryCheckSection"><h4>2. Daily function</h4><div class="formGrid"><div class="field"><label>Comfortable walking completed (minutes)</label><input id="icWalkMinutes" type="number" min="0" value="${prev.walkMinutes??''}"></div>${triSelect('icStairs','Stairs tolerated with normal movement?',prev.stairs)}<div class="field"><label>Confidence in injured area 0–10</label><input id="icConfidence" type="number" min="0" max="10" value="${prev.confidence??''}"></div></div></section>
- <section class="injuryCheckSection"><h4>3. Rehabilitation execution</h4><p class="muted compact">Report exercises and the walking/running target separately. ‘Part completed’ means you started and completed some of the prescribed amount without symptoms forcing you to stop. ‘Not started’ means you did none of the planned target. Symptom-limited stopping is recorded separately.</p><div class="formGrid">${selectField('icRehabExercises','Prescribed rehab exercises',prev.rehabExerciseStatus||'', [['','Not assessed'],['not_planned','No rehab exercises planned'],['all','All prescribed rehab exercises completed'],['some','Some prescribed rehab exercises completed'],['stopped','Started but stopped because of symptoms'],['none','Rehab exercises not completed']])}${selectField('icLocomotion','Walking or running target',prev.locomotionStatus||'', [['','Not assessed'],['not_planned','No walking/running target planned'],['completed','Walking/running target completed'],['partial','Part of target completed — not stopped by symptoms'],['stopped','Started but stopped because of symptoms'],['none','Planned target not started']])}${selectField('icStretchGoal','Optional stretch goal',prev.stretchGoalStatus||'', [['','Not assessed / not attempted'],['achieved','Stretch goal achieved'],['not_achieved','Stretch goal not achieved']])}${triSelect('icBridge','Strength exercise tolerated with control?',prev.bridge,'Tolerated','Not tolerated')}${triSelect('icHop','Impact test or jog-in-place tolerated?',prev.hop,'Tolerated','Not tolerated')}</div></section>
+ <section class="injuryCheckSection"><h4>3. Rehabilitation execution</h4><p class="muted compact">Report rehab exercises, the prescribed walking target and running exposure separately. ‘Part completed’ means you started and completed some of the prescribed amount without symptoms forcing you to stop. ‘Not started’ means you did none of the planned target. Symptom-limited stopping is recorded separately.</p><div class="formGrid">${selectField('icRehabExercises','Prescribed rehab exercises',prev.rehabExerciseStatus||'', [['','Not assessed'],['not_planned','No rehab exercises planned'],['all','All prescribed rehab exercises completed'],['some','Some prescribed rehab exercises completed'],['stopped','Started but stopped because of symptoms'],['none','Rehab exercises not completed']])}${selectField('icLocomotion','Prescribed walking target',prev.locomotionStatus||'', [['','Not assessed'],['not_planned','No walking target planned'],['completed','Full walking target completed'],['partial','Part of walking target completed — not stopped by symptoms'],['stopped','Started but stopped because of symptoms'],['none','Walking target not started']])}${selectField('icStretchGoal','Optional stretch goal',prev.stretchGoalStatus||'', [['','Not assessed / not attempted'],['achieved','Stretch goal achieved'],['not_achieved','Stretch goal not achieved']])}${triSelect('icBridge','Strength exercise tolerated with control?',prev.bridge,'Tolerated','Not tolerated')}${triSelect('icHop','Impact test or jog-in-place tolerated?',prev.hop,'Tolerated','Not tolerated')}</div></section>
  <section class="injuryCheckSection"><h4>4. Running exposure</h4><div class="formGrid">${selectField('icRunStatus','Running today',prev.runStatus,[['not_assessed','Not assessed'],['not_planned','Not planned / rest day'],['completed','Run completed'],['stopped','Started but stopped due to symptoms'],['unable','Unable to start because of symptoms']])}<div class="field"><label>Running completed (minutes)</label><input id="icRun" type="number" min="0" value="${prev.runMinutes??''}" placeholder="Only when attempted"></div><div class="field"><label>Highest pain during run 0–10</label><input id="icRunPain" type="number" min="0" max="10" value="${prev.runPain??''}"></div>${triSelect('icGait','Was gait or running technique altered?',prev.alteredGait)}</div></section>
  <section class="injuryCheckSection"><h4>5. Response to the previous load</h4><div class="formGrid">${triSelect('icWorse','Were symptoms worse later or the next morning?',prev.nextDayWorse)}${selectField('icResponse','Overall response to previous load',prev.loadResponse,[['','Not assessed'],['better','Better than before load'],['stable','Returned to baseline'],['mild_flare','Mild temporary flare'],['sustained_flare','Still worse after 24 hours']])}<div class="field fieldWide"><label>Symptoms / notes</label><textarea id="icSymptoms" placeholder="What changed, what activity caused it, and how long did the response last?">${esc(prev.symptoms||'')}</textarea></div></div></section>
  <div id="icConsistency" class="note"><b>Consistency check</b><p>The form will automatically align related answers.</p></div><button id="saveCheck" class="primary full">${editing?'Update check-in':'Save and recalculate timeline'}</button>${editing?'<button id="deleteCheck" class="danger full">Delete this check-in</button>':''}`;
@@ -2381,12 +2397,12 @@ function openInjuryCheck(i,existing=null){
  let syncing=false;
  const clearRunDetail=()=>{runMinutesField.value='';runPainField.value='';gaitField.value='';};
  const setConsistencyMessage=()=>{const rs=runStatusField.value,mins=nullableNumber(runMinutesField.value),lo=locomotionField.value,ex=exerciseField.value,sg=stretchField.value;let parts=[];
-  if(rs==='completed')parts.push(`${Number.isFinite(mins)?mins:0} min run recorded as completed; tolerance is judged separately from pain and gait.`);
+  if(rs==='completed')parts.push(`${Number.isFinite(mins)?mins:0} min run recorded as completed; this does not automatically mean the prescribed walking target was completed. Tolerance is judged separately from pain and gait.`);
   else if(rs==='stopped')parts.push(`Running exposure was started but stopped because of symptoms.`);
   else if(rs==='unable')parts.push(`The planned walk/run target was not started because symptoms prevented it.`);
   else if(rs==='not_planned')parts.push(`No run was planned; this is neutral and does not remove earlier running capacity.`);
   else parts.push(`Running was not assessed; this is neutral and does not remove earlier running capacity.`);
-  if(lo==='partial')parts.push('Only part of the prescribed walk/run target was completed, without symptoms forcing the stop.');
+  if(lo==='partial')parts.push('Only part of the prescribed walking target was completed, without symptoms forcing the stop.');
   if(ex==='some')parts.push('Some, but not all, prescribed rehab exercises were completed.');
   if(sg==='achieved')parts.push('The optional stretch goal is recorded only after the planned components were completed.');
   consistencyBox.innerHTML=`<b>Current interpretation</b><p>${esc(parts.join(' '))}</p>`;
@@ -2394,27 +2410,19 @@ function openInjuryCheck(i,existing=null){
  const normalizeCheckIn=source=>{if(syncing)return;syncing=true;let rs=runStatusField.value,mins=nullableNumber(runMinutesField.value),lo=locomotionField.value,ex=exerciseField.value,sg=stretchField.value;
   if(source==='minutes'&&Number.isFinite(mins)&&mins>0&&['not_assessed','not_planned','unable'].includes(rs))rs='completed';
   if(source==='runStatus'){
-   if(rs==='not_assessed'||rs==='not_planned'){clearRunDetail();mins=null;if(rs==='not_assessed'&&lo==='stopped')lo='';}
-   else if(rs==='completed'){if(!Number.isFinite(mins)||mins<=0)runMinutesField.value='';if(['','not_planned','none','stopped'].includes(lo))lo='completed';}
-   else if(rs==='stopped'){lo='stopped';}
-   else if(rs==='unable'){clearRunDetail();mins=null;lo='none';}
+   if(rs==='not_assessed'||rs==='not_planned'){clearRunDetail();mins=null;}
+   else if(rs==='completed'&&(!Number.isFinite(mins)||mins<=0))runMinutesField.value='';
+   else if(rs==='unable'){clearRunDetail();mins=null;}
   }
-  if(Number.isFinite(mins)&&mins>0){if(rs!=='stopped')rs='completed';if(['','not_planned','none'].includes(lo))lo='completed';}else if(rs==='completed'){rs='not_assessed';}
-  if(source==='locomotion'){
-   if(lo==='not_planned'){rs='not_planned';clearRunDetail();mins=null;}
-   else if(lo==='none'&&['completed','stopped'].includes(rs)){rs='unable';clearRunDetail();mins=null;}
-   else if(lo==='stopped'&&rs==='completed')rs='stopped';
-   else if((lo==='completed'||lo==='partial')&&rs==='unable')rs='not_assessed';
-  }
-  if(rs==='stopped')lo='stopped';
-  if(rs==='unable')lo='none';
-  if(rs==='completed'&&['','not_planned','none','stopped'].includes(lo))lo='completed';
+  if(Number.isFinite(mins)&&mins>0&&rs!=='stopped')rs='completed';
+  else if(rs==='completed'&&(!Number.isFinite(mins)||mins<=0))rs='not_assessed';
+  // Walking execution is intentionally independent from running exposure.
+  // A completed run must never silently award completion of the prescribed walk.
   if(sg==='achieved'){
    if(ex==='some'||ex==='none'||ex==='stopped'||ex==='')ex='all';
    if(lo==='partial'||lo==='none'||lo==='stopped'||lo==='')lo='completed';
-   if(lo==='not_planned'&&ex==='not_planned')sg='not_achieved';
   }
-  if((ex==='stopped'||lo==='stopped')&&sg==='achieved')sg='not_achieved';
+  if((ex==='stopped'||lo==='stopped'||rs==='stopped'||rs==='unable')&&sg==='achieved')sg='not_achieved';
   runStatusField.value=rs;locomotionField.value=lo;exerciseField.value=ex;stretchField.value=sg;syncing=false;setConsistencyMessage();
  };
  runMinutesField.addEventListener('input',()=>normalizeCheckIn('minutes'));
@@ -2615,11 +2623,11 @@ $('backupBtn').onclick=()=>download('ai-running-coach-backup.json',JSON.stringif
 let deferred;window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferred=e;$('installBtn').className='install'});$('installBtn').onclick=()=>deferred?.prompt();
 $('pillarCards')?.addEventListener('click',e=>{const card=e.target.closest('.pillarCard');if(!card||e.target.closest('summary'))return;const detail=card.querySelector('.pillarExplain');if(!detail)return;card.classList.toggle('open');detail.open=card.classList.contains('open');card.setAttribute('aria-expanded',String(detail.open))});
 $('pillarCards')?.addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&e.target.classList.contains('pillarCard')){e.preventDefault();e.target.click()}});
-const brandVersion=document.querySelector('.brand-copy p');if(brandVersion)brandVersion.textContent=`Race-specific adaptive planning • v10.0.12 · build ${BUILD}`;
+const brandVersion=document.querySelector('.brand-copy p');if(brandVersion)brandVersion.textContent=`Race-specific adaptive planning • v10.0.13 · build ${BUILD}`;
 if('serviceWorker'in navigator&&location.protocol==='https:')navigator.serviceWorker.register(`service-worker.js?v=${BUILD}`,{updateViaCache:'none'}).then(reg=>reg.update()).catch(()=>{});
 migrateAssessmentRuns();
 migrateImportedPower();
 if(reconcilePredictionHistory())save();
 renderAll();
-console.info('AI Running Coach v10.0.12 stable build 10120');
+console.info('AI Running Coach v10.0.13 stable build 10130');
 })();

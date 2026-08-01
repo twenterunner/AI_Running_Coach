@@ -1,4 +1,4 @@
-AI Running Coach v10.0.12 Stable — build 10120
+AI Running Coach v10.0.13 Stable — build 10130
 
 This release changes only the Injury tab and its supporting injury check-in logic.
 
@@ -17,4 +17,11 @@ Injury check-in consistency update:
 - No non-Injury calculations, plans, predictions, tabs or workflows were changed.
 
 Deployment:
-Replace all six application files in the GitHub Pages repository. Retain the existing icon files. Fully close and reopen the installed PWA so cache build 10120 activates.
+Replace all six application files in the GitHub Pages repository. Retain the existing icon files. Fully close and reopen the installed PWA so cache build 10130 activates.
+
+
+v10.0.13 execution consistency fix
+- Walking-target execution and running exposure are separate authoritative inputs.
+- Overall execution is withheld until exercises, walking and running each have an explicit answer.
+- Not planned is neutral; not assessed prevents a misleading percentage.
+- Calendar badges show exercises, walking and running separately.
