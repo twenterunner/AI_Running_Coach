@@ -1,4 +1,4 @@
-AI Running Coach v10.0.4 Stable — build 10040
+AI Running Coach v10.0.5 Stable — build 10050
 
 This release changes only the Injury tab and its supporting injury data model.
 
@@ -13,9 +13,9 @@ Injury-tab changes:
 - No non-Injury calculations, plans, predictions, tabs or workflows were changed.
 
 Deployment:
-Replace all six application files in the GitHub Pages repository. Retain the existing icon files. Fully close and reopen the installed PWA so cache build 10040 activates.
+Replace all six application files in the GitHub Pages repository. Retain the existing icon files. Fully close and reopen the installed PWA so cache build 10050 activates.
 
-v10.0.4 Injury check-in correction
+v10.0.5 Injury check-in correction
 - Positive running minutes automatically set the running status to Run completed.
 - The form no longer discards entered running minutes when the status was left at Not assessed.
 - Legacy check-ins containing positive running minutes are interpreted as completed running evidence.

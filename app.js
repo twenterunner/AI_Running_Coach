@@ -90,7 +90,7 @@ function recommendedRaceDate(setup){
  let totalWeeks=Math.ceil(Math.max(minimumTotal,req.requiredBuildWeeks+taperWeeks+2));
  return{date:iso(new Date(dte(setup.planStart).getTime()+totalWeeks*7*DAY)),totalWeeks,requiredBuildWeeks:req.requiredBuildWeeks,taperWeeks};
 }
-const BUILD=10040, SCHEMA=10040, STORAGE_KEY='arc_v62_web', MIRROR_KEY='arc_v8500_web', BACKUP_KEY='arc_pre8500_backup';
+const BUILD=10050, SCHEMA=10050, STORAGE_KEY='arc_v62_web', MIRROR_KEY='arc_v8500_web', BACKUP_KEY='arc_pre8500_backup';
 const defaults=()=>{let start=iso(new Date()),setup={planStart:start,raceDate:start,raceName:'Goal Race',raceDistance:42.195,targetTime:15300,currentWeekly:35,currentLongest:18,testDistance:5,testTime:1515,thresholdHr:168,criticalPower:300,bodyWeight:93,maxWeekly:65,growth:.07,peakLong:32,taperDays:14,minFactor:.85,maxFactor:1.05,adaptive:true};setup.raceDate=recommendedRaceDate(setup).date;return({schemaVersion:SCHEMA,setup,days:FIVE_DAY_TEMPLATE.map(d=>[...d]),runs:[],assessments:[],injuries:[],activeInjuryPlanId:null,plan:[],weekView:null,migration:{to:SCHEMA,status:'new',time:new Date().toISOString()}})};
 let migrationReport={from:null,to:SCHEMA,status:'new install',source:'defaults',runs:0,assessments:0,fieldsRecovered:0,warning:''};
 function parseStored(raw){if(!raw)return null;try{const x=JSON.parse(raw);return x&&typeof x==='object'?x:null}catch(err){recordDiagnostic('Storage parse',err);return null}}
@@ -2082,13 +2082,25 @@ function latestAdverse(checks,field){const x=lastObserved(checks,field);return x
 function recentChecks(checks,days=14){const cut=today().getTime()-days*DAY;return checks.filter(c=>dte(c.date).getTime()>=cut)}
 function runEvidence(checks){
  const normalized=checks.map(c=>Number(c.runMinutes)>0&&['not_assessed','not_planned',null,undefined,''].includes(c.runStatus)?{...c,runStatus:'completed'}:c);
- const completed=normalized.filter(c=>c.runStatus==='completed'||Number.isFinite(c.runMinutes));
- const successful=completed.filter(c=>Number(c.runMinutes)>0&&c.nextDayWorse!==true&&c.alteredGait!==true);
- const lastSuccess=successful.at(-1)||null;
- const lastAttempt=normalized.slice().reverse().find(c=>['completed','stopped','unable'].includes(c.runStatus)||Number.isFinite(c.runMinutes))||null;
+ // A completed exposure is historical evidence even when gait or next-day tolerance
+ // was not assessed. Those response fields determine whether it was tolerated, not
+ // whether the run happened.
+ const completed=normalized.filter(c=>c.runStatus==='completed'&&Number(c.runMinutes)>0);
+ const tolerated=completed.filter(c=>c.nextDayWorse===false&&c.alteredGait===false);
+ const provisionallyTolerated=completed.filter(c=>c.nextDayWorse!==true&&c.alteredGait!==true);
+ const lastCompleted=completed.at(-1)||null;
+ const lastTolerated=tolerated.at(-1)||null;
+ const lastAttempt=normalized.slice().reverse().find(c=>['completed','stopped','unable'].includes(c.runStatus)||Number(c.runMinutes)>0)||null;
  const latest=normalized.at(-1)||{};
- const preserved=!!lastSuccess&&['not_planned','rest_day','not_assessed',undefined,null,''].includes(latest.runStatus);
- return{completed,successful,lastSuccess,lastAttempt,preserved,bestMinutes:successful.length?Math.max(...successful.map(c=>Number(c.runMinutes)||0)):0,lastMinutes:lastSuccess?Number(lastSuccess.runMinutes)||0:null};
+ const latestNeutral=['not_planned','rest_day','not_assessed',undefined,null,''].includes(latest.runStatus);
+ return{
+  completed,tolerated,successful:provisionallyTolerated,lastCompleted,lastTolerated,lastSuccess:lastTolerated,lastAttempt,
+  preserved:!!lastCompleted&&latestNeutral,
+  bestCompletedMinutes:completed.length?Math.max(...completed.map(c=>Number(c.runMinutes)||0)):0,
+  bestMinutes:provisionallyTolerated.length?Math.max(...provisionallyTolerated.map(c=>Number(c.runMinutes)||0)):0,
+  lastCompletedMinutes:lastCompleted?Number(lastCompleted.runMinutes)||0:null,
+  lastMinutes:lastTolerated?Number(lastTolerated.runMinutes)||0:null
+ };
 }
 function longitudinalSnapshot(i,checks){
  const latest=checks.at(-1)||{},run=runEvidence(checks),recent=recentChecks(checks,14);
@@ -2160,9 +2172,18 @@ function comparisonFactors(i,p){let s=p.snapshot||longitudinalSnapshot(i,p.check
  add('Walking',Number.isFinite(p.walkPain)?`${p.walkPain}/10 pain`:'Not assessed',p.elapsed<10?'Some limitation':'Comfortable',!Number.isFinite(p.walkPain)?unknown:p.walkPain===0?'ahead':p.walkPain>=3?'behind':'on',!Number.isFinite(p.walkPain)?'Walking pain has not been assessed.':p.walkPain===0?'Comfortable walking has been demonstrated.':'Walking symptoms still limit progression.');
  add('Strength',s.strength===true?'Controlled':s.strength===false?'Not tolerated':'Not assessed',p.elapsed<21?'Beginning':'Controlled repeated loading',!known(s.strength)?unknown:s.strength?'ahead':'behind',!known(s.strength)?'No recent strength assessment is available.':s.strength?'The most recent assessed strength task was controlled.':'The most recent assessed strength task was not tolerated.');
  add('Impact',s.impact===true?'Tolerated':s.impact===false?'Not tolerated':'Not assessed',p.elapsed<28?'Usually not required':'Expected to be emerging',!known(s.impact)?unknown:s.impact?'ahead':p.elapsed>=28?'behind':'on',!known(s.impact)?'No impact assessment is available.':s.impact?'The latest assessed low-level impact was tolerated.':'The latest assessed impact task was not tolerated.');
- const runActual=s.run.lastSuccess?`${s.run.lastMinutes} min on ${fmtDate(s.run.lastSuccess.date)}`:(s.run.lastAttempt?.runStatus==='unable'?'Unable on last attempt':s.run.lastAttempt?.runStatus==='stopped'?'Stopped due to symptoms':'Not assessed');
- const runStatus=!s.run.lastSuccess?(s.run.lastAttempt?.runStatus==='unable'||s.run.lastAttempt?.runStatus==='stopped'?'behind':unknown):s.run.bestMinutes>=10?'ahead':'on';
- const runReason=s.run.lastSuccess?(s.latest.runStatus==='not_planned'||s.latest.runStatus==='rest_day'||s.latest.runStatus==='not_assessed'||!s.latest.runStatus?'No run was planned or assessed today; the last demonstrated running capacity is retained.':'The latest successful running exposure is used together with its symptom response.'):(runStatus==='behind'?'The last attempted run was limited by symptoms.':'Running ability has not yet been assessed.');
+ const lastRun=s.run.lastCompleted;
+ const runActual=lastRun?`${s.run.lastCompletedMinutes} min on ${fmtDate(lastRun.date)}`:(s.run.lastAttempt?.runStatus==='unable'?'Unable on last attempt':s.run.lastAttempt?.runStatus==='stopped'?'Stopped due to symptoms':'Not assessed');
+ const confirmedTolerance=!!lastRun&&lastRun.nextDayWorse===false&&lastRun.alteredGait===false;
+ const adverseRun=!!lastRun&&(lastRun.nextDayWorse===true||lastRun.alteredGait===true);
+ const runStatus=!lastRun?(s.run.lastAttempt?.runStatus==='unable'||s.run.lastAttempt?.runStatus==='stopped'?'behind':unknown):adverseRun?'behind':s.run.bestCompletedMinutes>=10?'ahead':'on';
+ let runReason;
+ if(lastRun){
+  const neutralToday=s.latest.date!==lastRun.date&&['not_planned','rest_day','not_assessed',undefined,null,''].includes(s.latest.runStatus);
+  if(adverseRun)runReason=`A ${s.run.lastCompletedMinutes}-minute run was completed on ${fmtDate(lastRun.date)}, but gait or delayed symptoms indicate it was not yet fully tolerated.`;
+  else if(confirmedTolerance)runReason=neutralToday?'No run was planned or assessed today; the last confirmed running capacity is retained.':'The latest completed run was followed by normal gait and a stable next-day response.';
+  else runReason=neutralToday?'No run was planned or assessed today; yesterday’s completed running duration remains recorded, while tolerance awaits gait and next-day-response evidence.':'The running exposure is recorded, but full tolerance is not yet confirmed because gait or next-day response was not assessed.';
+ }else runReason=runStatus==='behind'?'The last attempted run was limited by symptoms.':'Running ability has not yet been assessed.';
  add('Running',runActual,p.elapsed<28?'Often 0 min':'Some easy exposure',runStatus,runReason);
  const resp=lastObserved(p.checks,'nextDayWorse');add('Load response',resp.index<0?'Not assessed':resp.value?'Worse':'Stable','Stable',resp.index<0?unknown:resp.value?'behind':'ahead',resp.index<0?'No next-day load response has been recorded.':resp.value?'The most recently assessed load caused a delayed flare.':'The most recently assessed load did not worsen symptoms the next day.');
  return f;}
@@ -2519,5 +2540,5 @@ migrateAssessmentRuns();
 migrateImportedPower();
 if(reconcilePredictionHistory())save();
 renderAll();
-console.info('AI Running Coach v10.0.4 stable build 10040');
+console.info('AI Running Coach v10.0.5 stable build 10050');
 })();
