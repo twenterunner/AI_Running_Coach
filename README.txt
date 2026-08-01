@@ -1,4 +1,4 @@
-AI Running Coach v10.0.9 Stable — build 10090
+AI Running Coach v10.0.10 Stable — build 10100
 
 This release changes only the Injury tab and its supporting injury data model.
 
@@ -13,7 +13,7 @@ Injury-tab changes:
 - No non-Injury calculations, plans, predictions, tabs or workflows were changed.
 
 Deployment:
-Replace all six application files in the GitHub Pages repository. Retain the existing icon files. Fully close and reopen the installed PWA so cache build 10090 activates.
+Replace all six application files in the GitHub Pages repository. Retain the existing icon files. Fully close and reopen the installed PWA so cache build 10100 activates.
 
 Previous Injury check-in correction
 - Positive running minutes automatically set the running status to Run completed.
@@ -22,12 +22,12 @@ Previous Injury check-in correction
 - Running status and duration are validated before saving.
 
 
-v10.0.9 Injury status wording and release consistency
+v10.0.10 Injury status wording and release consistency
 - Replaces ambiguous rehabilitation status labels such as Completed with explicit wording such as Rehab exercises completed.
-- Aligns visible header, runtime header override, console version, manifest, asset query strings, service-worker cache and README to v10.0.9 build 10090.
+- Aligns visible header, runtime header override, console version, manifest, asset query strings, service-worker cache and README to v10.0.10 build 10100.
 
 
-v10.0.9 Injury execution update
+v10.0.10 Injury execution update
 - Separates rehab exercise completion from walking/running target completion.
 - Adds a transparent overall daily execution score and independent calendar badges.
 - Preserves backwards compatibility with earlier single-status check-ins.
