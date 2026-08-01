@@ -1,4 +1,4 @@
-AI Running Coach v10.0.15 Stable — build 10150
+AI Running Coach v10.0.16 Stable — build 10160
 
 This release changes only the Injury tab and its supporting injury check-in logic.
 
@@ -17,26 +17,33 @@ Injury check-in consistency update:
 - No non-Injury calculations, plans, predictions, tabs or workflows were changed.
 
 Deployment:
-Replace all six application files in the GitHub Pages repository. Retain the existing icon files. Fully close and reopen the installed PWA so cache build 10150 activates.
+Replace all six application files in the GitHub Pages repository. Retain the existing icon files. Fully close and reopen the installed PWA so cache build 10160 activates.
 
 
-v10.0.15 execution consistency fix
+v10.0.16 execution consistency fix
 - Walking-target execution and running exposure are separate authoritative inputs.
 - Overall execution is withheld until exercises, walking and running each have an explicit answer.
 - Not planned is neutral; not assessed prevents a misleading percentage.
 - Calendar badges show exercises, walking and running separately.
 
 
-v10.0.15 Injury check-in update
+v10.0.16 Injury check-in update
 - Daily check-in questions are generated from the prescription scheduled for the selected date.
 - Unscheduled exercise, walking, impact and running components are hidden and saved as not planned.
 - The form displays the exact scheduled walking target, exercises and running/impact exposure before answers are entered.
 - Saved check-ins retain a snapshot of that day’s prescription for later editing and auditability.
 
 
-v10.0.15 Injury-date controls
+v10.0.16 Injury-date controls
 - Injury date and rehabilitation-plan start date are independently editable.
 - Injury age and prognosis continue to use the injury date.
 - The seven-day calendar and adherence period use the rehabilitation-plan start date.
 - The rehabilitation-plan start date cannot precede the injury date.
 - Existing injuries migrate with the injury date as their initial rehabilitation-plan start date.
+
+v10.0.16 Daily check-in consistency
+- Every saved in-plan check-in must answer all activities scheduled for that date and therefore receives an execution score.
+- A completed walking target requires actual minutes at least equal to the prescribed target; partial or symptom-stopped walking requires positive minutes; not started requires zero minutes.
+- A completed or symptom-stopped run requires positive minutes; an unable-to-start run cannot retain running minutes.
+- Walking minutes and execution status synchronize in real time.
+- Calendar tiles now show one concise check-in/execution badge; component details remain inside the expanded day.
