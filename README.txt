@@ -1,33 +1,20 @@
-AI Running Coach v10.0.11 Stable — build 10110
+AI Running Coach v10.0.12 Stable — build 10120
 
-This release changes only the Injury tab and its supporting injury data model.
+This release changes only the Injury tab and its supporting injury check-in logic.
 
-Injury-tab changes:
-- Each major topic now has its own card: diagnosis/prognosis, clinician cross-check, recovery overview, adherence, today’s plan, seven-day calendar, milestones, progression criteria and check-in history.
-- Exercise technique is integrated beneath today’s prescription instead of appearing as an unrelated standalone section.
-- Clinician-entered information is independently classified as confirmed, partly agreed with, or contradicted by the app assessment.
-- A second injury can be assessed in parallel without replacing the current injury record.
-- Diagnosis and prognosis are shown before the user chooses whether to follow the new recovery plan.
-- Only one injury recovery plan can be active at a time; switching plans requires explicit confirmation.
-- Inactive injuries remain available as parallel assessments but do not generate the active daily plan, adherence or calendar.
+Injury check-in consistency update:
+- Related fields synchronise immediately while the user edits the form.
+- Positive running minutes automatically create a completed running exposure unless the user explicitly records symptom-limited stopping.
+- A completed run cannot coexist with a walk/run target marked not planned, not started or symptom-stopped.
+- A symptom-stopped run automatically sets the walk/run target to symptom-stopped.
+- Unable to start clears running details and records the planned walk/run target as not started.
+- A run that was not planned remains neutral and can coexist with a completed walking target.
+- Achieving the optional stretch goal requires completion of the applicable planned components.
+- Completion remains separate from tolerance: pain and altered gait can limit progression even when the target was completed.
+- The form displays a live plain-language interpretation before saving.
+- Calendar badges, adherence, running-capacity evidence and recovery rationale use the same saved execution states.
+- Existing injury records and older check-ins remain compatible.
 - No non-Injury calculations, plans, predictions, tabs or workflows were changed.
 
 Deployment:
-Replace all six application files in the GitHub Pages repository. Retain the existing icon files. Fully close and reopen the installed PWA so cache build 10110 activates.
-
-Previous Injury check-in correction
-- Positive running minutes automatically set the running status to Run completed.
-- The form no longer discards entered running minutes when the status was left at Not assessed.
-- Legacy check-ins containing positive running minutes are interpreted as completed running evidence.
-- Running status and duration are validated before saving.
-
-
-v10.0.11 Injury status wording and release consistency
-- Replaces ambiguous rehabilitation status labels such as Completed with explicit wording such as Rehab exercises completed.
-- Aligns visible header, runtime header override, console version, manifest, asset query strings, service-worker cache and README to v10.0.11 build 10110.
-
-
-v10.0.11 Injury execution update
-- Separates rehab exercise completion from walking/running target completion.
-- Adds a transparent overall daily execution score and independent calendar badges.
-- Preserves backwards compatibility with earlier single-status check-ins.
+Replace all six application files in the GitHub Pages repository. Retain the existing icon files. Fully close and reopen the installed PWA so cache build 10120 activates.
