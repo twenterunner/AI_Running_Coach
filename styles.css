@@ -618,7 +618,16 @@ canvas{width:100%;height:auto;display:block}
 @media(max-width:480px){.rehabDay>summary{grid-template-columns:44px minmax(0,1fr);}.rehabDayStatus{grid-column:2;justify-self:start}.rehabDate{grid-row:1/3}}
 
 
-/* Build 9980: explicit walking and stretch targets */
+/* Build 9990: explicit walking and stretch targets */
 .rehabStretchGoal{border-left:4px solid var(--teal);background:#eef9f7;border-radius:11px;padding:11px 12px;margin-top:10px}
 .rehabStretchGoal b{display:block;color:#176f69;margin-bottom:4px}
 .rehabStretchGoal p{margin:0;font-size:12px;line-height:1.45;color:var(--ink)}
+
+/* Build 9990: separate questionnaire completion from rehabilitation execution */
+.rehabStatusPair{display:flex;flex-wrap:wrap;gap:6px;margin-top:7px}
+.checkinBadge,.executionBadge{display:inline-flex;align-items:center;border-radius:999px;padding:5px 8px;font-size:10px;font-weight:900;line-height:1.15}
+.checkinBadge.done{background:#e7f6ed;color:#24734a}.checkinBadge.pending{background:#eef1f4;color:#657487}
+.executionBadge.completed,.executionBadge.exceeded{background:#e7f6ed;color:#24734a}.executionBadge.partial{background:#fff4df;color:#9a6416}.executionBadge.stopped,.executionBadge.missed{background:#fde9eb;color:#a73542}.executionBadge.rest,.executionBadge.unknown{background:#eef1f4;color:#657487}
+.rehabCompletionClarifier{border-top:1px solid var(--line);padding-top:12px}.rehabCompletionClarifier p{margin:5px 0 0;line-height:1.5}
+.adherencePeriods{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.adherencePeriods span{background:#f6f9fb;border-radius:12px;padding:11px;color:var(--muted)}.adherencePeriods b{display:block;color:var(--ink);font-size:18px;margin-top:3px}
+@media(max-width:480px){.rehabDayTitle small{white-space:normal}.rehabStatusPair{display:grid;grid-template-columns:1fr}.checkinBadge,.executionBadge{width:max-content;max-width:100%}.adherencePeriods{grid-template-columns:1fr 1fr}}
