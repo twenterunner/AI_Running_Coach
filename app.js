@@ -90,7 +90,7 @@ function recommendedRaceDate(setup){
  let totalWeeks=Math.ceil(Math.max(minimumTotal,req.requiredBuildWeeks+taperWeeks+2));
  return{date:iso(new Date(dte(setup.planStart).getTime()+totalWeeks*7*DAY)),totalWeeks,requiredBuildWeeks:req.requiredBuildWeeks,taperWeeks};
 }
-const BUILD=10260, SCHEMA=10260, STORAGE_KEY='arc_v62_web', MIRROR_KEY='arc_v8500_web', BACKUP_KEY='arc_pre8500_backup';
+const BUILD=10270, SCHEMA=10270, STORAGE_KEY='arc_v62_web', MIRROR_KEY='arc_v8500_web', BACKUP_KEY='arc_pre8500_backup';
 const defaults=()=>{let start=iso(new Date()),setup={planStart:start,raceDate:start,raceName:'Goal Race',raceDistance:42.195,targetTime:15300,currentWeekly:35,currentLongest:18,testDistance:5,testTime:1515,thresholdHr:168,criticalPower:300,bodyWeight:93,maxWeekly:65,growth:.07,peakLong:32,taperDays:14,minFactor:.85,maxFactor:1.05,adaptive:true};setup.raceDate=recommendedRaceDate(setup).date;return({schemaVersion:SCHEMA,setup,days:FIVE_DAY_TEMPLATE.map(d=>[...d]),runs:[],assessments:[],injuries:[],activeInjuryPlanId:null,plan:[],weekView:null,migration:{to:SCHEMA,status:'new',time:new Date().toISOString()}})};
 let migrationReport={from:null,to:SCHEMA,status:'new install',source:'defaults',runs:0,assessments:0,fieldsRecovered:0,warning:''};
 function parseStored(raw){if(!raw)return null;try{const x=JSON.parse(raw);return x&&typeof x==='object'?x:null}catch(err){recordDiagnostic('Storage parse',err);return null}}
@@ -1564,13 +1564,49 @@ function fitNumber(obj,names){
  for(const name of names){const value=obj?.[name];const n=Number(value);if(Number.isFinite(n))return n}
  return null;
 }
-function findFitPower(record){
- const direct=fitNumber(record,['power','enhancedPower','nativePower','runningPower','avgPower']);
- if(Number.isFinite(direct)&&direct>0)return direct;
- for(const [key,value] of Object.entries(record||{})){
-   if(!/power/i.test(key)||/balance|phase|zone/i.test(key))continue;
-   const n=Number(value);if(Number.isFinite(n)&&n>0&&n<3000)return n;
+function fitNumericValues(value,depth=0){
+ if(depth>4||value==null)return[];
+ if(typeof value==='number')return Number.isFinite(value)?[value]:[];
+ if(typeof value==='string'){const n=Number(value);return Number.isFinite(n)?[n]:[]}
+ if(Array.isArray(value))return value.flatMap(v=>fitNumericValues(v,depth+1));
+ if(typeof value==='object'){
+   const preferred=['value','values','fieldValue','rawValue','scaledValue','data'];
+   let out=[];
+   for(const key of preferred)if(Object.prototype.hasOwnProperty.call(value,key))out.push(...fitNumericValues(value[key],depth+1));
+   if(out.length)return out;
+   for(const v of Object.values(value))out.push(...fitNumericValues(v,depth+1));
+   return out;
  }
+ return[];
+}
+function fitPowerCandidates(obj,path='',depth=0,out=[]){
+ if(depth>5||obj==null)return out;
+ if(Array.isArray(obj)){obj.forEach((v,i)=>fitPowerCandidates(v,`${path}[${i}]`,depth+1,out));return out}
+ if(typeof obj!=='object')return out;
+ for(const [key,value] of Object.entries(obj)){
+   const next=path?`${path}.${key}`:key;
+   const descriptor=typeof value==='object'&&value?`${next} ${value.name||value.fieldName||value.field_name||''} ${value.units||value.unit||''}`:next;
+   const norm=descriptor.toLowerCase().replace(/[_-]+/g,' ');
+   if(/power|watt/.test(norm)&&!/balance|phase|zone|form power|air power|leg spring|stiffness|ratio|percent/.test(norm)){
+     for(const n of fitNumericValues(value))if(n>0&&n<3000){
+       let score=30;
+       if(/(^|[. ])power($|[. ])/i.test(norm))score=100;
+       if(/running power|stryd power|power watts|watts power/i.test(norm))score=120;
+       if(/avg power|average power/i.test(norm))score=90;
+       if(/developer|field/i.test(norm))score+=5;
+       out.push({value:n,path:next,label:descriptor.trim(),score});
+     }
+   }
+   if(typeof value==='object')fitPowerCandidates(value,next,depth+1,out);
+ }
+ return out;
+}
+function findFitPower(record,diagnostics=null){
+ const directNames=['power','Power','enhancedPower','enhanced_power','nativePower','runningPower','running_power','avgPower','averagePower'];
+ const direct=fitNumber(record,directNames);
+ if(Number.isFinite(direct)&&direct>0){if(diagnostics)diagnostics.add('native power');return direct}
+ const candidates=fitPowerCandidates(record).sort((a,b)=>b.score-a.score);
+ if(candidates.length){if(diagnostics)diagnostics.add(candidates[0].label||candidates[0].path);return candidates[0].value}
  return null;
 }
 function fitDistanceMeters(value){
@@ -1594,9 +1630,10 @@ async function summariseFIT(file){
  const session=sessions.find(x=>String(x?.sport||'').toLowerCase()==='running')||sessions[0]||{};
  const sport=String(session.sport||'').toLowerCase();
  if(sport&&sport!=='running')throw Error(`This FIT activity is recorded as ${sport}, not running.`);
+ const powerFieldDiagnostics=new Set();
  const records=recordsRaw.map(r=>{
    const d=fitDateValue(r.timestamp);
-   return{t:d?d.getTime()/1000:null,hr:fitNumber(r,['heartRate','heart_rate']),speed:fitNumber(r,['enhancedSpeed','speed']),power:findFitPower(r),distance:fitDistanceMeters(fitNumber(r,['distance'])),cadence:fitNumber(r,['cadence','fractionalCadence'])};
+   return{t:d?d.getTime()/1000:null,hr:fitNumber(r,['heartRate','heart_rate']),speed:fitNumber(r,['enhancedSpeed','speed']),power:findFitPower(r,powerFieldDiagnostics),distance:fitDistanceMeters(fitNumber(r,['distance'])),cadence:fitNumber(r,['cadence','fractionalCadence'])};
  }).filter(r=>Number.isFinite(r.t)).sort((a,b)=>a.t-b.t);
  const startDate=fitDateValue(session.startTime||session.timestamp)||fitDateValue(recordsRaw[0]?.timestamp);
  if(!startDate)throw Error('The FIT file does not contain a valid activity start time.');
@@ -1608,7 +1645,7 @@ async function summariseFIT(file){
  const positive=(key)=>records.map(r=>r[key]).filter(v=>Number.isFinite(v)&&v>0);
  const mean=(arr)=>arr.length?avg(arr):null;
  const avgHr=fitNumber(session,['avgHeartRate','averageHeartRate'])??mean(positive('hr'));
- const avgPower=fitNumber(session,['avgPower','averagePower'])??mean(positive('power'));
+ const avgPower=findFitPower(session,powerFieldDiagnostics)??mean(positive('power')); 
  const avgCadence=fitNumber(session,['avgRunningCadence','avgCadence','averageCadence'])??mean(positive('cadence'));
  const analysis=streamAnalysis(records);
  const sourceHint=/stryd/i.test(file.name)||recordsRaw.some(r=>Object.keys(r||{}).some(k=>/stryd|formPower|legSpring/i.test(k)))?'Stryd FIT':'Garmin FIT';
@@ -1619,7 +1656,7 @@ async function summariseFIT(file){
    cadence:Number.isFinite(avgCadence)?Math.round(avgCadence):null,gct:null,vo:null,rpe:null,pain:null,recovery:null,temperature:null,
    notes:`Imported from ${sourceHint}`,
    drift:null,powerDrift:null,paceDrift:null,candidateDrift:analysis?.drift??null,candidatePowerDrift:analysis?.powerDrift??null,candidatePaceDrift:analysis?.paceDrift??null,
-   candidateStreamEvidence:analysis,streamEvidence:null,sourceFormat:'fit-activity',sourceDevice:sourceHint,fitWarnings:(errors||[]).map(String).slice(0,5),lapCount:laps.length
+   candidateStreamEvidence:analysis,streamEvidence:null,sourceFormat:'fit-activity',sourceDevice:sourceHint,fitWarnings:[...(errors||[]).map(String).slice(0,5),...(avgPower?[]:['No usable native or developer running-power field was found.']),...(powerFieldDiagnostics.size?[`Power field used: ${Array.from(powerFieldDiagnostics)[0]}`]:[])],lapCount:laps.length
  };
 }
 async function parseRunImportFile(file){
@@ -2852,11 +2889,11 @@ $('backupBtn').onclick=()=>download('ai-running-coach-backup.json',JSON.stringif
 let deferred;window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferred=e;$('installBtn').className='install'});$('installBtn').onclick=()=>deferred?.prompt();
 $('pillarCards')?.addEventListener('click',e=>{const card=e.target.closest('.pillarCard');if(!card||e.target.closest('summary'))return;const detail=card.querySelector('.pillarExplain');if(!detail)return;card.classList.toggle('open');detail.open=card.classList.contains('open');card.setAttribute('aria-expanded',String(detail.open))});
 $('pillarCards')?.addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&e.target.classList.contains('pillarCard')){e.preventDefault();e.target.click()}});
-const brandVersion=document.querySelector('.brand-copy p');if(brandVersion)brandVersion.textContent=`Race-specific adaptive planning • v10.0.26 · build ${BUILD}`;
+const brandVersion=document.querySelector('.brand-copy p');if(brandVersion)brandVersion.textContent=`Race-specific adaptive planning • v10.0.27 · build ${BUILD}`;
 if('serviceWorker'in navigator&&location.protocol==='https:')navigator.serviceWorker.register(`service-worker.js?v=${BUILD}`,{updateViaCache:'none'}).then(reg=>reg.update()).catch(()=>{});
 migrateAssessmentRuns();
 migrateImportedPower();
 if(reconcilePredictionHistory())save();
 renderAll();
-console.info('AI Running Coach v10.0.26 stable build 10260');
+console.info('AI Running Coach v10.0.27 stable build 10270');
 })();
