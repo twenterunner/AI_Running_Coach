@@ -1,4 +1,4 @@
-AI Running Coach v10.0.24 Stable — build 10240
+AI Running Coach v10.0.25 Stable — build 10250
 
 Files included:
 - index.html
@@ -8,9 +8,9 @@ Files included:
 - service-worker.js
 - README.txt
 
-Replace all six application files in the GitHub Pages repository. Retain the existing icon files. Fully close and reopen the installed PWA so cache build 10240 activates.
+Replace all six application files in the GitHub Pages repository. Retain the existing icon files. Fully close and reopen the installed PWA so cache build 10250 activates.
 
-Build 10240 Injury-module prescription-source fix:
+Build 10250 Injury-module criterion-layout fix:
 - The current-day and future daily check-in always use the exact prescription displayed by the current seven-day rehabilitation calendar.
 - A previously saved same-day snapshot can no longer override a newly recalculated walking duration or exercise dose.
 - Historical check-ins still retain their original saved prescription snapshot for auditability.
