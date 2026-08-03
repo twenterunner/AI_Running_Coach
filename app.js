@@ -90,7 +90,7 @@ function recommendedRaceDate(setup){
  let totalWeeks=Math.ceil(Math.max(minimumTotal,req.requiredBuildWeeks+taperWeeks+2));
  return{date:iso(new Date(dte(setup.planStart).getTime()+totalWeeks*7*DAY)),totalWeeks,requiredBuildWeeks:req.requiredBuildWeeks,taperWeeks};
 }
-const BUILD=10270, SCHEMA=10270, STORAGE_KEY='arc_v62_web', MIRROR_KEY='arc_v8500_web', BACKUP_KEY='arc_pre8500_backup';
+const BUILD=10280, SCHEMA=10280, STORAGE_KEY='arc_v62_web', MIRROR_KEY='arc_v8500_web', BACKUP_KEY='arc_pre8500_backup';
 const defaults=()=>{let start=iso(new Date()),setup={planStart:start,raceDate:start,raceName:'Goal Race',raceDistance:42.195,targetTime:15300,currentWeekly:35,currentLongest:18,testDistance:5,testTime:1515,thresholdHr:168,criticalPower:300,bodyWeight:93,maxWeekly:65,growth:.07,peakLong:32,taperDays:14,minFactor:.85,maxFactor:1.05,adaptive:true};setup.raceDate=recommendedRaceDate(setup).date;return({schemaVersion:SCHEMA,setup,days:FIVE_DAY_TEMPLATE.map(d=>[...d]),runs:[],assessments:[],injuries:[],activeInjuryPlanId:null,plan:[],weekView:null,migration:{to:SCHEMA,status:'new',time:new Date().toISOString()}})};
 let migrationReport={from:null,to:SCHEMA,status:'new install',source:'defaults',runs:0,assessments:0,fieldsRecovered:0,warning:''};
 function parseStored(raw){if(!raw)return null;try{const x=JSON.parse(raw);return x&&typeof x==='object'?x:null}catch(err){recordDiagnostic('Storage parse',err);return null}}
@@ -1601,12 +1601,66 @@ function fitPowerCandidates(obj,path='',depth=0,out=[]){
  }
  return out;
 }
-function findFitPower(record,diagnostics=null){
+function fitDeveloperFieldMap(messages){
+ const descriptions=fitArray(messages,['fieldDescriptionMesgs','fieldDescriptionMesg','fieldDescriptions']);
+ const map=new Map();
+ for(const d of descriptions){
+   const dev=fitNumber(d,['developerDataIndex','developer_data_index']);
+   const num=fitNumber(d,['fieldDefinitionNumber','field_definition_number','fieldDefNumber','fieldNumber']);
+   if(!Number.isFinite(dev)||!Number.isFinite(num))continue;
+   const name=String(d.fieldName||d.field_name||d.name||'').trim();
+   const units=String(d.units||d.unit||'').trim();
+   const scale=fitNumber(d,['scale']);
+   const offset=fitNumber(d,['offset']);
+   map.set(`${dev}:${num}`,{name,units,scale:Number.isFinite(scale)&&scale!==0?scale:null,offset:Number.isFinite(offset)?offset:0});
+ }
+ return map;
+}
+function fitDeveloperEntries(value,path='',depth=0,out=[]){
+ if(depth>7||value==null)return out;
+ if(Array.isArray(value)){value.forEach((v,i)=>fitDeveloperEntries(v,`${path}[${i}]`,depth+1,out));return out}
+ if(typeof value!=='object')return out;
+ const dev=fitNumber(value,['developerDataIndex','developer_data_index','developerIndex','developer_index']);
+ const num=fitNumber(value,['fieldDefinitionNumber','field_definition_number','fieldDefNumber','fieldNumber','field_number']);
+ if(Number.isFinite(dev)&&Number.isFinite(num)){
+   const rawCandidates=['value','fieldValue','field_value','rawValue','raw_value','scaledValue','scaled_value','data'];
+   for(const key of rawCandidates){
+     if(Object.prototype.hasOwnProperty.call(value,key)){
+       const vals=fitNumericValues(value[key]);
+       if(vals.length)out.push({dev,num,value:vals[0],path});
+     }
+   }
+ }
+ for(const [k,v] of Object.entries(value))if(typeof v==='object')fitDeveloperEntries(v,path?`${path}.${k}`:k,depth+1,out);
+ return out;
+}
+function normalizeDeveloperValue(raw,description){
+ let value=Number(raw);
+ if(!Number.isFinite(value))return null;
+ if(description?.scale)value=value/description.scale;
+ if(description?.offset)value-=description.offset||0;
+ return value;
+}
+function findFitPower(record,developerMap=null,diagnostics=null){
  const directNames=['power','Power','enhancedPower','enhanced_power','nativePower','runningPower','running_power','avgPower','averagePower'];
  const direct=fitNumber(record,directNames);
  if(Number.isFinite(direct)&&direct>0){if(diagnostics)diagnostics.add('native power');return direct}
  const candidates=fitPowerCandidates(record).sort((a,b)=>b.score-a.score);
  if(candidates.length){if(diagnostics)diagnostics.add(candidates[0].label||candidates[0].path);return candidates[0].value}
+ if(developerMap?.size){
+   const matches=[];
+   for(const entry of fitDeveloperEntries(record)){
+     const description=developerMap.get(`${entry.dev}:${entry.num}`);
+     if(!description)continue;
+     const name=String(description.name||'').trim().toLowerCase().replace(/[_-]+/g,' ');
+     const units=String(description.units||'').trim().toLowerCase();
+     if(name!=='power'&&!/^(running|stryd) power$/.test(name))continue;
+     if(/form|air|lap|balance|phase|ratio|spring|stiffness/.test(name))continue;
+     const value=normalizeDeveloperValue(entry.value,description);
+     if(Number.isFinite(value)&&value>0&&value<3000)matches.push({value,name,units,path:entry.path});
+   }
+   if(matches.length){if(diagnostics)diagnostics.add(matches[0].name||'Stryd Power');return matches[0].value}
+ }
  return null;
 }
 function fitDistanceMeters(value){
@@ -1631,9 +1685,10 @@ async function summariseFIT(file){
  const sport=String(session.sport||'').toLowerCase();
  if(sport&&sport!=='running')throw Error(`This FIT activity is recorded as ${sport}, not running.`);
  const powerFieldDiagnostics=new Set();
+ const developerFieldMap=fitDeveloperFieldMap(messages);
  const records=recordsRaw.map(r=>{
    const d=fitDateValue(r.timestamp);
-   return{t:d?d.getTime()/1000:null,hr:fitNumber(r,['heartRate','heart_rate']),speed:fitNumber(r,['enhancedSpeed','speed']),power:findFitPower(r,powerFieldDiagnostics),distance:fitDistanceMeters(fitNumber(r,['distance'])),cadence:fitNumber(r,['cadence','fractionalCadence'])};
+   return{t:d?d.getTime()/1000:null,hr:fitNumber(r,['heartRate','heart_rate']),speed:fitNumber(r,['enhancedSpeed','speed']),power:findFitPower(r,developerFieldMap,powerFieldDiagnostics),distance:fitDistanceMeters(fitNumber(r,['distance'])),cadence:fitNumber(r,['cadence','fractionalCadence'])};
  }).filter(r=>Number.isFinite(r.t)).sort((a,b)=>a.t-b.t);
  const startDate=fitDateValue(session.startTime||session.timestamp)||fitDateValue(recordsRaw[0]?.timestamp);
  if(!startDate)throw Error('The FIT file does not contain a valid activity start time.');
@@ -1645,7 +1700,7 @@ async function summariseFIT(file){
  const positive=(key)=>records.map(r=>r[key]).filter(v=>Number.isFinite(v)&&v>0);
  const mean=(arr)=>arr.length?avg(arr):null;
  const avgHr=fitNumber(session,['avgHeartRate','averageHeartRate'])??mean(positive('hr'));
- const avgPower=findFitPower(session,powerFieldDiagnostics)??mean(positive('power')); 
+ const avgPower=findFitPower(session,developerFieldMap,powerFieldDiagnostics)??mean(positive('power')); 
  const avgCadence=fitNumber(session,['avgRunningCadence','avgCadence','averageCadence'])??mean(positive('cadence'));
  const analysis=streamAnalysis(records);
  const sourceHint=/stryd/i.test(file.name)||recordsRaw.some(r=>Object.keys(r||{}).some(k=>/stryd|formPower|legSpring/i.test(k)))?'Stryd FIT':'Garmin FIT';
@@ -1656,7 +1711,7 @@ async function summariseFIT(file){
    cadence:Number.isFinite(avgCadence)?Math.round(avgCadence):null,gct:null,vo:null,rpe:null,pain:null,recovery:null,temperature:null,
    notes:`Imported from ${sourceHint}`,
    drift:null,powerDrift:null,paceDrift:null,candidateDrift:analysis?.drift??null,candidatePowerDrift:analysis?.powerDrift??null,candidatePaceDrift:analysis?.paceDrift??null,
-   candidateStreamEvidence:analysis,streamEvidence:null,sourceFormat:'fit-activity',sourceDevice:sourceHint,fitWarnings:[...(errors||[]).map(String).slice(0,5),...(avgPower?[]:['No usable native or developer running-power field was found.']),...(powerFieldDiagnostics.size?[`Power field used: ${Array.from(powerFieldDiagnostics)[0]}`]:[])],lapCount:laps.length
+   candidateStreamEvidence:analysis,streamEvidence:null,sourceFormat:'fit-activity',sourceDevice:sourceHint,fitWarnings:[...(errors||[]).map(String).slice(0,5),...(avgPower?[]:['No usable native or developer running-power field was found.'])],lapCount:laps.length
  };
 }
 async function parseRunImportFile(file){
@@ -2889,11 +2944,11 @@ $('backupBtn').onclick=()=>download('ai-running-coach-backup.json',JSON.stringif
 let deferred;window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferred=e;$('installBtn').className='install'});$('installBtn').onclick=()=>deferred?.prompt();
 $('pillarCards')?.addEventListener('click',e=>{const card=e.target.closest('.pillarCard');if(!card||e.target.closest('summary'))return;const detail=card.querySelector('.pillarExplain');if(!detail)return;card.classList.toggle('open');detail.open=card.classList.contains('open');card.setAttribute('aria-expanded',String(detail.open))});
 $('pillarCards')?.addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&e.target.classList.contains('pillarCard')){e.preventDefault();e.target.click()}});
-const brandVersion=document.querySelector('.brand-copy p');if(brandVersion)brandVersion.textContent=`Race-specific adaptive planning • v10.0.27 · build ${BUILD}`;
+const brandVersion=document.querySelector('.brand-copy p');if(brandVersion)brandVersion.textContent=`Race-specific adaptive planning • v10.0.28 · build ${BUILD}`;
 if('serviceWorker'in navigator&&location.protocol==='https:')navigator.serviceWorker.register(`service-worker.js?v=${BUILD}`,{updateViaCache:'none'}).then(reg=>reg.update()).catch(()=>{});
 migrateAssessmentRuns();
 migrateImportedPower();
 if(reconcilePredictionHistory())save();
 renderAll();
-console.info('AI Running Coach v10.0.27 stable build 10270');
+console.info('AI Running Coach v10.0.28 stable build 10280');
 })();
