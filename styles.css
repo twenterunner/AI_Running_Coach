@@ -698,13 +698,13 @@ canvas{width:100%;height:auto;display:block}
 .diagnosisAgreementInline>small{display:block;margin-bottom:14px;color:var(--muted)}
 .executionBadge.unknown{white-space:normal;line-height:1.2;text-align:left}
 
-/* Build 10220: stage-specific stretch goals and recommendation evidence */
+/* Build 10230: stage-specific stretch goals and recommendation evidence */
 .rehabBestOutcome,.rehabEvidenceMeter{margin-top:12px;padding:14px 16px;border-radius:15px;background:#f5f8fb;border-left:4px solid var(--blue)}
 .rehabBestOutcome b,.rehabEvidenceMeter b{display:block;margin-bottom:5px}.rehabBestOutcome p,.rehabEvidenceMeter p{margin:0;color:var(--muted);line-height:1.45}
 .rehabEvidenceMeter.high{border-left-color:var(--green);background:#eef8f3}.rehabEvidenceMeter.moderate{border-left-color:var(--amber);background:#fff8eb}.rehabEvidenceMeter.low{border-left-color:var(--red);background:#fff2f3}
 .rehabStretchGoal small{display:block;margin-top:8px;color:var(--muted);line-height:1.4}
 
-/* Build 10220: Injury layout cleanup and stretch-goal consistency */
+/* Build 10230: Injury layout cleanup and stretch-goal consistency */
 .rehabDayBody{display:grid;gap:12px}
 .rehabDayDetails{border:1px solid var(--line);border-radius:14px;background:#f8fafc;padding:0}
 .rehabDayDetails>summary{padding:13px 14px;font-weight:800;cursor:pointer;color:#315d77}
