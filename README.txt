@@ -1,4 +1,4 @@
-AI Running Coach v10.0.28 Stable — build 10280
+AI Running Coach v10.0.29 Stable — build 10290
 
 Files included:
 - index.html
@@ -8,9 +8,9 @@ Files included:
 - service-worker.js
 - README.txt
 
-Replace all six application files in the GitHub Pages repository. Retain the existing icon files. Fully close and reopen the installed PWA so cache build 10280 activates.
+Replace all six application files in the GitHub Pages repository. Retain the existing icon files. Fully close and reopen the installed PWA so cache build 10290 activates.
 
-Build 10280 run-import update:
+Build 10290 run-import update:
 - Existing detailed Stryd CSV import retained.
 - Added browser-based Garmin and Stryd FIT activity import using the official Garmin FIT JavaScript SDK.
 - FIT records are normalized into the existing run model, including duration, distance, heart rate, cadence and native/developer power fields when available.
