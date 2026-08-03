@@ -1,4 +1,4 @@
-AI Running Coach v10.0.21 Stable — build 10210
+AI Running Coach v10.0.22 Stable — build 10220
 
 This release changes only the Injury tab and its supporting check-in logic.
 
@@ -11,4 +11,9 @@ Fixes:
 - Historical check-ins continue to use their saved prescription snapshot when edited.
 
 Deployment:
-Replace all six application files in the GitHub Pages repository. Retain the existing icon files. Fully close and reopen the installed PWA so cache build 10210 activates.
+Replace all six application files in the GitHub Pages repository. Retain the existing icon files. Fully close and reopen the installed PWA so cache build 10220 activates.
+
+Build 10220 Injury-module consistency update:
+- Today's exercise technique guides are derived from the exact same daily prescription object used by the seven-day calendar and date-specific check-in.
+- Impact-assessment guides now match quiet jogging in place and controlled double-leg hops.
+- A prescription consistency validator removes any guide that is not present in that day's prescribed activities.
