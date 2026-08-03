@@ -90,7 +90,7 @@ function recommendedRaceDate(setup){
  let totalWeeks=Math.ceil(Math.max(minimumTotal,req.requiredBuildWeeks+taperWeeks+2));
  return{date:iso(new Date(dte(setup.planStart).getTime()+totalWeeks*7*DAY)),totalWeeks,requiredBuildWeeks:req.requiredBuildWeeks,taperWeeks};
 }
-const BUILD=10250, SCHEMA=10250, STORAGE_KEY='arc_v62_web', MIRROR_KEY='arc_v8500_web', BACKUP_KEY='arc_pre8500_backup';
+const BUILD=10260, SCHEMA=10260, STORAGE_KEY='arc_v62_web', MIRROR_KEY='arc_v8500_web', BACKUP_KEY='arc_pre8500_backup';
 const defaults=()=>{let start=iso(new Date()),setup={planStart:start,raceDate:start,raceName:'Goal Race',raceDistance:42.195,targetTime:15300,currentWeekly:35,currentLongest:18,testDistance:5,testTime:1515,thresholdHr:168,criticalPower:300,bodyWeight:93,maxWeekly:65,growth:.07,peakLong:32,taperDays:14,minFactor:.85,maxFactor:1.05,adaptive:true};setup.raceDate=recommendedRaceDate(setup).date;return({schemaVersion:SCHEMA,setup,days:FIVE_DAY_TEMPLATE.map(d=>[...d]),runs:[],assessments:[],injuries:[],activeInjuryPlanId:null,plan:[],weekView:null,migration:{to:SCHEMA,status:'new',time:new Date().toISOString()}})};
 let migrationReport={from:null,to:SCHEMA,status:'new install',source:'defaults',runs:0,assessments:0,fieldsRecovered:0,warning:''};
 function parseStored(raw){if(!raw)return null;try{const x=JSON.parse(raw);return x&&typeof x==='object'?x:null}catch(err){recordDiagnostic('Storage parse',err);return null}}
@@ -1544,6 +1544,95 @@ function summariseCSV(rows){
  };
 }
 
+
+const FIT_SDK_URL='https://cdn.jsdelivr.net/npm/@garmin/fitsdk@21.208.0/src/index.js';
+let fitSdkPromise=null;
+async function loadFitSdk(){
+ if(!fitSdkPromise)fitSdkPromise=import(FIT_SDK_URL).catch(err=>{fitSdkPromise=null;throw new Error('The Garmin FIT decoder could not be loaded. Check your internet connection and try again.');});
+ return fitSdkPromise;
+}
+function fitArray(messages,names){
+ for(const name of names){const value=messages?.[name];if(Array.isArray(value))return value;if(value&&typeof value==='object')return [value]}
+ return [];
+}
+function fitDateValue(value){
+ if(value instanceof Date)return value;
+ if(typeof value==='string'||typeof value==='number'){const d=new Date(value);if(!Number.isNaN(d.getTime()))return d}
+ return null;
+}
+function fitNumber(obj,names){
+ for(const name of names){const value=obj?.[name];const n=Number(value);if(Number.isFinite(n))return n}
+ return null;
+}
+function findFitPower(record){
+ const direct=fitNumber(record,['power','enhancedPower','nativePower','runningPower','avgPower']);
+ if(Number.isFinite(direct)&&direct>0)return direct;
+ for(const [key,value] of Object.entries(record||{})){
+   if(!/power/i.test(key)||/balance|phase|zone/i.test(key))continue;
+   const n=Number(value);if(Number.isFinite(n)&&n>0&&n<3000)return n;
+ }
+ return null;
+}
+function fitDistanceMeters(value){
+ const n=Number(value);if(!Number.isFinite(n)||n<=0)return null;
+ return n;
+}
+async function summariseFIT(file){
+ const {Decoder,Stream}=await loadFitSdk();
+ const bytes=new Uint8Array(await file.arrayBuffer());
+ if(bytes.length<12||String.fromCharCode(...bytes.slice(8,12))!=='.FIT')throw Error('The selected file is not a valid FIT file.');
+ const stream=Stream.fromByteArray(Array.from(bytes));
+ const decoder=new Decoder(stream);
+ if(!decoder.isFIT())throw Error('The selected file is not a valid FIT file.');
+ const {messages,errors}=decoder.read({applyScaleAndOffset:true,expandSubFields:true,expandComponents:true,convertTypesToStrings:true,convertDateTimesToDates:true,includeUnknownData:true,mergeHeartRates:true});
+ const fileIds=fitArray(messages,['fileIdMesgs','fileIdMesg','fileId']);
+ const fileType=String(fileIds[0]?.type||'').toLowerCase();
+ if(fileType&&fileType!=='activity')throw Error(`This FIT file is a ${fileType} file, not a recorded activity.`);
+ const sessions=fitArray(messages,['sessionMesgs','sessionMesg','sessions']);
+ const recordsRaw=fitArray(messages,['recordMesgs','recordMesg','records']);
+ const laps=fitArray(messages,['lapMesgs','lapMesg','laps']);
+ const session=sessions.find(x=>String(x?.sport||'').toLowerCase()==='running')||sessions[0]||{};
+ const sport=String(session.sport||'').toLowerCase();
+ if(sport&&sport!=='running')throw Error(`This FIT activity is recorded as ${sport}, not running.`);
+ const records=recordsRaw.map(r=>{
+   const d=fitDateValue(r.timestamp);
+   return{t:d?d.getTime()/1000:null,hr:fitNumber(r,['heartRate','heart_rate']),speed:fitNumber(r,['enhancedSpeed','speed']),power:findFitPower(r),distance:fitDistanceMeters(fitNumber(r,['distance'])),cadence:fitNumber(r,['cadence','fractionalCadence'])};
+ }).filter(r=>Number.isFinite(r.t)).sort((a,b)=>a.t-b.t);
+ const startDate=fitDateValue(session.startTime||session.timestamp)||fitDateValue(recordsRaw[0]?.timestamp);
+ if(!startDate)throw Error('The FIT file does not contain a valid activity start time.');
+ let duration=fitNumber(session,['totalTimerTime','totalElapsedTime']);
+ if(!(duration>0)&&records.length>1)duration=records.at(-1).t-records[0].t;
+ let distanceM=fitNumber(session,['totalDistance','distance']);
+ if(!(distanceM>0)){const ds=records.map(r=>r.distance).filter(Number.isFinite);if(ds.length)distanceM=Math.max(...ds)}
+ if(!(duration>0)||!(distanceM>0))throw Error('The FIT activity does not contain valid duration and distance data.');
+ const positive=(key)=>records.map(r=>r[key]).filter(v=>Number.isFinite(v)&&v>0);
+ const mean=(arr)=>arr.length?avg(arr):null;
+ const avgHr=fitNumber(session,['avgHeartRate','averageHeartRate'])??mean(positive('hr'));
+ const avgPower=fitNumber(session,['avgPower','averagePower'])??mean(positive('power'));
+ const avgCadence=fitNumber(session,['avgRunningCadence','avgCadence','averageCadence'])??mean(positive('cadence'));
+ const analysis=streamAnalysis(records);
+ const sourceHint=/stryd/i.test(file.name)||recordsRaw.some(r=>Object.keys(r||{}).some(k=>/stryd|formPower|legSpring/i.test(k)))?'Stryd FIT':'Garmin FIT';
+ const startSeconds=Math.round(startDate.getTime()/1000);
+ return{
+   id:'fit-'+startSeconds+'-'+Math.round(distanceM),date:iso(startDate),type:'Easy',distanceKm:distanceM/1000,durationSec:duration,
+   avgHr:Number.isFinite(avgHr)?Math.round(avgHr):null,avgPower:Number.isFinite(avgPower)?Math.round(avgPower):null,
+   cadence:Number.isFinite(avgCadence)?Math.round(avgCadence):null,gct:null,vo:null,rpe:null,pain:null,recovery:null,temperature:null,
+   notes:`Imported from ${sourceHint}`,
+   drift:null,powerDrift:null,paceDrift:null,candidateDrift:analysis?.drift??null,candidatePowerDrift:analysis?.powerDrift??null,candidatePaceDrift:analysis?.paceDrift??null,
+   candidateStreamEvidence:analysis,streamEvidence:null,sourceFormat:'fit-activity',sourceDevice:sourceHint,fitWarnings:(errors||[]).map(String).slice(0,5),lapCount:laps.length
+ };
+}
+async function parseRunImportFile(file){
+ const ext=(file.name.split('.').pop()||'').toLowerCase();
+ if(ext==='csv'){
+   const text=await file.text();if(!text.trim())throw Error('The selected CSV file is empty.');
+   const rows=parseCSV(text);if(!rows?.length||rows.length<2)throw Error('The CSV does not contain activity rows.');
+   return summariseCSV(rows);
+ }
+ if(ext==='fit')return summariseFIT(file);
+ throw Error('Unsupported file type. Choose a Garmin/Stryd FIT activity or detailed Stryd CSV file.');
+}
+
 function runExecutionBreakdownHtml(r){
  const plan=r.planId?state.plan.find(p=>p.id===r.planId):null,d=workoutScoreDetails(r,plan);
  if(!d)return'<section class="runExecutionBreakdown"><h3>Execution breakdown</h3><p class="muted">Not enough distance and duration information to calculate a score.</p></section>';
@@ -2693,84 +2782,54 @@ $('activityFile').onchange=async e=>{
  preview=null;
  $('importPreview').className='hidden';
  try{
-   if(!f.name.toLowerCase().endsWith('.csv'))throw Error('Please choose a detailed Stryd CSV file.');
-   const text=await f.text();
-   if(!text.trim())throw Error('The selected CSV file is empty.');
-   const rows=parseCSV(text);
-   if(!rows?.length||rows.length<2)throw Error('The CSV does not contain activity rows.');
-   preview=summariseCSV(rows);
-   if(!preview||!preview.distanceKm||!preview.durationSec)throw Error('The activity could not be summarised from this CSV.');
+   preview=await parseRunImportFile(f);
+   if(!preview||!preview.distanceKm||!preview.durationSec)throw Error('The activity could not be summarised from this file.');
+   if(state.runs.some(r=>r.id===preview.id||(
+     r.date===preview.date&&Math.abs(Number(r.distanceKm)-Number(preview.distanceKm))<.02&&Math.abs(Number(r.durationSec)-Number(preview.durationSec))<5
+   )))throw Error('This activity appears to have already been imported.');
 
-   let m=metrics(preview);
+   let m=metrics(preview),format=preview.sourceFormat==='fit-activity'?(preview.sourceDevice||'FIT activity'):'Stryd CSV';
    $('importPreview').className='panel';
-   $('importPreview').innerHTML=`<h3>CSV analysis preview</h3>
+   $('importPreview').innerHTML=`<h3>${esc(format)} analysis preview</h3>
    <div class="metricGrid">
     ${kpi('Date',preview.date)}
     ${kpi('Distance',preview.distanceKm.toFixed(2)+' km')}
     ${kpi('Duration',fmtTime(preview.durationSec))}
     ${kpi('Pace',pace(m.pace))}
     ${kpi('Heart rate',preview.avgHr?Math.round(preview.avgHr)+' bpm':'—')}
-    ${kpi('Power',preview.avgPower?Math.round(preview.avgPower)+' W':'—',
-      preview.avgPower&&preview.avgPower<20?'Detected value is implausibly low—check body weight and CSV headers':'Parsed as watts')}
-    ${kpi('Cardiac drift',Number.isFinite(preview.candidateDrift)?preview.candidateDrift.toFixed(1)+'% candidate':'Not available',
-      preview.candidateStreamEvidence?.reliability?preview.candidateStreamEvidence.reliability+' reliability · saved for every run type':'Needs ≥30 min with HR and power')}
-    ${kpi('Power–HR drift',Number.isFinite(preview.candidatePowerDrift)?preview.candidatePowerDrift.toFixed(1)+'% candidate':'—')}
-    ${kpi('Pace–HR drift',Number.isFinite(preview.candidatePaceDrift)?preview.candidatePaceDrift.toFixed(1)+'% candidate':'—')}
+    ${kpi('Power',preview.avgPower?Math.round(preview.avgPower)+' W':'—',preview.avgPower?'Parsed from native or developer FIT/CSV power data':'No usable power field found')}
+    ${kpi('Cadence',preview.cadence?Math.round(preview.cadence)+' spm':'—')}
+    ${kpi('Cardiac drift',Number.isFinite(preview.candidateDrift)?preview.candidateDrift.toFixed(1)+'% candidate':'Not available',preview.candidateStreamEvidence?.reliability?preview.candidateStreamEvidence.reliability+' reliability · requires timestamped HR and power':'Needs sufficient timestamped HR and power')}
     ${kpi('Efficiency factor',dec(m.efficiencyJ,1)+' J/beat')}
    </div>
+   ${preview.fitWarnings?.length?`<div class="note"><b>FIT decoder notes</b><p class="muted compact">${esc(preview.fitWarnings.join(' · '))}</p></div>`:''}
    <div class="formGrid">
     <div class="field"><label>Run type</label><select id="iType"><option>Easy</option><option>Easy + strides</option><option>Recovery</option><option>Shakeout</option><option>Steady aerobic</option><option>Medium-long</option><option>Progression</option><option>Long run</option><option>Specific long run</option><option>Race rehearsal</option><option>Hills</option><option>Fartlek</option><option>Threshold</option><option>Threshold intervals</option><option>VO₂max intervals</option><option>Race-pace intervals</option><option>Half-marathon-specific</option><option>Marathon-specific</option><option>Fitness assessment</option><option>Race</option></select></div>
     <div class="field"><label>Link to planned workout</label><select id="iPlanMatch"></select><small class="muted">Confirm a planned workout, choose ad hoc, or leave unresolved.</small></div>
     <div class="field"><label>RPE 1–10 <small class="muted">1 very easy · 10 maximal</small></label><input id="iRpe" type="number" min="1" max="10"></div>
     <div class="field"><label>Pain 0–10 <small class="muted">0 none · 5 affects form · 10 extreme</small></label><input id="iPain" type="number" min="0" max="10"></div>
-    <div class="field"><label>Previous-night Garmin HRV (ms)</label><input id="iHrv" type="number" min="1" max="250"><small class="muted">Garmin Overnight Average from the night before this run.</small></div>
-    <div class="field"><label>Notes</label><input id="iNotes"></div>
+    <div class="field"><label>Previous-night Garmin HRV (ms)</label><input id="iHrv" type="number" min="1" max="250"></div>
+    <div class="field"><label>Notes</label><input id="iNotes" value="${esc(preview.notes||'')}"></div>
    </div>
    <button id="saveImport" class="primary full">Save analysed run</button>`;
    const sameDayPlan=state.plan.find(p=>p.type!=='Rest'&&p.type!=='Race Day'&&p.date===preview.date&&!state.runs.some(r=>r.planId===p.id));
-   if(sameDayPlan){$('iType').value=sameDayPlan.type==='Fitness assessment'?'Fitness assessment':sameDayPlan.type}
+   if(sameDayPlan)$('iType').value=sameDayPlan.type==='Fitness assessment'?'Fitness assessment':sameDayPlan.type;
    const refreshImportMatches=()=>{let draft={...preview,type:$('iType').value};let suggested=preview.planId||suggestedPlanId(draft)||'adhoc';$('iPlanMatch').innerHTML=planMatchOptions(draft,suggested)};
    refreshImportMatches();$('iType').onchange=refreshImportMatches;
 
    $('saveImport').onclick=()=>{
     try{
-      if(!preview)throw Error('The import preview has expired. Choose the CSV again.');
+      if(!preview)throw Error('The import preview has expired. Choose the file again.');
       if(state.runs.some(r=>r.id===preview.id))throw Error('This run was already imported.');
-      Object.assign(preview,{
-        type:$('iType').value,
-        rpe:Number($('iRpe').value)||null,
-        pain:$('iPain').value===''?null:Number($('iPain').value),
-        hrv:$('iHrv').value===''?null:Number($('iHrv').value),recovery:null,
-        notes:$('iNotes').value
-      });
-      preview.drift=preview.candidatePowerDrift;
-      preview.powerDrift=preview.candidatePowerDrift;
-      preview.paceDrift=null;
-      preview.streamEvidence=preview.candidateStreamEvidence;
-      delete preview.candidateDrift;
-      delete preview.candidatePowerDrift;
-      delete preview.candidatePaceDrift;
-      delete preview.candidateStreamEvidence;
-      applyRunMatch(preview,$('iPlanMatch').value,'user');
-      state.runs.push({...preview});
-      reconcileExactDateMatches();
-      recordPredictionSnapshot(preview.date,'Stryd import',preview.id);
-      save();
-      $('importPreview').className='hidden';
-      preview=null;
-      input.value='';
-      renderAll();
-      toast('CSV analysed and run saved.');
-    }catch(err){
-      toast(err?.message||'The run could not be saved.',true);
-    }
+      Object.assign(preview,{type:$('iType').value,rpe:Number($('iRpe').value)||null,pain:$('iPain').value===''?null:Number($('iPain').value),hrv:$('iHrv').value===''?null:Number($('iHrv').value),recovery:null,notes:$('iNotes').value});
+      preview.drift=preview.candidatePowerDrift;preview.powerDrift=preview.candidatePowerDrift;preview.paceDrift=null;preview.streamEvidence=preview.candidateStreamEvidence;
+      delete preview.candidateDrift;delete preview.candidatePowerDrift;delete preview.candidatePaceDrift;delete preview.candidateStreamEvidence;
+      applyRunMatch(preview,$('iPlanMatch').value,'user');state.runs.push({...preview});reconcileExactDateMatches();
+      recordPredictionSnapshot(preview.date,preview.sourceFormat==='fit-activity'?'FIT import':'Stryd import',preview.id);
+      save();$('importPreview').className='hidden';preview=null;input.value='';renderAll();toast('Activity analysed and run saved.');
+    }catch(err){toast(err?.message||'The run could not be saved.',true)}
    };
- }catch(err){
-   preview=null;
-   input.value='';
-   $('importPreview').className='hidden';
-   toast(err?.message||'The CSV could not be imported.',true);
- }
+ }catch(err){preview=null;input.value='';$('importPreview').className='hidden';toast(err?.message||'The activity file could not be imported.',true)}
 };
 $('addAssessmentBtn').onclick=()=>{$('assessmentForm').className='panel';$('assessmentForm').innerHTML=`<h3>Fitness assessment result</h3><div class="formGrid"><div class="field"><label>Date</label><input id="aDate" type="date" value="${iso(today())}"></div><div class="field"><label>Distance km</label><input id="aDist" value="5"></div><div class="field"><label>Time</label><input id="aTime" placeholder="25:15"></div><div class="field"><label>Average / threshold HR</label><input id="aHr" value="${state.setup.thresholdHr}"></div><div class="field"><label>Average / critical power W</label><input id="aCp" value="${state.setup.criticalPower}"></div><div class="field"><label>Valid result</label><select id="aValid"><option value="true">Yes</option><option value="false">No</option></select></div></div><button id="saveAssessment" class="primary full">Save assessment and completed run</button>`;$('saveAssessment').onclick=()=>{let a={id:'a-'+Date.now(),date:$('aDate').value,distance:Number($('aDist').value),time:parseTime($('aTime').value),thresholdHr:Number($('aHr').value),criticalPower:Number($('aCp').value),valid:$('aValid').value==='true'};if(!a.date||!a.distance||!a.time)return toast('Complete date, distance and time.',true);state.assessments.push(a);syncAssessmentRun(a);buildPlan();syncAssessmentRun(a);recordPredictionSnapshot(a.date,'Fitness assessment',a.id);save();renderAll();$('assessmentForm').className='hidden';toast(a.valid?'Assessment saved, added to run history and applied to future targets.':'Assessment saved and added to run history, but not applied to prediction.')}};
 
@@ -2793,11 +2852,11 @@ $('backupBtn').onclick=()=>download('ai-running-coach-backup.json',JSON.stringif
 let deferred;window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferred=e;$('installBtn').className='install'});$('installBtn').onclick=()=>deferred?.prompt();
 $('pillarCards')?.addEventListener('click',e=>{const card=e.target.closest('.pillarCard');if(!card||e.target.closest('summary'))return;const detail=card.querySelector('.pillarExplain');if(!detail)return;card.classList.toggle('open');detail.open=card.classList.contains('open');card.setAttribute('aria-expanded',String(detail.open))});
 $('pillarCards')?.addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&e.target.classList.contains('pillarCard')){e.preventDefault();e.target.click()}});
-const brandVersion=document.querySelector('.brand-copy p');if(brandVersion)brandVersion.textContent=`Race-specific adaptive planning • v10.0.25 · build ${BUILD}`;
+const brandVersion=document.querySelector('.brand-copy p');if(brandVersion)brandVersion.textContent=`Race-specific adaptive planning • v10.0.26 · build ${BUILD}`;
 if('serviceWorker'in navigator&&location.protocol==='https:')navigator.serviceWorker.register(`service-worker.js?v=${BUILD}`,{updateViaCache:'none'}).then(reg=>reg.update()).catch(()=>{});
 migrateAssessmentRuns();
 migrateImportedPower();
 if(reconcilePredictionHistory())save();
 renderAll();
-console.info('AI Running Coach v10.0.25 stable build 10250');
+console.info('AI Running Coach v10.0.26 stable build 10260');
 })();
