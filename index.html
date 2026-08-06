@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#0b3157"><title>AI Running Coach</title>
-<link rel="manifest" href="manifest.webmanifest?v=10320"><link rel="stylesheet" href="styles.css?v=10320">
+<link rel="manifest" href="manifest.webmanifest?v=10330"><link rel="stylesheet" href="styles.css?v=10330">
 
 <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png?v=10320">
 <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png?v=10320">
@@ -13,15 +13,17 @@
 
 </head>
 <body>
+<a class="skipLink" href="#mainContent">Skip to main content</a>
 <header class="topbar">
-  <div class="brand"><img class="logo" src="icon-192.png?v=10320" alt="AI Running Coach logo"><div class="brand-copy"><h1>AI Running Coach</h1><p>Race-specific adaptive planning • v10.0.32 · build 10320</p></div></div>
+  <div class="brand"><img class="logo" src="icon-192.png?v=10320" alt="AI Running Coach logo"><div class="brand-copy"><h1>AI Running Coach</h1><p>Race-specific adaptive planning · v10.0.33 · build 10330</p></div></div>
   <button id="installBtn" class="install hidden">Install</button>
 </header>
-<nav id="nav"></nav>
-<main>
-<div id="toast" class="toast hidden"></div>
+<nav id="nav" aria-label="Primary navigation"></nav>
+<div id="moreNav" class="moreNav hidden" aria-label="More destinations"></div>
+<main id="mainContent" tabindex="-1">
+<div id="toast" class="toast hidden" role="status" aria-live="polite" aria-atomic="true"></div>
 
-<section id="dashboard" class="page active">
+<section id="dashboard" class="page">
   <div class="hero outlookHero">
     <div class="outlookHeroIntro">
       <span id="phaseBadge" class="badge"></span>
@@ -68,8 +70,8 @@
     <div class="dashboardSectionHead"><span>3</span><div><h3>Progress to race</h3><p>How the plan is progressing and what remains.</p></div></div>
     <div id="kpis" class="kpis"></div>
     <div class="grid2">
-      <article class="panel progressChartPanel"><div class="panelHead progressChartHead"><div><h3>Weekly distance</h3><span class="muted">Planned vs completed</span></div><div id="weeklyDistanceSummary" class="chartMetric"></div></div><canvas id="volumeChart" width="1000" height="340"></canvas></article>
-      <article class="panel progressChartPanel"><div class="panelHead progressChartHead"><div><h3>Long-run progression</h3><span class="muted">Planned vs completed</span></div><div id="longRunSummary" class="chartMetric"></div></div><canvas id="longRunChart" width="1000" height="340"></canvas></article>
+      <article class="panel progressChartPanel"><div class="panelHead progressChartHead"><div><h3>Weekly distance</h3><span class="muted">Planned vs completed</span></div><div id="weeklyDistanceSummary" class="chartMetric"></div></div><canvas id="volumeChart" width="1000" height="340" role="img" aria-label="Weekly planned and completed distance chart">Weekly planned and completed distance.</canvas></article>
+      <article class="panel progressChartPanel"><div class="panelHead progressChartHead"><div><h3>Long-run progression</h3><span class="muted">Planned vs completed</span></div><div id="longRunSummary" class="chartMetric"></div></div><canvas id="longRunChart" width="1000" height="340" role="img" aria-label="Planned and completed long-run progression chart">Planned and completed long-run distance.</canvas></article>
     </div>
   </div>
 
@@ -78,12 +80,12 @@
     <article class="panel predictionPanel">
       <div class="panelHead"><div><h3>Predicted marathon-time trend</h3><p class="muted compact">A history of the central finish-time estimate—not the target probability</p></div></div>
       <div id="predictionSummary" class="predictionSummary"></div>
-      <canvas id="predictionChart" width="1000" height="340"></canvas>
+      <canvas id="predictionChart" width="1000" height="340" role="img" aria-label="Predicted race-time trend chart">Predicted race-time trend.</canvas>
     </article>
     <div id="metricKpis" class="kpis"></div>
     <div class="grid2 metricCharts">
-      <article class="panel"><div class="panelHead"><div><h3>Efficiency factor</h3><p class="muted compact">Joules of running power per heartbeat · higher is better</p></div></div><canvas id="efficiencyChart" width="1000" height="380"></canvas></article>
-      <article class="panel"><div class="panelHead"><div><h3>Power-based cardiac drift</h3><p class="muted compact">Change in power–HR efficiency · lower is better</p></div></div><canvas id="driftChart" width="1000" height="380"></canvas></article>
+      <article class="panel"><div class="panelHead"><div><h3>Efficiency factor</h3><p class="muted compact">Joules of running power per heartbeat · higher is better</p></div></div><canvas id="efficiencyChart" width="1000" height="380" role="img" aria-label="Efficiency factor trend chart">Efficiency factor trend.</canvas></article>
+      <article class="panel"><div class="panelHead"><div><h3>Power-based cardiac drift</h3><p class="muted compact">Change in power–HR efficiency · lower is better</p></div></div><canvas id="driftChart" width="1000" height="380" role="img" aria-label="Power-based cardiac drift trend chart">Power-based cardiac drift trend.</canvas></article>
     </div>
     <article class="panel"><div class="panelHead"><div><h3>Metrics by run type</h3><p class="muted compact">Average and best values calculated separately for each session category</p></div></div><div id="metricTypeSummary"></div></article>
     <details class="panel modelDetails"><summary>Model and metric definitions</summary><div id="componentGuide" class="guideGrid componentGuide"></div><div class="guideGrid componentGuide"><div><b>Efficiency factor · J/heartbeat</b><p>Average power × 60 ÷ average heart rate. It estimates external running work per heartbeat. Compare only similar conditions and run types.</p></div><div><b>Power-based cardiac drift · %</b><p>Change in power per heartbeat from the first half to the second half after warm-up. Lower is better and timestamped heart-rate and power data are required.</p></div></div></details>
@@ -91,7 +93,7 @@
   </div>
 </section>
 
-<section id="today" class="page">
+<section id="today" class="page active">
   <div class="sectionTitle"><div><h2>Today</h2><p id="todayDate"></p></div></div>
   <div id="todayCard"></div>
   <article class="panel"><h3>Coach focus</h3><div id="todayCoach"></div></article>
@@ -103,7 +105,7 @@
   <div id="weekHeader" class="weekHeader"></div>
   <article class="panel programmeTimelinePanel"><div class="panelHead"><div><h3>Programme timeline</h3><p class="muted compact">Training blocks and current position on the path to race day.</p></div></div><div id="raceTimeline"></div></article>
   <article class="panel evidencePanel"><div class="panelHead"><div><h3>Athlete state and weekly adjustment</h3><p class="muted compact">Fitness, recovery, injury signals, completed load and workout performance are combined into one coaching decision.</p></div></div><div id="fitnessEvidence"></div></article>
-  <article class="panel planMixPanel"><div class="panelHead"><div><h3>Training intensity mix</h3><p class="muted compact">Distance distribution by workout category</p></div></div><div class="mixGrid"><div><h4>Next week</h4><canvas id="nextWeekMixChart" width="1000" height="340"></canvas></div><div><h4>Completed to date</h4><canvas id="completedMixChart" width="1000" height="340"></canvas></div><div><h4>Overall programme</h4><canvas id="overallMixChart" width="1000" height="340"></canvas></div></div></article>
+  <article class="panel planMixPanel"><div class="panelHead"><div><h3>Training intensity mix</h3><p class="muted compact">Distance distribution by workout category</p></div></div><div class="mixGrid"><div><h4>Next week</h4><canvas id="nextWeekMixChart" width="1000" height="340" role="img" aria-label="Next week training intensity mix">Next week intensity distribution.</canvas></div><div><h4>Completed to date</h4><canvas id="completedMixChart" width="1000" height="340" role="img" aria-label="Completed training intensity mix">Completed intensity distribution.</canvas></div><div><h4>Overall programme</h4><canvas id="overallMixChart" width="1000" height="340" role="img" aria-label="Overall programme training intensity mix">Overall programme intensity distribution.</canvas></div></div></article>
   <div id="planCards"></div>
 </section>
 
@@ -168,7 +170,7 @@
   <div id="recoveryStatus" class="recoveryStatus"></div>
   <article class="panel recoveryTrendPanel">
     <div class="panelHead"><div><h3>Garmin HRV trend</h3><p class="muted compact">Previous-night Overnight Average, recent average and personal baseline</p></div><div id="hrvTrendBadge" class="evidenceBadge"></div></div>
-    <canvas id="hrvChart" width="1000" height="420"></canvas>
+    <canvas id="hrvChart" width="1000" height="420" role="img" aria-label="Garmin HRV trend chart">Garmin HRV trend.</canvas>
     <div id="hrvLegend" class="hrvLegend"></div>
   </article>
   <article class="panel"><div class="panelHead"><div><h3>Recovery contribution</h3><p class="muted compact">How existing HRV and pain evidence contributes to the next weekly review</p></div></div><div id="recoveryAdaptive"></div></article>
@@ -184,13 +186,39 @@
 
 <section id="settings" class="page">
   <div class="sectionTitle"><div><h2>Settings</h2><p>Configure the training plan, targets and adaptive limits.</p></div></div>
-  <article class="panel"><div id="settingsGrid" class="formGrid"></div><button id="saveSettings" class="primary full">Save and rebuild future plan</button></article>
+  <article class="panel"><div id="settingsGrid" class="formGrid"></div><button id="saveSettings" class="primary full">Preview and rebuild future plan</button><button id="undoSettingsBtn" type="button" class="secondary full hidden">Undo last plan rebuild</button></article>
   <article class="panel"><h3>Training days</h3><div id="daysGrid"></div></article>
   <article class="panel"><div class="panelHead"><div><h3>Plan Health</h3><p class="muted compact">Structure score, calculation and recommendations for the configured plan.</p></div><button id="planHealthBtn" class="secondary">Validate plan</button></div><div id="planHealthContent"></div></article>
-  <article class="panel"><h3>Data</h3><div class="buttonRow"><button id="backupBtn">Download backup</button><label for="restoreFile" class="buttonLike">Restore backup</label><input id="restoreFile" type="file" accept=".json"><button id="exportBtn">Export runs CSV</button><button id="resetBtn" class="danger">Reset app</button></div></article>
+  <article class="panel"><h3>Data</h3><div class="buttonRow"><button id="backupBtn">Download backup</button><label for="restoreFile" class="buttonLike">Restore backup</label><input id="restoreFile" type="file" accept=".json"><button id="undoRestoreBtn" type="button" class="secondary hidden">Undo last restore</button><button id="exportBtn">Export runs CSV</button><button id="resetBtn" class="danger">Reset app</button></div></article>
 </section>
 </main>
 
-<div id="modal" class="modal hidden"><div class="modalCard"><button id="closeModal" class="close">×</button><div id="modalContent"></div></div></div>
-<script src="app.js?v=10320"></script>
+<div id="modal" class="modal hidden" role="dialog" aria-modal="true" aria-label="AI Running Coach dialog" tabindex="-1"><div class="modalCard"><button id="closeModal" class="close" type="button" aria-label="Close dialog">×</button><div id="modalContent"></div></div></div>
+
+<div id="onboarding" class="onboarding hidden" role="dialog" aria-modal="true" aria-labelledby="onboardingTitle">
+  <form id="onboardingForm" class="onboardingCard" novalidate>
+    <div class="onboardingIntro"><span class="badge">First-time setup</span><h2 id="onboardingTitle">Build your plan from your data</h2><p>Confirm the essentials before any coaching or probability is shown. You can change these later in Settings.</p></div>
+    <div id="onboardingErrors" class="formErrors hidden" role="alert" tabindex="-1"></div>
+    <fieldset><legend><i>1</i> Goal event</legend><div class="formGrid">
+      <div class="field"><label for="obRaceName">Race name</label><input id="obRaceName" required maxlength="100" value="Goal Race"></div>
+      <div class="field"><label for="obRaceDate">Race date</label><input id="obRaceDate" type="date" required></div>
+      <div class="field"><label for="obRaceDistance">Race distance (km)</label><input id="obRaceDistance" type="number" inputmode="decimal" min="0.1" max="200" step="0.1" required value="42.195"></div>
+      <div class="field"><label for="obTargetTime">Target time (H:MM:SS or M:SS)</label><input id="obTargetTime" inputmode="numeric" required value="4:15:00"></div>
+    </div></fieldset>
+    <fieldset><legend><i>2</i> Current training</legend><div class="formGrid">
+      <div class="field"><label for="obCurrentWeekly">Current weekly distance (km)</label><input id="obCurrentWeekly" type="number" inputmode="decimal" min="0" max="250" step="0.1" required value="35"></div>
+      <div class="field"><label for="obCurrentLongest">Current longest run (km)</label><input id="obCurrentLongest" type="number" inputmode="decimal" min="0" max="200" step="0.1" required value="18"></div>
+      <div class="field"><label for="obBodyWeight">Body weight (kg)</label><input id="obBodyWeight" type="number" inputmode="decimal" min="25" max="250" step="0.1" required value="70"></div>
+    </div></fieldset>
+    <fieldset><legend><i>3</i> Recent baseline</legend><div class="formGrid">
+      <div class="field"><label for="obTestDistance">Recent test distance (km)</label><input id="obTestDistance" type="number" inputmode="decimal" min="0.1" max="200" step="0.1" required value="5"></div>
+      <div class="field"><label for="obTestTime">Recent test time (M:SS or H:MM:SS)</label><input id="obTestTime" inputmode="numeric" required value="25:15"></div>
+      <div class="field"><label for="obThresholdHr">Threshold heart rate (bpm)</label><input id="obThresholdHr" type="number" inputmode="numeric" min="60" max="240" required value="168"></div>
+      <div class="field"><label for="obCriticalPower">Critical power (W)</label><input id="obCriticalPower" type="number" inputmode="decimal" min="50" max="1500" required value="300"></div>
+    </div></fieldset>
+    <label class="onboardingConsent"><input id="obConfirm" type="checkbox" required><span>I confirm these are my values. Coaching estimates are decision support, not medical advice.</span></label>
+    <button class="primary full" type="submit">Review and create my plan</button>
+  </form>
+</div>
+<script src="app.js?v=10330"></script>
 </body></html>
