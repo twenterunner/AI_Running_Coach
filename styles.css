@@ -774,6 +774,23 @@ canvas{width:100%;height:auto;display:block}
 .todayCoachGrid span{display:block;color:var(--muted);font-size:.72rem;font-weight:850;letter-spacing:.055em;text-transform:uppercase}
 .todayCoachGrid h4{margin:5px 0 6px;color:var(--navy);font-size:1.05rem}
 .todayCoachGrid p{margin:4px 0;color:var(--ink);line-height:1.45;overflow-wrap:anywhere}
+.todayRequiredCard{display:grid;gap:10px}
+.todayActionBlock{border-left:4px solid #86a0b7;border-radius:10px;background:#fff;padding:11px 12px}
+.todayActionBlock.injuryAction{border-left-color:var(--red);background:#fff7f8}
+.todayActionBlock.trainingSecondary{border-left-color:#8aa5bd;background:#f8fbfd}
+.todayActionBlock>b{display:block;color:var(--navy);font-size:.96rem}
+.todayActionBlock ul{margin:7px 0 4px;padding-left:20px;color:var(--ink)}
+.todayActionBlock li{margin:4px 0;line-height:1.4;overflow-wrap:anywhere}
+.todayActionBlock p{font-size:.88rem}
+.todayProgressSummary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:10px}
+.todayProgressSummary>div{min-width:0;border-radius:10px;background:#fff;padding:10px 9px}
+.todayProgressSummary small,.todayProgressSummary b,.todayProgressSummary em{display:block;min-width:0;max-width:100%;overflow-wrap:anywhere}
+.todayProgressSummary small{color:var(--muted);font-size:.68rem;font-weight:800;line-height:1.2;text-transform:uppercase}
+.todayProgressSummary b{margin-top:5px;color:var(--navy);font-size:clamp(.82rem,3.2vw,.96rem);line-height:1.2}
+.todayProgressSummary em{margin-top:4px;color:var(--muted);font-size:.72rem;font-style:normal;line-height:1.25}
+.todayCoachGrid .todayProgressNote{margin-top:9px;color:var(--muted);font-size:.8rem}
+.todayInlineLink{margin-top:8px;border:0;background:transparent;color:#145b8f;padding:5px 0;font-weight:850;text-align:left;text-decoration:underline;text-underline-offset:3px}
+.todayInlineLink:hover,.todayInlineLink:focus-visible{color:var(--navy)}
 @media(max-width:600px){
  .coachPathwaySummary{grid-template-columns:1fr}
  .coachPathwayCard{padding:14px}
@@ -782,6 +799,7 @@ canvas{width:100%;height:auto;display:block}
  .coachFactorTriple small{font-size:.62rem}
  .coachFactorTriple strong{font-size:1rem}
 }
+@media(max-width:350px){.todayProgressSummary{grid-template-columns:1fr}.todayProgressSummary>div{display:grid;grid-template-columns:1fr auto;column-gap:8px}.todayProgressSummary em{grid-column:1/-1}}
 @media(max-width:330px){
  .coachFactorTriple{grid-template-columns:1fr}
  .coachFactorTriple>div{grid-template-rows:auto auto}

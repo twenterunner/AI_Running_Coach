@@ -17,6 +17,9 @@ After upgrading an installed PWA, fully close and reopen it once so cache arc-v1
 
 Key release changes
 -------------------
+- Today Coach focus now lists the exact training and active injury-recovery actions required for the day.
+- Active injury recovery is given clear visual priority without changing either the training-plan or injury-recovery decision logic.
+- The former generic execution/readiness tiles are replaced by a compact Progress snapshot showing weekly distance, Pace & Power, Distance & Load, evidence confidence and next review date.
 - Strict boundary validation and field-level errors for runs, imports, assessments, injuries, settings and backups.
 - Strict M:SS / H:MM:SS parsing; malformed or ambiguous time values are rejected.
 - Deterministic, revision-based storage recovery plus a completed-migration marker that prevents deleted current data from being repopulated by old storage keys.
