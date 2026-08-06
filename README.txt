@@ -13,10 +13,11 @@ Replace only these six application files in the GitHub Pages repository:
 
 Retain your existing image assets separately and unchanged. The image references remain exactly as supplied in v10.0.32, including their existing cache-query values. Keep the separately managed icon, favicon, Apple touch icon and social-preview files beside these application files.
 
-After upgrading an installed PWA, fully close and reopen it once so cache arc-v1033-stable-10330-ui1 activates. Existing v10.x local data are migrated into schema 10330 and retained under a deterministic primary/mirror storage pair.
+After upgrading an installed PWA, fully close and reopen it once so cache arc-v1033-stable-10330-ui3 activates. Existing v10.x local data are migrated into schema 10330 and retained under a deterministic primary/mirror storage pair.
 
 Key release changes
 -------------------
+- The Today Progress link now opens the full Progress page, and the three mobile summary tiles use aligned label/value rows.
 - Today Coach focus now lists the exact training and active injury-recovery actions required for the day.
 - Active injury recovery is given clear visual priority without changing either the training-plan or injury-recovery decision logic.
 - The former generic execution/readiness tiles are replaced by a compact Progress snapshot showing weekly distance, Pace & Power, Distance & Load, evidence confidence and next review date.
