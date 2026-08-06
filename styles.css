@@ -764,3 +764,26 @@ canvas{width:100%;height:auto;display:block}
 .timelineBlock,.timelineBlock span{color:#071f38}
 .status.upcoming,.recoveryConclusion .recoveryConfidence{color:var(--muted)}
 .coachAction>strong{background:var(--navy);color:#fff}.coachVerdict{border-left-color:var(--blue)}
+
+/* v10.0.33 mobile pathway containment and populated Today coach focus */
+.coachFactorPair>div,.coachFactorPair small,.coachFactorPair strong{min-width:0;max-width:100%}
+.coachFactorPair strong{font-size:clamp(.88rem,4vw,1.08rem);letter-spacing:-.015em;white-space:nowrap}
+.todayCoachGrid{display:grid;gap:10px}
+.todayCoachGrid section{min-width:0;border:1px solid var(--line);border-radius:14px;padding:13px 14px;background:var(--surface-soft)}
+.todayCoachGrid .todayFocusPrimary{border-left:5px solid var(--blue);background:#eef5fb}
+.todayCoachGrid span{display:block;color:var(--muted);font-size:.72rem;font-weight:850;letter-spacing:.055em;text-transform:uppercase}
+.todayCoachGrid h4{margin:5px 0 6px;color:var(--navy);font-size:1.05rem}
+.todayCoachGrid p{margin:4px 0;color:var(--ink);line-height:1.45;overflow-wrap:anywhere}
+@media(max-width:600px){
+ .coachPathwaySummary{grid-template-columns:1fr}
+ .coachPathwayCard{padding:14px}
+ .coachFactorTriple{grid-template-columns:repeat(3,minmax(0,1fr))}
+ .coachFactorTriple>div{padding:9px 8px}
+ .coachFactorTriple small{font-size:.62rem}
+ .coachFactorTriple strong{font-size:1rem}
+}
+@media(max-width:330px){
+ .coachFactorTriple{grid-template-columns:1fr}
+ .coachFactorTriple>div{grid-template-rows:auto auto}
+ .coachFactorTriple small{min-height:0}
+}
