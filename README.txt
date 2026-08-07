@@ -1,4 +1,4 @@
-AI Running Coach v10.0.37 Stable — build 10370
+AI Running Coach v10.0.38 Stable — build 10380
 
 Deployment
 ----------
@@ -13,7 +13,7 @@ Replace only these six application files in the GitHub Pages repository:
 
 Retain your existing image assets separately and unchanged. The image references remain exactly as supplied in v10.0.32, including their existing cache-query values. Keep the separately managed icon, favicon, Apple touch icon and social-preview files beside these application files.
 
-After upgrading an installed PWA, fully close and reopen it once so cache arc-v1037-stable-10370-premium1 activates. Existing v10.x local data are migrated into schema 10330 and retained under a deterministic primary/mirror storage pair.
+After upgrading an installed PWA, fully close and reopen it once so cache arc-v1038-stable-10380-premium1 activates. Existing v10.x local data are migrated into schema 10330 and retained under a deterministic primary/mirror storage pair.
 
 
 UI refinement release
@@ -52,12 +52,12 @@ Privacy and safety
 Athlete data remain in browser local storage unless the user explicitly downloads a backup or CSV. Coaching and injury guidance are decision support, not diagnosis or emergency care.
 
 
-v10.0.37 Post-run Coach Update
+v10.0.38 Post-run Coach Update
 -----------------------------
 After a manual or FIT/CSV run is saved, the app now captures before/after Pace & Power, learned Distance & Load, readiness, race estimate and the next prescribed workout target. It stores an explainable Coach Update with the run and shows Why, What changed, and What this changes next. Editing a run recalculates the update. Existing training, prediction, recovery and plan decision logic is unchanged.
 
 
-v10.0.37 Post-run prescription impact and mobile modal fix
+v10.0.38 Post-run prescription impact and mobile modal fix
 ----------------------------------------------------------
 - Post-run Coach Update now compares the next six planned sessions before vs after the saved run.
 - It explicitly shows distance, pace and power changes, including unchanged values.
@@ -65,10 +65,13 @@ v10.0.37 Post-run prescription impact and mobile modal fix
 - Import/review modals are portrait-safe on mobile: the modal body scrolls within the viewport and the final action button remains reachable/sticky above the safe-area inset.
 
 
-v10.0.37 Weekly pathway commitment
+v10.0.38 Weekly pathway commitment
 ----------------------------------
 - Pace & Power and Distance & Load are now treated as weekly-committed learned capabilities.
 - Completed runs update Pace & Power provisionally during the week; future pace/power prescriptions stay on the applied factor until the weekly review.
 - Distance & Load continues to contribute to the weekly review rather than changing future distances after a single run.
 - Post-run Coach Update now shows Applied vs Provisional Pace & Power and projects what upcoming pace/power targets would become if the provisional factor is confirmed.
 - Readiness remains an immediate protective modifier and may still reduce an upcoming session before the weekly review.
+
+
+v10.0.38: Fixes Save analysed run runtime blocker (undefined week helper) and makes Coach Update non-blocking so a valid run is always persisted first.

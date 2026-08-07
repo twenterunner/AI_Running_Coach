@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '10.0.37';
-  const BUILD = 10370;
+  const VERSION = '10.0.38';
+  const BUILD = 10380;
   const SCHEMA = 10330;
   const PRIMARY_STORAGE_KEY = 'arc_v10330_web';
   const MIRROR_STORAGE_KEY = 'arc_v10330_mirror';
@@ -457,8 +457,13 @@ function workoutScoreDetails(run,plan=run?.planId?state.plan.find(p=>p.id===run.
 function workoutScore(run,plan=run?.planId?state.plan.find(p=>p.id===run.planId):null){return workoutScoreDetails(run,plan)?.score??null}
 function trainingEvidence(asOf=iso(today())){let valid=state.assessments.filter(a=>a.valid&&a.date<=asOf).sort((a,b)=>a.date.localeCompare(b.date)),anchor=valid.at(-1),anchorDate=anchor?.date||state.setup.planStart,runs=state.runs.filter(r=>r.date>=anchorDate&&r.date<=asOf&&r.source!=='assessment').sort((a,b)=>a.date.localeCompare(b.date)),raw=100,evidence=0,events=[];runs.forEach(r=>{let p=r.planId?state.plan.find(x=>x.id===r.planId):null,score=workoutScore(r,p),weight=EVIDENCE_WEIGHT[r.type]??EVIDENCE_WEIGHT[baseType(r.type)]??.15;if(score==null)return;let confidence=weight;if(Number(r.pain)>=3||(!p&&r.type!=='Race'))confidence*=.35;if(p&&Number(r.distanceKm)<Number(p.distance)*.7)confidence*=.35;let maxMove=confidence*.65,signal=clamp((score-82)/18,-1,1);if(signal<0&&confidence<.35)signal=0;let delta=signal*maxMove;raw=clamp(raw+delta,95,105);evidence+=confidence;events.push({date:r.date,type:r.type,score,delta,confidence})});let applied=Math.round((raw-100)*2)/2+100;if(Math.abs(applied-100)<.75)applied=100;let confidence=clamp(Math.round(evidence/4*100),0,100);return{rawIndex:raw,index:applied,adjustment:applied/100,confidence,events,anchorDate,anchorType:anchor?'Fitness assessment':'Setup baseline'}}
 
+function trainingWeekForDate(date=iso(today())){
+ const d=dte(date);
+ if(!(d instanceof Date)||Number.isNaN(d.getTime()))return currentWeek();
+ return clamp(Math.floor((d-dte(state.setup.planStart))/(7*DAY))+1,1,weeks());
+}
 function reviewWeekForDate(date=iso(today())){
- const w=Math.max(1,Math.min(weeks(),weekOf(date)));
+ const w=Math.max(1,Math.min(weeks(),trainingWeekForDate(date)));
  return w;
 }
 function pacePowerCommittedFactor(date=iso(today())){
@@ -2187,7 +2192,7 @@ function nextTrainingSessionAfter(date=iso(today())){
 }
 function postRunCoachSnapshot(date=iso(today())){
  const paceState=trainingEvidence(date),reviewWeek=Math.min(weeks(),Math.max(1,currentWeek()+1)),load=adaptiveFactorDetails(reviewWeek);
- const upcoming=(state.plan||[]).filter(p=>p.date>=date&&!['Rest','Race Day'].includes(p.type)).sort((a,b)=>a.date.localeCompare(b.date)).slice(0,6).map(p=>{const z=zone(p.type,p.date);return{id:p.id,date:p.date,type:p.type,distance:Number(p.distance),pace:Number(z.pace),power:Number(z.power),week:weekOf(p.date)}});
+ const upcoming=(state.plan||[]).filter(p=>p.date>=date&&!['Rest','Race Day'].includes(p.type)).sort((a,b)=>a.date.localeCompare(b.date)).slice(0,6).map(p=>{let z=null;try{z=zone(p.type,p.date)}catch{}return{id:p.id,date:p.date,type:p.type,distance:Number(p.distance),pace:Number(z?.pace),power:Number(z?.power),week:trainingWeekForDate(p.date)}});
  const next=upcoming[0]||null;
  const paceReview=pacePowerReviewState(date);
  return{paceFactor:Number(paceReview.applied)||1,paceProvisional:Number(paceReview.provisional)||1,paceConfidence:Number(paceState.confidence)||0,loadFactor:Number(load.cumulativeFactor)||1,loadProvisional:Number(load.cumulativeFactor)||1,readiness:Number(1+(Number(load.temporaryAdjustment)||0)),effectiveLoad:Number(load.factor)||1,predictionSec:Number(prediction())||null,reviewWeek,next,upcoming};
@@ -3431,15 +3436,20 @@ $('activityFile').onchange=async e=>{
     try{
       if(!preview)throw Error('The import preview has expired. Choose the file again.');
       if(state.runs.some(r=>r.id===preview.id))throw Error('This run was already imported.');
-      const beforeCoach=postRunCoachSnapshot(preview.date);
       Object.assign(preview,{type:$('iType').value,rpe:Number($('iRpe').value)||null,pain:$('iPain').value===''?null:Number($('iPain').value),hrv:$('iHrv').value===''?null:Number($('iHrv').value),recovery:null,notes:$('iNotes').value});
       preview.drift=preview.candidatePowerDrift;preview.powerDrift=preview.candidatePowerDrift;preview.paceDrift=null;preview.streamEvidence=preview.candidateStreamEvidence;
       delete preview.candidateDrift;delete preview.candidatePowerDrift;delete preview.candidatePaceDrift;delete preview.candidateStreamEvidence;
-      const importErrors=CORE.validateRun(preview,{today:iso(today())});if(importErrors.length){showFieldErrors(importErrors,{type:'#iType',rpe:'#iRpe',pain:'#iPain',hrv:'#iHrv',notes:'#iNotes'},$('importPreview'));throw Error(CORE.firstErrorMessage(importErrors))}
-      applyRunMatch(preview,$('iPlanMatch').value,'user');state.runs.push({...preview});reconcileExactDateMatches();
-      recordPredictionSnapshot(preview.date,preview.sourceFormat==='fit-activity'?'FIT import':'Stryd import',preview.id);
-      const savedRun=state.runs.find(r=>r.id===preview.id),afterCoach=postRunCoachSnapshot(preview.date);if(savedRun)savedRun.coachUpdate=postRunCoachUpdate(savedRun,beforeCoach,afterCoach);
-      save();$('importPreview').className='hidden';const coachHtml=savedRun?postRunCoachUpdateHtml(savedRun):'';preview=null;input.value='';renderAll();if(coachHtml){$('modalContent').innerHTML=coachHtml+`<button id="closeCoachUpdate" class="primary full" type="button">Done</button>`;$('modal').className='modal';$('closeCoachUpdate').onclick=closeDialog;}toast('Activity analysed, saved and coaching update calculated.');
+      const errors=CORE.validateRun(preview,{today:iso(today())});
+      if(errors.length){showFieldErrors(errors,{type:'#iType',rpe:'#iRpe',pain:'#iPain',hrv:'#iHrv',notes:'#iNotes'},$('importPreview'));throw Error(CORE.firstErrorMessage(errors))}
+      applyRunMatch(preview,$('iPlanMatch').value,'user');
+      let before=null;try{before=postRunCoachSnapshot(preview.date)}catch(e){console.warn('Coach pre-snapshot failed',e)}
+      const savedRun={...preview};state.runs.push(savedRun);reconcileExactDateMatches();
+      recordPredictionSnapshot(savedRun.date,savedRun.sourceFormat==='fit-activity'?'FIT import':'Stryd import',savedRun.id);
+      let coachHtml='',coachWarning='';
+      try{const after=postRunCoachSnapshot(savedRun.date);if(before){savedRun.coachUpdate=postRunCoachUpdate(savedRun,before,after);coachHtml=postRunCoachUpdateHtml(savedRun)}}catch(e){console.warn('Coach update failed',e);coachWarning=' Run saved; Coach Update unavailable for this import.'}
+      save();$('importPreview').className='hidden';preview=null;input.value='';renderAll();
+      if(coachHtml){$('modalContent').innerHTML=coachHtml+`<button id="closeCoachUpdate" class="primary full" type="button">Done</button>`;$('modal').className='modal';$('closeCoachUpdate').onclick=closeDialog}
+      toast(`Activity analysed and run saved.${coachWarning}`,!!coachWarning);
     }catch(err){toast(err?.message||'The run could not be saved.',true)}
    };
  }catch(err){preview=null;input.value='';$('importPreview').className='hidden';toast(err?.message||'The activity file could not be imported.',true)}
