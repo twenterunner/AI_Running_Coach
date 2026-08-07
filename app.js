@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '10.0.34';
-  const BUILD = 10340;
+  const VERSION = '10.0.35';
+  const BUILD = 10350;
   const SCHEMA = 10330;
   const PRIMARY_STORAGE_KEY = 'arc_v10330_web';
   const MIRROR_STORAGE_KEY = 'arc_v10330_mirror';
@@ -2163,6 +2163,41 @@ async function parseRunImportFile(file){
  throw Error('Unsupported file type. Choose a Garmin/Stryd FIT activity or detailed Stryd CSV file.');
 }
 
+
+function nextTrainingSessionAfter(date=iso(today())){
+ return (state.plan||[]).filter(p=>p.date>=date&&!['Rest','Race Day'].includes(p.type)).sort((a,b)=>a.date.localeCompare(b.date))[0]||null;
+}
+function postRunCoachSnapshot(date=iso(today())){
+ const paceState=trainingEvidence(date),reviewWeek=Math.min(weeks(),Math.max(1,currentWeek()+1)),load=adaptiveFactorDetails(reviewWeek),next=nextTrainingSessionAfter(date),z=next?zone(next.type,next.date):null;
+ return{paceFactor:Number(paceState.adjustment)||1,paceConfidence:Number(paceState.confidence)||0,loadFactor:Number(load.cumulativeFactor)||1,readiness:Number(1+(Number(load.temporaryAdjustment)||0)),effectiveLoad:Number(load.factor)||1,predictionSec:Number(prediction())||null,reviewWeek,next:next&&z?{id:next.id,date:next.date,type:next.type,distance:Number(next.distance),pace:Number(z.pace),power:Number(z.power)}:null};
+}
+function signedFactorDelta(v){if(!Number.isFinite(v)||Math.abs(v)<.0005)return '↔ 0.000';return `${v>0?'+':''}${v.toFixed(3)}`;}
+function postRunCoachUpdate(run,before,after){
+ const plan=run.planId?state.plan.find(p=>p.id===run.planId):null,details=workoutScoreDetails(run,plan),score=details?.score??null,baseWeight=EVIDENCE_WEIGHT[run.type]??EVIDENCE_WEIGHT[baseType(run.type)]??.15;
+ let evidenceWeight=baseWeight,reasons=[];
+ if(Number(run.pain)>=3){evidenceWeight*=.35;reasons.push(`Pain ${Number(run.pain)}/10 reduced the performance evidence strength.`)}
+ if(!plan&&run.type!=='Race'){evidenceWeight*=.35;reasons.push('The run was not linked to a planned workout, so performance evidence was discounted.')}
+ if(plan&&Number(run.distanceKm)<Number(plan.distance)*.7){evidenceWeight*=.35;reasons.push('Less than 70% of prescribed distance was completed, so performance evidence was discounted.')}
+ if(score!=null){if(score>82)reasons.unshift(`${run.type} execution scored ${score}/100, adding positive Pace & Power evidence.`);else if(score===82)reasons.unshift(`${run.type} execution scored ${score}/100, neutral for Pace & Power calibration.`);else reasons.unshift(`${run.type} execution scored ${score}/100${evidenceWeight<.35?', but low-confidence negative evidence is protected from reducing established capability.':', providing negative Pace & Power evidence.'}`);}
+ if(Number.isFinite(run.powerDrift))reasons.push(`Power-based cardiac drift was ${Number(run.powerDrift).toFixed(1)}%, contributing to execution and load-tolerance evidence where applicable.`);
+ if(Number.isFinite(run.rpe))reasons.push(`RPE ${Number(run.rpe).toFixed(0)}/10 was included in the session-specific execution score.`);
+ if(plan)reasons.push(`${Number(run.distanceKm).toFixed(1)} of ${Number(plan.distance).toFixed(1)} planned km was recorded and contributes to weekly completion.`);
+ const paceDelta=after.paceFactor-before.paceFactor,loadDelta=after.loadFactor-before.loadFactor,readyDelta=after.readiness-before.readiness,predDelta=(Number.isFinite(after.predictionSec)&&Number.isFinite(before.predictionSec))?after.predictionSec-before.predictionSec:null;
+ let impact=[];
+ impact.push(Math.abs(paceDelta)>=.0005?`Pace & Power ${before.paceFactor.toFixed(3)} → ${after.paceFactor.toFixed(3)} (${signedFactorDelta(paceDelta)}).`:`Pace & Power remains ${after.paceFactor.toFixed(3)}; this run did not cross the applied-factor step.`);
+ impact.push(Math.abs(loadDelta)>=.0005?`Learned Distance & Load ${before.loadFactor.toFixed(3)} → ${after.loadFactor.toFixed(3)} (${signedFactorDelta(loadDelta)}).`:`Learned Distance & Load remains ${after.loadFactor.toFixed(3)}; this run feeds the next weekly review without an immediate cumulative step.`);
+ if(Math.abs(readyDelta)>=.0005)impact.push(`Readiness ${before.readiness.toFixed(3)} → ${after.readiness.toFixed(3)}.`);
+ if(predDelta!=null&&Math.abs(predDelta)>=1)impact.push(`Central race estimate ${predDelta<0?'improved':'moved slower'} by ${fmtTime(Math.abs(predDelta))}.`);
+ let nextChange='No immediate future-workout target changed.';
+ if(before.next&&after.next&&before.next.id===after.next.id){const bits=[],pd=after.next.pace-before.next.pace,wd=after.next.power-before.next.power;if(Number.isFinite(pd)&&Math.abs(pd)>=.5)bits.push(`pace ${pace(before.next.pace)} → ${pace(after.next.pace)}`);if(Number.isFinite(wd)&&Math.abs(wd)>=1)bits.push(`power ${Math.round(before.next.power)} → ${Math.round(after.next.power)} W`);nextChange=bits.length?`${after.next.type} on ${fmtDate(after.next.date)}: ${bits.join(' · ')}.`:`${after.next.type} on ${fmtDate(after.next.date)} remains unchanged.`;}
+ const confidence=after.paceConfidence>=70?'High':after.paceConfidence>=35?'Moderate':'Developing';
+ return{createdAt:new Date().toISOString(),score,evidenceQuality:details?.evidenceQuality||'limited',before,after,paceDelta,loadDelta,readinessDelta:readyDelta,predictionDeltaSec:predDelta,reasons:reasons.slice(0,5),impact,nextChange,confidence,decision:paceDelta>0||loadDelta>0?'This run strengthened the evidence behind the plan.':paceDelta<0||loadDelta<0?'This run produced evidence for a more conservative calibration.':'This run mainly reinforced the current calibration.'};
+}
+function postRunCoachUpdateHtml(r){
+ const u=r?.coachUpdate;if(!u)return '';
+ return `<section class="postRunCoachUpdate"><div class="postRunCoachHead"><div><span>POST-RUN COACH UPDATE</span><h3>${esc(u.decision)}</h3></div><b>${esc(u.confidence)} confidence</b></div><div class="postRunFactorGrid"><div><small>Pace & Power</small><strong>${Number(u.after?.paceFactor||1).toFixed(3)}</strong><em>${esc(signedFactorDelta(Number(u.paceDelta)||0))}</em></div><div><small>Distance & Load</small><strong>${Number(u.after?.loadFactor||1).toFixed(3)}</strong><em>${esc(signedFactorDelta(Number(u.loadDelta)||0))}</em></div><div><small>Readiness</small><strong>${Number(u.after?.readiness||1).toFixed(3)}</strong><em>${esc(signedFactorDelta(Number(u.readinessDelta)||0))}</em></div></div><div class="postRunCoachSection"><b>Why</b>${(u.reasons||[]).map(x=>`<p>${esc(x)}</p>`).join('')}</div><div class="postRunCoachSection"><b>What changed</b>${(u.impact||[]).map(x=>`<p>${esc(x)}</p>`).join('')}</div><div class="postRunNext"><b>What this changes next</b><p>${esc(u.nextChange||'No immediate prescription change.')}</p><small>Distance/load changes are normally applied at the weekly review; readiness remains temporary rather than changing learned capability.</small></div></section>`;
+}
+
 function runExecutionBreakdownHtml(r){
  const plan=r.planId?state.plan.find(p=>p.id===r.planId):null,d=workoutScoreDetails(r,plan);
  if(!d)return'<section class="runExecutionBreakdown"><h3>Execution breakdown</h3><p class="muted">Not enough distance and duration information to calculate a score.</p></section>';
@@ -3294,14 +3329,14 @@ function openRunDetails(runId){
    $('modal').className='modal';
    return;
  }
- $('modalContent').innerHTML=runExecutionBreakdownHtml(r)+runEditorHtml(r)+`<button id="deleteEditedRun" class="danger buttonLike full">Delete run</button>`;
+ $('modalContent').innerHTML=postRunCoachUpdateHtml(r)+runExecutionBreakdownHtml(r)+runEditorHtml(r)+`<button id="deleteEditedRun" class="danger buttonLike full">Delete run</button>`;
  $('modal').className='modal';
  bindEditorPlanRefresh(r);
  $('saveRunEdit').onclick=()=>{
    try{
     let updated=updatedRunFromForm(r),i=state.runs.findIndex(x=>x.id===r.id);
     if(i<0)throw Error('Run not found.');
-    state.runs[i]=updated;recordPredictionSnapshot(updated.date,'Run update',updated.id);save();$('modal').className='modal hidden';renderAll();toast('Run updated.');
+    state.runs.splice(i,1);const before=postRunCoachSnapshot(updated.date);state.runs.splice(i,0,updated);recordPredictionSnapshot(updated.date,'Run update',updated.id);const after=postRunCoachSnapshot(updated.date);updated.coachUpdate=postRunCoachUpdate(updated,before,after);save();renderAll();$('modalContent').innerHTML=postRunCoachUpdateHtml(updated)+`<button id="closeCoachUpdate" class="primary full" type="button">Done</button>`;$('modal').className='modal';$('closeCoachUpdate').onclick=closeDialog;toast('Run updated and coaching update recalculated.');
    }catch(err){toast(err.message,true)}
  };
  $('deleteEditedRun').onclick=()=>{
@@ -3317,7 +3352,7 @@ $('manualRunBtn').onclick=()=>{
  $('modal').className='modal';
  bindEditorPlanRefresh(r);
  $('saveRunEdit').onclick=()=>{
-   try{let created=updatedRunFromForm(r);state.runs.push(created);recordPredictionSnapshot(created.date,'Run saved',created.id);save();$('modal').className='modal hidden';renderAll();toast('Run saved.')}catch(err){toast(err.message,true)}
+   try{let created=updatedRunFromForm(r),before=postRunCoachSnapshot(created.date);state.runs.push(created);recordPredictionSnapshot(created.date,'Run saved',created.id);let after=postRunCoachSnapshot(created.date);created.coachUpdate=postRunCoachUpdate(created,before,after);save();renderAll();$('modalContent').innerHTML=postRunCoachUpdateHtml(created)+`<button id="closeCoachUpdate" class="primary full" type="button">Done</button>`;$('modal').className='modal';$('closeCoachUpdate').onclick=closeDialog;toast('Run saved and coaching update calculated.')}catch(err){toast(err.message,true)}
  };
 };
 $('closeModal').onclick=closeDialog;
@@ -3369,13 +3404,15 @@ $('activityFile').onchange=async e=>{
     try{
       if(!preview)throw Error('The import preview has expired. Choose the file again.');
       if(state.runs.some(r=>r.id===preview.id))throw Error('This run was already imported.');
+      const beforeCoach=postRunCoachSnapshot(preview.date);
       Object.assign(preview,{type:$('iType').value,rpe:Number($('iRpe').value)||null,pain:$('iPain').value===''?null:Number($('iPain').value),hrv:$('iHrv').value===''?null:Number($('iHrv').value),recovery:null,notes:$('iNotes').value});
       preview.drift=preview.candidatePowerDrift;preview.powerDrift=preview.candidatePowerDrift;preview.paceDrift=null;preview.streamEvidence=preview.candidateStreamEvidence;
       delete preview.candidateDrift;delete preview.candidatePowerDrift;delete preview.candidatePaceDrift;delete preview.candidateStreamEvidence;
       const importErrors=CORE.validateRun(preview,{today:iso(today())});if(importErrors.length){showFieldErrors(importErrors,{type:'#iType',rpe:'#iRpe',pain:'#iPain',hrv:'#iHrv',notes:'#iNotes'},$('importPreview'));throw Error(CORE.firstErrorMessage(importErrors))}
       applyRunMatch(preview,$('iPlanMatch').value,'user');state.runs.push({...preview});reconcileExactDateMatches();
       recordPredictionSnapshot(preview.date,preview.sourceFormat==='fit-activity'?'FIT import':'Stryd import',preview.id);
-      save();$('importPreview').className='hidden';preview=null;input.value='';renderAll();toast('Activity analysed and run saved.');
+      const savedRun=state.runs.find(r=>r.id===preview.id),afterCoach=postRunCoachSnapshot(preview.date);if(savedRun)savedRun.coachUpdate=postRunCoachUpdate(savedRun,beforeCoach,afterCoach);
+      save();$('importPreview').className='hidden';const coachHtml=savedRun?postRunCoachUpdateHtml(savedRun):'';preview=null;input.value='';renderAll();if(coachHtml){$('modalContent').innerHTML=coachHtml+`<button id="closeCoachUpdate" class="primary full" type="button">Done</button>`;$('modal').className='modal';$('closeCoachUpdate').onclick=closeDialog;}toast('Activity analysed, saved and coaching update calculated.');
     }catch(err){toast(err?.message||'The run could not be saved.',true)}
    };
  }catch(err){preview=null;input.value='';$('importPreview').className='hidden';toast(err?.message||'The activity file could not be imported.',true)}

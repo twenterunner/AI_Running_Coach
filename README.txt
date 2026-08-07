@@ -1,4 +1,4 @@
-AI Running Coach v10.0.34 Stable — build 10340
+AI Running Coach v10.0.35 Stable — build 10350
 
 Deployment
 ----------
@@ -13,7 +13,7 @@ Replace only these six application files in the GitHub Pages repository:
 
 Retain your existing image assets separately and unchanged. The image references remain exactly as supplied in v10.0.32, including their existing cache-query values. Keep the separately managed icon, favicon, Apple touch icon and social-preview files beside these application files.
 
-After upgrading an installed PWA, fully close and reopen it once so cache arc-v1034-stable-10340-premium1 activates. Existing v10.x local data are migrated into schema 10330 and retained under a deterministic primary/mirror storage pair.
+After upgrading an installed PWA, fully close and reopen it once so cache arc-v1035-stable-10350-premium1 activates. Existing v10.x local data are migrated into schema 10330 and retained under a deterministic primary/mirror storage pair.
 
 
 UI refinement release
@@ -50,3 +50,8 @@ The original Garmin FIT decoder URL is retained because this code-only package c
 Privacy and safety
 ------------------
 Athlete data remain in browser local storage unless the user explicitly downloads a backup or CSV. Coaching and injury guidance are decision support, not diagnosis or emergency care.
+
+
+v10.0.35 Post-run Coach Update
+-----------------------------
+After a manual or FIT/CSV run is saved, the app now captures before/after Pace & Power, learned Distance & Load, readiness, race estimate and the next prescribed workout target. It stores an explainable Coach Update with the run and shows Why, What changed, and What this changes next. Editing a run recalculates the update. Existing training, prediction, recovery and plan decision logic is unchanged.

@@ -1031,3 +1031,10 @@ nav button.active,nav button[aria-current="page"]{background:#e7edf2;color:var(-
   .outlookCard>strong{font-size:32px}
   .panel{padding:14px 13px}
 }
+
+/* v10.0.35 — Post-run Coach Update + Decision Explanation */
+.postRunCoachUpdate{margin:0 0 18px;padding:20px;border:1px solid #d7e2ea;border-radius:20px;background:linear-gradient(145deg,#f7fbfe,#fff);box-shadow:0 10px 28px rgba(11,49,87,.07)}
+.postRunCoachHead{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;margin-bottom:15px}.postRunCoachHead span{display:block;color:var(--blue);font-size:.68rem;font-weight:900;letter-spacing:.08em}.postRunCoachHead h3{margin:5px 0 0;font-size:1.15rem;line-height:1.35}.postRunCoachHead>b{white-space:nowrap;padding:7px 10px;border-radius:999px;background:#edf7f3;color:#176d5d;font-size:.75rem}
+.postRunFactorGrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;margin-bottom:15px}.postRunFactorGrid>div{padding:12px;border-radius:14px;background:#fff;border:1px solid var(--line);min-width:0}.postRunFactorGrid small,.postRunFactorGrid strong,.postRunFactorGrid em{display:block}.postRunFactorGrid small{color:var(--muted);font-size:.68rem;font-weight:800;text-transform:uppercase}.postRunFactorGrid strong{margin-top:5px;font-size:1.35rem;color:var(--navy);font-variant-numeric:tabular-nums}.postRunFactorGrid em{margin-top:3px;color:var(--muted);font-size:.75rem;font-style:normal}
+.postRunCoachSection{padding:12px 0;border-top:1px solid var(--line)}.postRunCoachSection>b,.postRunNext>b{display:block;margin-bottom:6px;color:var(--navy)}.postRunCoachSection p,.postRunNext p{margin:5px 0;line-height:1.45;font-size:.88rem}.postRunNext{padding:13px 14px;border-radius:14px;background:#eef6fb;border-left:4px solid var(--blue)}.postRunNext small{display:block;color:var(--muted);line-height:1.4}
+@media(max-width:520px){.postRunCoachUpdate{padding:15px}.postRunCoachHead{display:grid}.postRunCoachHead>b{justify-self:start}.postRunFactorGrid{grid-template-columns:1fr 1fr 1fr}.postRunFactorGrid>div{padding:10px 8px}.postRunFactorGrid small{font-size:.58rem}.postRunFactorGrid strong{font-size:1.05rem}}
