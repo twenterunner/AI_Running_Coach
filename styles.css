@@ -1038,3 +1038,18 @@ nav button.active,nav button[aria-current="page"]{background:#e7edf2;color:var(-
 .postRunFactorGrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;margin-bottom:15px}.postRunFactorGrid>div{padding:12px;border-radius:14px;background:#fff;border:1px solid var(--line);min-width:0}.postRunFactorGrid small,.postRunFactorGrid strong,.postRunFactorGrid em{display:block}.postRunFactorGrid small{color:var(--muted);font-size:.68rem;font-weight:800;text-transform:uppercase}.postRunFactorGrid strong{margin-top:5px;font-size:1.35rem;color:var(--navy);font-variant-numeric:tabular-nums}.postRunFactorGrid em{margin-top:3px;color:var(--muted);font-size:.75rem;font-style:normal}
 .postRunCoachSection{padding:12px 0;border-top:1px solid var(--line)}.postRunCoachSection>b,.postRunNext>b{display:block;margin-bottom:6px;color:var(--navy)}.postRunCoachSection p,.postRunNext p{margin:5px 0;line-height:1.45;font-size:.88rem}.postRunNext{padding:13px 14px;border-radius:14px;background:#eef6fb;border-left:4px solid var(--blue)}.postRunNext small{display:block;color:var(--muted);line-height:1.4}
 @media(max-width:520px){.postRunCoachUpdate{padding:15px}.postRunCoachHead{display:grid}.postRunCoachHead>b{justify-self:start}.postRunFactorGrid{grid-template-columns:1fr 1fr 1fr}.postRunFactorGrid>div{padding:10px 8px}.postRunFactorGrid small{font-size:.58rem}.postRunFactorGrid strong{font-size:1.05rem}}
+
+/* v10.0.36 — portrait-safe modal + future prescription impact */
+.futurePrescriptionList{display:grid;gap:8px;margin-top:10px}
+.futurePrescriptionRow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;padding:11px 12px;border:1px solid var(--line);border-radius:13px;background:#fff}
+.futurePrescriptionRow strong,.futurePrescriptionRow small,.futurePrescriptionRow span{display:block}
+.futurePrescriptionRow small{margin-top:3px;color:var(--muted)}
+.futurePrescriptionRow>div:last-child{text-align:right;font-size:.8rem;line-height:1.4}
+.futurePrescriptionRow>div:last-child span:first-child{color:var(--navy);font-weight:800}
+.futurePrescriptionRow>div:last-child span:last-child{color:var(--muted)}
+@media(max-width:520px){.futurePrescriptionRow{grid-template-columns:1fr}.futurePrescriptionRow>div:last-child{text-align:left;display:grid;grid-template-columns:1fr 1fr;gap:8px}}
+
+.modal{display:flex;align-items:flex-start;justify-content:center;overflow:hidden;padding:max(8px,env(safe-area-inset-top)) 8px max(8px,env(safe-area-inset-bottom))}
+.modalCard{width:min(700px,100%);max-height:calc(100dvh - max(16px,env(safe-area-inset-top)) - max(16px,env(safe-area-inset-bottom)));overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding-bottom:calc(86px + env(safe-area-inset-bottom));margin:0}
+.modalCard>.primary.full:last-child,.modalCard>form:last-child .primary.full:last-child,.modalCard .postRunCoachUpdate+button.primary.full{position:sticky;bottom:0;z-index:8;box-shadow:0 -10px 24px rgba(255,255,255,.96),0 8px 20px rgba(11,49,87,.12);margin-top:18px}
+@media(max-width:720px){.modal{padding:0}.modalCard{width:100%;max-width:none;max-height:100dvh;min-height:100dvh;border-radius:0;padding:18px 14px calc(92px + env(safe-area-inset-bottom))}.close{position:sticky;float:right;top:8px;z-index:12}.modalCard .primary.full:last-child,.modalCard>form:last-child .primary.full:last-child,.modalCard .postRunCoachUpdate+button.primary.full{bottom:calc(8px + env(safe-area-inset-bottom))}}
