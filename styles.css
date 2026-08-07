@@ -805,3 +805,229 @@ canvas{width:100%;height:auto;display:block}
  .coachFactorTriple>div{grid-template-rows:auto auto}
  .coachFactorTriple small{min-height:0}
 }
+
+/* v10.0.34 — premium mobile-first UI refinement. Logic intentionally unchanged. */
+:root{
+  --accent:var(--blue);
+  --surface:var(--card);
+  --surface-soft:var(--soft);
+  --panel:var(--card);
+  --text:var(--ink);
+  --bg:#f6f7f9;
+  --card:#ffffff;
+  --soft:#f4f6f8;
+  --line:#e6e9ed;
+  --ink:#17212b;
+  --muted:#687586;
+  --navy:#102f4d;
+  --navy2:#173f62;
+  --blue:#2274aa;
+  --teal:#168276;
+  --purple:#6857a6;
+  --green:#287a50;
+  --amber:#a96c16;
+  --red:#a84252;
+  --shadow-sm:0 1px 2px rgba(20,35,50,.04),0 5px 16px rgba(20,35,50,.035);
+  --shadow-md:0 8px 28px rgba(18,41,61,.08);
+  --radius-sm:10px;
+  --radius-md:15px;
+  --radius-lg:22px;
+}
+html{background:var(--bg)}
+body{background:var(--bg);color:var(--ink);letter-spacing:-.005em}
+main{max-width:1160px;padding:24px 18px 92px}
+
+/* Brand/header: quieter and more product-like. */
+.topbar{position:relative;top:auto;background:var(--bg);color:var(--ink);padding:19px 18px 10px;box-shadow:none;border:0}
+.brand{gap:12px}
+.logo{width:42px;height:42px;border-radius:12px;background:#0b2135;box-shadow:var(--shadow-sm)}
+.brand h1{font-size:18px;letter-spacing:-.025em}
+.brand p{font-size:10.5px;color:var(--muted);opacity:1!important}
+.install{background:#fff;color:var(--navy);border:1px solid var(--line);box-shadow:var(--shadow-sm);border-radius:10px}
+
+/* Desktop navigation remains top-based; mobile becomes a true bottom nav. */
+nav{top:0;background:rgba(246,247,249,.92);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border-bottom:1px solid rgba(218,224,230,.8);padding:8px 16px;gap:5px}
+nav button{background:transparent;color:#647384;border-radius:9px;padding:9px 12px;font-size:12px;font-weight:750;transition:background .15s ease,color .15s ease}
+nav button:hover{background:#edf0f3;color:var(--navy)}
+nav button.active,nav button[aria-current="page"]{background:#e7edf2;color:var(--navy);box-shadow:none}
+
+/* Typography + spacing hierarchy. */
+.sectionTitle{margin:8px 2px 22px;align-items:flex-end}
+.sectionTitle h2{font-size:clamp(26px,4vw,34px);line-height:1.05;letter-spacing:-.04em}
+.sectionTitle p{font-size:13px;margin-top:7px;line-height:1.45}
+.dashboardSection{margin:34px 0 42px}
+.dashboardSectionHead{margin:0 1px 16px;gap:11px}
+.dashboardSectionHead>span{width:27px;height:27px;background:#e7edf2;color:var(--navy);box-shadow:none;font-size:11px}
+.dashboardSectionHead h3{font-size:19px;letter-spacing:-.025em}
+.dashboardSectionHead p{font-size:12px;margin-top:3px}
+
+/* Fewer boxes: panels rely on spacing/elevation instead of heavy borders. */
+.panel,.kpi,.workout,.runCard,.injuryTopicCard,.injuryCard>.injurySection{
+  border:1px solid rgba(223,228,233,.78);
+  box-shadow:var(--shadow-sm);
+  background:var(--card);
+}
+.panel{border-radius:var(--radius-lg);padding:19px;margin-bottom:15px}
+.panel h3{font-size:16px;letter-spacing:-.018em}
+.kpi{border-radius:var(--radius-md);padding:15px}
+.kpi label{font-size:9.5px;letter-spacing:.065em;color:#718091}
+.kpi strong{font-size:23px;letter-spacing:-.035em;margin:7px 0 3px}
+.kpi small{font-size:10.5px;line-height:1.35}
+.note{border:0;border-left:3px solid var(--blue);background:#f3f7fa;border-radius:10px}
+
+/* Progress: calm premium hero; status lives in content, not the whole background. */
+.outlookHero,.outlookHero.outlook-good,.outlookHero.outlook-watch,.outlookHero.outlook-action{
+  background:linear-gradient(145deg,#102f4d 0%,#173f62 58%,#1b4c70 100%);
+  border:1px solid rgba(255,255,255,.08);
+  border-radius:26px;
+  box-shadow:0 18px 42px rgba(16,47,77,.16);
+  padding:25px;
+}
+.outlookHero .trackStatus{background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.15);padding:7px 10px;font-size:11px}
+.outlookCard{background:rgba(255,255,255,.075);border-color:rgba(255,255,255,.13);border-radius:17px;padding:16px}
+.projectedOutlook{background:rgba(255,255,255,.105)}
+.outlookCard.metric-good,.outlookCard.metric-watch,.outlookCard.metric-action{box-shadow:none;border-color:rgba(255,255,255,.17)}
+.outlookCard>span{font-size:10px;letter-spacing:.07em}
+.outlookCard>strong{font-size:clamp(34px,6vw,48px);letter-spacing:-.045em}
+.outlookGain>div,.outlookMetricDetail{background:rgba(255,255,255,.07)!important;border-color:rgba(255,255,255,.11)!important}
+.coachAssessmentPanel{border-left:0;box-shadow:var(--shadow-md)}
+
+/* Today: scheduled workout is the hero/action, not another ordinary card. */
+#todayCard>.workout{border-radius:24px;box-shadow:var(--shadow-md);overflow:hidden;border-color:#dce4ea}
+#todayCard>.workout .workoutHead{padding:19px;background:linear-gradient(145deg,#fff,#f7fafc);grid-template-columns:58px 1fr auto}
+#todayCard>.workout .dateBox{background:#e9f1f6;color:var(--navy);border-radius:13px;padding:9px 5px}
+#todayCard>.workout .workoutTitle h3{font-size:21px;letter-spacing:-.035em}
+#todayCard>.workout .workoutTitle p{font-size:12px;margin-top:5px}
+#todayCard>.workout .status{align-self:start}
+#todayCard>.workout .workoutDetails{background:#fff;padding:18px}
+.todayActions{margin:12px 0 22px;gap:9px}
+.todayActions button{min-height:45px;border-radius:12px}
+#today>article.panel{padding:0;border:0;background:transparent;box-shadow:none}
+#today>article.panel>h3{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin:0 0 10px 2px}
+.todayCoachGrid{gap:12px}
+.todayCoachGrid section{border:1px solid var(--line);border-radius:17px;padding:16px 17px;background:#fff;box-shadow:var(--shadow-sm)}
+.todayCoachGrid .todayFocusPrimary{border-left:0;background:#102f4d;color:#fff;box-shadow:var(--shadow-md)}
+.todayCoachGrid .todayFocusPrimary span{color:#b9d1e4}
+.todayCoachGrid .todayFocusPrimary h4,.todayCoachGrid .todayFocusPrimary p{color:#fff}
+.todayCoachGrid .todayFocusPrimary p{opacity:.83}
+.todayRequiredCard{background:#fff!important}
+.todayActionBlock{border-left:3px solid #9fb2c2;background:#f7f9fb;padding:12px 13px}
+.todayActionBlock.injuryAction{border-left-color:var(--red);background:#fff7f8}
+.todayProgressSummary>div{background:#f5f7f9;border:1px solid #edf0f2;border-radius:12px}
+
+/* Plan: schedule first, insights second. */
+.planPrimaryHead{display:flex;align-items:baseline;gap:12px;margin:6px 2px 12px}
+.planPrimaryHead span{font-size:10px;font-weight:900;letter-spacing:.09em;color:var(--navy)}
+.planPrimaryHead p{margin:0;color:var(--muted);font-size:12px}
+.weekNav{max-width:420px;margin:0 0 12px;grid-template-columns:42px 1fr 42px}
+.weekNav button{border:1px solid var(--line);background:#fff;border-radius:10px;box-shadow:var(--shadow-sm)}
+.weekHeader{background:#eef3f6;border:0;border-radius:13px;padding:12px 14px;margin-bottom:16px}
+.workout{border-radius:17px;margin-bottom:9px;box-shadow:none}
+.workoutHead{padding:13px 14px}
+.workout:hover{border-color:#ccd8e1}
+.workout.open{box-shadow:var(--shadow-md);border-color:#ccd8e1}
+.workoutDetails{background:#fbfcfd;padding:16px}
+.targets{gap:8px}
+.target{border:0;background:#f1f4f6;border-radius:10px}
+.planInsightsShell{margin-top:26px;border:1px solid var(--line);background:#fff;border-radius:20px;box-shadow:var(--shadow-sm);overflow:hidden}
+.planInsightsShell>summary{list-style:none;cursor:pointer;padding:17px 19px;display:flex;flex-direction:column;gap:3px;color:var(--navy)}
+.planInsightsShell>summary::-webkit-details-marker{display:none}
+.planInsightsShell>summary span{font-weight:850;font-size:15px}
+.planInsightsShell>summary small{font-size:11px;color:var(--muted);font-weight:500}
+.planInsightsShell>summary:after{content:'›';position:absolute;right:24px;font-size:23px;transform:rotate(90deg);transition:transform .2s ease}
+.planInsightsShell{position:relative}
+.planInsightsShell[open]>summary:after{transform:rotate(-90deg)}
+.planInsightsBody{padding:0 14px 14px;background:#f6f7f9;border-top:1px solid var(--line)}
+.planInsightsBody>.panel{margin:14px 0 0;box-shadow:none}
+
+/* Charts and analytical surfaces: less dashboard chrome. */
+.panel canvas{background:transparent;border-radius:12px}
+.chartMetric{background:#f4f6f8;border:0;border-radius:9px}
+.chartLegend{font-size:.78rem;color:var(--muted)}
+.metricTypeTable{border-color:#e8ebee;border-radius:13px}
+.adaptationPath{border:1px solid #e5e9ed;border-radius:18px;padding:17px;box-shadow:none}
+.adaptationPath.pacePath,.adaptationPath.loadPath{border-top-width:3px}
+.pathFactorSummary>div,.factorUseGrid article{background:#f4f6f8;border-radius:11px}
+.planFactorUsePanel{padding:18px;border-radius:17px;box-shadow:none}
+.pathwayHistoryPanel{border-radius:17px;box-shadow:none}
+
+/* Injury: one calm visual language, active work has priority. */
+.injuryCard{border-radius:22px!important;padding:17px!important}
+.injuryCard.activeRecoveryPlan{border:1px solid #cfded7!important;box-shadow:var(--shadow-md)}
+.injuryCard.assessmentOnly{background:#fff}
+.injuryTopicCard,.injuryCard>.injurySection{border-radius:16px;padding:15px;box-shadow:none;margin:11px 0}
+.diagnosisOverview{border-left:0;background:#f3f7fa}
+.recoveryOverview,.rehabTodayFocus,.rehabCalendarSection,.adherenceSummary{border-left-width:3px}
+.rehabTodayFocus{background:#fff}
+.injuryKpiGrid{gap:8px}
+.metric-card{border:0;background:#f4f6f8;border-radius:13px;padding:13px}
+.injuryPatternTop{border-left-width:3px;border-radius:14px}
+.recoveryScoreCard{border-width:1px}
+.rehabDay{border-color:#e6eaed;border-radius:13px}
+.rehabDay>summary{padding:10px 11px}
+.rehabDayBody{background:#fbfcfd}
+.clinicalReasoningSummary{background:#fff;border-color:#e5e9ed}
+
+/* Forms and import surfaces. */
+.field input,.field select,.field textarea{background:#fff;border:1px solid #d9e0e5;border-radius:11px;padding:11px;transition:border-color .15s ease,box-shadow .15s ease}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:#7ba5c2;box-shadow:0 0 0 3px rgba(34,116,170,.10);outline:0!important}
+.primary{background:var(--navy);border-radius:11px;box-shadow:none}
+.primary:hover{background:#183f61}
+.secondary,.buttonLike,.buttonRow button{border-color:#d8dfe5;background:#fff;border-radius:11px}
+.filePick{background:var(--navy);border-radius:11px}
+.importBox{align-items:flex-start}
+
+/* Keep semantic status colour but soften saturation. */
+.status{letter-spacing:.035em}
+.status.completed{background:#eaf5ef;color:#246844}.status.missed{background:#fae9ec;color:#943849}.status.today{background:#e9f1f7;color:#255f84}.status.upcoming{background:#f0f2f4;color:#667384}.status.rest{background:#f1eef6;color:#675985}
+
+/* Desktop hover should be subtle; touch UI shouldn't jump. */
+.kpi:hover,.pillarCard:hover,.factorKpi:hover{transform:none;box-shadow:var(--shadow-sm)}
+
+@media(max-width:720px){
+  body{padding-bottom:0}
+  main{padding:16px 13px calc(96px + env(safe-area-inset-bottom))}
+  .topbar{padding:14px 14px 7px}
+  .brand p{display:none}
+  .logo{width:38px;height:38px;border-radius:11px}
+  .brand h1{font-size:17px}
+  nav{
+    position:fixed;left:0;right:0;bottom:0;top:auto;z-index:90;
+    grid-template-columns:repeat(5,minmax(0,1fr));
+    padding:7px 7px calc(7px + env(safe-area-inset-bottom));
+    border-top:1px solid rgba(212,219,225,.9);border-bottom:0;
+    background:rgba(252,252,253,.94);
+    box-shadow:0 -8px 30px rgba(18,38,56,.07);
+  }
+  nav button{min-height:48px;border-radius:10px;padding:6px 3px;font-size:10.5px;display:grid;place-items:center;align-content:center}
+  nav button.active,nav button[aria-current="page"]{background:#edf2f5;color:var(--navy)}
+  .moreNav{position:fixed;left:10px;right:10px;bottom:calc(70px + env(safe-area-inset-bottom));top:auto;z-index:89;border:1px solid var(--line);border-radius:16px;padding:9px;background:rgba(255,255,255,.97);box-shadow:0 16px 45px rgba(14,37,55,.16)}
+  .moreNav button{min-height:43px}
+  .sectionTitle{margin:4px 2px 17px}
+  .sectionTitle h2{font-size:27px}
+  .outlookHero{padding:18px;border-radius:22px}
+  .outlookCard{padding:14px;border-radius:15px}
+  .dashboardSection{margin:27px 0 34px}
+  .panel{padding:15px;border-radius:17px}
+  .kpi{padding:13px}
+  #todayCard>.workout .workoutHead{padding:16px 14px}
+  #todayCard>.workout .workoutTitle h3{font-size:19px}
+  .todayActions{display:grid;grid-template-columns:1fr 1fr}
+  .todayActions button:first-child{grid-column:1/-1}
+  .planPrimaryHead{display:block;margin-bottom:11px}.planPrimaryHead p{margin-top:4px}
+  .planInsightsShell{margin-top:22px;border-radius:17px}
+  .planInsightsBody{padding:0 10px 10px}
+  .mixGrid{gap:10px}
+  .injuryCard{padding:13px!important;border-radius:18px!important}
+  .injuryTopicCard,.injuryCard>.injurySection{padding:13px;border-radius:14px}
+  .importBox{display:grid}.filePick{text-align:center;width:100%}
+}
+
+@media(max-width:390px){
+  .todayActions{grid-template-columns:1fr}
+  .todayActions button:first-child{grid-column:auto}
+  #todayCard>.workout .workoutHead{grid-template-columns:52px minmax(0,1fr);gap:10px}
+  #todayCard>.workout .status{grid-column:2;justify-self:start}
+  .outlookCard>strong{font-size:32px}
+  .panel{padding:14px 13px}
+}

@@ -1,4 +1,4 @@
-AI Running Coach v10.0.33 Stable — build 10330
+AI Running Coach v10.0.34 Stable — build 10340
 
 Deployment
 ----------
@@ -13,10 +13,22 @@ Replace only these six application files in the GitHub Pages repository:
 
 Retain your existing image assets separately and unchanged. The image references remain exactly as supplied in v10.0.32, including their existing cache-query values. Keep the separately managed icon, favicon, Apple touch icon and social-preview files beside these application files.
 
-After upgrading an installed PWA, fully close and reopen it once so cache arc-v1033-stable-10330-ui3 activates. Existing v10.x local data are migrated into schema 10330 and retained under a deterministic primary/mirror storage pair.
+After upgrading an installed PWA, fully close and reopen it once so cache arc-v1034-stable-10340-premium1 activates. Existing v10.x local data are migrated into schema 10330 and retained under a deterministic primary/mirror storage pair.
 
-Key release changes
--------------------
+
+UI refinement release
+---------------------
+- UI-only premium design pass; training, prediction, recovery and injury decision logic is unchanged.
+- Cleaner neutral surface system, stronger typography hierarchy, fewer visible borders and more deliberate spacing.
+- Mobile navigation is now a persistent bottom navigation bar with the secondary destinations opening above it.
+- Today is visually prioritised as the daily briefing, with the scheduled workout and next action carrying the strongest hierarchy.
+- Progress uses a calmer race-outlook hero and lower-noise cards instead of full-page warning colours.
+- Plan now shows the actual weekly workout schedule first; timeline, adaptation pathways and intensity mix sit in one secondary insights disclosure.
+- Injury cards, recovery views, forms, tables and charts share the same quieter design language.
+- Accessibility behaviours from v10.0.33 are retained, including focus visibility, reduced-motion handling and chart data tables.
+
+Key release changes retained from v10.0.33
+------------------------------------------
 - The Today Progress link now opens the full Progress page, and the three mobile summary tiles use aligned label/value rows.
 - Today Coach focus now lists the exact training and active injury-recovery actions required for the day.
 - Active injury recovery is given clear visual priority without changing either the training-plan or injury-recovery decision logic.

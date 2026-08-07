@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#0b3157"><title>AI Running Coach</title>
-<link rel="manifest" href="manifest.webmanifest?v=10330"><link rel="stylesheet" href="styles.css?v=10330-ui3">
+<link rel="manifest" href="manifest.webmanifest?v=10340"><link rel="stylesheet" href="styles.css?v=10340-premium1">
 
 <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png?v=10320">
 <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png?v=10320">
@@ -15,7 +15,7 @@
 <body>
 <a class="skipLink" href="#mainContent">Skip to main content</a>
 <header class="topbar">
-  <div class="brand"><img class="logo" src="icon-192.png?v=10320" alt="AI Running Coach logo"><div class="brand-copy"><h1>AI Running Coach</h1><p>Race-specific adaptive planning · v10.0.33 · build 10330</p></div></div>
+  <div class="brand"><img class="logo" src="icon-192.png?v=10320" alt="AI Running Coach logo"><div class="brand-copy"><h1>AI Running Coach</h1><p>Race-specific adaptive planning · v10.0.34 · build 10340</p></div></div>
   <button id="installBtn" class="install hidden">Install</button>
 </header>
 <nav id="nav" aria-label="Primary navigation"></nav>
@@ -103,10 +103,16 @@
   <div class="sectionTitle"><div><h2>Training plan</h2><p>Tap any workout for the full prescription.</p></div></div>
   <div class="weekNav"><button id="prevWeek">‹</button><button id="thisWeek">Current week</button><button id="nextWeek">›</button></div>
   <div id="weekHeader" class="weekHeader"></div>
-  <article class="panel programmeTimelinePanel"><div class="panelHead"><div><h3>Programme timeline</h3><p class="muted compact">Training blocks and current position on the path to race day.</p></div></div><div id="raceTimeline"></div></article>
-  <article class="panel evidencePanel"><div class="panelHead"><div><h3>Athlete state and weekly adjustment</h3><p class="muted compact">Fitness, recovery, injury signals, completed load and workout performance are combined into one coaching decision.</p></div></div><div id="fitnessEvidence"></div></article>
-  <article class="panel planMixPanel"><div class="panelHead"><div><h3>Training intensity mix</h3><p class="muted compact">Distance distribution by workout category</p></div></div><div class="mixGrid"><div><h4>Next week</h4><canvas id="nextWeekMixChart" width="1000" height="340" role="img" aria-label="Next week training intensity mix">Next week intensity distribution.</canvas></div><div><h4>Completed to date</h4><canvas id="completedMixChart" width="1000" height="340" role="img" aria-label="Completed training intensity mix">Completed intensity distribution.</canvas></div><div><h4>Overall programme</h4><canvas id="overallMixChart" width="1000" height="340" role="img" aria-label="Overall programme training intensity mix">Overall programme intensity distribution.</canvas></div></div></article>
+  <div class="planPrimaryHead"><span>THIS WEEK</span><p>Your scheduled sessions are the primary plan view. Tap a workout for targets, rationale and execution detail.</p></div>
   <div id="planCards"></div>
+  <details class="planInsightsShell">
+    <summary><span>Training insights &amp; adaptation</span><small>Timeline, pathways and intensity distribution</small></summary>
+    <div class="planInsightsBody">
+      <article class="panel programmeTimelinePanel"><div class="panelHead"><div><h3>Programme timeline</h3><p class="muted compact">Training blocks and current position on the path to race day.</p></div></div><div id="raceTimeline"></div></article>
+      <article class="panel evidencePanel"><div class="panelHead"><div><h3>Athlete state and weekly adjustment</h3><p class="muted compact">Fitness, recovery, injury signals, completed load and workout performance are combined into one coaching decision.</p></div></div><div id="fitnessEvidence"></div></article>
+      <article class="panel planMixPanel"><div class="panelHead"><div><h3>Training intensity mix</h3><p class="muted compact">Distance distribution by workout category</p></div></div><div class="mixGrid"><div><h4>Next week</h4><canvas id="nextWeekMixChart" width="1000" height="340" role="img" aria-label="Next week training intensity mix">Next week intensity distribution.</canvas></div><div><h4>Completed to date</h4><canvas id="completedMixChart" width="1000" height="340" role="img" aria-label="Completed training intensity mix">Completed intensity distribution.</canvas></div><div><h4>Overall programme</h4><canvas id="overallMixChart" width="1000" height="340" role="img" aria-label="Overall programme training intensity mix">Overall programme intensity distribution.</canvas></div></div></article>
+    </div>
+  </details>
 </section>
 
 <section id="runs" class="page">
@@ -220,5 +226,5 @@
     <button class="primary full" type="submit">Review and create my plan</button>
   </form>
 </div>
-<script src="app.js?v=10330-ui3"></script>
+<script src="app.js?v=10340-premium1"></script>
 </body></html>
