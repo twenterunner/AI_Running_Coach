@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '10.0.52';
-  const BUILD = 10520;
+  const VERSION = '10.0.53';
+  const BUILD = 10530;
   const SCHEMA = 10330;
   const PRIMARY_STORAGE_KEY = 'arc_v10330_web';
   const MIRROR_STORAGE_KEY = 'arc_v10330_mirror';
@@ -1859,7 +1859,7 @@ function dailyCoachFocus(p){
  else trainingBody=`<div class="supportMetric"><span>Running</span><b>No running session scheduled</b></div><p>Do not add a catch-up run. Preserve the next purposeful training exposure.</p>`;
  cards.push(`<section class="todaySupportCard trainingSupport"><div class="todaySupportHead"><span>${coachVisualIcon('plan')}</span><div><small>TRAINING PLAN</small><h4>Today's running plan</h4></div></div>${trainingBody}<button type="button" class="todayInlineLink" data-go="plan">View training week</button></section>`);
  const pace=ast.pathways.pace,load=ast.pathways.load;
- cards.push(`<section class="todaySupportCard progressSupport"><div class="todaySupportHead"><span>${coachVisualIcon('trend')}</span><div><small>PROGRESS SNAPSHOT</small><h4>Where you stand</h4></div></div><div class="todayMiniMetrics"><div><small>Week distance</small><strong>${wd.actual.toFixed(1)}<em> / ${wd.planned.toFixed(1)} km</em></strong><span>${completion===null?'No volume target':`${completion}% complete`}</span></div><div><small>Pace & power</small><strong>${Number(pace.current).toFixed(3)}</strong><span>${signedFactorDelta(pace.weekChange)} this week</span></div><div><small>Distance & load</small><strong>${Number(load.current).toFixed(3)}</strong><span>${signedFactorDelta(load.weekChange)} this week</span></div><div><small>Readiness</small><strong>${esc(ast.readiness)}</strong><span>Next review ${fmtDate(ast.reviewDate)}</span></div></div><button type="button" class="todayInlineLink" data-go="dashboard">Open full progress</button></section>`);
+ cards.push(`<section class="todaySupportCard progressSupport"><div class="todaySupportHead"><span>${coachVisualIcon('trend')}</span><div><small>PROGRESS SNAPSHOT</small><h4>Where you stand</h4></div></div><div class="todayMiniMetrics"><div><small>Week distance</small><strong>${wd.actual.toFixed(1)}<em> / ${wd.planned.toFixed(1)} km</em></strong><span>${completion===null?'No volume target':`${completion}% complete`}</span></div><div><small>Readiness</small><strong>${esc(ast.readiness)}</strong><span>Next review ${fmtDate(ast.reviewDate)}</span></div><div><small>Pace & power</small><strong>${Number(pace.current).toFixed(3)}</strong><span>${signedFactorDelta(pace.weekChange)} this week</span></div><div><small>Distance & load</small><strong>${Number(load.current).toFixed(3)}</strong><span>${signedFactorDelta(load.weekChange)} this week</span></div></div><button type="button" class="todayInlineLink" data-go="dashboard">Open full progress</button></section>`);
  return `<div class="todaySupportGrid">${cards.join('')}</div>`;
 }
 function renderToday(){
