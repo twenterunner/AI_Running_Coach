@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '10.0.48';
-  const BUILD = 10480;
+  const VERSION = '10.0.49';
+  const BUILD = 10490;
   const SCHEMA = 10330;
   const PRIMARY_STORAGE_KEY = 'arc_v10330_web';
   const MIRROR_STORAGE_KEY = 'arc_v10330_mirror';
@@ -440,9 +440,10 @@ function workoutScoreDetails(run,plan=run?.planId?state.plan.find(p=>p.id===run.
   add('distance','Distance execution',score,profile.distance,`${actualKm.toFixed(2)} km completed versus ${plannedKm.toFixed(2)} km planned. ${direction}`);
  }
  const reliability=targetMetricReliability(plan),aggregateNote=reliability<.5?' Whole-run averages include warm-up, recoveries and cooldown, so this is supporting evidence only.':'';
- const ia=run.intervalAnalysis?.structured&&run.intervalAnalysis?.usableForScore&&run.intervalAnalysis?.work?.length?run.intervalAnalysis:null,ip=ia?ia.work.map(x=>x.paceScore).filter(Number.isFinite):[],iw=ia?ia.work.map(x=>x.powerScore).filter(Number.isFinite):[];
+ const ia=run.intervalAnalysis?.structured&&run.intervalAnalysis?.usableForScore&&run.intervalAnalysis?.scoredWork?.length?run.intervalAnalysis:null,ip=ia?ia.scoredWork.map(x=>x.paceScore).filter(Number.isFinite):[],iw=ia?ia.scoredWork.map(x=>x.powerScore).filter(Number.isFinite):[];
  if(plan?.zone?.pace>0){if(ip.length>=2)add('pace','Interval pace execution',avg(ip),profile.pace,`${ip.length} FIT work repetitions compared directly with ${pace(plan.zone.pace)} target.`,1);else{const ratio=plan.zone.pace/actualPace,score=clamp(100-Math.abs(1-ratio)*145,45,100);add('pace','Pace execution',score,profile.pace,`${pace(actualPace)} whole-run average versus ${pace(plan.zone.pace)} target for the prescribed target portion.${aggregateNote}`,reliability)}}
  if(Number(run.avgPower)>0&&plan?.zone?.power>0){if(iw.length>=2)add('power','Interval power execution',avg(iw),profile.power,`${iw.length} FIT work repetitions compared directly with ${Math.round(plan.zone.power)} W target.`,1);else{const ratio=Number(run.avgPower)/plan.zone.power,score=clamp(100-Math.abs(1-ratio)*140,45,100);add('power','Power execution',score,profile.power,`${Math.round(Number(run.avgPower))} W whole-run average versus ${Math.round(plan.zone.power)} W target.${aggregateNote}`,reliability)}}
+ if(ia&&Number(ia.adherencePenalty)>0){const adherenceScore=clamp(100-ia.adherencePenalty*5,0,100);add('repAdherence','Repetition prescription adherence',adherenceScore,.12,`${ia.detectedReps} detected versus ${ia.expectedReps} prescribed. ${ia.extraReps?`${ia.extraReps} extra rep${ia.extraReps===1?'':'s'} added unplanned load.`:''}${ia.missingReps?`${ia.missingReps} prescribed rep${ia.missingReps===1?' was':'s were'} not detected.`:''}`,1)}
  if(Number(run.avgHr)>0&&plan?.zone?.hr>0){const hr=Number(run.avgHr),guide=plan.zone.hr,delta=(hr-guide)/Math.max(1,guide),score=hr<=guide?100:clamp(100-delta*180,55,100);add('hr','Heart-rate control',score,profile.hr,`${Math.round(hr)} bpm whole-run average versus ${Math.round(guide)} bpm guide. Lower-than-guide HR receives full, not extra, credit.${aggregateNote}`,reliability)}
  if(Number.isFinite(Number(run.powerDrift))){const drift=Number(run.powerDrift),score=clamp(100-Math.max(0,drift-2)*6,55,100),relevance=['Intervals','Repetition','Fitness assessment'].includes(baseType(type))?.45:1;add('drift','Cardiac drift',score,profile.drift,`${drift.toFixed(1)}% power-based drift; values up to about 2% receive full credit.${relevance<1?' Drift has limited relevance for short-repetition sessions.':''}`,relevance)}
  const rpe=Number(run.rpe),range=expectedRpe(type);if(Number.isFinite(rpe)&&rpe>0){const dist=rpe<range[0]?range[0]-rpe:rpe>range[1]?rpe-range[1]:0,score=clamp(100-dist*14,45,100);add('rpe','Effort appropriateness',score,profile.rpe,`RPE ${rpe}/10 versus expected ${range[0]}–${range[1]} for this session objective.`)}
@@ -2218,8 +2219,26 @@ function rawFitStrydRunningPower(bytes){
    }
   }
   if(!samples.length)return null;
-  return{average:samples.reduce((sum,v)=>sum+v,0)/samples.length,count:samples.length,min:Math.min(...samples),max:Math.max(...samples),source:'Stryd developer Power'};
+  return{average:samples.reduce((sum,v)=>sum+v,0)/samples.length,count:samples.length,min:Math.min(...samples),max:Math.max(...samples),samples:samples.slice(),source:'Stryd developer Power'};
  }catch(e){return null}
+}
+
+function attachRawStrydPowerToRecords(records,raw){
+ if(!Array.isArray(records)||!records.length||!raw?.samples?.length)return{records,mapped:0,method:null};
+ const samples=raw.samples.filter(v=>Number.isFinite(Number(v))&&Number(v)>0).map(Number);
+ if(!samples.length)return{records,mapped:0,method:null};
+ const existing=records.filter(r=>Number(r.power)>0).length;
+ if(existing>=Math.max(3,records.length*.5))return{records,mapped:existing,method:'decoded FIT developer power'};
+ // Stryd developer Power is normally emitted at record cadence. Map by sequence;
+ // if counts differ slightly, use proportional index mapping rather than dropping the stream.
+ let mapped=0;
+ records.forEach((r,i)=>{
+   if(Number(r.power)>0){mapped++;return}
+   const j=records.length===1?0:Math.round(i*(samples.length-1)/(records.length-1));
+   const v=samples[clamp(j,0,samples.length-1)];
+   if(Number.isFinite(v)&&v>0){r.power=v;mapped++}
+ });
+ return{records,mapped,method:samples.length===records.length?'Stryd developer Power · exact record alignment':`Stryd developer Power · proportional alignment (${samples.length} power samples / ${records.length} FIT records)`};
 }
 
 function fitLapSummary(lap,index,developerFieldMap,records){
@@ -2267,13 +2286,24 @@ function detectWorkSegments(records,plan){
 }
 function scoreDetectedIntervals(work,plan,source='record stream'){
  const expected=Math.max(0,Number(plan?.repetitions)||0),targetPace=Number(plan?.zone?.pace),targetPower=Number(plan?.zone?.power);
- const rows=work.map((l,i)=>({...l,rep:i+1,paceScore:Number.isFinite(l.paceSecPerKm)&&targetPace>0?clamp(100-Math.abs(1-targetPace/l.paceSecPerKm)*145,45,100):null,powerScore:Number.isFinite(l.avgPower)&&targetPower>0?clamp(100-Math.abs(1-l.avgPower/targetPower)*140,45,100):null}));
- const scores=[avg(rows.map(x=>x.paceScore).filter(Number.isFinite)),avg(rows.map(x=>x.powerScore).filter(Number.isFinite))].filter(Number.isFinite);
- const cut=Math.max(1,Math.floor(rows.length/2)),first=rows.slice(0,cut),last=rows.slice(cut),mean=(a,k)=>avg(a.map(x=>Number(x[k])).filter(Number.isFinite));
+ const allRows=work.map((l,i)=>({...l,rep:i+1,paceScore:Number.isFinite(l.paceSecPerKm)&&targetPace>0?clamp(100-Math.abs(1-targetPace/l.paceSecPerKm)*145,0,100):null,powerScore:Number.isFinite(l.avgPower)&&targetPower>0?clamp(100-Math.abs(1-l.avgPower/targetPower)*140,0,100):null}));
+ const scoredRows=expected>0?allRows.slice(0,expected):allRows;
+ const paceScores=scoredRows.map(x=>x.paceScore).filter(Number.isFinite),powerScores=scoredRows.map(x=>x.powerScore).filter(Number.isFinite);
+ const paceComponent=paceScores.length?avg(paceScores):null,powerComponent=powerScores.length?avg(powerScores):null;
+ const available=[paceComponent,powerComponent].filter(Number.isFinite);
+ const baseRepScore=available.length?avg(available):null;
+ const extraReps=expected>0?Math.max(0,allRows.length-expected):0;
+ const missingReps=expected>0?Math.max(0,expected-allRows.length):0;
+ // Extra work can never improve prescription execution. Apply a small adherence penalty;
+ // missing prescribed reps have a stronger completion penalty.
+ const extraPenalty=Math.min(10,extraReps*2),missingPenalty=expected>0?Math.min(30,missingReps*(30/expected)):0;
+ const adherencePenalty=extraPenalty+missingPenalty;
+ const finalRepScore=Number.isFinite(baseRepScore)?Math.round(clamp(baseRepScore-adherencePenalty,0,100)):null;
+ const cut=Math.max(1,Math.floor(scoredRows.length/2)),first=scoredRows.slice(0,cut),last=scoredRows.slice(cut),mean=(a,k)=>avg(a.map(x=>Number(x[k])).filter(Number.isFinite));
  const p1=mean(first,'avgPower'),p2=mean(last,'avgPower'),t1=mean(first,'paceSecPerKm'),t2=mean(last,'paceSecPerKm');
- const ratios=rows.map(x=>Number.isFinite(x.avgPower)&&targetPower>0?x.avgPower/targetPower:Number.isFinite(x.paceSecPerKm)&&targetPace>0?targetPace/x.paceSecPerKm:null).filter(Number.isFinite),mr=avg(ratios),variance=mr&&ratios.length>1?avg(ratios.map(v=>(v-mr)**2)):null;
- const coverage=expected>0?rows.length/expected:1,quality=rows.length>=3&&coverage>=.75&&coverage<=1.5?'high':rows.length>=3&&coverage>=.5?'moderate':'limited';
- return{available:true,structured:true,work:rows,expectedReps:expected,detectedReps:rows.length,extraReps:expected>0?Math.max(0,rows.length-expected):0,repScore:scores.length?Math.round(avg(scores)):null,fadePower:Number.isFinite(p1)&&p1>0&&Number.isFinite(p2)?(p2/p1-1)*100:null,fadePace:Number.isFinite(t1)&&t1>0&&Number.isFinite(t2)?(t2/t1-1)*100:null,consistencyCv:variance!=null?Math.sqrt(variance)/mr*100:null,quality,source,usableForScore:quality==='high',reason:`${rows.length}${expected?` detected versus ${expected} prescribed`:''} using the ${source}.`};
+ const ratios=scoredRows.map(x=>Number.isFinite(x.avgPower)&&targetPower>0?x.avgPower/targetPower:Number.isFinite(x.paceSecPerKm)&&targetPace>0?targetPace/x.paceSecPerKm:null).filter(Number.isFinite),mr=avg(ratios),variance=mr&&ratios.length>1?avg(ratios.map(v=>(v-mr)**2)):null;
+ const coverage=expected>0?allRows.length/expected:1,quality=allRows.length>=3&&coverage>=.75&&coverage<=1.5?'high':allRows.length>=3&&coverage>=.5?'moderate':'limited';
+ return{available:true,structured:true,work:allRows,scoredWork:scoredRows,expectedReps:expected,detectedReps:allRows.length,extraReps,missingReps,paceComponent,powerComponent,baseRepScore,extraPenalty,missingPenalty,adherencePenalty,repScore:finalRepScore,fadePower:Number.isFinite(p1)&&p1>0&&Number.isFinite(p2)?(p2/p1-1)*100:null,fadePace:Number.isFinite(t1)&&t1>0&&Number.isFinite(t2)?(t2/t1-1)*100:null,consistencyCv:variance!=null?Math.sqrt(variance)/mr*100:null,quality,source,usableForScore:quality==='high'&&scoredRows.length>=Math.max(2,Math.min(expected||2,2)),reason:`${allRows.length}${expected?` detected versus ${expected} prescribed`:''} using the ${source}. Only the first ${expected||allRows.length} prescribed repetition${(expected||allRows.length)===1?'':'s'} contribute to execution scoring.`};
 }
 function intervalFitAnalysis(laps,records,plan){
  const structured=plan&&['Intervals','Repetition','Threshold','Tempo','Marathon','Fitness assessment'].includes(baseType(plan.type));
@@ -2311,7 +2341,7 @@ async function summariseFIT(file){
  if(sport&&sport!=='running')throw Error(`This FIT activity is recorded as ${sport}, not running.`);
  const powerFieldDiagnostics=new Set();
  const developerFieldMap=fitDeveloperFieldMap(messages);
- const records=recordsRaw.map(r=>{
+ let records=recordsRaw.map(r=>{
    const d=fitDateValue(r.timestamp);
    return{t:d?d.getTime()/1000:null,hr:fitNumber(r,['heartRate','heart_rate']),speed:fitNumber(r,['enhancedSpeed','speed']),power:findFitPower(r,developerFieldMap,powerFieldDiagnostics),distance:fitDistanceMeters(fitNumber(r,['distance'])),cadence:fitNumber(r,['cadence','fractionalCadence'])};
  }).filter(r=>Number.isFinite(r.t)).sort((a,b)=>a.t-b.t);
@@ -2326,9 +2356,12 @@ async function summariseFIT(file){
  const mean=(arr)=>arr.length?avg(arr):null;
  const avgHr=fitNumber(session,['avgHeartRate','averageHeartRate'])??mean(positive('hr'));
  const decodedPower=findFitPower(session,developerFieldMap,powerFieldDiagnostics)??mean(positive('power'));
- const rawStrydPower=decodedPower?null:rawFitStrydRunningPower(bytes);
- const avgPower=decodedPower??rawStrydPower?.average??null;
- if(rawStrydPower)powerFieldDiagnostics.add(`${rawStrydPower.source} (${rawStrydPower.count} samples)`);
+ const rawStrydPower=rawFitStrydRunningPower(bytes);
+ const rawMap=attachRawStrydPowerToRecords(records,rawStrydPower);
+ records=rawMap.records;
+ const recordPowerMean=mean(records.map(r=>Number(r.power)).filter(v=>Number.isFinite(v)&&v>0));
+ const avgPower=decodedPower??recordPowerMean??rawStrydPower?.average??null;
+ if(rawStrydPower)powerFieldDiagnostics.add(`${rawStrydPower.source} (${rawStrydPower.count} samples${rawMap.method?`; ${rawMap.method}`:''})`);
  const avgCadence=fitNumber(session,['avgRunningCadence','avgCadence','averageCadence'])??mean(positive('cadence'));
  const analysis=streamAnalysis(records);
  const fitLaps=laps.map((lap,i)=>fitLapSummary(lap,i,developerFieldMap,records)).filter(l=>Number(l.durationSec)>0||Number(l.distanceKm)>0);
@@ -2340,7 +2373,7 @@ async function summariseFIT(file){
    cadence:Number.isFinite(avgCadence)?Math.round(avgCadence):null,gct:null,vo:null,rpe:null,pain:null,recovery:null,temperature:null,
    notes:`Imported from ${sourceHint}`,
    drift:null,powerDrift:null,paceDrift:null,candidateDrift:analysis?.drift??null,candidatePowerDrift:analysis?.powerDrift??null,candidatePaceDrift:analysis?.paceDrift??null,
-   candidateStreamEvidence:analysis,streamEvidence:null,sourceFormat:'fit-activity',sourceDevice:sourceHint,fitWarnings:[...(errors||[]).map(String).slice(0,5),...(rawStrydPower?[`Running power read from Stryd developer Power (${rawStrydPower.count} samples).`]:[]),...(avgPower?[]:['No usable native or developer running-power field was found.'])],lapCount:laps.length,fitLaps,fitRecords:records.map(r=>({t:r.t,hr:r.hr,speed:r.speed,power:r.power,distance:r.distance}))
+   candidateStreamEvidence:analysis,streamEvidence:null,sourceFormat:'fit-activity',sourceDevice:sourceHint,fitWarnings:[...(errors||[]).map(String).slice(0,5),...(rawStrydPower?[`Running power read from Stryd developer Power (${rawStrydPower.count} samples).${rawMap.method?' '+rawMap.method+'.':''}`]:[]),...(avgPower?[]:['No usable native or developer running-power field was found.'])],lapCount:laps.length,fitLaps,fitRecords:records.map(r=>({t:r.t,hr:r.hr,speed:r.speed,power:r.power,distance:r.distance}))
  };
 }
 async function parseRunImportFile(file){
@@ -2402,12 +2435,12 @@ function postRunCoachUpdateHtml(r){
 function intervalAnalysisHtml(r){
  const a=r?.intervalAnalysis;if(!a?.structured)return'';
  if(!a.work?.length)return`<section class="intervalAnalysisCard"><div class="intervalAnalysisHead"><div><span>INTERVAL-LEVEL FIT ANALYSIS</span><h3>Detection confidence too low</h3></div><b>Not scored</b></div><p>${esc(a.reason)}</p><p class="muted compact">Whole-run evidence remains in use; uncertain interval detection cannot lower or raise the execution score.</p></section>`;
- const rows=a.work.map(x=>`<div class="intervalRepRow"><strong>Rep ${x.rep}</strong><span>${Number.isFinite(x.distanceKm)?x.distanceKm.toFixed(2)+' km':'—'}</span><span>${Number.isFinite(x.paceSecPerKm)?pace(x.paceSecPerKm):'—'}</span><span>${Number.isFinite(x.avgPower)?Math.round(x.avgPower)+' W':'—'}</span><span>${Number.isFinite(x.avgHr)?Math.round(x.avgHr)+' bpm':'—'}</span></div>`).join('');
+ const rows=a.work.map(x=>{const extra=a.expectedReps>0&&x.rep>a.expectedReps;return`<div class="intervalRepRow ${extra?'extraRep':''}"><strong>Rep ${x.rep}${extra?' · extra':''}</strong><span>${Number.isFinite(x.distanceKm)?x.distanceKm.toFixed(2)+' km':'—'}</span><span>${Number.isFinite(x.paceSecPerKm)?pace(x.paceSecPerKm):'—'}</span><span>${Number.isFinite(x.avgPower)?Math.round(x.avgPower)+' W':'—'}</span><span>${Number.isFinite(x.avgHr)?Math.round(x.avgHr)+' bpm':'—'}</span></div>`}).join('');
  const paceChange=Number.isFinite(a.fadePace)?`${Math.abs(a.fadePace).toFixed(1)}% ${a.fadePace<0?'faster':'slower'}`:null,powerChange=Number.isFinite(a.fadePower)?`${Math.abs(a.fadePower).toFixed(1)}% ${a.fadePower>=0?'higher':'lower'}`:null;
  const late=powerChange?`Power ${powerChange}`:paceChange?`Pace ${paceChange}`:'—';
  const countText=a.expectedReps?`${a.detectedReps} detected / ${a.expectedReps} prescribed`:`${a.detectedReps} detected`;
- const extra=a.extraReps>0?` · ${a.extraReps} additional rep${a.extraReps===1?'':'s'} treated as unplanned load`:'';
- return`<section class="intervalAnalysisCard"><div class="intervalAnalysisHead"><div><span>INTERVAL-LEVEL FIT ANALYSIS</span><h3>${countText}</h3></div><b>${a.usableForScore&&Number.isFinite(a.repScore)?a.repScore+'/100':esc(a.quality)}</b></div><div class="intervalSummary"><div><small>Rep execution</small><strong>${a.usableForScore&&Number.isFinite(a.repScore)?a.repScore+'/100':'Not scored'}</strong></div><div><small>Rep consistency</small><strong>${Number.isFinite(a.consistencyCv)?a.consistencyCv.toFixed(1)+'% variation':'—'}</strong></div><div><small>Late-rep change</small><strong>${late}</strong></div></div><div class="intervalRepTable"><div class="intervalRepHeader"><b>Rep</b><b>Distance</b><b>Pace</b><b>Power</b><b>HR</b></div>${rows}</div><p class="muted compact">${esc(a.reason)}${extra}. ${a.usableForScore?'High-confidence repetition evidence replaces whole-run pace/power averages in execution scoring.':'Detection is shown for inspection only and does not replace whole-run execution evidence.'}</p></section>`;
+ const calc=`<details class="intervalScoreCalc"><summary>How ${Number.isFinite(a.repScore)?a.repScore+'/100':'the score'} is calculated</summary><div class="intervalCalcRows">${Number.isFinite(a.paceComponent)?`<div><span>Prescribed-rep pace</span><b>${Math.round(a.paceComponent)}/100</b></div>`:''}${Number.isFinite(a.powerComponent)?`<div><span>Prescribed-rep power</span><b>${Math.round(a.powerComponent)}/100</b></div>`:''}<div><span>Base rep execution</span><b>${Number.isFinite(a.baseRepScore)?Math.round(a.baseRepScore)+'/100':'—'}</b></div>${a.extraPenalty?`<div class="penalty"><span>${a.extraReps} extra rep${a.extraReps===1?'':'s'}</span><b>−${a.extraPenalty.toFixed(0)}</b></div>`:''}${a.missingPenalty?`<div class="penalty"><span>${a.missingReps} missing rep${a.missingReps===1?'':'s'}</span><b>−${a.missingPenalty.toFixed(0)}</b></div>`:''}<div class="total"><span>Interval execution</span><b>${Number.isFinite(a.repScore)?a.repScore+'/100':'Not scored'}</b></div></div><p class="muted compact">Rep pace and power are scored on a true 0–100 scale with no artificial 45-point floor. Only prescribed reps count toward pace/power execution; extra reps can only add an adherence penalty and training load.</p></details>`;
+ return`<section class="intervalAnalysisCard"><div class="intervalAnalysisHead"><div><span>INTERVAL-LEVEL FIT ANALYSIS</span><h3>${countText}</h3></div><b>${a.usableForScore&&Number.isFinite(a.repScore)?a.repScore+'/100':esc(a.quality)}</b></div><div class="intervalSummary"><div><small>Rep execution</small><strong>${a.usableForScore&&Number.isFinite(a.repScore)?a.repScore+'/100':'Not scored'}</strong></div><div><small>Rep consistency</small><strong>${Number.isFinite(a.consistencyCv)?a.consistencyCv.toFixed(1)+'% variation':'—'}</strong></div><div><small>Late-rep change</small><strong>${late}</strong></div></div>${calc}<div class="intervalRepTable"><div class="intervalRepHeader"><b>Rep</b><b>Distance</b><b>Pace</b><b>Power</b><b>HR</b></div>${rows}</div><p class="muted compact">${esc(a.reason)} ${a.usableForScore?'High-confidence prescribed-repetition evidence replaces whole-run pace/power averages in execution scoring.':'Detection is shown for inspection only and does not replace whole-run execution evidence.'}</p></section>`;
 }
 function runExecutionBreakdownHtml(r){
  const plan=r.planId?state.plan.find(p=>p.id===r.planId):null,d=workoutScoreDetails(r,plan);

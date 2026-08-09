@@ -1404,3 +1404,9 @@ details>summary{transition:background .15s ease,color .15s ease}details>summary:
 /* v10.0.48 — record-stream interval detection clarity */
 .intervalAnalysisHead>b{text-transform:capitalize}
 .intervalAnalysisCard .muted.compact{line-height:1.42}
+
+/* v10.0.49 — transparent interval score + Stryd per-rep power */
+.intervalScoreCalc{margin:12px 0;border:1px solid #dce8ec;border-radius:13px;background:#fff}
+.intervalScoreCalc>summary{padding:11px 12px;font-weight:850;color:#17435f;cursor:pointer}
+.intervalCalcRows{padding:0 12px 11px}.intervalCalcRows>div{display:flex;justify-content:space-between;gap:12px;padding:7px 0;border-top:1px solid #eef2f4;font-size:.79rem}.intervalCalcRows span{color:#607482}.intervalCalcRows b{color:#173e59}.intervalCalcRows .penalty b{color:#a45e29}.intervalCalcRows .total{font-size:.88rem}.intervalCalcRows .total b{font-size:1rem}
+.intervalRepRow.extraRep{background:#fff8ed}.intervalRepRow.extraRep strong{color:#9a6425}
