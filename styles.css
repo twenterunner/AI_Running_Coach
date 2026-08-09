@@ -1229,3 +1229,105 @@ details>summary{transition:background .15s ease,color .15s ease}details>summary:
  .todayStatusHero h3{font-size:1.55rem!important}
  .todayStatusHero p{font-size:.96rem!important}
 }
+
+
+/* ===== v10.0.43 Today simplification + coach-banner readability ===== */
+
+/* AI coach is now the dominant top banner */
+.aiCoachBriefing{
+  background:linear-gradient(135deg,#082f56 0%,#0b5d78 58%,#0a8991 100%)!important;
+  color:#fff!important;
+  padding:24px 21px!important;
+  border:0!important;
+  box-shadow:0 18px 42px rgba(7,47,81,.18)!important;
+}
+.aiCoachBriefing,
+.aiCoachBriefing p,
+.aiCoachBriefing b,
+.aiCoachBriefing strong,
+.aiCoachBriefing h3,
+.aiCoachBriefing small{color:#fff!important}
+.aiCoachHeader h3{
+  font-size:1.58rem!important;
+  line-height:1.18!important;
+  font-weight:900!important;
+  letter-spacing:-.04em!important;
+  color:#fff!important;
+}
+.aiCoachHeader small{
+  font-size:.76rem!important;
+  color:rgba(255,255,255,.82)!important;
+}
+.aiCoachIcon{
+  width:49px!important;height:49px!important;
+  background:rgba(255,255,255,.14)!important;
+  box-shadow:none!important;
+}
+.aiCoachEvidence{
+  background:rgba(255,255,255,.14)!important;
+  color:#fff!important;
+  font-size:.73rem!important;
+  padding:7px 10px!important;
+}
+.aiCoachLead{
+  font-size:1.08rem!important;
+  line-height:1.55!important;
+  font-weight:650!important;
+  color:#fff!important;
+}
+.aiCoachVisual{
+  background:rgba(255,255,255,.10)!important;
+  border-color:rgba(255,255,255,.12)!important;
+}
+.aiCoachVisual>span{background:rgba(255,255,255,.13)!important;color:#fff!important}
+.aiCoachVisual small{color:rgba(255,255,255,.72)!important}
+.aiCoachVisual b{color:#fff!important;font-size:.79rem!important}
+.aiCoachNarrative{
+  border-top-color:rgba(255,255,255,.14)!important;
+}
+.aiCoachNarrative p{
+  color:rgba(255,255,255,.92)!important;
+  font-size:.92rem!important;
+  line-height:1.52!important;
+}
+.aiCoachEvidenceNote{
+  display:block;
+  margin-top:9px;
+  color:rgba(255,255,255,.67)!important;
+  font-size:.68rem!important;
+  line-height:1.4;
+}
+.aiCoachCall{
+  background:rgba(4,31,54,.30)!important;
+  border:1px solid rgba(255,255,255,.13);
+}
+.aiCoachCall small{color:rgba(255,255,255,.76)!important}
+.aiCoachCall b{font-size:.98rem!important;color:#fff!important}
+
+/* Remove visual spacing left by deleted shortcut area */
+#todayCard + #todayCoach{margin-top:12px}
+
+/* Supporting cards now carry navigation context themselves */
+.todaySupportCard .todayInlineLink{
+  display:inline-flex!important;
+  align-items:center;
+  min-height:40px;
+  padding:9px 12px!important;
+  border-radius:11px!important;
+  background:#edf5f7!important;
+  color:#104463!important;
+  font-size:.82rem!important;
+  font-weight:850!important;
+}
+
+/* Defensive fix: any white button inside old hero gets dark text */
+.todayStatusHero .todayHeroAction{color:#0a3157!important}
+
+/* Larger readable mobile coach banner */
+@media(max-width:620px){
+  .aiCoachBriefing{padding:21px 17px!important;border-radius:22px!important}
+  .aiCoachHeader h3{font-size:1.45rem!important}
+  .aiCoachLead{font-size:1.02rem!important}
+  .aiCoachNarrative p{font-size:.89rem!important}
+  .aiCoachCall b{font-size:.94rem!important}
+}

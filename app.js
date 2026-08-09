@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '10.0.42';
-  const BUILD = 10420;
+  const VERSION = '10.0.43';
+  const BUILD = 10430;
   const SCHEMA = 10330;
   const PRIMARY_STORAGE_KEY = 'arc_v10330_web';
   const MIRROR_STORAGE_KEY = 'arc_v10330_mirror';
@@ -1831,10 +1831,10 @@ function consolidatedTodayCoachBriefing(p){
  flags.push({kind:'trend',label:'Pace & power',value:`${paceState.applied.toFixed(3)} → ${paceState.provisional.toFixed(3)}`});
  flags.push({kind:'load',label:'This week',value:completion===null?'No planned km':`${wd.actual.toFixed(1)} / ${wd.planned.toFixed(1)} km`});
  return `<section class="aiCoachBriefing">
-   <div class="aiCoachHeader"><span class="aiCoachIcon">${coachVisualIcon('coach')}</span><div><small>AI COACH BRIEFING</small><h3>${esc(headline)}</h3></div><span class="aiCoachEvidence">${report.evidenceCoverage}% evidence</span></div>
+   <div class="aiCoachHeader"><span class="aiCoachIcon">${coachVisualIcon('coach')}</span><div><small>AI COACH BRIEFING</small><h3>${esc(headline)}</h3></div><span class="aiCoachEvidence">${report.evidenceCoverage>0?`${report.evidenceCoverage}% training evidence`:'Training evidence building'}</span></div>
    <p class="aiCoachLead">${esc(lead)}</p>
    <div class="aiCoachVisualGrid">${flags.map(f=>`<div class="aiCoachVisual"><span>${coachVisualIcon(f.kind)}</span><div><small>${esc(f.label)}</small><b>${esc(f.value)}</b></div></div>`).join('')}</div>
-   <div class="aiCoachNarrative"><p>${esc(raceSentence)}</p><p>${esc(executionSentence)} ${esc(pathwaySentence)}</p></div>
+   <div class="aiCoachNarrative"><p>${esc(raceSentence)}</p><p>${esc(executionSentence)} ${esc(pathwaySentence)}</p><small class="aiCoachEvidenceNote">Training-evidence coverage reflects qualifying completed runs, assessments and linked execution data used by the race-performance model. It does not mean the app knows nothing about your profile, injury or plan.</small></div>
    <div class="aiCoachCall"><span>${coachVisualIcon('plan')}</span><div><small>COACH'S CALL TODAY</small><b>${esc(action)}</b></div></div>
  </section>`;
 }
@@ -1864,18 +1864,8 @@ function renderToday(){
  const activeInjury=(state.injuries||[]).find(injury=>injury.id===state.activeInjuryPlanId);
  const injuryProgress=activeInjury?injuryPrediction(activeInjury):null;
  const injuryDay=activeInjury?rehabCalendarDay(activeInjury,injuryProgress,iso(today()),rehabPlanDayIndex(activeInjury,iso(today()))):null;
- let hero='';
- if(injuryDay){
-  const walkItem=(injuryDay.items||[]).find(x=>/walk/i.test(x))||'';
-  const exerciseCount=(injuryDay.items||[]).filter(x=>!/walk/i.test(x)).length;
-  hero=`<section class="todayStatusHero rehabHero"><div class="todayHeroTop"><span class="todayStatusPill">REHAB DAY</span><span class="todayHeroDate">${esc($('todayDate').textContent)}</span></div><h3>${esc(injuryDay.title)}</h3><div class="todayHeroFacts">${walkItem?`<span>${esc(walkItem.replace(/^Walk\s*/i,''))}</span>`:''}${exerciseCount?`<span>${exerciseCount} rehab exercise${exerciseCount===1?'':'s'}</span>`:''}</div><p>${p&&p.type!=='Rest'?'Your active rehabilitation plan takes priority over the scheduled running session.':'No running session today · rehabilitation is the primary plan.'}</p><button type="button" class="todayHeroAction" data-go="injury">Complete injury check-in</button></section>`;
- }else if(p&&p.type!=='Rest'){
-  hero=`<section class="todayStatusHero trainingHero"><div class="todayHeroTop"><span class="todayStatusPill">TODAY'S SESSION</span><span class="todayHeroDate">${esc($('todayDate').textContent)}</span></div><h3>${esc(p.type)}</h3><div class="todayHeroFacts">${Number(p.distance)>0?`<span>${p.distance.toFixed(1)} km</span>`:''}<span>${esc(p.purpose||'Planned training')}</span></div><p>Follow the prescribed intensity and use the post-run review to update your coaching evidence.</p><button type="button" class="todayHeroAction" data-go="runs">Log or import run</button></section>`;
- }else{
-  hero=`<section class="todayStatusHero restHero"><div class="todayHeroTop"><span class="todayStatusPill">RECOVERY DAY</span><span class="todayHeroDate">${esc($('todayDate').textContent)}</span></div><h3>Recovery and preparation</h3><p>No running workout is scheduled. Keep the day easy and avoid catch-up training.</p></section>`;
- }
- const workoutSection=p&&p.type!=='Rest'?`<details class="todayWorkoutDetails"><summary>View running-plan prescription</summary>${workoutHtml(p)}</details>`:'';
- $('todayCard').innerHTML=consolidatedTodayCoachBriefing(p)+hero+workoutSection+`<div class="todayActions" aria-label="Quick actions"><button type="button" class="primary" data-go="runs">Log / import</button><button type="button" class="secondary" data-go="plan">This week</button>${state.activeInjuryPlanId?'<button type="button" class="secondary" data-go="injury">Rehab plan</button>':''}</div>`;
+ const workoutSection=!injuryDay&&p&&p.type!=='Rest'?`<details class="todayWorkoutDetails"><summary>View today’s detailed running prescription</summary>${workoutHtml(p)}</details>`:'';
+ $('todayCard').innerHTML=consolidatedTodayCoachBriefing(p)+workoutSection;
  $('todayCoach').innerHTML=dailyCoachFocus(p);
 }
 function renderPlan(){
