@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '10.0.39';
-  const BUILD = 10390;
+  const VERSION = '10.0.40';
+  const BUILD = 10400;
   const SCHEMA = 10330;
   const PRIMARY_STORAGE_KEY = 'arc_v10330_web';
   const MIRROR_STORAGE_KEY = 'arc_v10330_mirror';
@@ -1806,7 +1806,26 @@ function dailyCoachFocus(p){
  return `<div class="todayCoachGrid"><section class="todayFocusPrimary"><span>Today’s priority</span><h4>${esc(priorityTitle)}</h4><p>${esc(priorityText)}</p></section><section class="todayRequiredCard"><span>Required today</span>${required}</section>${progress}</div>`;
  /* The training and injury engines are unchanged; this view only consolidates their existing outputs. */
 }
-function renderToday(){let p=state.plan.find(x=>x.date===iso(today()));$('todayDate').textContent=today().toLocaleDateString(undefined,{weekday:'long',day:'numeric',month:'long'});$('todayCard').innerHTML=(p?workoutHtml(p):'<div class="panel">No workout scheduled.</div>')+`<div class="todayActions" aria-label="Quick actions"><button type="button" class="primary" data-go="runs">Log or import a run</button><button type="button" class="secondary" data-go="plan">View this week</button>${state.activeInjuryPlanId?'<button type="button" class="secondary" data-go="injury">Injury check-in</button>':''}</div>`;$('todayCoach').innerHTML=dailyCoachFocus(p)}
+function renderToday(){
+ let p=state.plan.find(x=>x.date===iso(today()));
+ $('todayDate').textContent=today().toLocaleDateString(undefined,{weekday:'long',day:'numeric',month:'long'});
+ const activeInjury=(state.injuries||[]).find(injury=>injury.id===state.activeInjuryPlanId);
+ const injuryProgress=activeInjury?injuryPrediction(activeInjury):null;
+ const injuryDay=activeInjury?rehabCalendarDay(activeInjury,injuryProgress,iso(today()),rehabPlanDayIndex(activeInjury,iso(today()))):null;
+ let hero='';
+ if(injuryDay){
+  const walkItem=(injuryDay.items||[]).find(x=>/walk/i.test(x))||'';
+  const exerciseCount=(injuryDay.items||[]).filter(x=>!/walk/i.test(x)).length;
+  hero=`<section class="todayStatusHero rehabHero"><div class="todayHeroTop"><span class="todayStatusPill">REHAB DAY</span><span class="todayHeroDate">${esc($('todayDate').textContent)}</span></div><h3>${esc(injuryDay.title)}</h3><div class="todayHeroFacts">${walkItem?`<span>${esc(walkItem.replace(/^Walk\s*/i,''))}</span>`:''}${exerciseCount?`<span>${exerciseCount} rehab exercise${exerciseCount===1?'':'s'}</span>`:''}</div><p>${p&&p.type!=='Rest'?'Your active rehabilitation plan takes priority over the scheduled running session.':'No running session today · rehabilitation is the primary plan.'}</p><button type="button" class="todayHeroAction" data-go="injury">Complete injury check-in</button></section>`;
+ }else if(p&&p.type!=='Rest'){
+  hero=`<section class="todayStatusHero trainingHero"><div class="todayHeroTop"><span class="todayStatusPill">TODAY'S SESSION</span><span class="todayHeroDate">${esc($('todayDate').textContent)}</span></div><h3>${esc(p.type)}</h3><div class="todayHeroFacts">${Number(p.distance)>0?`<span>${p.distance.toFixed(1)} km</span>`:''}<span>${esc(p.purpose||'Planned training')}</span></div><p>Follow the prescribed intensity and use the post-run review to update your coaching evidence.</p><button type="button" class="todayHeroAction" data-go="runs">Log or import run</button></section>`;
+ }else{
+  hero=`<section class="todayStatusHero restHero"><div class="todayHeroTop"><span class="todayStatusPill">RECOVERY DAY</span><span class="todayHeroDate">${esc($('todayDate').textContent)}</span></div><h3>Recovery and preparation</h3><p>No running workout is scheduled. Keep the day easy and avoid catch-up training.</p></section>`;
+ }
+ const workoutSection=p&&p.type!=='Rest'?`<details class="todayWorkoutDetails"><summary>View running-plan prescription</summary>${workoutHtml(p)}</details>`:'';
+ $('todayCard').innerHTML=hero+workoutSection+`<div class="todayActions" aria-label="Quick actions"><button type="button" class="primary" data-go="runs">Log / import</button><button type="button" class="secondary" data-go="plan">This week</button>${state.activeInjuryPlanId?'<button type="button" class="secondary" data-go="injury">Rehab plan</button>':''}</div>`;
+ $('todayCoach').innerHTML=dailyCoachFocus(p);
+}
 function renderPlan(){
  const ast=athleteState(state.weekView||currentWeek());if($('fitnessEvidence')){
   const evidence=ast.fitnessEvidence,fitnessTarget=ast.fitnessDelta,fitnessFactor=1+fitnessTarget/100,recoveryImpact=Math.round((ast.hrv.factor-1)*100);
@@ -3322,7 +3341,23 @@ function renderAll(){[renderDashboard,renderToday,renderPlan,renderRuns,renderMe
 const pages=[['today','Today'],['plan','Plan'],['runs','Log'],['dashboard','Progress'],['assessments','Assessments'],['recovery','Recovery'],['injury','Injury'],['race','Race day'],['settings','Settings']];
 $('nav').innerHTML=pages.map((p,i)=>`<button data-page="${p[0]}" class="${i?'':'active'}">${p[1]}</button>`).join('');$('nav').onclick=e=>{let p=e.target.dataset.page;if(!p)return;document.querySelectorAll('.page').forEach(x=>x.classList.toggle('active',x.id===p));document.querySelectorAll('#nav button').forEach(x=>x.classList.toggle('active',x.dataset.page===p));renderAll();scrollTo(0,0)};document.body.onclick=e=>{if(e.target.id==='addInjuryBtn'){openInjuryForm();return}let activate=e.target.closest('[data-activate-injury-plan]');if(activate){let id=activate.dataset.activateInjuryPlan,current=state.injuries.find(x=>x.id===state.activeInjuryPlanId),next=state.injuries.find(x=>x.id===id);if(next&&confirm(`Switch the active recovery plan from ${current?.location||'the current injury'} to ${next.location||'this injury'}? Only one plan can be followed at a time.`)){state.activeInjuryPlanId=id;save();renderInjury();toast('Active recovery plan switched.')}return;}let ib=e.target.closest('[data-injury-check]');if(ib){openInjuryCheck(state.injuries.find(x=>x.id===ib.dataset.injuryCheck));return}let ice=e.target.closest('[data-injury-check-edit]');if(ice){let injury=state.injuries.find(x=>x.id===ice.dataset.injuryCheckEdit),check=injury?.checkIns?.find(x=>x.date===ice.dataset.checkDate);if(injury&&check)openInjuryCheck(injury,check);return}let ie=e.target.closest('[data-injury-edit]');if(ie){openInjuryForm(state.injuries.find(x=>x.id===ie.dataset.injuryEdit));return}let idel=e.target.closest('[data-injury-delete]');if(idel){if(confirm('Delete this injury and its check-ins?')){state.injuries=state.injuries.filter(x=>x.id!==idel.dataset.injuryDelete);if(state.activeInjuryPlanId===idel.dataset.injuryDelete)state.activeInjuryPlanId=state.injuries[0]?.id||null;save();renderInjury()}return}const go=e.target.closest('[data-go]');if(go){activatePage(go.dataset.go);return}const planRunBtn=e.target.closest('[data-plan-run]');if(planRunBtn){openRunDetails(planRunBtn.dataset.planRun);return}let factorToggle=e.target.closest('.factorToggle');if(factorToggle){let tile=factorToggle.closest('.factorKpi'),open=tile.classList.toggle('open');factorToggle.setAttribute('aria-expanded',String(open));return}let w=e.target.closest('.workout');if(w&&!e.target.closest('button'))w.classList.toggle('open')};
 const primaryPages=pages.slice(0,4),secondaryPages=pages.slice(4);
-function renderNavigation(){const current=document.querySelector('.page.active')?.id||'today';$('nav').innerHTML=primaryPages.map(p=>`<button data-page="${p[0]}">${p[1]}</button>`).join('')+secondaryPages.map(p=>`<button class="desktopSecondary" data-page="${p[0]}">${p[1]}</button>`).join('')+'<button id="moreNavBtn" class="moreToggle" type="button" aria-expanded="false" aria-controls="moreNav">More</button>';$('moreNav').innerHTML=secondaryPages.map(p=>`<button data-page="${p[0]}">${p[1]}</button>`).join('');setActiveNavigation(current)}
+function navIcon(page){
+ const icons={
+  today:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 13h4l2-6 4 12 2-6h4"/><path d="M5 4h14v16H5z" opacity=".15"/></svg>',
+  plan:'<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M7 3v4M17 3v4M4 9h16M8 13h3M13 13h3M8 16h3"/></svg>',
+  runs:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 4l-2 4 3 2 2-3 3 2"/><path d="M10 10l-3 4-3 1M14 11l-1 5 4 4M9 4.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3z"/></svg>',
+  dashboard:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19V10M10 19V5M16 19v-7M22 19H2"/><path d="M4 8l6-4 6 6 5-5"/></svg>',
+  more:'<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg>',
+  assessments:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h14v16H5zM8 8h8M8 12h5M8 16h7"/></svg>',
+  recovery:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2-5.3"/><path d="M4 4v6h6"/></svg>',
+  injury:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v18M3 12h18"/><circle cx="12" cy="12" r="9"/></svg>',
+  race:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 21V3M5 4h12l-3 4 3 4H5"/></svg>',
+  settings:'<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/></svg>'
+ };
+ return icons[page]||icons.more;
+}
+function navButtonHtml(page,label,extra=''){return`<button ${extra} data-page="${page}"><span class="navIcon">${navIcon(page)}</span><span class="navLabel">${label}</span></button>`}
+function renderNavigation(){const current=document.querySelector('.page.active')?.id||'today';$('nav').innerHTML=primaryPages.map(p=>navButtonHtml(p[0],p[1])).join('')+secondaryPages.map(p=>navButtonHtml(p[0],p[1],'class="desktopSecondary"')).join('')+`<button id="moreNavBtn" class="moreToggle" type="button" aria-expanded="false" aria-controls="moreNav"><span class="navIcon">${navIcon('more')}</span><span class="navLabel">More</span></button>`;$('moreNav').innerHTML=secondaryPages.map(p=>`<button data-page="${p[0]}"><span class="navIcon">${navIcon(p[0])}</span><span>${p[1]}</span></button>`).join('');setActiveNavigation(current)}
 function setActiveNavigation(page){document.querySelectorAll('#nav [data-page],#moreNav [data-page]').forEach(button=>{const active=button.dataset.page===page;button.classList.toggle('active',active);if(active)button.setAttribute('aria-current','page');else button.removeAttribute('aria-current')});const more=$('moreNavBtn'),secondary=secondaryPages.some(item=>item[0]===page);more?.classList.toggle('active',secondary);if(secondary)more?.setAttribute('aria-current','page');else more?.removeAttribute('aria-current')}
 function activatePage(page){if(!pages.some(p=>p[0]===page))return;document.querySelectorAll('.page').forEach(section=>section.classList.toggle('active',section.id===page));setActiveNavigation(page);$('moreNav').className='moreNav hidden';$('moreNavBtn')?.setAttribute('aria-expanded','false');renderAll();scrollTo(0,0);$('mainContent')?.focus({preventScroll:true})}
 renderNavigation();$('nav').onclick=event=>{if(event.target.id==='moreNavBtn'){const open=$('moreNav').classList.toggle('hidden')===false;event.target.setAttribute('aria-expanded',String(open));return}if(event.target.dataset.page)activatePage(event.target.dataset.page)};$('moreNav').onclick=event=>{if(event.target.dataset.page)activatePage(event.target.dataset.page)};

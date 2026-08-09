@@ -1053,3 +1053,113 @@ nav button.active,nav button[aria-current="page"]{background:#e7edf2;color:var(-
 .modalCard{width:min(700px,100%);max-height:calc(100dvh - max(16px,env(safe-area-inset-top)) - max(16px,env(safe-area-inset-bottom)));overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding-bottom:calc(86px + env(safe-area-inset-bottom));margin:0}
 .modalCard>.primary.full:last-child,.modalCard>form:last-child .primary.full:last-child,.modalCard .postRunCoachUpdate+button.primary.full{position:sticky;bottom:0;z-index:8;box-shadow:0 -10px 24px rgba(255,255,255,.96),0 8px 20px rgba(11,49,87,.12);margin-top:18px}
 @media(max-width:720px){.modal{padding:0}.modalCard{width:100%;max-width:none;max-height:100dvh;min-height:100dvh;border-radius:0;padding:18px 14px calc(92px + env(safe-area-inset-bottom))}.close{position:sticky;float:right;top:8px;z-index:12}.modalCard .primary.full:last-child,.modalCard>form:last-child .primary.full:last-child,.modalCard .postRunCoachUpdate+button.primary.full{bottom:calc(8px + env(safe-area-inset-bottom))}}
+
+
+/* ===== v10.0.40 Visual Design v2 ===== */
+:root{
+ --brand-navy:#0a2f54;
+ --brand-blue:#1677b8;
+ --brand-cyan:#28a6b8;
+ --page-bg:#f3f6f9;
+ --surface-elevated:#ffffff;
+ --surface-tint:#edf4f8;
+ --shadow-soft:0 8px 26px rgba(10,47,84,.075);
+ --shadow-float:0 16px 42px rgba(10,47,84,.12);
+}
+body{background:var(--page-bg)}
+main{padding-bottom:112px}
+.topbar{background:linear-gradient(115deg,#082c50 0%,#0a466f 60%,#0a5f77 100%);box-shadow:0 6px 22px rgba(7,37,68,.17)}
+.brand-copy h1{letter-spacing:-.025em}
+.brand-copy p{opacity:.78;font-size:.75rem}
+.logo{box-shadow:0 5px 18px rgba(0,0,0,.18);border-radius:18px}
+
+/* stronger mobile primary navigation */
+#nav{background:rgba(250,252,253,.97);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border-top:1px solid rgba(20,63,91,.10);box-shadow:0 -8px 26px rgba(10,47,84,.10)}
+#nav button{font-size:.93rem!important;font-weight:800!important;letter-spacing:-.01em;min-height:72px!important;gap:4px!important;border-radius:16px!important;color:#586979!important;transition:transform .15s ease,background .15s ease,color .15s ease}
+#nav button:active{transform:scale(.96)}
+#nav button.active{color:var(--brand-navy)!important;background:linear-gradient(145deg,#e4f1f7,#dcecf3)!important;box-shadow:inset 0 0 0 1px rgba(22,119,184,.08)}
+#nav .navIcon{display:flex;height:24px;align-items:center;justify-content:center}
+#nav .navIcon svg{width:23px;height:23px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+#nav .navLabel{display:block;line-height:1.05}
+#moreNav button{display:flex;align-items:center;gap:12px;font-size:1rem;font-weight:800}
+#moreNav .navIcon svg{width:21px;height:21px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+
+/* fewer boxed surfaces / stronger hierarchy */
+.page>h2,.pageTitle h2{letter-spacing:-.035em}
+.panel{border-color:rgba(45,79,105,.10);box-shadow:var(--shadow-soft)}
+.dashboardSection{margin-top:32px}
+.dashboardSectionHead{margin-bottom:14px}
+.dashboardSectionHead>span{background:linear-gradient(145deg,var(--brand-blue),var(--brand-cyan));box-shadow:0 5px 14px rgba(22,119,184,.22)}
+.kpi{border:0;background:linear-gradient(145deg,#fff,#f9fbfc);box-shadow:var(--shadow-soft)}
+.kpi strong{letter-spacing:-.035em}
+
+/* Today: product-style daily briefing */
+#today .pageTitle{margin-bottom:8px}
+#todayDate{font-size:.9rem;color:#71808d;font-weight:700}
+.todayStatusHero{position:relative;overflow:hidden;margin:14px 0 18px;padding:22px;border:0;border-radius:24px;color:white;box-shadow:var(--shadow-float)}
+.todayStatusHero:after{content:"";position:absolute;width:190px;height:190px;border-radius:50%;right:-65px;top:-95px;background:rgba(255,255,255,.08)}
+.todayStatusHero.rehabHero{background:linear-gradient(135deg,#0a385e 0%,#0d6c78 100%)}
+.todayStatusHero.trainingHero{background:linear-gradient(135deg,#0b3157 0%,#166faa 100%)}
+.todayStatusHero.restHero{background:linear-gradient(135deg,#304b64 0%,#547587 100%)}
+.todayHeroTop{display:flex;justify-content:space-between;align-items:center;gap:12px;position:relative;z-index:1}
+.todayStatusPill{font-size:.68rem;font-weight:900;letter-spacing:.09em;padding:6px 9px;border-radius:999px;background:rgba(255,255,255,.14)}
+.todayHeroDate{font-size:.77rem;opacity:.78;font-weight:700}
+.todayStatusHero h3{position:relative;z-index:1;font-size:1.55rem;line-height:1.16;letter-spacing:-.035em;margin:16px 0 9px}
+.todayStatusHero p{position:relative;z-index:1;max-width:560px;margin:10px 0 0;line-height:1.48;color:rgba(255,255,255,.82)}
+.todayHeroFacts{display:flex;position:relative;z-index:1;gap:8px;flex-wrap:wrap}
+.todayHeroFacts span{padding:7px 10px;border-radius:10px;background:rgba(255,255,255,.12);font-size:.82rem;font-weight:800}
+.todayHeroAction{position:relative;z-index:2;margin-top:17px;padding:12px 16px!important;background:#fff!important;color:var(--brand-navy)!important;border:0!important;border-radius:13px!important;font-weight:900!important;box-shadow:0 7px 18px rgba(0,0,0,.12)}
+.todayWorkoutDetails{margin:0 0 16px;border:0;background:transparent}
+.todayWorkoutDetails>summary{padding:13px 15px;background:#e9f0f4;border-radius:14px;color:var(--brand-navy);font-weight:850;cursor:pointer}
+.todayWorkoutDetails[open]>summary{margin-bottom:10px}
+.todayActions{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px!important;margin:14px 0 18px}
+.todayActions button{min-height:48px;font-size:.9rem;font-weight:850;border-radius:14px}
+
+/* less nested-card feel in daily coach */
+.todayCoachGrid{gap:14px}
+.todayFocusPrimary,.todayRequiredCard,.todayProgressCard{border:0!important;box-shadow:var(--shadow-soft)!important;border-radius:20px!important}
+.todayFocusPrimary{background:linear-gradient(145deg,#ffffff,#f2f8fb)!important}
+.todayRequiredCard{background:#fff!important}
+.todayProgressCard{background:linear-gradient(145deg,#fff,#f8fafc)!important}
+
+/* richer progress hero and charts */
+.outlookHero{background:linear-gradient(135deg,#092f54 0%,#0b5678 60%,#168596 100%)!important;box-shadow:var(--shadow-float)!important}
+.outlookCard{backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+canvas{filter:saturate(.9)}
+.chartMetric{font-weight:850}
+
+/* controls */
+button.primary,.buttonLike.primary{background:linear-gradient(135deg,#0b426d,#147fb1)!important;box-shadow:0 8px 18px rgba(18,105,155,.17)}
+button.primary:hover{filter:brightness(1.04)}
+button.secondary{background:#edf3f6!important;border-color:transparent!important;color:var(--brand-navy)!important}
+
+/* tiny persistent revision footer */
+.appFooter{display:flex;align-items:center;justify-content:center;gap:7px;padding:18px 12px 104px;color:#8b98a4;font-size:.68rem}
+.appFooter span{font-weight:750}.appFooter small{font-size:.66rem}
+
+/* more polished cards */
+.runCard,.weekCard,.injuryDayCard,.calendarDayCard{border-color:rgba(44,78,104,.09)!important;box-shadow:0 6px 20px rgba(10,47,84,.055)!important}
+.runCard:hover,.weekCard:hover{box-shadow:0 10px 27px rgba(10,47,84,.09)!important}
+
+/* desktop keeps top navigation compact */
+@media(min-width:901px){
+ #nav{box-shadow:0 4px 16px rgba(10,47,84,.06);border-top:0}
+ #nav button{min-height:48px!important;font-size:.86rem!important}
+ #nav .navIcon{display:none}
+ .appFooter{padding-bottom:24px}
+}
+@media(max-width:900px){
+ #nav{position:fixed!important;left:0;right:0;bottom:0;z-index:60;display:grid!important;grid-template-columns:repeat(5,1fr)!important;padding:7px 7px calc(7px + env(safe-area-inset-bottom))!important}
+ #nav .desktopSecondary{display:none!important}
+ #nav button{padding:8px 3px!important}
+ .moreNav{position:fixed!important;left:10px!important;right:10px!important;bottom:calc(88px + env(safe-area-inset-bottom))!important;z-index:70;border-radius:20px!important;box-shadow:var(--shadow-float)!important;padding:10px!important}
+}
+@media(max-width:480px){
+ #nav button{font-size:.88rem!important;min-height:70px!important}
+ #nav .navIcon svg{width:22px;height:22px}
+ .todayStatusHero{padding:19px 17px;border-radius:21px}
+ .todayStatusHero h3{font-size:1.38rem}
+ .todayActions{grid-template-columns:1fr 1fr}
+ .todayActions button:first-child{grid-column:1/-1}
+ .appFooter{padding-bottom:108px}
+}
