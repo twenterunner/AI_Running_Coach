@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '10.0.40';
-  const BUILD = 10400;
+  const VERSION = '10.0.41';
+  const BUILD = 10410;
   const SCHEMA = 10330;
   const PRIMARY_STORAGE_KEY = 'arc_v10330_web';
   const MIRROR_STORAGE_KEY = 'arc_v10330_mirror';
@@ -3360,7 +3360,21 @@ function navButtonHtml(page,label,extra=''){return`<button ${extra} data-page="$
 function renderNavigation(){const current=document.querySelector('.page.active')?.id||'today';$('nav').innerHTML=primaryPages.map(p=>navButtonHtml(p[0],p[1])).join('')+secondaryPages.map(p=>navButtonHtml(p[0],p[1],'class="desktopSecondary"')).join('')+`<button id="moreNavBtn" class="moreToggle" type="button" aria-expanded="false" aria-controls="moreNav"><span class="navIcon">${navIcon('more')}</span><span class="navLabel">More</span></button>`;$('moreNav').innerHTML=secondaryPages.map(p=>`<button data-page="${p[0]}"><span class="navIcon">${navIcon(p[0])}</span><span>${p[1]}</span></button>`).join('');setActiveNavigation(current)}
 function setActiveNavigation(page){document.querySelectorAll('#nav [data-page],#moreNav [data-page]').forEach(button=>{const active=button.dataset.page===page;button.classList.toggle('active',active);if(active)button.setAttribute('aria-current','page');else button.removeAttribute('aria-current')});const more=$('moreNavBtn'),secondary=secondaryPages.some(item=>item[0]===page);more?.classList.toggle('active',secondary);if(secondary)more?.setAttribute('aria-current','page');else more?.removeAttribute('aria-current')}
 function activatePage(page){if(!pages.some(p=>p[0]===page))return;document.querySelectorAll('.page').forEach(section=>section.classList.toggle('active',section.id===page));setActiveNavigation(page);$('moreNav').className='moreNav hidden';$('moreNavBtn')?.setAttribute('aria-expanded','false');renderAll();scrollTo(0,0);$('mainContent')?.focus({preventScroll:true})}
-renderNavigation();$('nav').onclick=event=>{if(event.target.id==='moreNavBtn'){const open=$('moreNav').classList.toggle('hidden')===false;event.target.setAttribute('aria-expanded',String(open));return}if(event.target.dataset.page)activatePage(event.target.dataset.page)};$('moreNav').onclick=event=>{if(event.target.dataset.page)activatePage(event.target.dataset.page)};
+renderNavigation();
+$('nav').onclick=event=>{
+ const button=event.target.closest('button');
+ if(!button||!$('nav').contains(button))return;
+ if(button.id==='moreNavBtn'){
+  const open=$('moreNav').classList.toggle('hidden')===false;
+  button.setAttribute('aria-expanded',String(open));
+  return;
+ }
+ if(button.dataset.page)activatePage(button.dataset.page);
+};
+$('moreNav').onclick=event=>{
+ const button=event.target.closest('button[data-page]');
+ if(button&&$('moreNav').contains(button))activatePage(button.dataset.page);
+};
 $('prevWeek').onclick=()=>{state.weekView=clamp((state.weekView||currentWeek())-1,1,weeks());renderPlan()};$('nextWeek').onclick=()=>{state.weekView=clamp((state.weekView||currentWeek())+1,1,weeks());renderPlan()};$('thisWeek').onclick=()=>{state.weekView=currentWeek();renderPlan()};
 
 function runEditorHtml(r){
