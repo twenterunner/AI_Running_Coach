@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '10.0.44';
-  const BUILD = 10440;
+  const VERSION = '10.0.45';
+  const BUILD = 10450;
   const SCHEMA = 10330;
   const PRIMARY_STORAGE_KEY = 'arc_v10330_web';
   const MIRROR_STORAGE_KEY = 'arc_v10330_mirror';
@@ -1550,7 +1550,7 @@ function coachReportHtml(report,compact=false){
  const recoverySummary=ast.readiness==='Normal'?'Recovery supports normal progression':ast.readiness==='Reduced'?'Recovery suggests caution':'Recovery currently restricts progression';
  const painSummary=ast.pain.count?`Latest recent maximum ${ast.pain.max}/10`:'No pain data logged';
  const executionHtml=ex&&ex.count?`<section class="executionAssessment"><div class="executionHead"><div><h4>Workout execution</h4><p class="muted compact">How well recent completed sessions delivered their intended stimulus.</p></div><strong>${Number.isFinite(ex.average)?Math.round(ex.average):'—'}/100</strong></div><div class="executionKpis"><span>Recent average <b>${Number.isFinite(ex.average)?Math.round(ex.average):'—'}</b></span><span>Key sessions <b>${Number.isFinite(ex.keyAverage)?Math.round(ex.keyAverage):'—'}</b></span><span>Trend <b>${Number.isFinite(ex.trend)?`${ex.trend>=0?'+':''}${ex.trend.toFixed(0)} pts`:'Insufficient data'}</b></span></div><details class="executionDetails"><summary>Session-by-session evidence</summary>${ex.recent.map(x=>`<div class="executionRow"><span>${fmtDate(x.date)} · ${esc(x.type)}</span><b>${x.score}/100</b><small>${x.plan?`Planned ${x.plan.distance.toFixed(1)} km · actual ${Number(x.run.distanceKm).toFixed(1)} km`:'Ad hoc run'}${Number.isFinite(x.pain)?` · pain ${x.pain}/10`:''}${Number.isFinite(x.drift)?` · drift ${x.drift.toFixed(1)}%`:''}</small></div>`).join('')}</details></section>`:'<section class="executionAssessment"><h4>Workout execution</h4><p class="muted">No completed run has enough information for an execution score yet.</p></section>';
- return `<div class="coachReport ${compact?'compactReport':''}"><div class="coachVerdict"><span>Evidence-based assessment</span><p class="coachConclusion">${esc(report.conclusion)}</p><p class="coachProjection">${esc(report.projected)}</p><small>Evidence coverage ${report.evidenceCoverage}% · Coaching uses logged, configured, plan-linked and execution-score evidence.</small></div><div class="coachPathwaySummary"><article class="coachPathwayCard paceSummary"><span class="coachPathwayLabel">PACE & POWER PATHWAY</span><b class="coachPathwayDecision">${esc(paceDecision)}</b><div class="coachFactorPair coachFactorTriple"><div><small>Current factor</small><strong>${paceCurrentFactor.toFixed(3)}</strong></div><div><small>This week</small><strong>${signedFactorDelta(ast.pathways.pace.weekChange)}</strong></div><div><small>Since start</small><strong>${signedFactorDelta(ast.pathways.pace.sinceStart)}</strong></div></div><p>Execution, assessments and races calibrate future pace and power.</p></article><article class="coachPathwayCard loadSummary"><span class="coachPathwayLabel">DISTANCE & LOAD PATHWAY</span><b class="coachPathwayDecision">${esc(loadDecision)}</b><div class="coachFactorPair coachFactorTriple"><div><small>Current factor</small><strong>${loadCurrentFactor.toFixed(3)}</strong></div><div><small>This week</small><strong>${signedFactorDelta(ast.pathways.load.weekChange)}</strong></div><div><small>Since start</small><strong>${signedFactorDelta(ast.pathways.load.sinceStart)}</strong></div></div><p>Recovery, pain and load tolerance calibrate distance and session load.</p></article></div><div class="coachRecoverySummary"><div><span>Recovery</span><b>${esc(ast.readiness)}</b><small>${esc(recoverySummary)}</small></div><div><span>Pain</span><b>${ast.pain.count?`${ast.pain.max}/10`:'No data'}</b><small>${esc(painSummary)}</small></div></div><button class="coachPlanLink" data-go="plan">View pathway calculations in Plan →</button>${executionHtml}<div class="coachEvidenceGrid"><section><h4>Verified strengths</h4>${strengths}</section><section><h4>Priority opportunities</h4>${opportunities}</section></div><section class="coachActions"><h4>Next actions</h4>${report.actions.map((a,i)=>`<div class="coachAction"><strong>${i+1}</strong><div><b>${esc(a.title)}</b><p>${esc(a.text)}</p><small>Based on: ${esc(a.source)}</small></div></div>`).join('')}</section></div>`;
+ return `<div class="coachReport ${compact?'compactReport':''}"><div class="coachVerdict"><span>LONGITUDINAL TRAINING REVIEW</span><p class="coachConclusion">${esc(report.conclusion)}</p><p class="coachProjection">${esc(report.projected)}</p><small>Evidence coverage ${report.evidenceCoverage}% · Coaching uses logged, configured, plan-linked and execution-score evidence.</small></div><div class="coachPathwaySummary"><article class="coachPathwayCard paceSummary"><span class="coachPathwayLabel">PACE & POWER PATHWAY</span><b class="coachPathwayDecision">${esc(paceDecision)}</b><div class="coachFactorPair coachFactorTriple"><div><small>Current factor</small><strong>${paceCurrentFactor.toFixed(3)}</strong></div><div><small>This week</small><strong>${signedFactorDelta(ast.pathways.pace.weekChange)}</strong></div><div><small>Since start</small><strong>${signedFactorDelta(ast.pathways.pace.sinceStart)}</strong></div></div><p>Execution, assessments and races calibrate future pace and power.</p></article><article class="coachPathwayCard loadSummary"><span class="coachPathwayLabel">DISTANCE & LOAD PATHWAY</span><b class="coachPathwayDecision">${esc(loadDecision)}</b><div class="coachFactorPair coachFactorTriple"><div><small>Current factor</small><strong>${loadCurrentFactor.toFixed(3)}</strong></div><div><small>This week</small><strong>${signedFactorDelta(ast.pathways.load.weekChange)}</strong></div><div><small>Since start</small><strong>${signedFactorDelta(ast.pathways.load.sinceStart)}</strong></div></div><p>Recovery, pain and load tolerance calibrate distance and session load.</p></article></div><div class="coachRecoverySummary"><div><span>Recovery</span><b>${esc(ast.readiness)}</b><small>${esc(recoverySummary)}</small></div><div><span>Pain</span><b>${ast.pain.count?`${ast.pain.max}/10`:'No data'}</b><small>${esc(painSummary)}</small></div></div><button class="coachPlanLink" data-go="plan">View pathway calculations in Plan →</button>${executionHtml}<div class="coachEvidenceGrid"><section><h4>Verified strengths</h4>${strengths}</section><section><h4>Priority opportunities</h4>${opportunities}</section></div><section class="coachActions"><h4>Next actions</h4>${report.actions.map((a,i)=>`<div class="coachAction"><strong>${i+1}</strong><div><b>${esc(a.title)}</b><p>${esc(a.text)}</p><small>Based on: ${esc(a.source)}</small></div></div>`).join('')}</section></div>`;
 }
 function progressCard(x){let pct=clamp(x.value/Math.max(.01,x.target)*100,0,100);let value=x.unit==='km'?`${x.value.toFixed(1)} / ${x.target.toFixed(1)} km`:`${Math.round(x.value)} / ${Math.round(x.target)} ${x.unit}`;return `<div class="progressCard"><div><b>${x.label}</b><span>${value}</span></div><strong>${Math.round(pct)}%</strong><div class="progressTrack"><i style="width:${pct}%"></i></div></div>`}
 function renderDashboard(){
@@ -1796,49 +1796,53 @@ function coachVisualIcon(kind){
  return icons[kind]||icons.coach;
 }
 function consolidatedTodayCoachBriefing(p){
- const engine=coachEngine(),report=evidenceBasedCoach(engine),ast=report.athleteState,remaining=raceTimeRemaining(),wd=weekData(currentWeek());
+ const engine=coachEngine(),report=evidenceBasedCoach(engine),ast=report.athleteState;
  const activeInjury=(state.injuries||[]).find(injury=>injury.id===state.activeInjuryPlanId);
  const injuryProgress=activeInjury?injuryPrediction(activeInjury):null;
  const injuryDay=activeInjury?rehabCalendarDay(activeInjury,injuryProgress,iso(today()),rehabPlanDayIndex(activeInjury,iso(today()))):null;
  const recent=completedRuns().slice().sort((a,b)=>b.date.localeCompare(a.date))[0]||null;
  const recentScore=recent?workoutScore(recent):null;
- const completion=wd.planned>0?Math.round(wd.actual/wd.planned*100):null;
+ const wd=weekData(currentWeek()),completion=wd.planned>0?Math.round(wd.actual/wd.planned*100):null;
  const hrv=ast.hrv||hrvModel();
- const paceState=pacePowerReviewState(iso(today()));
- const currentProb=engine.currentModel.provisional?null:Math.round(engine.currentModel.probability);
- const targetGap=engine.pred-Number(state.setup.targetTime);
- const targetText=targetGap<=0?`${fmtTime(Math.abs(targetGap))} inside the target estimate`:`${fmtTime(targetGap)} outside the target estimate`;
- const recoveryText=ast.readiness==='Normal'?'recovery currently supports normal progression':ast.readiness==='Reduced'?'recovery is asking for some restraint':'recovery currently limits progression';
+ const pain=ast.pain||{};
+ const readiness=ast.readiness||'Unknown';
  let headline='Stay disciplined and let the plan work.';
- let lead='';
+ let lead='',action='',why=[];
  if(injuryDay){
-   headline=`Protect recovery today; fitness is not the priority.`;
-   lead=`Your active rehabilitation plan is the governing plan today. ${injuryDay.title} is designed to build the next return-to-running criterion without adding an unscheduled impact exposure.`;
+   headline='Rehab is the priority today.';
+   lead=`${injuryDay.title}. The objective is to satisfy the next rehabilitation criterion without adding an unscheduled impact exposure.`;
+   action=`Complete today's prescribed rehabilitation exactly as written, then submit the injury check-in. Do not add running unless today's rehabilitation prescription explicitly includes it.`;
+   why.push(`Active rehabilitation plan: ${injuryDay.title}.`);
+   if(p&&p.type!=='Rest')why.push(`A running-plan session exists today, but rehabilitation takes priority.`);
  }else if(p&&p.type!=='Rest'){
-   headline=`Execute ${p.type.toLowerCase()} with control today.`;
-   lead=`The priority is the intended stimulus, not simply completing kilometres. ${p.purpose||'Follow the prescribed pace, power and effort guidance.'}`;
+   headline=`Execute today's ${p.type.toLowerCase()} with control.`;
+   lead=p.purpose||'Deliver the intended training stimulus rather than chasing pace or extra distance.';
+   action=`Complete the prescribed session to its intended effort, then log or import the run so execution and recovery evidence can be updated.`;
+   why.push(`Scheduled: ${p.type} · ${Number(p.distance).toFixed(1)} km.`);
  }else{
-   headline='Use today to absorb the training already completed.';
-   lead='There is no running session to make up. Recovery today protects the quality of the next meaningful training exposure.';
+   headline='Recovery is the training today.';
+   lead='There is no purposeful running session to complete. Absorb the work already done and protect the next quality exposure.';
+   action='Keep movement comfortable, do not add catch-up mileage, and arrive at the next planned session fresh.';
+   why.push('No running workout is scheduled today.');
  }
- const raceSentence=`You have ${remaining.label} until ${state.setup.raceName}. Current model estimate is ${fmtEstimate(engine.pred,engine.currentModel.provisional)}${currentProb===null?' with target probability still provisional':` with a ${currentProb}% model-estimated chance of the ${fmtTime(state.setup.targetTime)} target`}; that places the current estimate ${targetText}.`;
- const executionSentence=recent?`Your latest logged run was ${fmtDate(recent.date)} · ${recent.type}${recentScore!=null?`, execution ${recentScore}/100`:''}${Number.isFinite(Number(recent.pain))?`, pain ${Number(recent.pain)}/10`:''}.`:'There is not yet a recent completed run with enough evidence to summarize.';
- const pathwaySentence=`Applied Pace & Power is ${paceState.applied.toFixed(3)} with ${paceState.provisional.toFixed(3)} provisionally indicated for the next review. Learned Distance & Load is ${Number(ast.pathways?.load?.current??ast.adjustment??1).toFixed(3)}; ${recoveryText}.`;
- const action=injuryDay?`Complete the prescribed rehab exactly as written, record the check-in afterward, and do not add running unless today's rehab prescription explicitly includes it.`:p&&p.type!=='Rest'?`Complete today's session to the prescribed objective, then log/import it so execution, recovery and pathway evidence can be updated.`:`Keep everyday movement comfortable and arrive at the next session fresh rather than adding catch-up training.`;
- const flags=[];
- if(activeInjury)flags.push({kind:'injury',label:'Active rehab',value:injuryDay?.title||activeInjury.location||'Injury plan'});
- flags.push({kind:'race',label:'Race',value:remaining.label});
- flags.push({kind:'trend',label:'Pace & power',value:`${paceState.applied.toFixed(3)} → ${paceState.provisional.toFixed(3)}`});
- flags.push({kind:'load',label:'This week',value:completion===null?'No planned km':`${wd.actual.toFixed(1)} / ${wd.planned.toFixed(1)} km`});
- return `<section class="aiCoachBriefing">
-   <div class="aiCoachHeader"><span class="aiCoachIcon">${coachVisualIcon('coach')}</span><div><small>AI COACH BRIEFING</small><h3>${esc(headline)}</h3></div><span class="aiCoachEvidence">${report.evidenceCoverage>0?`${report.evidenceCoverage}% training evidence`:'Training evidence building'}</span></div>
+ if(readiness!=='Normal'&&readiness!=='Unknown')why.push(`Readiness is ${String(readiness).toLowerCase()}, so progression should be conservative.`);
+ if(Number.isFinite(pain.max)&&pain.max>=3)why.push(`Recent pain reached ${pain.max}/10 and remains relevant to today’s decision.`);
+ if(recent&&recentScore!=null)why.push(`Latest scored run: ${recent.type} · ${recentScore}/100 execution.`);
+ else if(recent)why.push(`Latest run: ${recent.type} on ${fmtDate(recent.date)}.`);
+ const visuals=[];
+ visuals.push({kind:injuryDay?'injury':'plan',label:'Today',value:injuryDay?'Rehab priority':p&&p.type!=='Rest'?`${p.type} · ${Number(p.distance).toFixed(1)} km`:'Recovery'});
+ visuals.push({kind:'recovery',label:'Readiness',value:readiness});
+ if(recent)visuals.push({kind:'trend',label:'Latest run',value:recentScore!=null?`${recentScore}/100 execution`:recent.type});
+ visuals.push({kind:'load',label:'Week',value:completion===null?'No volume target':`${completion}% complete`});
+ return `<section class="aiCoachBriefing todayCoachBriefing">
+   <div class="aiCoachHeader"><span class="aiCoachIcon">${coachVisualIcon('coach')}</span><div><small>TODAY'S COACH BRIEFING</small><h3>${esc(headline)}</h3></div><span class="aiCoachEvidence">${report.evidenceCoverage>0?`${report.evidenceCoverage}% training evidence`:'Evidence building'}</span></div>
    <p class="aiCoachLead">${esc(lead)}</p>
-   <div class="aiCoachVisualGrid">${flags.map(f=>`<div class="aiCoachVisual"><span>${coachVisualIcon(f.kind)}</span><div><small>${esc(f.label)}</small><b>${esc(f.value)}</b></div></div>`).join('')}</div>
-   <div class="aiCoachNarrative"><p>${esc(raceSentence)}</p><p>${esc(executionSentence)} ${esc(pathwaySentence)}</p><small class="aiCoachEvidenceNote">Training-evidence coverage reflects qualifying completed runs, assessments and linked execution data used by the race-performance model. It does not mean the app knows nothing about your profile, injury or plan.</small></div>
+   <div class="aiCoachVisualGrid">${visuals.map(f=>`<div class="aiCoachVisual"><span>${coachVisualIcon(f.kind)}</span><div><small>${esc(f.label)}</small><b>${esc(f.value)}</b></div></div>`).join('')}</div>
+   <div class="todayCoachWhy"><small>WHY THIS IS TODAY'S CALL</small>${why.slice(0,4).map(x=>`<p>${esc(x)}</p>`).join('')}</div>
    <div class="aiCoachCall"><span>${coachVisualIcon('plan')}</span><div><small>COACH'S CALL TODAY</small><b>${esc(action)}</b></div></div>
+   <small class="todayCoachScope">Today intentionally focuses on the next action. The Progress tab contains the longer-term race outlook, pathway trends, strengths, limiters and strategic priorities.</small>
  </section>`;
 }
-
 function dailyCoachFocus(p){
  const ast=athleteState(currentWeek());
  const activeInjury=(state.injuries||[]).find(injury=>injury.id===state.activeInjuryPlanId);

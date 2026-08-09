@@ -1336,3 +1336,19 @@ details>summary{transition:background .15s ease,color .15s ease}details>summary:
 .topbar .brand-copy h1{color:#fff!important;font-size:1.65rem!important;line-height:1.08!important;font-weight:900!important;letter-spacing:-.035em!important;text-shadow:0 1px 2px rgba(0,0,0,.12)}
 .topbar .brand-copy p{color:rgba(255,255,255,.82)!important}
 @media(max-width:620px){.topbar .brand-copy h1{font-size:1.48rem!important}}
+
+
+/* v10.0.45 — separate Today coaching from longitudinal Progress review */
+.todayCoachBriefing .aiCoachLead{max-width:58rem}
+.todayCoachWhy{margin-top:14px;padding:12px 14px;border-radius:15px;background:rgba(255,255,255,.09);border:1px solid rgba(255,255,255,.11)}
+.todayCoachWhy>small{display:block;margin-bottom:6px;font-size:.63rem;font-weight:900;letter-spacing:.09em;color:rgba(255,255,255,.72)!important}
+.todayCoachWhy p{position:relative;margin:6px 0!important;padding-left:15px;color:rgba(255,255,255,.92)!important;font-size:.86rem!important;line-height:1.42!important}
+.todayCoachWhy p:before{content:"";position:absolute;left:0;top:.55em;width:6px;height:6px;border-radius:50%;background:#8ce4dc}
+.todayCoachScope{display:block;margin-top:11px;color:rgba(255,255,255,.61)!important;font-size:.67rem!important;line-height:1.4}
+.coachAssessmentPanel{position:relative}
+.coachAssessmentPanel:before{content:"TRAINING REVIEW";display:inline-flex;margin-bottom:10px;padding:5px 8px;border-radius:999px;background:#e9f3f7;color:#145b7d;font-size:.62rem;font-weight:900;letter-spacing:.08em}
+.coachVerdict>span{letter-spacing:.08em!important}
+@media(max-width:620px){
+ .todayCoachWhy{padding:11px 12px}
+ .todayCoachWhy p{font-size:.82rem!important}
+}
