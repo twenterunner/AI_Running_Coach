@@ -1331,3 +1331,8 @@ details>summary{transition:background .15s ease,color .15s ease}details>summary:
   .aiCoachNarrative p{font-size:.89rem!important}
   .aiCoachCall b{font-size:.94rem!important}
 }
+
+/* v10.0.44 — stronger top brand title */
+.topbar .brand-copy h1{color:#fff!important;font-size:1.65rem!important;line-height:1.08!important;font-weight:900!important;letter-spacing:-.035em!important;text-shadow:0 1px 2px rgba(0,0,0,.12)}
+.topbar .brand-copy p{color:rgba(255,255,255,.82)!important}
+@media(max-width:620px){.topbar .brand-copy h1{font-size:1.48rem!important}}
