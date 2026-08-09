@@ -1417,3 +1417,17 @@ details>summary{transition:background .15s ease,color .15s ease}details>summary:
 .powerCoverage.good{background:#edf8f3;border-color:#d8ebe1}.powerCoverage.partial{background:#fff7e9;border-color:#f1dfbd}.powerCoverage.missing{background:#fff0ef;border-color:#efd7d4}
 
 /* v10.0.52 copy simplification: obsolete Today rationale/scope blocks removed from markup. */
+
+/* v10.0.54 — Readiness Center */
+.readinessCenter{border-top:4px solid #208ca0}
+.readinessHero{display:grid;grid-template-columns:1fr 1.2fr;gap:14px;padding:16px;border-radius:17px;background:#eff8f5}
+.readinessHero.reduced{background:#fff7e8}.readinessHero.restricted{background:#fff0ef}
+.readinessHero>div:first-child small,.readinessImpact small{display:block;font-size:.64rem;font-weight:900;letter-spacing:.08em;color:#748791}
+.readinessHero>div:first-child strong{display:block;margin-top:3px;font-size:1.5rem;color:#153f58}.readinessHero>div:first-child span{display:block;margin-top:3px;color:#657986}
+.readinessFormula{background:#fff;border-radius:13px;padding:10px 12px}.readinessFormula>div{display:flex;justify-content:space-between;gap:10px;padding:6px 0;border-bottom:1px solid #edf1f3}.readinessFormula .total{border-bottom:0;font-size:.92rem}.readinessFormula span{color:#607582}.readinessFormula b{color:#173f5a}
+.readinessExplanationGrid{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin:11px 0}.readinessExplanationGrid>div{padding:12px;border-radius:13px;background:#f5f8fa}.readinessExplanationGrid small{font-size:.62rem;font-weight:900;letter-spacing:.07em;color:#7c8b96}.readinessExplanationGrid strong{display:block;margin-top:4px;color:#153e59;font-size:1.05rem}.readinessExplanationGrid p{margin:4px 0 0;color:#687b88;font-size:.74rem;line-height:1.4}
+.readinessCalc{margin:10px 0;border:1px solid #e0e8ec;border-radius:13px}.readinessCalc>summary{padding:11px 12px;font-weight:850;color:#17425e}
+.readinessEvidenceRow,.readinessRule{padding:10px 12px;border-top:1px solid #edf1f3}.readinessEvidenceRow{display:grid;grid-template-columns:1fr auto;gap:3px 10px}.readinessEvidenceRow p,.readinessRule p{grid-column:1/-1;margin:3px 0;color:#607582;font-size:.75rem;line-height:1.42}.readinessEvidenceRow span{font-weight:850;color:#1a526c}
+.readinessImpact{padding:12px 13px;border-radius:13px;background:#edf5f8}.readinessImpact b{display:block;margin-top:4px;color:#173f5a;line-height:1.42}.readinessImpact p{margin:4px 0 0;color:#657986;font-size:.75rem}
+.readinessSvg{width:100%;height:auto;min-height:150px}.readinessBaseline{stroke:#8998a3;stroke-width:2;stroke-dasharray:7 7}.readinessLine{fill:none;stroke:#238fa0;stroke-width:4;stroke-linejoin:round;stroke-linecap:round}.readinessPoint{fill:#238fa0}.readinessAxis text{fill:#778994;font-size:13px}
+@media(max-width:560px){.readinessHero,.readinessExplanationGrid{grid-template-columns:1fr}}
