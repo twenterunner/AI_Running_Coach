@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '10.0.46';
-  const BUILD = 10460;
+  const VERSION = '10.0.48';
+  const BUILD = 10480;
   const SCHEMA = 10330;
   const PRIMARY_STORAGE_KEY = 'arc_v10330_web';
   const MIRROR_STORAGE_KEY = 'arc_v10330_mirror';
@@ -440,7 +440,7 @@ function workoutScoreDetails(run,plan=run?.planId?state.plan.find(p=>p.id===run.
   add('distance','Distance execution',score,profile.distance,`${actualKm.toFixed(2)} km completed versus ${plannedKm.toFixed(2)} km planned. ${direction}`);
  }
  const reliability=targetMetricReliability(plan),aggregateNote=reliability<.5?' Whole-run averages include warm-up, recoveries and cooldown, so this is supporting evidence only.':'';
- const ia=run.intervalAnalysis?.structured&&run.intervalAnalysis?.work?.length?run.intervalAnalysis:null,ip=ia?ia.work.map(x=>x.paceScore).filter(Number.isFinite):[],iw=ia?ia.work.map(x=>x.powerScore).filter(Number.isFinite):[];
+ const ia=run.intervalAnalysis?.structured&&run.intervalAnalysis?.usableForScore&&run.intervalAnalysis?.work?.length?run.intervalAnalysis:null,ip=ia?ia.work.map(x=>x.paceScore).filter(Number.isFinite):[],iw=ia?ia.work.map(x=>x.powerScore).filter(Number.isFinite):[];
  if(plan?.zone?.pace>0){if(ip.length>=2)add('pace','Interval pace execution',avg(ip),profile.pace,`${ip.length} FIT work repetitions compared directly with ${pace(plan.zone.pace)} target.`,1);else{const ratio=plan.zone.pace/actualPace,score=clamp(100-Math.abs(1-ratio)*145,45,100);add('pace','Pace execution',score,profile.pace,`${pace(actualPace)} whole-run average versus ${pace(plan.zone.pace)} target for the prescribed target portion.${aggregateNote}`,reliability)}}
  if(Number(run.avgPower)>0&&plan?.zone?.power>0){if(iw.length>=2)add('power','Interval power execution',avg(iw),profile.power,`${iw.length} FIT work repetitions compared directly with ${Math.round(plan.zone.power)} W target.`,1);else{const ratio=Number(run.avgPower)/plan.zone.power,score=clamp(100-Math.abs(1-ratio)*140,45,100);add('power','Power execution',score,profile.power,`${Math.round(Number(run.avgPower))} W whole-run average versus ${Math.round(plan.zone.power)} W target.${aggregateNote}`,reliability)}}
  if(Number(run.avgHr)>0&&plan?.zone?.hr>0){const hr=Number(run.avgHr),guide=plan.zone.hr,delta=(hr-guide)/Math.max(1,guide),score=hr<=guide?100:clamp(100-delta*180,55,100);add('hr','Heart-rate control',score,profile.hr,`${Math.round(hr)} bpm whole-run average versus ${Math.round(guide)} bpm guide. Lower-than-guide HR receives full, not extra, credit.${aggregateNote}`,reliability)}
@@ -1895,7 +1895,10 @@ function weeklyReviewData(w=currentWeek()){
 function weeklyReviewHtml(w=currentWeek()){
  const r=weeklyReviewData(w),status=r.closed?'WEEKLY REVIEW COMPLETE':'PROVISIONAL WEEKLY REVIEW',paceText=`${r.appliedPace.toFixed(3)} → ${r.provisionalPace.toFixed(3)}`,loadText=`${r.appliedLoad.toFixed(3)} → ${r.nextLoad.toFixed(3)}`;
  const rows=r.changes.map(x=>{const pc=Math.abs(x.nextPace-x.pace)>=.5,pw=Math.abs(x.nextPower-x.power)>=1;return`<div class="weeklyReviewChange"><div><b>${fmtDate(x.date)} · ${esc(x.type)}</b><small>${Number(x.distance).toFixed(1)} km</small></div><span>${pc?`${pace(x.pace)} → ${pace(x.nextPace)}`:`${pace(x.pace)} · held`}</span><span>${pw?`${Math.round(x.power)} → ${Math.round(x.nextPower)} W`:`${Math.round(x.power)} W · held`}</span></div>`}).join('');
- return`<section class="weeklyReviewCard ${r.closed?'complete':'provisional'}"><div class="weeklyReviewHead"><div><small>${status}</small><h3>Week ${r.week} adaptation review</h3></div><span>${r.closed?'Applied':'Building'}</span></div><div class="weeklyReviewFactors"><div><small>Pace & Power</small><strong>${paceText}</strong><em>${signedFactorDelta(r.paceDelta)}</em></div><div><small>Distance & Load</small><strong>${loadText}</strong><em>${signedFactorDelta(r.loadDelta)}</em></div><div><small>Readiness</small><strong>${r.readiness.toFixed(3)}</strong><em>temporary</em></div></div><div class="weeklyReviewReasons"><b>Why</b>${r.reasons.length?r.reasons.map(x=>`<p>${esc(x)}</p>`).join(''):'<p>Evidence is still accumulating for this week.</p>'}</div><details><summary>Prescription impact for Week ${Math.min(weeks(),r.week+1)}</summary><div class="weeklyReviewChanges">${rows||'<p class="muted">No upcoming running sessions to compare.</p>'}</div><p class="muted compact">${r.closed?'The weekly review is finalised from completed evidence.':'These are provisional pace/power effects. Learned pathway changes commit when the week closes; acute readiness may still reduce an upcoming session sooner.'}</p></details></section>`;
+ const readinessReduction=(1-r.readiness)*100;
+ const readinessLabel=r.readiness>=.995?'Normal readiness':r.readiness>=.96?'Slightly reduced readiness':'Reduced readiness';
+ const readinessText=r.readiness>=.995?'No temporary load reduction applied.':`${Math.max(0,readinessReduction).toFixed(0)}% temporary load moderation is currently applied.`;
+ return`<section class="weeklyReviewCard ${r.closed?'complete':'provisional'}"><div class="weeklyReviewHead"><div><small>${status}</small><h3>Week ${r.week} adaptation review</h3></div><span>${r.closed?'Applied':'Building'}</span></div><div class="weeklyReviewFactors twoPathways"><div><small>Pace & Power pathway</small><strong>${paceText}</strong><em>${signedFactorDelta(r.paceDelta)}</em></div><div><small>Distance & Load pathway</small><strong>${loadText}</strong><em>${signedFactorDelta(r.loadDelta)}</em></div></div><div class="weeklyRecoveryContext ${r.readiness>=.995?'normal':'reduced'}"><div class="weeklyRecoveryIcon">${r.readiness>=.995?'✓':'!'}</div><div><small>RECOVERY CONTEXT</small><b>${readinessLabel}</b><p>${readinessText} This is a temporary overlay and does not change learned Distance & Load capability.</p></div><span>${r.readiness.toFixed(3)}</span></div><div class="weeklyReviewReasons"><b>Why</b>${r.reasons.length?r.reasons.map(x=>`<p>${esc(x)}</p>`).join(''):'<p>Evidence is still accumulating for this week.</p>'}</div><details><summary>Prescription impact for Week ${Math.min(weeks(),r.week+1)}</summary><div class="weeklyReviewChanges">${rows||'<p class="muted">No upcoming running sessions to compare.</p>'}</div><p class="muted compact">${r.closed?'The weekly review is finalised from completed evidence.':'These are provisional pace/power effects. Learned pathway changes commit when the week closes; acute recovery context may still reduce an upcoming session sooner.'}</p></details></section>`;
 }
 
 function renderPlan(){
@@ -2231,29 +2234,63 @@ function fitLapSummary(lap,index,developerFieldMap,records){
  const paceSecPerKm=speed>0?1000/speed:(distanceM>0&&elapsed>0?elapsed/(distanceM/1000):null);
  return{index:index+1,durationSec:elapsed>0?elapsed:null,distanceKm:distanceM>0?distanceM/1000:null,paceSecPerKm:Number.isFinite(paceSecPerKm)?paceSecPerKm:null,avgPower:Number.isFinite(lapPower)?lapPower:null,avgHr:Number.isFinite(lapHr)?lapHr:null};
 }
-function intervalFitAnalysis(laps,plan){
- if(!Array.isArray(laps)||laps.length<2)return null;
- const structured=plan&&['Intervals','Repetition','Threshold','Tempo','Marathon','Fitness assessment'].includes(baseType(plan.type));
- if(!structured)return{available:true,structured:false,laps,quality:'lap data available',reason:'FIT lap data are available, but the run is not matched to a structured workout.'};
- const expected=Math.max(0,Number(plan.repetitions)||0),candidates=laps.filter(l=>Number(l.durationSec)>20&&Number(l.distanceKm)>.05);
- if(!candidates.length)return null;
- const medPower=median(candidates.map(x=>x.avgPower).filter(Number.isFinite)),medPace=median(candidates.map(x=>x.paceSecPerKm).filter(Number.isFinite));
- let work=candidates.filter(l=>(Number.isFinite(l.avgPower)&&Number.isFinite(medPower)&&l.avgPower>=medPower*.98)||(Number.isFinite(l.paceSecPerKm)&&Number.isFinite(medPace)&&l.paceSecPerKm<=medPace*1.02));
- if(expected>=2&&work.length>expected)work=work.slice().sort((a,b)=>{
-   const az=Number.isFinite(a.avgPower)&&plan.zone?.power?Math.abs(a.avgPower-plan.zone.power)/plan.zone.power:Number.isFinite(a.paceSecPerKm)&&plan.zone?.pace?Math.abs(a.paceSecPerKm-plan.zone.pace)/plan.zone.pace:0;
-   const bz=Number.isFinite(b.avgPower)&&plan.zone?.power?Math.abs(b.avgPower-plan.zone.power)/plan.zone.power:Number.isFinite(b.paceSecPerKm)&&plan.zone?.pace?Math.abs(b.paceSecPerKm-plan.zone.pace)/plan.zone.pace:0;
-   return az-bz}).slice(0,expected).sort((a,b)=>a.index-b.index);
- if(expected>=2&&work.length<Math.max(2,Math.floor(expected*.6)))return{available:true,structured:true,laps,work:[],expectedReps:expected,quality:'limited',reason:`Only ${work.length} work laps could be identified confidently versus ${expected} prescribed.`};
- const targetPace=Number(plan.zone?.pace),targetPower=Number(plan.zone?.power);
+function recordSegmentSummary(records,start,end,index){
+ const seg=records.slice(start,end+1),first=seg[0],last=seg.at(-1),duration=Math.max(0,(last?.t||0)-(first?.t||0));
+ const ds=seg.map(x=>Number(x.distance)).filter(Number.isFinite),distanceM=ds.length>1?Math.max(...ds)-Math.min(...ds):null;
+ const speeds=seg.map(x=>Number(x.speed)).filter(v=>Number.isFinite(v)&&v>0),powers=seg.map(x=>Number(x.power)).filter(v=>Number.isFinite(v)&&v>0),hrs=seg.map(x=>Number(x.hr)).filter(v=>Number.isFinite(v)&&v>0);
+ const speed=avg(speeds),paceSecPerKm=speed>0?1000/speed:null;
+ return{index:index+1,startSec:first?.t,endSec:last?.t,durationSec:duration,distanceKm:distanceM>0?distanceM/1000:(speed>0?speed*duration/1000:null),paceSecPerKm,avgPower:avg(powers),avgHr:avg(hrs)};
+}
+function detectWorkSegments(records,plan){
+ if(!Array.isArray(records)||records.length<20)return[];
+ const smooth=[];
+ for(let i=0;i<records.length;i++){const a=Math.max(0,i-3),b=Math.min(records.length,i+4),vals=records.slice(a,b).map(r=>Number(r.speed)).filter(v=>Number.isFinite(v)&&v>0);smooth.push(avg(vals))}
+ const valid=smooth.filter(Number.isFinite);if(valid.length<15)return[];
+ const sorted=valid.slice().sort((a,b)=>a-b),q=p=>sorted[Math.min(sorted.length-1,Math.floor((sorted.length-1)*p))],low=q(.25),high=q(.78);
+ // Require a meaningful pace contrast; threshold sits between recovery/easy and fast running.
+ const threshold=low+(high-low)*.58;
+ if(!(high>low*1.12))return[];
+ let raw=[],on=false,start=0,above=0,below=0;
+ for(let i=0;i<smooth.length;i++){
+   const v=smooth[i];
+   if(!on){above=Number.isFinite(v)&&v>=threshold?above+1:0;if(above>=5){on=true;start=Math.max(0,i-above+1);below=0}}
+   else{below=!Number.isFinite(v)||v<threshold?below+1:0;if(below>=5){raw.push([start,Math.max(start,i-below)]);on=false;above=0}}
+ }
+ if(on)raw.push([start,smooth.length-1]);
+ // Merge brief false dips, then keep plausible work bouts.
+ const merged=[];for(const seg of raw){if(merged.length&&records[seg[0]].t-records[merged.at(-1)[1]].t<12)merged.at(-1)[1]=seg[1];else merged.push(seg)}
+ let out=merged.map((x,i)=>recordSegmentSummary(records,x[0],x[1],i)).filter(x=>x.durationSec>=15&&x.durationSec<=900&&Number(x.distanceKm)>.04);
+ // Remove long warm-up/cool-down-like chunks when shorter repeated bouts are present.
+ const durations=out.map(x=>x.durationSec).sort((a,b)=>a-b),med=median(durations);
+ if(out.length>=3&&Number.isFinite(med))out=out.filter(x=>x.durationSec<=Math.max(180,med*2.4));
+ return out.map((x,i)=>({...x,index:i+1}));
+}
+function scoreDetectedIntervals(work,plan,source='record stream'){
+ const expected=Math.max(0,Number(plan?.repetitions)||0),targetPace=Number(plan?.zone?.pace),targetPower=Number(plan?.zone?.power);
  const rows=work.map((l,i)=>({...l,rep:i+1,paceScore:Number.isFinite(l.paceSecPerKm)&&targetPace>0?clamp(100-Math.abs(1-targetPace/l.paceSecPerKm)*145,45,100):null,powerScore:Number.isFinite(l.avgPower)&&targetPower>0?clamp(100-Math.abs(1-l.avgPower/targetPower)*140,45,100):null}));
  const scores=[avg(rows.map(x=>x.paceScore).filter(Number.isFinite)),avg(rows.map(x=>x.powerScore).filter(Number.isFinite))].filter(Number.isFinite);
- const cut=Math.max(1,Math.floor(rows.length/2)),first=rows.slice(0,cut),last=rows.slice(cut);
- const mean=(a,k)=>avg(a.map(x=>Number(x[k])).filter(Number.isFinite)),p1=mean(first,'avgPower'),p2=mean(last,'avgPower'),t1=mean(first,'paceSecPerKm'),t2=mean(last,'paceSecPerKm');
- const ratios=rows.map(x=>Number.isFinite(x.avgPower)&&targetPower>0?x.avgPower/targetPower:Number.isFinite(x.paceSecPerKm)&&targetPace>0?targetPace/x.paceSecPerKm:null).filter(Number.isFinite),mr=avg(ratios);
- const variance=mr&&ratios.length>1?avg(ratios.map(v=>(v-mr)**2)):null;
- return{available:true,structured:true,laps,work:rows,expectedReps:expected,repScore:scores.length?Math.round(avg(scores)):null,fadePower:Number.isFinite(p1)&&p1>0&&Number.isFinite(p2)?(p2/p1-1)*100:null,fadePace:Number.isFinite(t1)&&t1>0&&Number.isFinite(t2)?(t2/t1-1)*100:null,consistencyCv:variance!=null?Math.sqrt(variance)/mr*100:null,quality:rows.length>=Math.max(2,expected||2)?'high':'moderate',reason:`${rows.length}${expected?` of ${expected}`:''} work repetitions identified from FIT laps.`};
+ const cut=Math.max(1,Math.floor(rows.length/2)),first=rows.slice(0,cut),last=rows.slice(cut),mean=(a,k)=>avg(a.map(x=>Number(x[k])).filter(Number.isFinite));
+ const p1=mean(first,'avgPower'),p2=mean(last,'avgPower'),t1=mean(first,'paceSecPerKm'),t2=mean(last,'paceSecPerKm');
+ const ratios=rows.map(x=>Number.isFinite(x.avgPower)&&targetPower>0?x.avgPower/targetPower:Number.isFinite(x.paceSecPerKm)&&targetPace>0?targetPace/x.paceSecPerKm:null).filter(Number.isFinite),mr=avg(ratios),variance=mr&&ratios.length>1?avg(ratios.map(v=>(v-mr)**2)):null;
+ const coverage=expected>0?rows.length/expected:1,quality=rows.length>=3&&coverage>=.75&&coverage<=1.5?'high':rows.length>=3&&coverage>=.5?'moderate':'limited';
+ return{available:true,structured:true,work:rows,expectedReps:expected,detectedReps:rows.length,extraReps:expected>0?Math.max(0,rows.length-expected):0,repScore:scores.length?Math.round(avg(scores)):null,fadePower:Number.isFinite(p1)&&p1>0&&Number.isFinite(p2)?(p2/p1-1)*100:null,fadePace:Number.isFinite(t1)&&t1>0&&Number.isFinite(t2)?(t2/t1-1)*100:null,consistencyCv:variance!=null?Math.sqrt(variance)/mr*100:null,quality,source,usableForScore:quality==='high',reason:`${rows.length}${expected?` detected versus ${expected} prescribed`:''} using the ${source}.`};
 }
-function refreshIntervalAnalysis(run,plan){if(!run?.fitLaps?.length)return null;return run.intervalAnalysis=intervalFitAnalysis(run.fitLaps,plan)}
+function intervalFitAnalysis(laps,records,plan){
+ const structured=plan&&['Intervals','Repetition','Threshold','Tempo','Marathon','Fitness assessment'].includes(baseType(plan.type));
+ if(!structured)return{available:true,structured:false,quality:'not applicable',reason:'The run is not matched to a structured workout.'};
+ const detected=detectWorkSegments(records,plan);
+ if(detected.length>=3)return scoreDetectedIntervals(detected,plan,'second-by-second FIT pace stream');
+ // Lap fallback is display-only unless confidence is genuinely high.
+ const lapCandidates=(laps||[]).filter(l=>Number(l.durationSec)>15&&Number(l.distanceKm)>.04);
+ if(lapCandidates.length>=3){const result=scoreDetectedIntervals(lapCandidates,plan,'FIT lap boundaries');result.usableForScore=false;result.quality='limited';result.reason+=` Record-stream detection found only ${detected.length}; lap boundaries are shown for inspection but are not trusted for execution scoring.`;return result}
+ return{available:true,structured:true,work:[],expectedReps:Math.max(0,Number(plan?.repetitions)||0),detectedReps:detected.length,quality:'limited',usableForScore:false,source:'record stream',reason:'The FIT stream did not contain enough clearly separated work/recovery transitions for reliable interval scoring.'};
+}
+function refreshIntervalAnalysis(run,plan){
+ if(!run)return null;
+ const records=run.fitRecords||[],laps=run.fitLaps||[];
+ if(!records.length&&!laps.length)return null;
+ return run.intervalAnalysis=intervalFitAnalysis(laps,records,plan);
+}
 
 async function summariseFIT(file){
  const {Decoder,Stream}=await loadFitSdk();
@@ -2303,7 +2340,7 @@ async function summariseFIT(file){
    cadence:Number.isFinite(avgCadence)?Math.round(avgCadence):null,gct:null,vo:null,rpe:null,pain:null,recovery:null,temperature:null,
    notes:`Imported from ${sourceHint}`,
    drift:null,powerDrift:null,paceDrift:null,candidateDrift:analysis?.drift??null,candidatePowerDrift:analysis?.powerDrift??null,candidatePaceDrift:analysis?.paceDrift??null,
-   candidateStreamEvidence:analysis,streamEvidence:null,sourceFormat:'fit-activity',sourceDevice:sourceHint,fitWarnings:[...(errors||[]).map(String).slice(0,5),...(rawStrydPower?[`Running power read from Stryd developer Power (${rawStrydPower.count} samples).`]:[]),...(avgPower?[]:['No usable native or developer running-power field was found.'])],lapCount:laps.length,fitLaps
+   candidateStreamEvidence:analysis,streamEvidence:null,sourceFormat:'fit-activity',sourceDevice:sourceHint,fitWarnings:[...(errors||[]).map(String).slice(0,5),...(rawStrydPower?[`Running power read from Stryd developer Power (${rawStrydPower.count} samples).`]:[]),...(avgPower?[]:['No usable native or developer running-power field was found.'])],lapCount:laps.length,fitLaps,fitRecords:records.map(r=>({t:r.t,hr:r.hr,speed:r.speed,power:r.power,distance:r.distance}))
  };
 }
 async function parseRunImportFile(file){
@@ -2364,12 +2401,14 @@ function postRunCoachUpdateHtml(r){
 
 function intervalAnalysisHtml(r){
  const a=r?.intervalAnalysis;if(!a?.structured)return'';
- if(!a.work?.length)return`<section class="intervalAnalysisCard"><div class="intervalAnalysisHead"><div><span>INTERVAL-LEVEL FIT ANALYSIS</span><h3>Lap evidence limited</h3></div><b>${esc(a.quality||'Limited')}</b></div><p>${esc(a.reason||'Work repetitions could not be mapped confidently.')}</p></section>`;
+ if(!a.work?.length)return`<section class="intervalAnalysisCard"><div class="intervalAnalysisHead"><div><span>INTERVAL-LEVEL FIT ANALYSIS</span><h3>Detection confidence too low</h3></div><b>Not scored</b></div><p>${esc(a.reason)}</p><p class="muted compact">Whole-run evidence remains in use; uncertain interval detection cannot lower or raise the execution score.</p></section>`;
  const rows=a.work.map(x=>`<div class="intervalRepRow"><strong>Rep ${x.rep}</strong><span>${Number.isFinite(x.distanceKm)?x.distanceKm.toFixed(2)+' km':'—'}</span><span>${Number.isFinite(x.paceSecPerKm)?pace(x.paceSecPerKm):'—'}</span><span>${Number.isFinite(x.avgPower)?Math.round(x.avgPower)+' W':'—'}</span><span>${Number.isFinite(x.avgHr)?Math.round(x.avgHr)+' bpm':'—'}</span></div>`).join('');
- const fade=Number.isFinite(a.fadePower)?`Power ${a.fadePower>=0?'+':''}${a.fadePower.toFixed(1)}%`:Number.isFinite(a.fadePace)?`Pace ${a.fadePace>=0?'+':''}${a.fadePace.toFixed(1)}%`:'—';
- return`<section class="intervalAnalysisCard"><div class="intervalAnalysisHead"><div><span>INTERVAL-LEVEL FIT ANALYSIS</span><h3>${a.work.length}${a.expectedReps?` / ${a.expectedReps}`:''} work reps identified</h3></div><b>${Number.isFinite(a.repScore)?a.repScore+'/100':'Analysed'}</b></div><div class="intervalSummary"><div><small>Rep execution</small><strong>${Number.isFinite(a.repScore)?a.repScore+'/100':'—'}</strong></div><div><small>Consistency</small><strong>${Number.isFinite(a.consistencyCv)?a.consistencyCv.toFixed(1)+'% CV':'—'}</strong></div><div><small>Late-rep change</small><strong>${fade}</strong></div></div><div class="intervalRepTable"><div class="intervalRepHeader"><b>Rep</b><b>Distance</b><b>Pace</b><b>Power</b><b>HR</b></div>${rows}</div><p class="muted compact">${esc(a.reason)} Sufficient lap evidence replaces whole-run pace/power averages in execution scoring.</p></section>`;
+ const paceChange=Number.isFinite(a.fadePace)?`${Math.abs(a.fadePace).toFixed(1)}% ${a.fadePace<0?'faster':'slower'}`:null,powerChange=Number.isFinite(a.fadePower)?`${Math.abs(a.fadePower).toFixed(1)}% ${a.fadePower>=0?'higher':'lower'}`:null;
+ const late=powerChange?`Power ${powerChange}`:paceChange?`Pace ${paceChange}`:'—';
+ const countText=a.expectedReps?`${a.detectedReps} detected / ${a.expectedReps} prescribed`:`${a.detectedReps} detected`;
+ const extra=a.extraReps>0?` · ${a.extraReps} additional rep${a.extraReps===1?'':'s'} treated as unplanned load`:'';
+ return`<section class="intervalAnalysisCard"><div class="intervalAnalysisHead"><div><span>INTERVAL-LEVEL FIT ANALYSIS</span><h3>${countText}</h3></div><b>${a.usableForScore&&Number.isFinite(a.repScore)?a.repScore+'/100':esc(a.quality)}</b></div><div class="intervalSummary"><div><small>Rep execution</small><strong>${a.usableForScore&&Number.isFinite(a.repScore)?a.repScore+'/100':'Not scored'}</strong></div><div><small>Rep consistency</small><strong>${Number.isFinite(a.consistencyCv)?a.consistencyCv.toFixed(1)+'% variation':'—'}</strong></div><div><small>Late-rep change</small><strong>${late}</strong></div></div><div class="intervalRepTable"><div class="intervalRepHeader"><b>Rep</b><b>Distance</b><b>Pace</b><b>Power</b><b>HR</b></div>${rows}</div><p class="muted compact">${esc(a.reason)}${extra}. ${a.usableForScore?'High-confidence repetition evidence replaces whole-run pace/power averages in execution scoring.':'Detection is shown for inspection only and does not replace whole-run execution evidence.'}</p></section>`;
 }
-
 function runExecutionBreakdownHtml(r){
  const plan=r.planId?state.plan.find(p=>p.id===r.planId):null,d=workoutScoreDetails(r,plan);
  if(!d)return'<section class="runExecutionBreakdown"><h3>Execution breakdown</h3><p class="muted">Not enough distance and duration information to calculate a score.</p></section>';

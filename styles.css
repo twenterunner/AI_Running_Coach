@@ -1363,3 +1363,44 @@ details>summary{transition:background .15s ease,color .15s ease}details>summary:
 .weeklyReviewFactors{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:13px 0}.weeklyReviewFactors>div{padding:11px;border-radius:13px;background:#fff}.weeklyReviewFactors small,.weeklyReviewFactors strong,.weeklyReviewFactors em{display:block}.weeklyReviewFactors small{font-size:.64rem;color:#7e8c97;text-transform:uppercase;font-weight:850}.weeklyReviewFactors strong{margin-top:4px;color:#153c59;font-size:1.05rem}.weeklyReviewFactors em{margin-top:2px;color:#6e7e89;font-size:.7rem;font-style:normal}
 .weeklyReviewReasons{padding:11px 0;border-top:1px solid #e5ecef}.weeklyReviewReasons p{margin:5px 0;color:#536979;font-size:.82rem}.weeklyReviewChange{display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:8px;padding:9px 0;border-bottom:1px solid #edf1f3;font-size:.77rem}.weeklyReviewChange small{display:block;color:#81909b}.weeklyReviewChange>span{text-align:right;color:#315066}
 @media(max-width:560px){.intervalSummary,.weeklyReviewFactors{grid-template-columns:1fr 1fr}.weeklyReviewFactors>div:last-child{grid-column:1/-1}.weeklyReviewChange{grid-template-columns:1fr}.weeklyReviewChange>span{text-align:left}}
+
+
+/* v10.0.47 — two pathways + separate recovery context */
+.weeklyReviewFactors.twoPathways{grid-template-columns:1fr 1fr!important}
+.weeklyRecoveryContext{
+  display:grid;
+  grid-template-columns:auto 1fr auto;
+  gap:11px;
+  align-items:center;
+  margin:12px 0 14px;
+  padding:12px 13px;
+  border-radius:14px;
+  background:#f3f7f9;
+  border:1px solid #dfe8ec
+}
+.weeklyRecoveryContext.normal{background:#eef8f3;border-color:#d7ebe0}
+.weeklyRecoveryContext.reduced{background:#fff5e7;border-color:#f1dfbf}
+.weeklyRecoveryIcon{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  width:34px;height:34px;
+  border-radius:50%;
+  font-weight:900;
+  background:#dbeee4;
+  color:#1b7b5d
+}
+.weeklyRecoveryContext.reduced .weeklyRecoveryIcon{background:#f3d9a7;color:#8a5a16}
+.weeklyRecoveryContext small{display:block;font-size:.61rem;font-weight:900;letter-spacing:.08em;color:#75848f}
+.weeklyRecoveryContext b{display:block;margin-top:2px;color:#173b56}
+.weeklyRecoveryContext p{margin:3px 0 0;color:#617482;font-size:.76rem;line-height:1.4}
+.weeklyRecoveryContext>span{font-weight:900;color:#294e68;font-variant-numeric:tabular-nums}
+@media(max-width:560px){
+  .weeklyReviewFactors.twoPathways{grid-template-columns:1fr 1fr!important}
+  .weeklyRecoveryContext{grid-template-columns:auto 1fr}
+  .weeklyRecoveryContext>span{grid-column:2;justify-self:start}
+}
+
+/* v10.0.48 — record-stream interval detection clarity */
+.intervalAnalysisHead>b{text-transform:capitalize}
+.intervalAnalysisCard .muted.compact{line-height:1.42}
