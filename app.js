@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '10.0.50';
-  const BUILD = 10500;
+  const VERSION = '10.0.52';
+  const BUILD = 10520;
   const SCHEMA = 10330;
   const PRIMARY_STORAGE_KEY = 'arc_v10330_web';
   const MIRROR_STORAGE_KEY = 'arc_v10330_mirror';
@@ -1840,9 +1840,7 @@ function consolidatedTodayCoachBriefing(p){
    <div class="aiCoachHeader"><span class="aiCoachIcon">${coachVisualIcon('coach')}</span><div><small>TODAY'S COACH BRIEFING</small><h3>${esc(headline)}</h3></div><span class="aiCoachEvidence">${report.evidenceCoverage>0?`${report.evidenceCoverage}% training evidence`:'Evidence building'}</span></div>
    <p class="aiCoachLead">${esc(lead)}</p>
    <div class="aiCoachVisualGrid">${visuals.map(f=>`<div class="aiCoachVisual"><span>${coachVisualIcon(f.kind)}</span><div><small>${esc(f.label)}</small><b>${esc(f.value)}</b></div></div>`).join('')}</div>
-   <div class="todayCoachWhy"><small>WHY THIS IS TODAY'S CALL</small>${why.slice(0,4).map(x=>`<p>${esc(x)}</p>`).join('')}</div>
    <div class="aiCoachCall"><span>${coachVisualIcon('plan')}</span><div><small>COACH'S CALL TODAY</small><b>${esc(action)}</b></div></div>
-   <small class="todayCoachScope">Today intentionally focuses on the next action. The Progress tab contains the longer-term race outlook, pathway trends, strengths, limiters and strategic priorities.</small>
  </section>`;
 }
 function dailyCoachFocus(p){
@@ -2478,7 +2476,31 @@ function migrateImportedPower(){
  });
  if(changed)save();
 }
+function ensureRunStreamMetrics(run){
+ if(!run)return false;
+ if(Number.isFinite(run.powerDrift)&&run.streamEvidence)return false;
+ const records=Array.isArray(run.fitRecords)?run.fitRecords:null;
+ if(records?.length){
+   const analysis=streamAnalysis(records);
+   if(analysis&&Number.isFinite(analysis.powerDrift)){
+     run.drift=analysis.powerDrift;
+     run.powerDrift=analysis.powerDrift;
+     run.paceDrift=analysis.paceDrift;
+     run.streamEvidence=analysis;
+     return true;
+   }
+ }
+ return false;
+}
+function refreshSavedStreamMetrics(){
+ let changed=false;
+ for(const run of state.runs||[])if(ensureRunStreamMetrics(run))changed=true;
+ if(changed)save();
+ return changed;
+}
+
 function renderMetrics(){
+ refreshSavedStreamMetrics();
  let rs=completedRuns().slice().sort((a,b)=>a.date.localeCompare(b.date));
  let efficiencyRuns=rs.filter(r=>Number.isFinite(metrics(r).efficiencyJ));
  let driftRuns=rs.filter(r=>Number.isFinite(r.powerDrift));
@@ -2492,27 +2514,25 @@ function renderMetrics(){
    kpi('Latest power cardiac drift',latestDrift?latestDrift.powerDrift.toFixed(1)+'%':'—','Change in the power-to-heart-rate relationship between run halves. Lower is better.')+
    kpi('3-run drift average',recentDrift.length?dec(avg(recentDrift),1)+'%':'—');
 
- let allMetricRuns=rs.filter(r=>Number.isFinite(metrics(r).efficiencyJ)||Number.isFinite(r.powerDrift));
- let labels=allMetricRuns.map(r=>dte(r.date).toLocaleDateString(undefined,{day:'numeric',month:'short'}));
- let effValues=allMetricRuns.map(r=>metrics(r).efficiencyJ).filter(Number.isFinite);
- let driftValues=allMetricRuns.map(r=>r.powerDrift).filter(Number.isFinite);
-
- drawLine($('efficiencyChart'),metricSeries(allMetricRuns,r=>metrics(r).efficiencyJ),{
+ let effValues=efficiencyRuns.map(r=>metrics(r).efficiencyJ).filter(Number.isFinite);
+ let effLabels=efficiencyRuns.map(r=>dte(r.date).toLocaleDateString(undefined,{day:'numeric',month:'short'}));
+ drawLine($('efficiencyChart'),metricSeries(efficiencyRuns,r=>metrics(r).efficiencyJ),{
    min:effValues.length?Math.floor(Math.min(...effValues)-5):80,
    max:effValues.length?Math.ceil(Math.max(...effValues)+5):140,zero:false,ticks:6,
-   formatY:v=>Math.round(v)+' J',labels,allLabels:allMetricRuns.length<=8,
-   empty:'Log a run with average power and heart rate'});
+   formatY:v=>Math.round(v)+' J',labels:effLabels,allLabels:efficiencyRuns.length<=8,
+   empty:'Log or import a run with average power and heart rate'});
 
- let driftSeries=metricSeries(allMetricRuns,r=>r.powerDrift);
+ let driftValues=driftRuns.map(r=>r.powerDrift).filter(Number.isFinite);
+ let driftLabels=driftRuns.map(r=>dte(r.date).toLocaleDateString(undefined,{day:'numeric',month:'short'}));
+ let driftSeries=metricSeries(driftRuns,r=>r.powerDrift);
  drawLine($('driftChart'),driftSeries,{
    min:driftValues.length?Math.min(0,Math.floor(Math.min(...driftValues)-2)):0,
    max:driftValues.length?Math.max(10,Math.ceil(Math.max(...driftValues)+2)):10,ticks:6,
-   formatY:v=>Math.round(v)+'%',labels,allLabels:allMetricRuns.length<=8,
-   empty:'Import a detailed Stryd CSV with timestamped heart rate and power'});
+   formatY:v=>Math.round(v)+'%',labels:driftLabels,allLabels:driftRuns.length<=8,
+   empty:'No valid power-based drift point yet. Import a FIT or detailed CSV with sufficient timestamped heart rate and running power.'});
 
  let summary=typeMetricSummary(rs);
  $('metricTypeSummary').innerHTML=summary.length?`<div class="metricTypeTable"><div class="metricTypeHead"><b>Run type</b><b>Efficiency avg</b><b>Efficiency best</b><b>Drift avg</b><b>Drift best</b></div>${summary.map(x=>`<div class="metricTypeRow"><span><i style="--runColor:${runTypeColors[x.type]}"></i>${esc(x.type)}</span><span>${Number.isFinite(x.effAvg)?x.effAvg.toFixed(1)+' J/beat':'—'}</span><span>${Number.isFinite(x.effBest)?x.effBest.toFixed(1)+' J/beat':'—'}</span><span>${Number.isFinite(x.driftAvg)?x.driftAvg.toFixed(1)+'%':'—'}</span><span>${Number.isFinite(x.driftBest)?x.driftBest.toFixed(1)+'%':'—'}</span></div>`).join('')}</div>`:'<span class="muted">No qualifying run metrics yet.</span>';
-
 }
 function assessmentRunId(a){return a.runId||`assessment-run-${a.id}`}
 function syncAssessmentRun(a){
@@ -3241,7 +3261,7 @@ function rehabCalendarDay(i,p,date,offset){
   else {guideExercises=[rehabSyntheticGuide('Gentle mobility','5–8 minutes through a comfortable range','Maintain comfortable movement without adding meaningful load.',['Move the affected area slowly through a comfortable range.','Avoid forcing end range or reproducing sharp pain.','Use smooth repetitions and relaxed breathing.','Stop if symptoms increase rather than settle.'],'Keeps movement available on a lower-load day while allowing the previous rehabilitation response to become clear.','Continue when movement remains comfortable and symptoms are no worse later or the next morning.')];items=[`${guideExercises[0].name} — ${guideExercises[0].dose}`,'No progression test today'];}
  } else if(stage===3){
   if([0,3,6].includes(cycleDay)){type='assessment';title='Walk–run exposure';guideExercises=exercises.slice();items=guideExercises.map(x=>`${x.name} — ${x.dose}`);running='Planned only if walking, pain and impact criteria remain stable';rationale='A spaced running exposure tests impact tolerance while preserving recovery days between attempts.';rule='Stop for pain above 2/10, altered gait or increasing tightness; progression depends on the next-morning response.';}
-  else if([1,4].includes(cycleDay)){type='load';title='Strength between running exposures';guideExercises=(INJURY_EXERCISES[p.diag.family]||INJURY_EXERCISES.muscle).filter(x=>x.stage<=2).slice(-2);items=guideExercises.map(x=>`${x.name} — ${x.dose}`);rationale='Strength is maintained between impact exposures without repeating running on consecutive days.';rule='Use the last tolerated dose; do not increase load after a flare.';}
+  else if([1,4].includes(cycleDay)){type='load';title='Strength & recovery day';guideExercises=(INJURY_EXERCISES[p.diag.family]||INJURY_EXERCISES.muscle).filter(x=>x.stage<=2).slice(-2);items=guideExercises.map(x=>`${x.name} — ${x.dose}`);rationale='Build strength and recovery between running days without adding extra impact.';rule='Use the last tolerated dose; do not increase load after a flare.';}
   else {guideExercises=[rehabSyntheticGuide('Mobility or light isometrics','5–10 minutes if symptom-neutral','Maintain movement or gentle muscle activation between running exposures.',['Choose comfortable mobility or a low-effort isometric used earlier in the plan.','Keep effort light and avoid fatigue.','Hold or move only within a symptom-neutral range.','Stop if symptoms increase during or after the activity.'],'Supports recovery between running exposures without adding another impact session.','Continue when the activity remains symptom-neutral and the next-morning response is stable.')];items=[`${guideExercises[0].name} — ${guideExercises[0].dose}`,'Review response to the previous running exposure'];}
  } else if(stage===4){
   if([0,3,6].includes(cycleDay)){type='run';title='Easy running progression';guideExercises=exercises.slice();items=guideExercises.map(x=>`${x.name} — ${x.dose}`);running='Easy continuous running planned';rationale='Running duration is rebuilt with at least one lower-load day between key exposures.';rule='Increase duration only after a stable same-day and next-morning response.';}
@@ -3687,7 +3707,7 @@ $('activityFile').onchange=async e=>{
     ${kpi('Heart rate',preview.avgHr?Math.round(preview.avgHr)+' bpm':'—')}
     ${kpi('Power',preview.avgPower?Math.round(preview.avgPower)+' W':'—',preview.avgPower?'Parsed from native or developer FIT/CSV power data':'No usable power field found')}
     ${kpi('Cadence',preview.cadence?Math.round(preview.cadence)+' spm':'—')}
-    ${kpi('Cardiac drift',Number.isFinite(preview.candidateDrift)?preview.candidateDrift.toFixed(1)+'% candidate':'Not available',preview.candidateStreamEvidence?.reliability?preview.candidateStreamEvidence.reliability+' reliability · requires timestamped HR and power':'Needs sufficient timestamped HR and power')}
+    ${kpi('Power cardiac drift',Number.isFinite(preview.candidatePowerDrift)?preview.candidatePowerDrift.toFixed(1)+'% candidate':'Not available',preview.candidateStreamEvidence?.reliability?preview.candidateStreamEvidence.reliability+' reliability · timestamped HR + running power':'Needs sufficient timestamped HR and running power')}
     ${kpi('Efficiency factor',dec(m.efficiencyJ,1)+' J/beat')}
    </div>
    ${preview.fitWarnings?.length?`<div class="note"><b>FIT decoder notes</b><p class="muted compact">${esc(preview.fitWarnings.join(' · '))}</p></div>`:''}

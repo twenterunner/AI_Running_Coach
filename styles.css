@@ -1415,3 +1415,5 @@ details>summary{transition:background .15s ease,color .15s ease}details>summary:
 .powerCoverage{display:grid;grid-template-columns:auto 1fr;gap:2px 10px;align-items:center;margin:10px 0;padding:10px 12px;border-radius:12px;background:#f5f8fa;border:1px solid #e0e8ec}
 .powerCoverage b{color:#183f5a}.powerCoverage span{justify-self:end;color:#476275;font-size:.78rem}.powerCoverage small{grid-column:1/-1;color:#72828d;font-size:.68rem}
 .powerCoverage.good{background:#edf8f3;border-color:#d8ebe1}.powerCoverage.partial{background:#fff7e9;border-color:#f1dfbd}.powerCoverage.missing{background:#fff0ef;border-color:#efd7d4}
+
+/* v10.0.52 copy simplification: obsolete Today rationale/scope blocks removed from markup. */
