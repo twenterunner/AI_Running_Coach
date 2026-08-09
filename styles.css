@@ -1410,3 +1410,8 @@ details>summary{transition:background .15s ease,color .15s ease}details>summary:
 .intervalScoreCalc>summary{padding:11px 12px;font-weight:850;color:#17435f;cursor:pointer}
 .intervalCalcRows{padding:0 12px 11px}.intervalCalcRows>div{display:flex;justify-content:space-between;gap:12px;padding:7px 0;border-top:1px solid #eef2f4;font-size:.79rem}.intervalCalcRows span{color:#607482}.intervalCalcRows b{color:#173e59}.intervalCalcRows .penalty b{color:#a45e29}.intervalCalcRows .total{font-size:.88rem}.intervalCalcRows .total b{font-size:1rem}
 .intervalRepRow.extraRep{background:#fff8ed}.intervalRepRow.extraRep strong{color:#9a6425}
+
+/* v10.0.50 — power-stream diagnostics */
+.powerCoverage{display:grid;grid-template-columns:auto 1fr;gap:2px 10px;align-items:center;margin:10px 0;padding:10px 12px;border-radius:12px;background:#f5f8fa;border:1px solid #e0e8ec}
+.powerCoverage b{color:#183f5a}.powerCoverage span{justify-self:end;color:#476275;font-size:.78rem}.powerCoverage small{grid-column:1/-1;color:#72828d;font-size:.68rem}
+.powerCoverage.good{background:#edf8f3;border-color:#d8ebe1}.powerCoverage.partial{background:#fff7e9;border-color:#f1dfbd}.powerCoverage.missing{background:#fff0ef;border-color:#efd7d4}

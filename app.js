@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '10.0.49';
-  const BUILD = 10490;
+  const VERSION = '10.0.50';
+  const BUILD = 10500;
   const SCHEMA = 10330;
   const PRIMARY_STORAGE_KEY = 'arc_v10330_web';
   const MIRROR_STORAGE_KEY = 'arc_v10330_mirror';
@@ -2076,7 +2076,7 @@ function fitPowerCandidates(obj,path='',depth=0,out=[]){
    const next=path?`${path}.${key}`:key;
    const descriptor=typeof value==='object'&&value?`${next} ${value.name||value.fieldName||value.field_name||''} ${value.units||value.unit||''}`:next;
    const norm=descriptor.toLowerCase().replace(/[_-]+/g,' ');
-   if(/power|watt/.test(norm)&&!/balance|phase|zone|form power|air power|leg spring|stiffness|ratio|percent/.test(norm)){
+   if(/power|watt/.test(norm)&&!/balance|phase|zone|form power|air power|leg spring|stiffness|ratio|percent|platform center offset|left right/.test(norm)){
      for(const n of fitNumericValues(value))if(n>0&&n<3000){
        let score=30;
        if(/(^|[. ])power($|[. ])/i.test(norm))score=100;
@@ -2162,7 +2162,7 @@ function rawFitStrydRunningPower(bytes){
   if(data.length<12||String.fromCharCode(...data.slice(8,12))!=='.FIT')return null;
   const view=new DataView(data.buffer,data.byteOffset,data.byteLength);
   const headerSize=data[0],dataSize=view.getUint32(4,true),end=Math.min(data.length,headerSize+dataSize);
-  const definitions=new Map(),descriptions=new Map(),samples=[];
+  const definitions=new Map(),descriptions=new Map(),recordSamples=[];
   const baseSize={0:1,1:1,2:1,3:2,4:2,5:4,6:4,7:1,8:4,9:8,10:1,11:2,12:4,13:1,14:8,15:8,16:8};
   const typeId=t=>Number(t)&31;
   const numeric=(pos,size,type,little)=>{
@@ -2207,40 +2207,53 @@ function rawFitStrydRunningPower(bytes){
     });
    }
    if(def.global===20){
+    // FIT Record native field 7 = Power in watts.
+    let recordPower=Number(values[7]);
+    if(!(recordPower>0&&recordPower<3000))recordPower=null;
+    let source=recordPower?'native Record.power':null;
+    // Developer Stryd Power overrides native only when it is valid and explicitly identified.
     for(const f of developerValues){
      const description=descriptions.get(`${f.index}:${f.number}`);if(!description)continue;
-     const name=description.name.toLowerCase().replace(/[_-]+/g,' ').trim();
-     if(name!=='power'&&!/^(running|stryd) power$/.test(name))continue;
-     if(/form|air|lap|balance|phase|ratio|spring|stiffness/.test(name))continue;
+     const name=String(description.name||'').toLowerCase().replace(/[_-]+/g,' ').trim(),units=String(description.units||'').toLowerCase();
+     const looksPower=(/power|watt/.test(name)||/watt/.test(units))&&!/form|air|lap|balance|phase|ratio|spring|stiffness|percent/.test(name);
+     if(!looksPower)continue;
      let raw=fieldValue(f.pos,f.size,description.baseType,f.little);if(Array.isArray(raw))raw=raw[0];
      let value=Number(raw);if(!Number.isFinite(value))continue;value=value/(description.scale||1)-(description.offset||0);
-     if(value>0&&value<3000)samples.push(value);
+     if(value>0&&value<3000){recordPower=value;source=`developer ${description.name||'Power'}`;break}
     }
+    recordSamples.push({power:recordPower,source});
    }
   }
-  if(!samples.length)return null;
-  return{average:samples.reduce((sum,v)=>sum+v,0)/samples.length,count:samples.length,min:Math.min(...samples),max:Math.max(...samples),samples:samples.slice(),source:'Stryd developer Power'};
+  const valid=recordSamples.map(x=>Number(x.power)).filter(v=>Number.isFinite(v)&&v>0);
+  if(!valid.length)return{average:null,count:0,min:null,max:null,samples:[],recordSamples,recordCount:recordSamples.length,source:'FIT record power'};
+  const sources=[...new Set(recordSamples.map(x=>x.source).filter(Boolean))];
+  return{average:valid.reduce((sum,v)=>sum+v,0)/valid.length,count:valid.length,min:Math.min(...valid),max:Math.max(...valid),samples:valid.slice(),recordSamples,recordCount:recordSamples.length,source:sources.join(' + ')||'FIT record power'};
  }catch(e){return null}
 }
-
 function attachRawStrydPowerToRecords(records,raw){
- if(!Array.isArray(records)||!records.length||!raw?.samples?.length)return{records,mapped:0,method:null};
- const samples=raw.samples.filter(v=>Number.isFinite(Number(v))&&Number(v)>0).map(Number);
- if(!samples.length)return{records,mapped:0,method:null};
+ if(!Array.isArray(records)||!records.length||!raw)return{records,mapped:0,method:null,coverage:0};
  const existing=records.filter(r=>Number(r.power)>0).length;
- if(existing>=Math.max(3,records.length*.5))return{records,mapped:existing,method:'decoded FIT developer power'};
- // Stryd developer Power is normally emitted at record cadence. Map by sequence;
- // if counts differ slightly, use proportional index mapping rather than dropping the stream.
- let mapped=0;
+ // Exact low-level FIT record alignment is preferred because it preserves timing.
+ if(Array.isArray(raw.recordSamples)&&raw.recordSamples.length===records.length){
+   let mapped=0;
+   records.forEach((r,i)=>{
+     if(Number(r.power)>0){mapped++;return}
+     const v=Number(raw.recordSamples[i]?.power);
+     if(Number.isFinite(v)&&v>0){r.power=v;mapped++}
+   });
+   return{records,mapped,method:`raw FIT record alignment (${raw.count}/${raw.recordCount} records contain power)`,coverage:mapped/records.length};
+ }
+ if(existing>=Math.max(3,records.length*.5))return{records,mapped:existing,method:'decoded FIT record power',coverage:existing/records.length};
+ const samples=(raw.samples||[]).filter(v=>Number.isFinite(Number(v))&&Number(v)>0).map(Number);
+ if(!samples.length)return{records,mapped:existing,method:null,coverage:existing/records.length};
+ let mapped=existing;
  records.forEach((r,i)=>{
-   if(Number(r.power)>0){mapped++;return}
-   const j=records.length===1?0:Math.round(i*(samples.length-1)/(records.length-1));
-   const v=samples[clamp(j,0,samples.length-1)];
+   if(Number(r.power)>0)return;
+   const j=records.length===1?0:Math.round(i*(samples.length-1)/(records.length-1)),v=samples[clamp(j,0,samples.length-1)];
    if(Number.isFinite(v)&&v>0){r.power=v;mapped++}
  });
- return{records,mapped,method:samples.length===records.length?'Stryd developer Power · exact record alignment':`Stryd developer Power · proportional alignment (${samples.length} power samples / ${records.length} FIT records)`};
+ return{records,mapped,method:`fallback proportional alignment (${samples.length} power samples / ${records.length} records)`,coverage:mapped/records.length};
 }
-
 function fitLapSummary(lap,index,developerFieldMap,records){
  const start=fitDateValue(lap.startTime||lap.timestamp),elapsed=fitNumber(lap,['totalTimerTime','totalElapsedTime']),distanceM=fitNumber(lap,['totalDistance','distance']);
  const startSec=start?start.getTime()/1000:null,endSec=Number.isFinite(startSec)&&elapsed>0?startSec+elapsed:null;
@@ -2373,7 +2386,7 @@ async function summariseFIT(file){
    cadence:Number.isFinite(avgCadence)?Math.round(avgCadence):null,gct:null,vo:null,rpe:null,pain:null,recovery:null,temperature:null,
    notes:`Imported from ${sourceHint}`,
    drift:null,powerDrift:null,paceDrift:null,candidateDrift:analysis?.drift??null,candidatePowerDrift:analysis?.powerDrift??null,candidatePaceDrift:analysis?.paceDrift??null,
-   candidateStreamEvidence:analysis,streamEvidence:null,sourceFormat:'fit-activity',sourceDevice:sourceHint,fitWarnings:[...(errors||[]).map(String).slice(0,5),...(rawStrydPower?[`Running power read from Stryd developer Power (${rawStrydPower.count} samples).${rawMap.method?' '+rawMap.method+'.':''}`]:[]),...(avgPower?[]:['No usable native or developer running-power field was found.'])],lapCount:laps.length,fitLaps,fitRecords:records.map(r=>({t:r.t,hr:r.hr,speed:r.speed,power:r.power,distance:r.distance}))
+   candidateStreamEvidence:analysis,streamEvidence:null,sourceFormat:'fit-activity',sourceDevice:sourceHint,powerDiagnostics:{recordCount:records.length,poweredRecords:records.filter(r=>Number(r.power)>0).length,coverage:records.length?records.filter(r=>Number(r.power)>0).length/records.length:0,mapping:rawMap.method||null,rawSource:rawStrydPower?.source||null,rawCount:rawStrydPower?.count||0},fitWarnings:[...(errors||[]).map(String).slice(0,5),...(rawStrydPower?[`Running power read from Stryd developer Power (${rawStrydPower.count} samples).${rawMap.method?' '+rawMap.method+'.':''}`]:[]),...(avgPower?[]:['No usable native or developer running-power field was found.'])],lapCount:laps.length,fitLaps,fitRecords:records.map(r=>({t:r.t,hr:r.hr,speed:r.speed,power:r.power,distance:r.distance}))
  };
 }
 async function parseRunImportFile(file){
@@ -2439,8 +2452,9 @@ function intervalAnalysisHtml(r){
  const paceChange=Number.isFinite(a.fadePace)?`${Math.abs(a.fadePace).toFixed(1)}% ${a.fadePace<0?'faster':'slower'}`:null,powerChange=Number.isFinite(a.fadePower)?`${Math.abs(a.fadePower).toFixed(1)}% ${a.fadePower>=0?'higher':'lower'}`:null;
  const late=powerChange?`Power ${powerChange}`:paceChange?`Pace ${paceChange}`:'—';
  const countText=a.expectedReps?`${a.detectedReps} detected / ${a.expectedReps} prescribed`:`${a.detectedReps} detected`;
+ const pd=r.powerDiagnostics,powerDiag=pd?`<div class="powerCoverage ${pd.coverage>=.8?'good':pd.coverage>0?'partial':'missing'}"><b>Running power stream</b><span>${pd.poweredRecords} / ${pd.recordCount} FIT records · ${Math.round(pd.coverage*100)}% coverage</span><small>${esc(pd.rawSource||pd.mapping||'No record-level running power recovered')}</small></div>`:'';
  const calc=`<details class="intervalScoreCalc"><summary>How ${Number.isFinite(a.repScore)?a.repScore+'/100':'the score'} is calculated</summary><div class="intervalCalcRows">${Number.isFinite(a.paceComponent)?`<div><span>Prescribed-rep pace</span><b>${Math.round(a.paceComponent)}/100</b></div>`:''}${Number.isFinite(a.powerComponent)?`<div><span>Prescribed-rep power</span><b>${Math.round(a.powerComponent)}/100</b></div>`:''}<div><span>Base rep execution</span><b>${Number.isFinite(a.baseRepScore)?Math.round(a.baseRepScore)+'/100':'—'}</b></div>${a.extraPenalty?`<div class="penalty"><span>${a.extraReps} extra rep${a.extraReps===1?'':'s'}</span><b>−${a.extraPenalty.toFixed(0)}</b></div>`:''}${a.missingPenalty?`<div class="penalty"><span>${a.missingReps} missing rep${a.missingReps===1?'':'s'}</span><b>−${a.missingPenalty.toFixed(0)}</b></div>`:''}<div class="total"><span>Interval execution</span><b>${Number.isFinite(a.repScore)?a.repScore+'/100':'Not scored'}</b></div></div><p class="muted compact">Rep pace and power are scored on a true 0–100 scale with no artificial 45-point floor. Only prescribed reps count toward pace/power execution; extra reps can only add an adherence penalty and training load.</p></details>`;
- return`<section class="intervalAnalysisCard"><div class="intervalAnalysisHead"><div><span>INTERVAL-LEVEL FIT ANALYSIS</span><h3>${countText}</h3></div><b>${a.usableForScore&&Number.isFinite(a.repScore)?a.repScore+'/100':esc(a.quality)}</b></div><div class="intervalSummary"><div><small>Rep execution</small><strong>${a.usableForScore&&Number.isFinite(a.repScore)?a.repScore+'/100':'Not scored'}</strong></div><div><small>Rep consistency</small><strong>${Number.isFinite(a.consistencyCv)?a.consistencyCv.toFixed(1)+'% variation':'—'}</strong></div><div><small>Late-rep change</small><strong>${late}</strong></div></div>${calc}<div class="intervalRepTable"><div class="intervalRepHeader"><b>Rep</b><b>Distance</b><b>Pace</b><b>Power</b><b>HR</b></div>${rows}</div><p class="muted compact">${esc(a.reason)} ${a.usableForScore?'High-confidence prescribed-repetition evidence replaces whole-run pace/power averages in execution scoring.':'Detection is shown for inspection only and does not replace whole-run execution evidence.'}</p></section>`;
+ return`<section class="intervalAnalysisCard"><div class="intervalAnalysisHead"><div><span>INTERVAL-LEVEL FIT ANALYSIS</span><h3>${countText}</h3></div><b>${a.usableForScore&&Number.isFinite(a.repScore)?a.repScore+'/100':esc(a.quality)}</b></div><div class="intervalSummary"><div><small>Rep execution</small><strong>${a.usableForScore&&Number.isFinite(a.repScore)?a.repScore+'/100':'Not scored'}</strong></div><div><small>Rep consistency</small><strong>${Number.isFinite(a.consistencyCv)?a.consistencyCv.toFixed(1)+'% variation':'—'}</strong></div><div><small>Late-rep change</small><strong>${late}</strong></div></div>${powerDiag}${calc}<div class="intervalRepTable"><div class="intervalRepHeader"><b>Rep</b><b>Distance</b><b>Pace</b><b>Power</b><b>HR</b></div>${rows}</div><p class="muted compact">${esc(a.reason)} ${a.usableForScore?'High-confidence prescribed-repetition evidence replaces whole-run pace/power averages in execution scoring.':'Detection is shown for inspection only and does not replace whole-run execution evidence.'}</p></section>`;
 }
 function runExecutionBreakdownHtml(r){
  const plan=r.planId?state.plan.find(p=>p.id===r.planId):null,d=workoutScoreDetails(r,plan);
