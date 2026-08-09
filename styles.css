@@ -1163,3 +1163,69 @@ button.secondary{background:#edf3f6!important;border-color:transparent!important
  .todayActions button:first-child{grid-column:1/-1}
  .appFooter{padding-bottom:108px}
 }
+
+
+/* ===== v10.0.42 Coach-first Today + richer visual system ===== */
+.aiCoachBriefing{margin:12px 0 20px;padding:21px;border-radius:24px;background:linear-gradient(145deg,#ffffff 0%,#f5fafc 100%);border:1px solid rgba(17,82,119,.10);box-shadow:0 14px 36px rgba(10,47,84,.10)}
+.aiCoachHeader{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:12px}
+.aiCoachIcon{display:flex;align-items:center;justify-content:center;width:45px;height:45px;border-radius:15px;color:#fff;background:linear-gradient(145deg,#116ea2,#1aa0a8);box-shadow:0 7px 17px rgba(18,120,150,.22)}
+.aiCoachIcon svg,.aiCoachVisual>span svg,.aiCoachCall>span svg,.todaySupportHead>span svg{width:23px;height:23px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.aiCoachHeader small{display:block;font-size:.67rem;font-weight:900;letter-spacing:.10em;color:#168092}
+.aiCoachHeader h3{margin:3px 0 0;font-size:1.35rem;line-height:1.2;letter-spacing:-.03em;color:#102f49}
+.aiCoachEvidence{padding:6px 9px;border-radius:999px;background:#e8f4f5;color:#19747b;font-size:.7rem;font-weight:850;white-space:nowrap}
+.aiCoachLead{font-size:1rem;line-height:1.55;color:#31495d;margin:16px 0 14px}
+.aiCoachVisualGrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.aiCoachVisual{display:flex;align-items:center;gap:8px;padding:10px;border-radius:14px;background:#fff;border:1px solid rgba(33,75,102,.08);min-width:0}
+.aiCoachVisual>span{display:flex;flex:none;align-items:center;justify-content:center;width:31px;height:31px;border-radius:10px;background:#e9f4f8;color:#177ca1}
+.aiCoachVisual small,.aiCoachVisual b{display:block}.aiCoachVisual small{font-size:.61rem;text-transform:uppercase;letter-spacing:.05em;color:#7a8995;font-weight:850}.aiCoachVisual b{margin-top:2px;font-size:.75rem;color:#173a55;line-height:1.25;overflow:hidden;text-overflow:ellipsis}
+.aiCoachNarrative{margin-top:13px;padding-top:11px;border-top:1px solid rgba(37,74,99,.10)}.aiCoachNarrative p{margin:5px 0;color:#526676;font-size:.85rem;line-height:1.47}
+.aiCoachCall{display:flex;gap:11px;align-items:flex-start;margin-top:13px;padding:13px 14px;border-radius:15px;background:linear-gradient(135deg,#0d3e66,#0c7080);color:white}
+.aiCoachCall>span{display:flex;flex:none;width:31px;height:31px;align-items:center;justify-content:center;border-radius:9px;background:rgba(255,255,255,.12)}
+.aiCoachCall small{display:block;font-size:.62rem;font-weight:900;letter-spacing:.08em;color:rgba(255,255,255,.72)}.aiCoachCall b{display:block;margin-top:3px;line-height:1.4;font-size:.88rem;color:#fff}
+
+/* Stronger white banner typography */
+.todayStatusHero,.todayStatusHero *{color:#fff!important}
+.todayStatusHero h3{font-size:1.72rem!important;font-weight:900!important;line-height:1.12!important;letter-spacing:-.045em!important;text-shadow:0 1px 2px rgba(0,0,0,.08)}
+.todayStatusHero p{font-size:1.02rem!important;line-height:1.52!important;color:rgba(255,255,255,.90)!important}
+.todayHeroFacts span{font-size:.93rem!important;font-weight:850!important;color:#fff!important}
+.todayStatusPill{font-size:.75rem!important;color:#fff!important}
+.todayHeroDate{font-size:.85rem!important;color:rgba(255,255,255,.86)!important}
+.todayHeroAction{font-size:1rem!important}
+
+/* Supporting Today cards */
+.todaySupportGrid{display:grid;grid-template-columns:1fr;gap:13px;margin-top:4px}
+.todaySupportCard{padding:17px;border-radius:20px;background:#fff;border:1px solid rgba(30,70,96,.09);box-shadow:0 8px 24px rgba(10,47,84,.065)}
+.todaySupportHead{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.todaySupportHead>span{display:flex;width:39px;height:39px;align-items:center;justify-content:center;border-radius:12px;color:#fff;background:linear-gradient(145deg,#176f9e,#21a0a8)}
+.todaySupportHead small{display:block;font-size:.63rem;font-weight:900;letter-spacing:.09em;color:#7c8995}.todaySupportHead h4{margin:2px 0 0;font-size:1.03rem;color:#17344e}
+.todaySupportCard ul{margin:8px 0 10px;padding-left:21px}.todaySupportCard li{margin:7px 0;line-height:1.42;color:#344d61}
+.todaySupportCard p{color:#546a7a;line-height:1.46}.supportNotice{padding:9px 10px;border-radius:10px;background:#fff4e8;color:#8a5a24!important;font-weight:750}
+.supportMetric{display:flex;align-items:baseline;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid #edf1f4}.supportMetric span{color:#7b8995;font-size:.76rem}.supportMetric b{color:#153b59;text-align:right}
+.todayMiniMetrics{display:grid;grid-template-columns:1fr 1fr;gap:8px}.todayMiniMetrics>div{padding:11px;border-radius:13px;background:#f4f8fa}.todayMiniMetrics small,.todayMiniMetrics strong,.todayMiniMetrics span{display:block}.todayMiniMetrics small{font-size:.65rem;text-transform:uppercase;color:#83919c;font-weight:850}.todayMiniMetrics strong{margin-top:4px;color:#143a57;font-size:1.08rem}.todayMiniMetrics strong em{font-size:.7rem;font-style:normal;color:#81909c}.todayMiniMetrics span{margin-top:3px;font-size:.7rem;color:#687a89}
+.todayInlineLink{margin-top:10px!important}
+
+/* visual cues across main app */
+.dashboardSectionHead>span{position:relative;overflow:hidden}.dashboardSectionHead>span:after{content:"";position:absolute;inset:5px;border:1px solid rgba(255,255,255,.38);border-radius:50%}
+.panelHead h3,.dashboardSectionHead h3{letter-spacing:-.025em}
+.runCard .runSummary>div>h3:before{content:"";display:inline-block;width:9px;height:9px;margin-right:8px;border-radius:50%;background:linear-gradient(145deg,#1681b6,#23a5a8);box-shadow:0 0 0 4px #e9f5f7}
+.weekCard{position:relative;overflow:hidden}.weekCard:before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:linear-gradient(#177db1,#23a6a7)}
+.progressCard{position:relative;overflow:hidden}.progressTrack{height:7px!important;border-radius:999px!important}.progressTrack i{background:linear-gradient(90deg,#1679b2,#1ea2a9)!important;border-radius:999px}
+.metricGrid .kpi:before{content:"";display:block;width:28px;height:3px;border-radius:3px;margin-bottom:8px;background:linear-gradient(90deg,#1679b2,#21a3a8)}
+.injuryDayCard,.calendarDayCard{position:relative;overflow:hidden}.injuryDayCard:after,.calendarDayCard:after{content:"";position:absolute;right:-26px;top:-26px;width:70px;height:70px;border-radius:50%;background:rgba(26,143,166,.055);pointer-events:none}
+details>summary{transition:background .15s ease,color .15s ease}details>summary:hover{background-color:#eef5f7}
+
+/* fix former Coach Focus inherited-white-text issue */
+.todayFocusPrimary{color:#183a54!important}.todayFocusPrimary *{color:inherit!important}
+
+@media(min-width:760px){
+ .todaySupportGrid{grid-template-columns:1fr 1fr}.progressSupport{grid-column:1/-1}
+}
+@media(max-width:620px){
+ .aiCoachBriefing{padding:17px 15px;border-radius:21px}
+ .aiCoachHeader{grid-template-columns:auto 1fr}.aiCoachEvidence{grid-column:2;justify-self:start}
+ .aiCoachHeader h3{font-size:1.22rem}
+ .aiCoachVisualGrid{grid-template-columns:1fr 1fr}
+ .aiCoachVisual{padding:9px}
+ .todayStatusHero h3{font-size:1.55rem!important}
+ .todayStatusHero p{font-size:.96rem!important}
+}
