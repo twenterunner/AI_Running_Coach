@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '10.4.3';
-  const BUILD = 14030;
+  const VERSION = '10.4.4';
+  const BUILD = 14040;
   const SCHEMA = 10330;
   const PRIMARY_STORAGE_KEY = 'arc_v10330_web';
   const MIRROR_STORAGE_KEY = 'arc_v10330_mirror';
@@ -561,6 +561,12 @@ function personalWeeklyObservations(asOf=iso(today()),excludeId=null){
  });
  return rows;
 }
+function effectiveRunType(run){
+ const plan=run?.planId?state.plan.find(p=>p.id===run.planId):null;
+ return plan?.type||run?.type||'Easy';
+}
+function effectiveWorkoutFamily(run){return workoutFamily(effectiveRunType(run));}
+
 function personalResponseModel(asOf=iso(today()),excludeId=null){
  const runs=personalRuns(asOf,excludeId),weeks=personalWeeklyObservations(asOf,excludeId);
  const dimensions=[];
@@ -570,7 +576,7 @@ function personalResponseModel(asOf=iso(today()),excludeId=null){
  const gentle=volumeObs.filter(w=>w.growth>=0&&w.growth<=7),aggressive=volumeObs.filter(w=>w.growth>7);
  const gentleScore=avg(gentle.map(w=>w.nextScore)),aggressiveScore=avg(aggressive.map(w=>w.nextScore));
  const gentlePain=avg(gentle.map(w=>Number(w.nextMaxPain)).filter(Number.isFinite)),aggressivePain=avg(aggressive.map(w=>Number(w.nextMaxPain)).filter(Number.isFinite));
- let volumeStatus='Building',volumeSummary='More completed week-to-week observations are needed to learn a preferred volume progression.';
+ let volumeStatus='Building',volumeSummary='Needs at least two completed training weeks to learn how weekly volume changes affect the following week.';
  if(volumeObs.length>=3){
    if(gentle.length>=2&&aggressive.length>=2&&Number.isFinite(gentleScore)&&Number.isFinite(aggressiveScore)){
      if(gentleScore>=aggressiveScore+5||Number.isFinite(aggressivePain)&&Number.isFinite(gentlePain)&&aggressivePain>=gentlePain+2){
@@ -585,7 +591,7 @@ function personalResponseModel(asOf=iso(today()),excludeId=null){
    evidence:[gentle.length?`${gentle.length} gradual-growth week${gentle.length===1?'':'s'} · next-week execution ${Number.isFinite(gentleScore)?Math.round(gentleScore)+'/100':'—'}`:null,aggressive.length?`${aggressive.length} >7% growth week${aggressive.length===1?'':'s'} · next-week execution ${Number.isFinite(aggressiveScore)?Math.round(aggressiveScore)+'/100':'—'}`:null].filter(Boolean)});
 
  // Intensity tolerance: quality sessions and next-session response.
- const quality=runs.filter(r=>['interval','threshold'].includes(workoutFamily(r.type)));
+ const quality=runs.filter(r=>['interval','threshold'].includes(effectiveWorkoutFamily(r)));
  const intensityObs=quality.map(r=>{
    const idx=runs.findIndex(x=>x.id===r.id),next=runs.slice(idx+1).find(x=>dte(x.date)-dte(r.date)<=3*DAY),score=workoutScore(r),nextScore=next?workoutScore(next):null;
    return{run:r,score,nextScore,rpe:Number(r.rpe),drift:Number(r.powerDrift),pain:Number(r.pain)};
@@ -593,7 +599,7 @@ function personalResponseModel(asOf=iso(today()),excludeId=null){
  const goodQuality=intensityObs.filter(x=>x.score>=82&&(!Number.isFinite(x.rpe)||x.rpe<=9)&&(!Number.isFinite(x.pain)||x.pain<3));
  const costlyQuality=intensityObs.filter(x=>(Number.isFinite(x.rpe)&&x.rpe>=9)||(Number.isFinite(x.pain)&&x.pain>=3)||(Number.isFinite(x.drift)&&x.drift>9));
  const nextExec=avg(intensityObs.map(x=>x.nextScore).filter(Number.isFinite));
- let intStatus='Building',intSummary='More quality sessions are needed to learn how well intensity is absorbed.';
+ let intStatus='Building',intSummary='Needs repeated interval/threshold sessions; a linked quality workout counts immediately as an observation.';
  if(intensityObs.length>=3){
    const goodRate=goodQuality.length/intensityObs.length,costRate=costlyQuality.length/intensityObs.length;
    if(goodRate>=.7&&costRate<=.25){intStatus='Good';intSummary='Most recent quality sessions have been executed well without repeated high-cost or pain signals.'}
@@ -605,11 +611,11 @@ function personalResponseModel(asOf=iso(today()),excludeId=null){
    evidence:[`${goodQuality.length}/${intensityObs.length||0} quality sessions met the low-cost execution definition`,Number.isFinite(nextExec)?`Average next-session execution ${Math.round(nextExec)}/100`:null].filter(Boolean)});
 
  // Long-run tolerance and durability.
- const longs=runs.filter(r=>workoutFamily(r.type)==='long');
+ const longs=runs.filter(r=>effectiveWorkoutFamily(r)==='long');
  const longObs=longs.map(r=>({run:r,score:workoutScore(r),drift:Number(r.powerDrift),late:runLateEfficiencyDelta(r),pain:Number(r.pain)}));
  const stableLong=longObs.filter(x=>(!Number.isFinite(x.drift)||x.drift<=5)&&(!Number.isFinite(x.late)||x.late>=-6)&&(!Number.isFinite(x.pain)||x.pain<3));
  const longest=longs.length?Math.max(...longs.map(r=>Number(r.distanceKm)||0)):null,lateAvg=avg(longObs.map(x=>x.late).filter(Number.isFinite)),driftAvg=avg(longObs.map(x=>x.drift).filter(Number.isFinite));
- let longStatus='Building',longSummary='Long-run durability needs more repeated time-on-feet evidence.';
+ let longStatus='Building',longSummary='Only long-run sessions count here; repeated long-run evidence is needed to assess durability.';
  if(longObs.length>=3){
    const stableRate=stableLong.length/longObs.length;
    if(stableRate>=.7){longStatus='Good';longSummary='Long runs have usually maintained power/efficiency without repeated adverse pain or drift signals.'}
@@ -621,7 +627,7 @@ function personalResponseModel(asOf=iso(today()),excludeId=null){
    evidence:[Number.isFinite(longest)?`Longest completed run ${longest.toFixed(1)} km`:null,Number.isFinite(driftAvg)?`Average long-run drift ${driftAvg.toFixed(1)}%`:null,Number.isFinite(lateAvg)?`Average late-run efficiency change ${lateAvg>=0?'+':''}${lateAvg.toFixed(1)}%`:null].filter(Boolean)});
 
  // Recovery speed: quality/long session followed by normal next-session response within 72h.
- const demanding=runs.filter(r=>['interval','threshold','long'].includes(workoutFamily(r.type)));
+ const demanding=runs.filter(r=>['interval','threshold','long'].includes(effectiveWorkoutFamily(r)));
  const recoveryObs=demanding.map(r=>{
    const idx=runs.findIndex(x=>x.id===r.id),next=runs.slice(idx+1).find(x=>dte(x.date)-dte(r.date)<=3*DAY);
    if(!next)return null;
@@ -629,7 +635,7 @@ function personalResponseModel(asOf=iso(today()),excludeId=null){
    return{run:r,next,nextScore,hrv,pain,stable,days:(dte(next.date)-dte(r.date))/DAY};
  }).filter(Boolean);
  const recovered=recoveryObs.filter(x=>x.stable),recRate=recoveryObs.length?recovered.length/recoveryObs.length:null,avgDays=avg(recovered.map(x=>x.days));
- let recStatus='Building',recSummary='Recovery speed needs repeated demanding-session → next-session observations.';
+ let recStatus='Building',recSummary='Needs a demanding interval/threshold/long run plus a later recorded session within 72 hours.';
  if(recoveryObs.length>=3){
    if(recRate>=.75){recStatus='Good';recSummary='Most demanding sessions have been followed by a stable next recorded session within 72 hours.'}
    else if(recRate<.5){recStatus='Slow / variable';recSummary='Recovery after demanding sessions has often remained incomplete by the next recorded session.'}
@@ -642,7 +648,7 @@ function personalResponseModel(asOf=iso(today()),excludeId=null){
  // Performance responsiveness from comparable-run deltas.
  const compObs=runs.map(r=>({run:r,comp:comparableRunAnalysis(r)})).filter(x=>x.comp&&x.comp.confidence!=='Low'&&Number.isFinite(x.comp.efficiencyDelta));
  const positiveComp=compObs.filter(x=>x.comp.efficiencyDelta>=2),negativeComp=compObs.filter(x=>x.comp.efficiencyDelta<=-2),compAvg=avg(compObs.map(x=>x.comp.efficiencyDelta));
- let perfStatus='Building',perfSummary='Comparable-run history is still too small to characterize performance responsiveness.';
+ let perfStatus='Building',perfSummary='Needs enough similar historical runs to create a Moderate/High-confidence comparable-run baseline.';
  if(compObs.length>=3){
    if(Number.isFinite(compAvg)&&compAvg>=2){perfStatus='Improving';perfSummary='Recent comparable sessions are generally being completed at lower physiological cost than the personal baseline.'}
    else if(Number.isFinite(compAvg)&&compAvg<=-2){perfStatus='Under pressure';perfSummary='Comparable-run efficiency has recently been below the personal baseline often enough to warrant caution.'}
@@ -2825,7 +2831,7 @@ function postRunCoachUpdateHtml(r){
  const future=(u.prescriptionChanges||[]).some(x=>Math.abs(Number(x.distanceDeltaKm))>=.05||Math.abs(Number(x.paceDeltaSec))>=.5||Math.abs(Number(x.powerDeltaW))>=1)?`<details class="postRunProjectedImpact"><summary>Projected workout impact if confirmed at weekly review</summary><div class="futurePrescriptionList">${u.prescriptionChanges.map(x=>{const dc=Math.abs(Number(x.distanceDeltaKm))>=.05,pc=Math.abs(Number(x.paceDeltaSec))>=.5,wc=Math.abs(Number(x.powerDeltaW))>=1;if(!dc&&!pc&&!wc)return'';return`<div class="futurePrescriptionRow"><div><strong>${esc(fmtDate(x.date))} · ${esc(x.type)}</strong></div><div>${dc?`<span>${Number(x.beforeDistance).toFixed(1)} → ${Number(x.afterDistance).toFixed(1)} km</span>`:''}${pc?`<span>${pace(x.beforePace)} → ${pace(x.afterPace)}</span>`:''}${wc?`<span>${Math.round(x.beforePower)} → ${Math.round(x.afterPower)} W</span>`:''}</div></div>`}).join('')}</div></details>`:'';
  const branch=(title,d,t)=>{
    const accepted=Math.abs(t.acceptedContribution)>=.00005,bucketRows=(t.weeklyRows||[]).map(x=>`<div class="evidenceBucketRow"><span>${fmtDate(x.date)} · ${esc(x.type)}</span><b>${signedFactorDelta(x.contribution)}</b></div>`).join('');
-   return`<section class="pathwayDecisionBranch compactPathway"><div class="compactPathwayHead"><div><small>${title}</small><h4>${esc(d.action)}</h4></div><b>${accepted?signedFactorDelta(t.acceptedContribution):'0.000'}</b></div><div class="compactPathwayFlow"><div><small>RUN SIGNAL</small><strong>${t.rawSignal>=0?'+':''}${t.rawSignal.toFixed(2)}</strong><span>${esc(d.interpretation)}</span></div><div><small>ACCEPTED INTO LEARNING</small><strong>${accepted?signedFactorDelta(t.acceptedContribution):'0.000'}</strong><span>${accepted?`${d.confidence} confidence · ${Math.round(t.confidenceWeight*100)}% evidence weight`:esc(t.safeguard)}</span></div><div><small>THIS WEEK</small><strong>${signedFactorDelta(t.weeklyBucket)}</strong><span>${t.weeklyRows.length} accepted run${t.weeklyRows.length===1?'':'s'}</span></div><div class="factor"><small>PROJECTED FACTOR</small><strong>${t.applied.toFixed(3)} → ${t.projected.toFixed(3)}</strong><span>${esc(t.status)}</span></div></div><details><summary>Calculation details</summary><p class="compactFormula">Accepted signal ${t.acceptedSignal>=0?'+':''}${t.acceptedSignal.toFixed(2)} × confidence ${t.confidenceWeight.toFixed(2)} × learning rate ${(t.learningRate*100).toFixed(2)}% = <b>${signedFactorDelta(t.acceptedContribution)}</b></p>${(d.signals||[]).map(s=>`<div class="decisionSignalRow"><span>${esc(s.name)}</span><b>${s.value>=0?'+':''}${Number(s.value).toFixed(2)}</b><small>${esc(s.detail)}</small></div>`).join('')}<div class="evidenceBucketList"><b>Accepted contributions this week</b>${bucketRows||'<p class="muted compact">None yet.</p>'}</div>${t.thresholdBlocked?`<div class="evidenceThresholdNotice"><p>Raw projected Pace & Power factor: <b>${t.rawProjected.toFixed(4)}</b>. It remains displayed as ${t.projected.toFixed(3)} until the stability threshold is crossed.</p></div>`:''}</details></section>`;
+   return`<section class="pathwayDecisionBranch compactPathway"><div class="compactPathwayHead"><div><small>${title}</small><h4>${esc(d.action)}</h4></div><b>${accepted?signedFactorDelta(t.acceptedContribution):'0.000'}</b></div><div class="compactPathwayFlow"><div><small>RUN SIGNAL</small><strong>${t.rawSignal>=0?'+':''}${t.rawSignal.toFixed(2)}</strong><span>${esc(d.interpretation)}</span></div><div><small>ACCEPTED INTO LEARNING</small><strong>${accepted?signedFactorDelta(t.acceptedContribution):'0.000'}</strong><span>${d.confidence} confidence · ${Math.round(t.confidenceWeight*100)}% evidence weight</span>${!accepted&&t.safeguard?`<em>${esc(t.safeguard)}</em>`:''}</div><div><small>THIS WEEK</small><strong>${signedFactorDelta(t.weeklyBucket)}</strong><span>${t.weeklyRows.length} accepted run${t.weeklyRows.length===1?'':'s'}</span></div><div class="factor"><small>PROJECTED FACTOR</small><strong>${t.applied.toFixed(3)} → ${t.projected.toFixed(3)}</strong><span>${esc(t.status)}</span></div></div><details><summary>Calculation details</summary><p class="compactFormula">Accepted signal ${t.acceptedSignal>=0?'+':''}${t.acceptedSignal.toFixed(2)} × confidence ${t.confidenceWeight.toFixed(2)} × learning rate ${(t.learningRate*100).toFixed(2)}% = <b>${signedFactorDelta(t.acceptedContribution)}</b></p>${(d.signals||[]).map(s=>`<div class="decisionSignalRow"><span>${esc(s.name)}</span><b>${s.value>=0?'+':''}${Number(s.value).toFixed(2)}</b><small>${esc(s.detail)}</small></div>`).join('')}<div class="evidenceBucketList"><b>Accepted contributions this week</b>${bucketRows||'<p class="muted compact">None yet.</p>'}</div>${t.thresholdBlocked?`<div class="evidenceThresholdNotice"><p>Raw projected Pace & Power factor: <b>${t.rawProjected.toFixed(4)}</b>. It remains displayed as ${t.projected.toFixed(3)} until the stability threshold is crossed.</p></div>`:''}</details></section>`;
  };
  return `<section class="postRunCoachUpdate simplifiedCoachUpdate"><div class="postRunCoachHead simplified"><div><span>POST-RUN ADAPTATION</span><h3>${esc(u.decision)}</h3></div></div><div class="pathwayDecisionGrid">${branch('PACE & POWER',pd,pt)}${branch('DISTANCE & LOAD',ld,lt)}</div><div class="readinessSeparate compact"><small>READINESS</small><b>${Number(u.after?.readiness||1).toFixed(3)}</b><span>Temporary recovery overlay · does not change learned capability.</span></div>${future}<div class="postRunNext compact"><b>Coach consequence</b><p>${esc(u.nextChange||'No immediate prescription change.')}</p></div></section>`;
 }
@@ -2866,9 +2872,9 @@ function injuryContextForRun(r){
 }
 function comparableRunAnalysis(run){
  if(!run)return null;
- const family=workoutFamily(run.type),dur=Number(run.durationSec)||0,dist=Number(run.distanceKm)||0,intensity=runIntensityRatio(run),paceNow=metrics(run).pace;
+ const family=effectiveWorkoutFamily(run),dur=Number(run.durationSec)||0,dist=Number(run.distanceKm)||0,intensity=runIntensityRatio(run),paceNow=metrics(run).pace;
  const constrained=injuryContextForRun(run);
- const pool=completedRuns(run.date).filter(r=>r.id!==run.id&&r.date<run.date&&workoutFamily(r.type)===family&&injuryContextForRun(r)===constrained);
+ const pool=completedRuns(run.date).filter(r=>r.id!==run.id&&r.date<run.date&&effectiveWorkoutFamily(r)===family&&injuryContextForRun(r)===constrained);
  const scored=pool.map(r=>{
    const rd=Number(r.durationSec)||0,rk=Number(r.distanceKm)||0,ri=runIntensityRatio(r),rp=metrics(r).pace;
    const simDur=dur&&rd?Math.max(0,1-Math.abs(rd-dur)/Math.max(dur,rd)):0;
