@@ -1,4 +1,4 @@
-AI Running Coach v10.7.1 Stable — build 17010
+AI Running Coach v10.7.2 Stable — build 17020
 
 Deployment
 ----------
@@ -534,3 +534,13 @@ v10.7.1 Clean Blue Restart
 - Interval repetition dots and metric bars now use the same blue family, with amber used only for extra/unplanned repetitions.
 - Progress, Today, Plan, Log, Recovery and Injury/Rehab share the same Level 1 / Level 2 / metric / foldout treatments.
 - No training, prediction, pathway, recovery, injury or scoring equations were changed.
+
+v10.7.2 Hard Color Reset
+------------------------
+- Removes the previous theme owner and rebuilds colours from a strict canonical palette.
+- Structural UI now uses only #071B2E (background), #0D3558 (cards), and #174F7A (nested modules).
+- #2E8FD0 / #7FC8F1 are reserved for actions, icons, graphs and progress indicators.
+- Teal/purple are removed as structural colours. Green #42C97B, amber #F2B84B, and red #FF6B7A are semantic-only.
+- Legacy gradients are stripped from the active stylesheet.
+- Progress is explicitly forced onto the same level-1 / level-2 hierarchy as Today, Plan, Log, Recovery and Injury/Rehab.
+- No training, prediction, pathway, recovery, injury or scoring equations changed.
