@@ -3,9 +3,9 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#0b3157"><title>AI Running Coach</title>
-<link rel="manifest" href="manifest.webmanifest?v=16060"><link rel="stylesheet" href="styles.css?v=16060-renderlock">
+<link rel="manifest" href="manifest.webmanifest?v=16060"><link rel="stylesheet" href="styles.css?v=16070-target">
 <style id="referenceRenderLock">
-/* v10.6.6 reference-render lock: deliberately lives after styles.css so legacy
+/* v10.6.7 reference-render lock: deliberately lives after styles.css so legacy
    light-theme selectors cannot reintroduce white content tiles. */
 :root{
   --rr-bg:#063e47;--rr-bg2:#04363f;--rr-card:#07535d;--rr-card2:#0a606a;
@@ -134,11 +134,19 @@ nav{background:#073f49!important;border-color:var(--rr-line)!important}nav butto
 <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=10320">
 <meta property="og:image" content="github-banner.png">
 
+
+<style id="targetRenderEmergencyLock">
+/* Last stylesheet in the document: blocks any legacy white surface with selector precedence. */
+#mainContent .mixGrid>div,.modalCard .intervalAnalysisCard,.modalCard .comparableRuns,#mainContent .predictionSummary>*,#mainContent .diagnosisBox,#mainContent .adherenceTile>span{background:#075763!important;background-image:none!important;color:#c5dddd!important}
+#mainContent :is(.todayInlineLink,.coachPlanLink,.logProgressLink,.primary,.secondary,.buttonLike),.modalCard :is(.primary,.secondary,.buttonLike){background:#0a7079!important;color:#fff!important;border-color:rgba(123,230,224,.22)!important}
+#mainContent :is(.todayInlineLink,.coachPlanLink,.logProgressLink,.primary,.secondary,.buttonLike) *, .modalCard :is(.primary,.secondary,.buttonLike) *{color:#fff!important}
+.mobileBottomNav button,.mobileBottomNav button.active,#nav.mobileBottomNav button,#nav.mobileBottomNav button.active{background:transparent!important;background-color:transparent!important;background-image:none!important;border-radius:0!important;box-shadow:none!important}
+</style>
 </head>
 <body>
 <a class="skipLink" href="#mainContent">Skip to main content</a>
 <header class="topbar">
-  <div class="brand"><img class="logo" src="icon-192.png?v=10320" alt="AI Running Coach logo"><div class="brand-copy"><h1>AI Running Coach</h1><p>Race-specific adaptive planning · v10.6.6 · build 16060</p></div></div>
+  <div class="brand"><img class="logo" src="icon-192.png?v=10320" alt="AI Running Coach logo"><div class="brand-copy"><h1>AI Running Coach</h1><p>Race-specific adaptive planning · v10.6.7 · build 16070</p></div></div>
   <button id="installBtn" class="install hidden">Install</button>
 </header>
 <nav id="nav" aria-label="Primary navigation"></nav>
@@ -322,7 +330,7 @@ nav{background:#073f49!important;border-color:var(--rr-line)!important}nav butto
   <article class="panel"><h3>Data</h3><div class="buttonRow"><button id="backupBtn">Download backup</button><label for="restoreFile" class="buttonLike">Restore backup</label><input id="restoreFile" type="file" accept=".json"><button id="undoRestoreBtn" type="button" class="secondary hidden">Undo last restore</button><button id="exportBtn">Export runs CSV</button><button id="resetBtn" class="danger">Reset app</button></div></article>
 </section>
 </main>
-<footer class="appFooter"><span>AI Running Coach</span><small>v10.6.6 · build 16060</small></footer>
+<footer class="appFooter"><span>AI Running Coach</span><small>v10.6.7 · build 16070</small></footer>
 
 <div id="modal" class="modal hidden" role="dialog" aria-modal="true" aria-label="AI Running Coach dialog" tabindex="-1"><div class="modalCard"><button id="closeModal" class="close" type="button" aria-label="Close dialog">×</button><div id="modalContent"></div></div></div>
 
@@ -351,5 +359,5 @@ nav{background:#073f49!important;border-color:var(--rr-line)!important}nav butto
     <button class="primary full" type="submit">Review and create my plan</button>
   </form>
 </div>
-<script src="app.js?v=16060-renderlock"></script>
+<script src="app.js?v=16070-target"></script>
 </body></html>

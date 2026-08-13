@@ -1,4 +1,4 @@
-AI Running Coach v10.6.2 Stable — build 16020
+AI Running Coach v10.6.7 Stable — build 16070
 
 Deployment
 ----------
@@ -466,4 +466,14 @@ v10.6.6 Reference-render lock
 - Adds a final inline reference-render CSS layer in index.html so legacy light-card rules cannot override the supplied dark-teal reference design.
 - Removes white/pale content tiles across Today, Plan, Log, Progress, Recovery, Injury/Rehab and secondary views.
 - Keeps dark-teal Level 1/2/3 surfaces, white primary text, aqua supporting text, compact semantic status accents, dark foldouts, teal chart canvases and non-white mobile navigation.
+- No training, prediction, recovery, injury, pathway or scoring equations changed.
+
+
+v10.6.7 Target-render fidelity lock
+----------------------------------
+- Uses the supplied dark-teal mobile render as the visual source of truth across Today, Plan, Log, Progress, Recovery and Injury/Rehab.
+- Removes remaining pale/white content surfaces, including Plan intensity-mix wrappers, Log interval-analysis/modal cards, Progress prediction/validation tiles, injury diagnosis/adherence tiles and Today action buttons.
+- Bottom navigation now uses a dark bar with cyan active icon/indicator; no white active pill.
+- All runner-facing buttons use dark teal with white text for reliable contrast.
+- Chart canvases and chart-detail wrappers are embedded dark teal, and canvas labels/grid lines were recoloured for dark-background readability.
 - No training, prediction, recovery, injury, pathway or scoring equations changed.

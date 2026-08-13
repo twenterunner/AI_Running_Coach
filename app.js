@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '10.6.6';
-  const BUILD = 16060;
+  const VERSION = '10.6.7';
+  const BUILD = 16070;
   const SCHEMA = 10330;
   const PRIMARY_STORAGE_KEY = 'arc_v10330_web';
   const MIRROR_STORAGE_KEY = 'arc_v10330_mirror';
@@ -2078,14 +2078,14 @@ function drawLine(canvas,series,options={}){
      ctx.save();ctx.strokeStyle=s.color;ctx.lineWidth=6;ctx.lineCap='round';
      if(s.dashed)ctx.setLineDash([16,10]);
      ctx.beginPath();ctx.moveTo(x,30);ctx.lineTo(x+30,30);ctx.stroke();ctx.restore();
-     ctx.fillStyle='#536172';ctx.fillText(s.label,x+42,38);
+     ctx.fillStyle='#b7d4d3';ctx.fillText(s.label,x+42,38);
      x+=52+ctx.measureText(s.label).width+34;
    });
  }
 
  let vals=series.flatMap(s=>s.data).filter(Number.isFinite);
  if(!vals.length){
-   ctx.fillStyle='#8190a0';ctx.font='600 27px system-ui';ctx.textAlign='center';
+   ctx.fillStyle='#9fc5c3';ctx.font='600 27px system-ui';ctx.textAlign='center';
    ctx.fillText(options.empty||'More completed data is needed',W/2,H/2);return;
  }
  let min=Number.isFinite(options.min)?options.min:(options.zero===false?Math.min(...vals):0);
@@ -2099,9 +2099,9 @@ function drawLine(canvas,series,options={}){
  let ticks=options.ticks||5;
  for(let i=0;i<ticks;i++){
    let fraction=i/(ticks-1),v=min+(max-min)*fraction,y=H-bottom-chartH*fraction;
-   ctx.strokeStyle=i===0?'#d9e2ea':'#eaf0f5';ctx.lineWidth=i===0?2:1;
+   ctx.strokeStyle=i===0?'#d9e2ea':'#164f58';ctx.lineWidth=i===0?2:1;
    ctx.beginPath();ctx.moveTo(left,y);ctx.lineTo(W-right,y);ctx.stroke();
-   ctx.fillStyle='#748293';
+   ctx.fillStyle='#9fc5c3';
    ctx.fillText(options.formatY?options.formatY(v):v.toFixed(v<10?1:0),left-12,y+7);
  }
  let n=Math.max(1,...series.map(s=>s.data.length));
@@ -2135,7 +2135,7 @@ function drawLine(canvas,series,options={}){
  if(options.labels?.length){
    let positions=options.allLabels?options.labels.map((_,i)=>i):
      [0,Math.floor((options.labels.length-1)/2),options.labels.length-1].filter((v,i,a)=>a.indexOf(v)===i);
-   ctx.font='19px system-ui';ctx.fillStyle='#748293';ctx.textAlign='center';
+   ctx.font='19px system-ui';ctx.fillStyle='#9fc5c3';ctx.textAlign='center';
    positions.forEach(i=>ctx.fillText(options.labels[i]||'',px(i),H-18));
  }
  const interactive=[];series.forEach(s=>s.data.forEach((v,i)=>{if(Number.isFinite(v)&&s.points!==false)interactive.push({x:px(i),y:py(v),label:s.label||'Value',value:v,index:i})}));
@@ -2154,13 +2154,13 @@ function drawDonut(canvas,segments,centerLabel='planned',emptyText='No training 
  let ctx=canvas.getContext('2d'),W=canvas.width,H=canvas.height,cx=W*.32,cy=H*.52,r=105,total=sum(segments.map(s=>s.value));
  ctx.clearRect(0,0,W,H);
  updateChartTable(canvas,'View chart summary and data',['Training category','Distance','Share'],segments.map(segment=>[segment.label,`${segment.value.toFixed(1)} km`,`${Math.round(segment.value/Math.max(1,total)*100)}%`]));
- if(!total){ctx.fillStyle='#8190a0';ctx.font='600 28px system-ui';ctx.textAlign='center';ctx.fillText(emptyText,W/2,H/2);return}
+ if(!total){ctx.fillStyle='#9fc5c3';ctx.font='600 28px system-ui';ctx.textAlign='center';ctx.fillText(emptyText,W/2,H/2);return}
  let a=-Math.PI/2;
  segments.forEach(s=>{let da=s.value/total*Math.PI*2;ctx.beginPath();ctx.strokeStyle=s.color;ctx.lineWidth=38;ctx.lineCap='butt';ctx.arc(cx,cy,r,a,a+da);ctx.stroke();a+=da});
- ctx.fillStyle='#172536';ctx.font='800 38px system-ui';ctx.textAlign='center';ctx.fillText(Math.round(total)+' km',cx,cy+8);
- ctx.font='20px system-ui';ctx.fillStyle='#748293';ctx.fillText(centerLabel,cx,cy+37);
+ ctx.fillStyle='#f4ffff';ctx.font='800 38px system-ui';ctx.textAlign='center';ctx.fillText(Math.round(total)+' km',cx,cy+8);
+ ctx.font='20px system-ui';ctx.fillStyle='#9fc5c3';ctx.fillText(centerLabel,cx,cy+37);
  ctx.textAlign='left';let y=82;
- segments.forEach(s=>{ctx.fillStyle=s.color;ctx.beginPath();ctx.arc(W*.58,y-6,8,0,Math.PI*2);ctx.fill();ctx.fillStyle='#314253';ctx.font='600 22px system-ui';ctx.fillText(s.label,W*.61,y);ctx.fillStyle='#748293';ctx.font='21px system-ui';ctx.fillText(`${s.value.toFixed(1)} km · ${Math.round(s.value/total*100)}%`,W*.61,y+28);y+=65});
+ segments.forEach(s=>{ctx.fillStyle=s.color;ctx.beginPath();ctx.arc(W*.58,y-6,8,0,Math.PI*2);ctx.fill();ctx.fillStyle='#d5ecea';ctx.font='600 22px system-ui';ctx.fillText(s.label,W*.61,y);ctx.fillStyle='#9fc5c3';ctx.font='21px system-ui';ctx.fillText(`${s.value.toFixed(1)} km · ${Math.round(s.value/total*100)}%`,W*.61,y+28);y+=65});
 }
 function intensityGroups(items,distanceKey){
  const dist=x=>Math.max(0,Number(x[distanceKey]??x.distance??x.distanceKm)||0);
@@ -3403,18 +3403,18 @@ function renderRecovery(){
 }
 function drawHrvChart(){
  const canvas=$('hrvChart');if(!canvas)return;const ctx=canvas.getContext('2d'),W=canvas.width,H=canvas.height,hist=hrvHistory(),model=hrvModel();ctx.clearRect(0,0,W,H);updateChartTable(canvas,'View HRV chart data',['Date','Previous-night HRV'],hist.map(item=>[fmtDate(item.date),`${Math.round(item.value)} ms`]));
- if(!hist.length){ctx.fillStyle='#8190a0';ctx.font='600 27px system-ui';ctx.textAlign='center';ctx.fillText('Log previous-night Garmin HRV to start the trend',W/2,H/2);return}
+ if(!hist.length){ctx.fillStyle='#9fc5c3';ctx.font='600 27px system-ui';ctx.textAlign='center';ctx.fillText('Log previous-night Garmin HRV to start the trend',W/2,H/2);return}
  const shown=hist.slice(-28),vals=shown.map(x=>x.value),base=Number.isFinite(model.baseline)?model.baseline:median(vals),recentN=model.count<=3?model.count:model.count<=6?3:7;
  const rolling=shown.map((x,i)=>avg(shown.slice(Math.max(0,i-recentN+1),i+1).map(y=>y.value)));
  let min=Math.min(...vals,base*.62),max=Math.max(...vals,base*1.18),pad=Math.max(3,(max-min)*.08);min=Math.max(0,min-pad);max+=pad;
  const left=78,right=24,top=34,bottom=70,cw=W-left-right,ch=H-top-bottom,px=i=>shown.length===1?left+cw/2:left+i*cw/(shown.length-1),py=v=>top+(max-v)/(max-min)*ch;
  const bands=[{from:min,to:base*.65,fill:'rgba(197,73,63,.10)'},{from:base*.65,to:base*.75,fill:'rgba(224,157,42,.10)'},{from:base*.75,to:max,fill:'rgba(55,151,91,.08)'}];
  bands.forEach(b=>{const y1=py(Math.min(max,b.to)),y2=py(Math.max(min,b.from));ctx.fillStyle=b.fill;ctx.fillRect(left,y1,cw,Math.max(0,y2-y1))});
- ctx.font='20px system-ui';ctx.textAlign='right';for(let i=0;i<5;i++){const v=min+(max-min)*i/4,y=py(v);ctx.strokeStyle='#e5ebf0';ctx.beginPath();ctx.moveTo(left,y);ctx.lineTo(W-right,y);ctx.stroke();ctx.fillStyle='#748293';ctx.fillText(Math.round(v),left-12,y+7)}
- ctx.save();ctx.strokeStyle='#8793a1';ctx.setLineDash([14,10]);ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(left,py(base));ctx.lineTo(W-right,py(base));ctx.stroke();ctx.restore();
+ ctx.font='20px system-ui';ctx.textAlign='right';for(let i=0;i<5;i++){const v=min+(max-min)*i/4,y=py(v);ctx.strokeStyle='#1c5861';ctx.beginPath();ctx.moveTo(left,y);ctx.lineTo(W-right,y);ctx.stroke();ctx.fillStyle='#9fc5c3';ctx.fillText(Math.round(v),left-12,y+7)}
+ ctx.save();ctx.strokeStyle='#78aaa8';ctx.setLineDash([14,10]);ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(left,py(base));ctx.lineTo(W-right,py(base));ctx.stroke();ctx.restore();
  ctx.strokeStyle='#58a65c';ctx.lineWidth=4;ctx.beginPath();rolling.forEach((v,i)=>i?ctx.lineTo(px(i),py(v)):ctx.moveTo(px(i),py(v)));ctx.stroke();
  ctx.strokeStyle='#2d82c7';ctx.lineWidth=4;ctx.beginPath();vals.forEach((v,i)=>i?ctx.lineTo(px(i),py(v)):ctx.moveTo(px(i),py(v)));ctx.stroke();vals.forEach((v,i)=>{ctx.fillStyle='#2d82c7';ctx.beginPath();ctx.arc(px(i),py(v),6,0,Math.PI*2);ctx.fill()});
- ctx.font='18px system-ui';ctx.fillStyle='#748293';ctx.textAlign='center';const step=Math.max(1,Math.ceil(shown.length/6));shown.forEach((x,i)=>{if(i%step&&i!==shown.length-1)return;const d=dte(x.date);ctx.fillText(`${d.toLocaleDateString(undefined,{weekday:'short'})} ${d.getDate()}/${d.getMonth()+1}`,px(i),H-32)});ctx.save();ctx.translate(24,H/2);ctx.rotate(-Math.PI/2);ctx.fillText('HRV (ms)',0,0);ctx.restore();
+ ctx.font='18px system-ui';ctx.fillStyle='#9fc5c3';ctx.textAlign='center';const step=Math.max(1,Math.ceil(shown.length/6));shown.forEach((x,i)=>{if(i%step&&i!==shown.length-1)return;const d=dte(x.date);ctx.fillText(`${d.toLocaleDateString(undefined,{weekday:'short'})} ${d.getDate()}/${d.getMonth()+1}`,px(i),H-32)});ctx.save();ctx.translate(24,H/2);ctx.rotate(-Math.PI/2);ctx.fillText('HRV (ms)',0,0);ctx.restore();
 }
 function renderPlanHealth(){
  const box=$('planHealthContent');if(!box)return;
