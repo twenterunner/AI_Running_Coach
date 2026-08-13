@@ -1,4 +1,4 @@
-AI Running Coach v10.7.2 Stable — build 17020
+AI Running Coach v10.7.3 Stable — build 17030
 
 Deployment
 ----------
@@ -543,4 +543,15 @@ v10.7.2 Hard Color Reset
 - Teal/purple are removed as structural colours. Green #42C97B, amber #F2B84B, and red #FF6B7A are semantic-only.
 - Legacy gradients are stripped from the active stylesheet.
 - Progress is explicitly forced onto the same level-1 / level-2 hierarchy as Today, Plan, Log, Recovery and Injury/Rehab.
+- No training, prediction, pathway, recovery, injury or scoring equations changed.
+
+v10.7.3 User-Palette Rebuild
+----------------------------
+- Rebuilds the UI around the exact five blue shades sampled from the supplied reference image:
+  #BBF5F9, #88C5FC, #3980EC, #0129BF, #080B6C.
+- Removes all v10.6.x/v10.7.x visual override layers from the active stylesheet and retains only the original layout CSS plus one new theme owner.
+- Repairs the mobile Plan week summary so week/phase/date and Planned/Completed/Remaining metrics do not overlap.
+- Bottom navigation is explicitly locked to the darkest supplied blue; only the active tab uses pale blue.
+- Main cards use royal blue, nested modules use mid blue, icons/bars use light blue, and pale blue is reserved for selected/highlight states.
+- Native intensity distribution bars remain enabled for Next week, Completed to date and Overall programme.
 - No training, prediction, pathway, recovery, injury or scoring equations changed.
