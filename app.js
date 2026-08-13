@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '10.6.9';
-  const BUILD = 16090;
+  const VERSION = '10.6.10';
+  const BUILD = 16100;
   const SCHEMA = 10330;
   const PRIMARY_STORAGE_KEY = 'arc_v10330_web';
   const MIRROR_STORAGE_KEY = 'arc_v10330_mirror';
@@ -1407,7 +1407,7 @@ function confidence(){
  let performancePillar={name:'Physiological fitness',weight:1,color:'#2d82c7',description:'Demonstrated capability used to centre the marathon-time prediction.',...physiological};
  let pillars=[
   {name:'Marathon preparation',weight:.50,color:'#e49b35',description:'How much marathon-specific evidence supports sustaining the predicted pace for 42.2 km.',...marathonPreparation},
-  {name:'Plan execution',weight:.30,color:'#57b7e6',description:'How reliably completed volume, sessions and timing match the programme.',...planExecution},
+  {name:'Plan execution',weight:.30,color:'#69b8ee',description:'How reliably completed volume, sessions and timing match the programme.',...planExecution},
   {name:'HRV & health',weight:.20,color:'#7457c8',description:'Whether the recent Garmin HRV pattern and pain evidence support absorbing training.',...recoveryHealth}
  ];
  let scoredPillars=pillars.filter(p=>Number.isFinite(p.score));
@@ -2099,7 +2099,7 @@ function drawLine(canvas,series,options={}){
  let ticks=options.ticks||5;
  for(let i=0;i<ticks;i++){
    let fraction=i/(ticks-1),v=min+(max-min)*fraction,y=H-bottom-chartH*fraction;
-   ctx.strokeStyle=i===0?'#d9e2ea':'#145b8a';ctx.lineWidth=i===0?2:1;
+   ctx.strokeStyle=i===0?'#d9e2ea':'#124a7b';ctx.lineWidth=i===0?2:1;
    ctx.beginPath();ctx.moveTo(left,y);ctx.lineTo(W-right,y);ctx.stroke();
    ctx.fillStyle='#a8cfee';
    ctx.fillText(options.formatY?options.formatY(v):v.toFixed(v<10?1:0),left-12,y+7);
@@ -2167,7 +2167,7 @@ function intensityGroups(items,distanceKey){
  return[
   {label:'Easy / recovery',value:sum(items.filter(x=>['Easy','Recovery','Easy + strides','Shakeout'].includes(x.type)).map(dist)),color:'#2d82c7'},
   {label:'Aerobic endurance',value:sum(items.filter(x=>['Steady aerobic','Medium-long','Progression'].includes(x.type)).map(dist)),color:'#6bbfe8'},
-  {label:'Long / specific long',value:sum(items.filter(x=>['Long run','Specific long run','Race rehearsal','Race'].includes(x.type)).map(dist)),color:'#57b7e6'},
+  {label:'Long / specific long',value:sum(items.filter(x=>['Long run','Specific long run','Race rehearsal','Race'].includes(x.type)).map(dist)),color:'#69b8ee'},
   {label:'Threshold / race specific',value:sum(items.filter(x=>['Tempo','Marathon','Threshold','Threshold intervals','Marathon-specific','Half-marathon-specific'].includes(x.type)).map(dist)),color:'#e49b35'},
   {label:'Speed / tests',value:sum(items.filter(x=>['Intervals','Hills','Fartlek','VO₂max intervals','Race-pace intervals','Fitness assessment'].includes(x.type)).map(dist)),color:'#7457c8'}
  ].filter(x=>x.value>0);
@@ -2177,7 +2177,7 @@ function drawDashboardCharts(){
  let c=confidence(),arr=completedWeekSeries(),weekLabels=arr.map((x,i)=>x.isRaceWeek?'Race':('W'+(i+1)));
  drawLine($('volumeChart'),[
    {label:'Planned km',data:arr.map(x=>x.plannedForChart),color:'#2d82c7',dashed:true,points:false},
-   {label:'Completed km',data:arr.map(x=>x.actual),color:'#57b7e6'}
+   {label:'Completed km',data:arr.map(x=>x.actual),color:'#69b8ee'}
  ],{empty:'No weekly distance data yet',labels:weekLabels,area:false});
  let plannedLong=Array.from({length:weeks()},(_,i)=>state.plan.find(x=>x.week===i+1&&['Long run','Specific long run','Race rehearsal','Progression'].includes(x.type))?.distance??null);
  let completedLong=Array.from({length:weeks()},(_,i)=>{
@@ -2187,7 +2187,7 @@ function drawDashboardCharts(){
  });
  drawLine($('longRunChart'),[
    {label:'Planned long run',data:plannedLong,color:'#2d82c7',dashed:true,points:false},
-   {label:'Completed long run',data:completedLong,color:'#57b7e6'}
+   {label:'Completed long run',data:completedLong,color:'#69b8ee'}
  ],{min:0,max:Math.max(state.setup.peakLong*1.12,10),empty:'Log a long run to show completed progression',labels:weekLabels});
 
  let history=(state.predictionHistory||[]).filter(x=>Number.isFinite(Number(x.seconds))&&x.date<=iso(today())).slice().sort((a,b)=>a.date.localeCompare(b.date));
@@ -3410,10 +3410,10 @@ function drawHrvChart(){
  const left=78,right=24,top=34,bottom=70,cw=W-left-right,ch=H-top-bottom,px=i=>shown.length===1?left+cw/2:left+i*cw/(shown.length-1),py=v=>top+(max-v)/(max-min)*ch;
  const bands=[{from:min,to:base*.65,fill:'rgba(197,73,63,.10)'},{from:base*.65,to:base*.75,fill:'rgba(224,157,42,.10)'},{from:base*.75,to:max,fill:'rgba(55,151,91,.08)'}];
  bands.forEach(b=>{const y1=py(Math.min(max,b.to)),y2=py(Math.max(min,b.from));ctx.fillStyle=b.fill;ctx.fillRect(left,y1,cw,Math.max(0,y2-y1))});
- ctx.font='20px system-ui';ctx.textAlign='right';for(let i=0;i<5;i++){const v=min+(max-min)*i/4,y=py(v);ctx.strokeStyle='#1b6598';ctx.beginPath();ctx.moveTo(left,y);ctx.lineTo(W-right,y);ctx.stroke();ctx.fillStyle='#a8cfee';ctx.fillText(Math.round(v),left-12,y+7)}
+ ctx.font='20px system-ui';ctx.textAlign='right';for(let i=0;i<5;i++){const v=min+(max-min)*i/4,y=py(v);ctx.strokeStyle='#2474b5';ctx.beginPath();ctx.moveTo(left,y);ctx.lineTo(W-right,y);ctx.stroke();ctx.fillStyle='#a8cfee';ctx.fillText(Math.round(v),left-12,y+7)}
  ctx.save();ctx.strokeStyle='#82bde2';ctx.setLineDash([14,10]);ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(left,py(base));ctx.lineTo(W-right,py(base));ctx.stroke();ctx.restore();
  ctx.strokeStyle='#4aa36b';ctx.lineWidth=4;ctx.beginPath();rolling.forEach((v,i)=>i?ctx.lineTo(px(i),py(v)):ctx.moveTo(px(i),py(v)));ctx.stroke();
- ctx.strokeStyle='#57b7e6';ctx.lineWidth=4;ctx.beginPath();vals.forEach((v,i)=>i?ctx.lineTo(px(i),py(v)):ctx.moveTo(px(i),py(v)));ctx.stroke();vals.forEach((v,i)=>{ctx.fillStyle='#57b7e6';ctx.beginPath();ctx.arc(px(i),py(v),6,0,Math.PI*2);ctx.fill()});
+ ctx.strokeStyle='#69b8ee';ctx.lineWidth=4;ctx.beginPath();vals.forEach((v,i)=>i?ctx.lineTo(px(i),py(v)):ctx.moveTo(px(i),py(v)));ctx.stroke();vals.forEach((v,i)=>{ctx.fillStyle='#69b8ee';ctx.beginPath();ctx.arc(px(i),py(v),6,0,Math.PI*2);ctx.fill()});
  ctx.font='18px system-ui';ctx.fillStyle='#a8cfee';ctx.textAlign='center';const step=Math.max(1,Math.ceil(shown.length/6));shown.forEach((x,i)=>{if(i%step&&i!==shown.length-1)return;const d=dte(x.date);ctx.fillText(`${d.toLocaleDateString(undefined,{weekday:'short'})} ${d.getDate()}/${d.getMonth()+1}`,px(i),H-32)});ctx.save();ctx.translate(24,H/2);ctx.rotate(-Math.PI/2);ctx.fillText('HRV (ms)',0,0);ctx.restore();
 }
 function renderPlanHealth(){

@@ -1,4 +1,4 @@
-AI Running Coach v10.6.9 Stable — build 16090
+AI Running Coach v10.6.10 Stable — build 16100
 
 Deployment
 ----------
@@ -490,7 +490,7 @@ v10.6.8 Logo-blue visual system
 - No training, prediction, recovery, injury, pathway or execution calculations changed.
 
 
-v10.6.9 Unified Logo-Blue Visual System
+v10.6.10 Unified Logo-Blue Visual System
 ----------------------------------------
 - Removes residual teal/green card surfaces from Today, Plan, Log, Progress, Recovery, Injury/Rehab and More.
 - Canonical palette now follows the app icon: deep navy, dark blue, medium blue, light blue and white.
@@ -499,3 +499,11 @@ v10.6.9 Unified Logo-Blue Visual System
 - Progress cards, pathway blocks, coach review, personal-response model, interval analysis, rehab and modal surfaces all use the same hierarchy.
 - Chart canvases, gridlines and labels are normalized to the same blue family.
 - No training, prediction, recovery, injury, pathway or scoring logic changed.
+
+
+v10.6.10 Stronger logo-blue palette
+------------------------------------
+- Shifts all structural surfaces away from blue-green/teal toward navy, royal blue and clear sky-blue shades sampled from the app-logo family.
+- Dark navy remains the application shell; level-1 cards use deep blue, level-2 cards medium blue, level-3 tiles brighter blue, with pale blue and white for contrast.
+- Semantic green remains limited to success indicators only.
+- No coaching, prediction, recovery, injury, pathway or scoring logic changed.
