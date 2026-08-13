@@ -1595,3 +1595,10 @@ details>summary{transition:background .15s ease,color .15s ease}details>summary:
  .evidenceDriver.consistent{grid-template-columns:1fr 64px 66px}
  .consistentSummary>div{min-height:0}
 }
+
+/* v10.5.4 simplified pathway headline */
+.pathwayHeadline{align-items:center}
+.pathwayHeadline>span{padding:5px 8px;border-radius:999px;background:#edf5f7;color:#285f72;font-size:.62rem;font-weight:850}
+.coachDecisionSummary.singleContribution{grid-template-columns:1fr;margin-top:9px}
+.coachDecisionSummary.singleContribution>div{min-height:0}
+@media(max-width:620px){.pathwayHeadline{align-items:flex-start}.pathwayHeadline>span{align-self:flex-start}}

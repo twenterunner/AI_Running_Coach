@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '10.5.3';
-  const BUILD = 15030;
+  const VERSION = '10.5.4';
+  const BUILD = 15040;
   const SCHEMA = 10330;
   const PRIMARY_STORAGE_KEY = 'arc_v10330_web';
   const MIRROR_STORAGE_KEY = 'arc_v10330_mirror';
@@ -2951,13 +2951,13 @@ function pathwayCalculationDetailsHtml(d,t){
 
 function qualitativePathwaySignal(v){
  v=Number(v)||0;
- if(v>=.65)return'Strong positive';
- if(v>=.35)return'Positive';
- if(v>=.12)return'Slight positive';
- if(v<=-.65)return'Strong conservative';
- if(v<=-.35)return'Conservative';
- if(v<=-.12)return'Slight conservative';
- return'Neutral';
+ if(v>=.65)return'Strong progression signal';
+ if(v>=.35)return'Progression signal';
+ if(v>=.12)return'Slight progression signal';
+ if(v<=-.65)return'Strong caution signal';
+ if(v<=-.35)return'Caution signal';
+ if(v<=-.12)return'Slight caution signal';
+ return'Supports current level';
 }
 function pathwayEvidenceSummaryHtml(d,t){
  const rows=[];
@@ -3013,12 +3013,8 @@ function postRunCoachUpdateHtml(r){
  const branch=(title,d,t)=>{
    const accepted=Math.abs(t.acceptedContribution)>=.00005,lang=pathwayCoachLanguage(d,t);
    return`<section class="pathwayDecisionBranch progressivePathway consistentPathway">
-     <div class="progressiveHead"><div><small>${title}</small><h4>${lang.q}</h4></div></div>
-     <div class="coachDecisionSummary consistentSummary">
-       <div><small>WHAT THIS RUN SUGGESTS</small><strong>${lang.q}</strong></div>
-       <div><small>HOW THE MODEL RESPONDS</small><strong>${accepted?'Adjust':'Hold'}</strong></div>
-       <div><small>LEARNING CONTRIBUTION</small><strong>${accepted?signedFactorDelta(t.acceptedContribution):'0.000'}</strong></div>
-     </div>
+     <div class="progressiveHead pathwayHeadline"><div><small>${title}</small><h4>${lang.q}</h4></div><span>${accepted?'Learning update accepted':'No pathway change'}</span></div>
+     <div class="coachDecisionSummary singleContribution"><div><small>LEARNING CONTRIBUTION</small><strong>${accepted?signedFactorDelta(t.acceptedContribution):'0.000'}</strong></div></div>
      <div class="coachPlainLanguage"><p><b>Run interpretation.</b> ${esc(lang.runMeaning)}</p><p><b>Model response.</b> ${esc(lang.response)}</p></div>
      ${!accepted&&t.safeguard?`<div class="coachDecisionSafeguard">${esc(t.safeguard)}</div>`:''}
      <details class="whyDecision"><summary>Why?</summary>
