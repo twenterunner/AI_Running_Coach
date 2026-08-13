@@ -459,3 +459,11 @@ v10.6.5 Approved-render fidelity
 - Workout rows, pathway cards, interval analysis, comparison cards, KPI cells, rehab cards and chart containers now share the same dark-teal hierarchy.
 - Exercise thumbnails remain tappable to enlarge in the technique viewer.
 - No training, prediction, recovery, injury, pathway or scoring equations changed.
+
+
+v10.6.6 Reference-render lock
+-------------------------------
+- Adds a final inline reference-render CSS layer in index.html so legacy light-card rules cannot override the supplied dark-teal reference design.
+- Removes white/pale content tiles across Today, Plan, Log, Progress, Recovery, Injury/Rehab and secondary views.
+- Keeps dark-teal Level 1/2/3 surfaces, white primary text, aqua supporting text, compact semantic status accents, dark foldouts, teal chart canvases and non-white mobile navigation.
+- No training, prediction, recovery, injury, pathway or scoring equations changed.
