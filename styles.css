@@ -1608,3 +1608,11 @@ details>summary{transition:background .15s ease,color .15s ease}details>summary:
 .comparableRuns + .postRunCoachUpdate{margin-top:12px}
 .postRunCoachUpdate + .intervalAnalysisCard,
 .postRunCoachUpdate + .runExecutionBreakdown{margin-top:14px}
+
+/* v10.5.6 hierarchy + consistent surfaces */
+.wiScoreLink{display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:72px;padding:7px 9px;border-radius:12px;background:rgba(255,255,255,.14);color:#fff;text-decoration:none;font-weight:900}.wiScoreLink small{margin-top:1px;color:rgba(255,255,255,.72);font-size:.52rem}
+.intervalAnalysisCard,.comparableRuns,.progressiveCoachUpdate,.executionFoldout{border-radius:18px;border:1px solid #dce7eb;box-shadow:0 7px 20px rgba(15,55,80,.055)}
+.workoutIntelligence + .intervalAnalysisCard,.intervalAnalysisCard + .comparableRuns,.comparableRuns + .postRunCoachUpdate,.postRunCoachUpdate + .executionFoldout{margin-top:12px}
+.intervalRepDetails{margin-top:10px;border-top:1px solid #dfe8eb;padding-top:8px}.intervalRepDetails>summary{font-size:.72rem;font-weight:850;color:#1d506b}
+.executionFoldout{background:#fff;padding:0!important;scroll-margin-top:82px}.executionFoldout>summary{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:14px 16px;cursor:pointer;color:#173e59;font-weight:900}.executionFoldout>summary b{padding:5px 8px;border-radius:999px;background:#eaf3f5;font-variant-numeric:tabular-nums}.executionFoldoutBody{padding:12px 16px 16px;border-top:1px solid #e7edef}
+.planInsightsShell,.todaySupportCard,.weeklyReviewCard{border-radius:18px}
