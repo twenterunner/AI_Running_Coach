@@ -442,7 +442,7 @@ v10.6.2 Teal hierarchy + exercise visuals
 - No training, prediction, recovery, injury, pathway or scoring equations were changed.
 
 
-v10.6.4 Render fidelity + runner-flow correction
+v10.6.5 Render fidelity + runner-flow correction
 ------------------------------------------------
 - Removes the remaining inherited white content tiles from Today, Plan, Log, Progress, Recovery and Injury/Rehab so the live app matches the approved dark-teal reference hierarchy.
 - Hardens foreground/background contrast across nested cards, weekly-review tiles, workout details, KPI/evidence cells, warnings, inputs, icons and foldouts.
@@ -450,3 +450,12 @@ v10.6.4 Render fidelity + runner-flow correction
 - Injury/Rehab now presents today's prescribed rehabilitation immediately after the active injury/plan decision, before longitudinal recovery and adherence summaries.
 - Exercise thumbnails are explicit zoom targets; tapping the image opens the large technique viewer while written cues, target muscles, pain rule and progression remain available in the card.
 - Repository remains flat. No training, prediction, recovery, injury, pathway or execution-scoring equations changed.
+
+
+v10.6.5 Approved-render fidelity
+----------------------------------
+- Removes remaining light/white content-card surfaces across Today, Plan, Log, Progress, Recovery and Injury/Rehab.
+- Uses the supplied reference render as the visual source of truth: dark teal page, layered teal cards, white headings, aqua metadata, compact semantic status accents, dark foldouts, and no white active bottom-nav pill.
+- Workout rows, pathway cards, interval analysis, comparison cards, KPI cells, rehab cards and chart containers now share the same dark-teal hierarchy.
+- Exercise thumbnails remain tappable to enlarge in the technique viewer.
+- No training, prediction, recovery, injury, pathway or scoring equations changed.

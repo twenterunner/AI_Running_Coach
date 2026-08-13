@@ -2218,3 +2218,149 @@ svg{color:inherit}
   .planEffectSummary{gap:9px!important}
   .planEffectSummary article{padding:11px 12px!important}
 }
+
+
+/* ============================================================
+   v10.6.5 Approved-render fidelity
+   Dark-teal card system across every runner-facing tab.
+   ============================================================ */
+:root{
+  --card:#07515b!important;
+  --soft:#0a5a64!important;
+  --surface:#07515b!important;
+  --surface-soft:#0a5a64!important;
+  --panel:#07515b!important;
+  --card-soft:#0a5a64!important;
+  --bg:#043b45!important;
+  --ink:#f7ffff!important;
+  --muted:#a8cccb!important;
+  --line:rgba(150,226,222,.18)!important;
+  --navy:#073f58!important;
+  --navy2:#075260!important;
+  --blue:#44c6ca!important;
+  --teal:#52d8d1!important;
+}
+html,body{background:#043b45!important;color:#f7ffff!important}
+body{background:linear-gradient(180deg,#063f49 0,#043b45 52%,#033640 100%) fixed!important}
+main{background:transparent!important}
+.topbar{background:#083f61!important;box-shadow:none!important;border-bottom:1px solid rgba(144,225,222,.10)!important}
+.sectionTitle h2,.sectionTitle h3,.sectionTitle strong{color:#fff!important}
+.sectionTitle p,.muted{color:#a8cccb!important}
+
+/* The approved render never uses white as a content-card surface. */
+.panel,.kpi,.workout,.workoutHead,.workoutDetails,.runCard,.runSummary,
+.weekHeader,.miniSession,.metricCell,.metric-card,.guideGrid>div,.target,
+.pillarCard,.todaySupportCard,.snapshotItem,.supportMetric,.injuryTopicCard,
+.rehabTodayFocus,.recoveryStatus,.readinessCenter,.readinessPanel,.predictionPanel,
+.importBox,.programmeTimelinePanel,.planMixPanel,.comparableRuns,.intervalAnalysisCard,
+.postRunCoachUpdate,.adaptationVisualCard,.modelValidationPanel,.personalDimension,
+.comparisonMetric,.evidenceDriver,.canonicalPathMetrics>div,.scienceProvenance>div,
+.intervalVisualMetrics>div,.repDotBlock,.adherenceTile,.prognosisStrip>div,
+.injuryKpiGrid>div,.clinicalReasoningGrid>div,.todayPlanGrid>div,.recoveryScoreWhy,
+.timelineReason,.comparisonRow,.criterion,.milestone,.checkInHistoryRow,
+.evidenceSummary>div,.preparationHeadline>div,.pathStats span,.pathAction,
+.executionKpis span,.coachFactorPair>div,.coachRecoverySummary>div,
+.pathFactorSummary>div,.pathwayHistoryPanel,.planFactorUsePanel,.factorUseGrid article,
+.stateLinkNote,.adjustmentSchedule,.confidenceBands span,.modelSteps section,.modelSteps code,
+.planEffectSummary article,.weeklyReviewFactors>div,.weeklyReviewChange,
+.powerCoverage,.coachPlainLanguage,.whyDecisionResult,.rehabStretchGoal{
+  background:#07515b!important;color:#f7ffff!important;border-color:rgba(150,226,222,.18)!important;box-shadow:none!important;
+}
+
+/* Slightly lighter nested information blocks, matching the render's layered teal. */
+.metricCell,.metric-card,.target,.supportMetric,.snapshotItem,.guideGrid>div,
+.intervalVisualMetrics>div,.comparisonMetric,.evidenceDriver,.canonicalPathMetrics>div,
+.scienceProvenance>div,.adherenceTile,.injuryKpiGrid>div,.clinicalReasoningGrid>div,
+.todayPlanGrid>div,.criterion,.milestone,.comparisonRow,.checkInHistoryRow,
+.pathFactorSummary>div,.planEffectSummary article,.weeklyReviewFactors>div,
+.preparationHeadline>div,.executionKpis span,.coachFactorPair>div,.coachRecoverySummary>div{
+  background:#0a606a!important;
+}
+
+/* Remove every explicit pale/white interior that survived earlier passes. */
+.workoutHead,.workoutDetails,.runSummary,.exerciseGuide,.exerciseInstructionBlock,
+.rehabDayBody,.modelDetailBody,.planInsightsBody,.modalBody,
+.todaySupportCard>div,.weeklyReviewBody,.pathwayHistoryChart{
+  background:transparent!important;
+}
+[style*="background:#fff"],[style*="background: #fff"],[style*="background:white"],[style*="background: white"]{
+  background:#0a606a!important;
+}
+
+/* High-contrast typography exactly as the render: white headings, aqua metadata. */
+.panel h1,.panel h2,.panel h3,.panel h4,.panel h5,.panel strong,.panel b,
+.workout h1,.workout h2,.workout h3,.workout strong,.workout b,
+.runCard h1,.runCard h2,.runCard h3,.runCard strong,.runCard b,
+.injuryTopicCard h1,.injuryTopicCard h2,.injuryTopicCard h3,.injuryTopicCard h4,
+.injuryTopicCard strong,.injuryTopicCard b,.kpi strong,.metricCell b,.metric-card strong,
+.target b,.snapshotItem b,.supportMetric b{color:#f7ffff!important}
+.panel p,.panel span,.panel small,.workout p,.workout span,.workout small,
+.runCard p,.runCard span,.runCard small,.injuryTopicCard p,.injuryTopicCard span,
+.injuryTopicCard small,.kpi label,.metricCell small,.metric-card small,.target small,
+.snapshotItem span,.supportMetric span{color:#a8cccb!important}
+
+/* Status colours appear only as compact cues, not giant pale tiles. */
+.status,.badge,.evidenceBadge{background:rgba(255,255,255,.055)!important;border:1px solid rgba(166,229,225,.18)!important}
+.status.completed{color:#7ee7a8!important}.status.today{color:#73e8e1!important}.status.upcoming{color:#d4e8e7!important}.status.rest{color:#bad1d1!important}.status.missed{color:#ff9a9a!important}
+.note,.note.good,.note.warn,.note.bad,.supportNotice,.executionNotice,.validationCaution{
+  background:#0a606a!important;color:#dcefee!important;border-color:rgba(150,226,222,.18)!important;
+}
+.note.good{border-left-color:#79dca2!important}.note.warn,.supportNotice{border-left-color:#e0a74d!important}.note.bad{border-left-color:#e77b7b!important}
+
+/* Workout rows closely match the supplied Plan render. */
+.workout{border-radius:14px!important;overflow:hidden!important;border:1px solid rgba(150,226,222,.16)!important}
+.workoutHead{min-height:74px!important;padding:11px 12px!important}
+.dateBox{background:#0a5963!important;border:1px solid rgba(150,226,222,.16)!important;color:#fff!important}
+.dateBox b{color:#fff!important}.dateBox span,.dateBox small{color:#9bc9c8!important}
+.workoutTypeIcon{background:#0a5963!important;border:1px solid rgba(150,226,222,.16)!important;color:#64ddd8!important}
+.workout:before{width:3px!important;background:#5bdad4!important}
+
+/* Foldouts: one dark strip with bright label and aqua chevron. */
+details,.planInsightsShell,.modelDetails,.modelDetail,.rehabDayDetails,.adherenceBreakdown,.injuryDisclosure,.exerciseDetail.visualExercise{
+  background:#07515b!important;border:1px solid rgba(150,226,222,.18)!important;color:#fff!important;box-shadow:none!important;
+}
+details>summary,.planInsightsShell>summary,.modelDetails>summary,.modelDetail>summary,.rehabDayDetails>summary,.adherenceBreakdown>summary,.injuryDisclosure>summary{
+  background:#07515b!important;color:#fff!important;border:0!important;
+}
+details>summary:after{color:#5edbd5!important}
+
+/* Charts/graphs should visually sit inside the dark UI rather than on white paper. */
+.panel canvas,.progressChartPanel canvas,.predictionPanel canvas,.metricCharts canvas,
+#volumeChart,#longRunChart,#predictionChart,#efficiencyChart,#driftChart,
+#nextWeekMixChart,#completedMixChart,#overallMixChart{
+  background:#064b55!important;border:1px solid rgba(150,226,222,.12)!important;border-radius:12px!important;
+}
+.chartLegend,.chartMetric{color:#b5d6d5!important}
+.chartLegend span,.chartMetric span{color:#b5d6d5!important}
+
+/* Bottom navigation in the supplied render: no white active tile. */
+.mobileBottomNav{background:#073f49!important;border-top:1px solid rgba(150,226,222,.15)!important;box-shadow:none!important}
+.mobileBottomNav button,.mobileBottomNav button.active{
+  background:transparent!important;border:0!important;color:#9bbbbb!important;box-shadow:none!important;border-radius:0!important;
+}
+.mobileBottomNav button.active{color:#66ded8!important}
+.mobileBottomNav button.active svg,.mobileBottomNav button.active .navIcon{color:#66ded8!important}
+.mobileBottomNav button.active:before{content:'';position:absolute;top:0;left:24%;right:24%;height:3px;border-radius:0 0 3px 3px;background:#59d9d3}
+
+/* Modal and exercise viewer use same dark-teal system. */
+.modalCard,.exerciseImageViewer{background:#064b55!important;color:#fff!important}
+.exerciseImageViewer>img{background:#043a43!important;border-color:rgba(150,226,222,.18)!important}
+.exerciseImageButton{background:#064b55!important;border:1px solid rgba(150,226,222,.18)!important}
+.exerciseMuscles i{background:#0b626c!important;color:#dcf9f7!important;border-color:rgba(150,226,222,.20)!important}
+.exercisePurpose,.exerciseRules>div{background:#0a606a!important;color:#e7f6f5!important;border-color:rgba(150,226,222,.16)!important}
+
+/* Forms also stay inside the visual system. */
+input,select,textarea,.field input,.field select,.field textarea{
+  background:#0a5963!important;color:#fff!important;border-color:rgba(150,226,222,.22)!important;
+}
+input::placeholder,textarea::placeholder{color:#89b2b1!important}
+
+/* Desktop-only old top nav must not reintroduce white. */
+nav{background:#073f49!important;border-color:rgba(150,226,222,.14)!important}
+nav button{background:#0a5963!important;color:#c9dfde!important}
+nav button.active{background:#0a6a72!important;color:#fff!important}
+
+@media(max-width:620px){
+  .panel,.workout,.runCard,.todaySupportCard,.injuryTopicCard{border-radius:14px!important}
+  .kpis{gap:8px!important}
+}
