@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '10.4.8';
-  const BUILD = 14080;
+  const VERSION = '10.5.0';
+  const BUILD = 15000;
   const SCHEMA = 10330;
   const PRIMARY_STORAGE_KEY = 'arc_v10330_web';
   const MIRROR_STORAGE_KEY = 'arc_v10330_mirror';
@@ -691,7 +691,7 @@ function personalResponseModelHtml(){
 
 function personalPathwaySignal(run,model,pathway){
  if(!run||!model)return{value:0,confidence:'Insufficient',detail:'No mature personal-response pattern available.'};
- const family=workoutFamily(run.type);
+ const family=effectiveWorkoutFamily(run);
  let key;
  if(pathway==='pace')key=(family==='interval'||family==='threshold')?'intensity':'performance';
  else key=family==='long'?'long':family==='interval'||family==='threshold'?'intensity':'volume';
@@ -983,20 +983,18 @@ function weeklyLoadEvidence(w,finalised=true,asOf=null){
  const allRuns=(state.runs||[]).filter(r=>trainingWeekForDate(r.date)===w&&r.source!=='assessment'&&(!asOf||r.date<=asOf)).sort((a,b)=>a.date.localeCompare(b.date));
  const wd=weekData(w),decisions=allRuns.map(r=>{const decision=loadDecisionSignalForRun(r,r.planId?state.plan.find(p=>p.id===r.planId):null);return{run:r,decision,contribution:loadAcceptedContribution(decision)}});
  const usable=decisions.filter(x=>Number.isFinite(x.decision.finalSignal)&&x.decision.confidenceWeight>0);
- let completionDelta=0,completionDetail='Weekly completion is evaluated only when the week closes.';
- const completion=wd.planned>0?wd.actual/wd.planned:null;
- if(finalised&&Number.isFinite(completion)){
-   if(completion<.70){completionDelta=-.03;completionDetail=`${Math.round(completion*100)}% of weekly distance completed.`}
-   else if(completion<.85){completionDelta=-.015;completionDetail=`${Math.round(completion*100)}% of weekly distance completed.`}
-   else if(completion<=1.05){completionDelta=0;completionDetail=`${Math.round(completion*100)}% completed; weekly completion is neutral.`}
-   else{completionDelta=-.005;completionDetail=`${Math.round(completion*100)}% completed; excess load is not rewarded.`}
+ const plannedSessions=(state.plan||[]).filter(p=>p.week===w&&!['Rest','Race Day'].includes(p.type));
+ const linkedIds=new Set(allRuns.map(r=>r.planId).filter(Boolean));
+ const missedSessions=plannedSessions.filter(p=>!linkedIds.has(p.id)&&(!asOf||p.date<=asOf));
+ const missedKm=sum(missedSessions.map(p=>Number(p.distance)||0)),plannedKm=sum(plannedSessions.map(p=>Number(p.distance)||0)),missedRatio=plannedKm>0?missedKm/plannedKm:0;
+ let completionDelta=0,completionDetail='Week-level adherence is evaluated only when the week closes. Shortened completed runs are already handled by their run-level completion signal and are not penalised twice.';
+ if(finalised&&plannedKm>0){
+   if(missedRatio>=.30)completionDelta=-.025;else if(missedRatio>=.15)completionDelta=-.012;else if(missedRatio>0)completionDelta=-.005;
+   completionDetail=missedSessions.length?`${missedSessions.length} planned session${missedSessions.length===1?' was':'s were'} not recorded (${missedKm.toFixed(1)} km; ${Math.round(missedRatio*100)}% of planned week). This week-level penalty covers missed sessions only.`:'Every planned session has a linked run. No additional week-level completion penalty is applied; shortened runs were already assessed at run level.';
  }
  const rawRunBucket=sum(usable.map(x=>x.contribution)),runDelta=clamp(rawRunBucket,-.035,.015),learningDelta=clamp(completionDelta+runDelta,-.05,.015);
- return{week:w,planned:wd.planned,actual:wd.actual,completion,decisions,completionDelta,rawRunBucket,runDelta,learningDelta,
-   items:[
-    {name:'Weekly completion',adjustment:completionDelta,detail:completionDetail,status:finalised?'available':'pending'},
-    {name:'Accepted run evidence',adjustment:runDelta,detail:usable.length?`${usable.length} accepted run contribution${usable.length===1?'':'s'} currently sum to ${signedFactorDelta(rawRunBucket)}.`:'No accepted run contributions yet.',status:usable.length?'available':'insufficient'}
-   ]};
+ return{week:w,planned:wd.planned,actual:wd.actual,completion:wd.planned>0?wd.actual/wd.planned:null,decisions,completionDelta,rawRunBucket,runDelta,learningDelta,missedSessions,missedKm,missedRatio,
+ items:[{name:'Missed-session adherence',adjustment:completionDelta,detail:completionDetail,status:finalised?'available':'pending'},{name:'Accepted run evidence',adjustment:runDelta,detail:usable.length?`${usable.length} analysed run${usable.length===1?'':'s'} currently contribute ${signedFactorDelta(rawRunBucket)} before the weekly bound.`:'No qualifying run-level load evidence yet.',status:usable.length?'available':'insufficient'}]};
 }
 function adaptiveFactorDetails(w){
  if(!state.setup.adaptive||w<=1)return{factor:1,rawFactor:1,baseFactor:1,cumulativeFactor:1,weeklyLearningDelta:0,temporaryAdjustment:0,items:[{name:'Baseline',adjustment:0,detail:w<=1?'No previous training week is available.':'Adaptive planning is disabled.'}],previousWeek:w-1,plannedKm:null,completedKm:null,status:w<=1?'baseline':'disabled'};
@@ -1952,6 +1950,22 @@ function decisionHistoryHtml(){
  return rows.length?`<details class="decisionHistoryPanel"><summary><span>Adaptation decision history</span><b>${rows.length} recent decisions</b></summary><p class="muted compact">A persistent audit trail of how uploaded runs were interpreted before pathway evidence was updated.</p><div>${rows.join('')}</div></details>`:'';
 }
 
+function modelValidationSummary(){
+ const runs=(state.runs||[]).filter(r=>Number(r.distanceKm)>0).slice().sort((a,b)=>a.date.localeCompare(b.date)),paceCases=[],loadCases=[];
+ runs.forEach((r,i)=>{
+  const plan=r.planId?state.plan.find(p=>p.id===r.planId):null,two=twoPathwayDecisionForRun(r,plan),pc=paceAcceptedContribution(two.pace),lc=loadAcceptedContribution(two.load),family=effectiveWorkoutFamily(r);
+  if(Math.abs(pc)>=.00005){const next=runs.slice(i+1).find(n=>effectiveWorkoutFamily(n)===family&&dte(n.date)-dte(r.date)<=28*DAY);if(next){const comp=comparableRunAnalysis(next);if(comp&&comp.confidence!=='Low'&&Number.isFinite(comp.efficiencyDelta))paceCases.push({date:r.date,nextDate:next.date,contribution:pc,outcome:comp.efficiencyDelta,confirmed:pc>0?comp.efficiencyDelta>=0:comp.efficiencyDelta<=0,confidence:comp.confidence});}}
+  if(Math.abs(lc)>=.00005){const next=runs.slice(i+1).find(n=>dte(n.date)-dte(r.date)<=7*DAY);if(next){const nextScore=workoutScore(next),pain=Number(next.pain),stable=(!Number.isFinite(nextScore)||nextScore>=75)&&(!Number.isFinite(pain)||pain<3);loadCases.push({date:r.date,nextDate:next.date,contribution:lc,stable,confirmed:lc>0?stable:!stable,nextScore,pain});}}
+ });
+ const pct=a=>a.length?Math.round(a.filter(x=>x.confirmed).length/a.length*100):null,pacePct=pct(paceCases),loadPct=pct(loadCases),n=paceCases.length+loadCases.length,confirmed=paceCases.filter(x=>x.confirmed).length+loadCases.filter(x=>x.confirmed).length;
+ return{paceCases,loadCases,pacePct,loadPct,overall:n?Math.round(confirmed/n*100):null,maturity:n>=20?'Moderate':n>=8?'Emerging':n>=3?'Early':'Insufficient',n,note:'These are internal follow-up checks, not external scientific validation or proof that a pathway caused the later outcome.'};
+}
+function modelValidationHtml(){
+ const v=modelValidationSummary(),metric=(label,pct,n,desc)=>`<article><small>${label}</small><strong>${pct==null?'—':pct+'%'}</strong><span>${n} evaluable follow-up${n===1?'':'s'}</span><p>${desc}</p></article>`;
+ const cases=[...v.paceCases.map(x=>`<div class="validationCase"><span>${fmtDate(x.date)} → ${fmtDate(x.nextDate)} · Pace & Power</span><b>${x.confirmed?'Direction confirmed':'Not confirmed'}</b><small>Contribution ${signedFactorDelta(x.contribution)} · later comparable efficiency ${x.outcome>=0?'+':''}${x.outcome.toFixed(1)}% · ${x.confidence} comparison confidence</small></div>`),...v.loadCases.map(x=>`<div class="validationCase"><span>${fmtDate(x.date)} → ${fmtDate(x.nextDate)} · Distance & Load</span><b>${x.confirmed?'Direction confirmed':'Not confirmed'}</b><small>Contribution ${signedFactorDelta(x.contribution)} · next-session ${x.stable?'stable':'adverse/low-execution'} response</small></div>`)].join('');
+ return`<section class="modelValidationPanel"><div class="modelValidationHead"><div><small>MODEL VALIDATION</small><h3>Are adaptive decisions being confirmed by later runs?</h3></div><span>${esc(v.maturity)} evidence</span></div><p>This checks whether accepted pathway decisions are followed by outcomes in the expected direction. It does not claim causal or external validation.</p><div class="modelValidationGrid">${metric('PACE & POWER',v.pacePct,v.paceCases.length,'Later same-family comparable run with Moderate/High comparison confidence.')}${metric('DISTANCE & LOAD',v.loadPct,v.loadCases.length,'Next recorded run within 7 days checks subsequent tolerance.')}${metric('OVERALL FOLLOW-UP',v.overall,v.n,'Directional confirmation across evaluable pathway decisions.')}</div><div class="scienceProvenance"><div><small>EVIDENCE-BACKED CONCEPTS</small><b>Individualised progression · internal/external load · HRV as recovery context · power-based intensity</b></div><div><small>APP-SPECIFIC HEURISTICS</small><b>Pathway weights · learning rates · safeguard thresholds · race-probability mapping</b></div></div><div class="validationCaution"><b>Interpretation</b><p>${esc(v.note)}</p>${v.n<8?'<p>Automatic coefficient self-calibration remains disabled. At least 8 evaluable follow-ups are required before even an Emerging internal validation signal.</p>':''}</div><details><summary>Show validation cases</summary>${cases||'<p class="muted compact">No pathway decision has enough subsequent evidence to validate yet.</p>'}</details></section>`;
+}
+
 function progressAdaptationHomeHtml(){
  const w=Math.max(1,currentWeek()),ast=athleteState(w),paceReview=pacePowerReviewState(),loadApplied=adaptiveFactorDetails(w),loadPreview=provisionalWeeklyAdjustment(w);
  const paceWeek=weeklyPaceEvidence(w),loadWeek=weeklyLoadEvidence(w,false,iso(today()));
@@ -2011,6 +2025,7 @@ function renderDashboard(){
  const coachReport=evidenceBasedCoach(engine);
  $('assessmentText').innerHTML=coachReportHtml(coachReport,true);
  const adaptationHome=$('progressAdaptationHome');if(adaptationHome)adaptationHome.innerHTML=progressAdaptationHomeHtml();
+ const validationEl=$('modelValidation');if(validationEl)validationEl.innerHTML=modelValidationHtml();
  const decisionHistory=$('decisionHistory');if(decisionHistory)decisionHistory.innerHTML=decisionHistoryHtml();
  const personalModelEl=$('personalResponseModel');if(personalModelEl)personalModelEl.innerHTML=personalResponseModelHtml();
  const pf=engine.projection.profile;
