@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '10.5.7';
-  const BUILD = 15070;
+  const VERSION = '10.6.0';
+  const BUILD = 16000;
   const SCHEMA = 10330;
   const PRIMARY_STORAGE_KEY = 'arc_v10330_web';
   const MIRROR_STORAGE_KEY = 'arc_v10330_mirror';
@@ -1973,21 +1973,11 @@ function progressAdaptationHomeHtml(){
  const paceProjected=paceReview.provisional,loadProjected=Number(loadPreview.cumulativeFactor||loadApplied.cumulativeFactor||1);
  const paceRows=paceWeek.rows.filter(x=>Math.abs(x.contribution)>=.00005).slice().reverse().map(x=>`<div class="canonicalContribution"><span>${fmtDate(x.run.date)} · ${esc(effectiveRunType(x.run))}</span><b>${signedFactorDelta(x.contribution)}</b></div>`).join('');
  const loadRows=loadWeek.decisions.filter(x=>Math.abs(x.contribution)>=.00005).slice().reverse().map(x=>`<div class="canonicalContribution"><span>${fmtDate(x.run.date)} · ${esc(effectiveRunType(x.run))}</span><b>${signedFactorDelta(x.contribution)}</b></div>`).join('');
- const status=(delta)=>delta>.0005?'Improving':delta<-.0005?'More conservative':'Holding';
- return`<section class="canonicalAdaptationHome">
-   <div class="canonicalAdaptationHead"><div><small>ADAPTATION</small><h3>Learned training calibration</h3><p>This is the single home for the two numeric pathway factors. Other tabs show only their practical coaching effect.</p></div><span>Week ${w}</span></div>
-   <div class="canonicalPathwayGrid">
-     <article><div class="canonicalPathHead"><div><small>PACE & POWER</small><h4>${status(paceProjected-paceReview.applied)}</h4></div><strong>${paceReview.applied.toFixed(3)}</strong></div>
-       <div class="canonicalPathMetrics"><div><small>Applied</small><b>${paceReview.applied.toFixed(3)}</b></div><div><small>This week</small><b>${signedFactorDelta(paceProjected-paceReview.applied)}</b></div><div><small>Projected</small><b>${paceProjected.toFixed(3)}</b></div><div><small>Since start</small><b>${signedFactorDelta(ast.pathways.pace.sinceStart)}</b></div></div>
-       <details><summary>Evidence and accepted contributions</summary><p class="muted compact">Pace & Power learns from capability evidence such as target-section pace/power execution, comparable-run physiology and personal response.</p>${paceRows||'<p class="muted compact">No non-zero accepted contribution this week.</p>'}</details>
-     </article>
-     <article><div class="canonicalPathHead"><div><small>DISTANCE & LOAD</small><h4>${status(loadProjected-Number(loadApplied.cumulativeFactor||1))}</h4></div><strong>${Number(loadApplied.cumulativeFactor||1).toFixed(3)}</strong></div>
-       <div class="canonicalPathMetrics"><div><small>Applied</small><b>${Number(loadApplied.cumulativeFactor||1).toFixed(3)}</b></div><div><small>This week</small><b>${signedFactorDelta(loadProjected-Number(loadApplied.cumulativeFactor||1))}</b></div><div><small>Projected</small><b>${loadProjected.toFixed(3)}</b></div><div><small>Since start</small><b>${signedFactorDelta(ast.pathways.load.sinceStart)}</b></div></div>
-       <details><summary>Evidence and accepted contributions</summary><p class="muted compact">Distance & Load learns from completed exposure, load tolerance, long-run stability, pain and personal load-response evidence.</p>${loadRows||'<p class="muted compact">No non-zero accepted contribution this week.</p>'}</details>
-     </article>
-   </div>
-   <details class="canonicalHistory"><summary>Pathway history from programme start</summary>${pathwayHistorySvg(ast.pathways.history)}<p class="muted compact">Readiness is deliberately excluded: it is temporary recovery context, not learned capability.</p></details>
- </section>`;
+ const status=(delta)=>delta>.0005?{label:'Improving',arrow:'↑',cls:'up'}:delta<-.0005?{label:'More conservative',arrow:'↓',cls:'down'}:{label:'Holding',arrow:'→',cls:'flat'};
+ const ps=status(paceProjected-paceReview.applied),ls=status(loadProjected-Number(loadApplied.cumulativeFactor||1));
+ const hist=ast.pathways.history||[],paceHist=hist.map(x=>Number(x.paceFactor??x.pace)).filter(Number.isFinite),loadHist=hist.map(x=>Number(x.loadFactor??x.load)).filter(Number.isFinite);
+ const card=(kind,title,stateObj,applied,weekDelta,projected,sinceStart,spark,rows,desc)=>`<article class="adaptationVisualCard ${stateObj.cls}"><div class="canonicalPathHead"><div class="pathTitle">${uiIcon(kind)}<div><small>${title}</small><h4>${stateObj.arrow} ${stateObj.label}</h4></div></div><strong>${applied.toFixed(3)}</strong></div><div class="pathSpark">${miniSparkline(spark)}</div><div class="canonicalPathMetrics compact"><div><small>This week</small><b>${signedFactorDelta(weekDelta)}</b></div><div><small>Projected</small><b>${projected.toFixed(3)}</b></div><div><small>Since start</small><b>${signedFactorDelta(sinceStart)}</b></div></div><details><summary>Evidence</summary><p class="muted compact">${desc}</p>${rows||'<p class="muted compact">No non-zero accepted contribution this week.</p>'}</details></article>`;
+ return`<section class="canonicalAdaptationHome"><div class="canonicalAdaptationHead"><div><small>ADAPTATION</small><h3>Learned training calibration</h3></div><span>Week ${w}</span></div><div class="canonicalPathwayGrid">${card('pace','PACE & POWER',ps,paceReview.applied,paceProjected-paceReview.applied,paceProjected,ast.pathways.pace.sinceStart,paceHist,paceRows,'Capability evidence from target execution, comparable physiology and personal response.')}${card('load','DISTANCE & LOAD',ls,Number(loadApplied.cumulativeFactor||1),loadProjected-Number(loadApplied.cumulativeFactor||1),loadProjected,ast.pathways.load.sinceStart,loadHist,loadRows,'Tolerance evidence from completed exposure, load response, pain and personal history.')}</div><details class="canonicalHistory"><summary>Full pathway history</summary>${pathwayHistorySvg(ast.pathways.history)}<p class="muted compact">Readiness is temporary recovery context and does not alter learned capability.</p></details></section>`;
 }
 
 function renderDashboard(){
@@ -2223,7 +2213,7 @@ function coachIntelligenceHtml(p){
 }
 function workoutHtml(p){
  let st=status(p),dt=new Date(p.date+'T00:00:00'),day=dt.toLocaleDateString(undefined,{weekday:'short'}),month=dt.toLocaleDateString(undefined,{month:'short'}),typeCls=workoutTypeClass(p.type);
- return`<div class="workout workout-${typeCls}" data-id="${p.id}"><div class="workoutHead"><div class="dateBox"><small>${day}</small><b>${dt.getDate()}</b><span>${month}</span></div><div class="workoutTypeIcon ${typeCls}">${workoutTypeIcon(p.type)}</div><div class="workoutTitle"><h3>${p.type}</h3><p>${p.type==='Rest'?p.purpose:`${p.distance.toFixed(1)} km · ${p.phase}`}</p></div><span class="status ${st}">${st}</span></div><div class="workoutDetails"><div class="targets">${p.type==='Rest'?'':`<div class="target"><small>Main-set pace</small><b>${pace(p.zone.pace)}</b></div><div class="target"><small>Main-set HR</small><b>${p.zone.hr} bpm</b></div><div class="target"><small>Main-set power</small><b>${p.zone.power} W</b></div>`}</div>${p.type==='Rest'?'':`<p class="targetScope">Targets apply to: <b>${esc(p.targetScope||'main set')}</b></p>`}<div class="prescription"><p><b>Warm-up:</b> ${p.warmup}</p><p><b>Main set:</b> ${p.main}</p><p><b>Cooldown:</b> ${p.cooldown}</p>${p.distanceCheck?`<p class="distanceCheck"><b>Distance check:</b> ${esc(p.distanceCheck)} ✓</p>`:''}<p><b>Purpose:</b> ${p.purpose}</p><p><b>Coach guidance:</b> ${p.coach}</p><p><b>Fuel / hydration:</b> ${p.fuel}</p></div>${coachIntelligenceHtml(p)}${(()=>{const linked=matchingRun(p);return linked?`<button class="viewPlanRun primary full" data-plan-run="${linked.id}">View entered run details</button>`:''})()}</div></div>`;
+ return`<div class="workout workout-${typeCls}" data-id="${p.id}"><div class="workoutHead"><div class="dateBox"><small>${day}</small><b>${dt.getDate()}</b><span>${month}</span></div><div class="workoutTypeIcon ${typeCls}">${uiIcon(typeCls==='quality'?'quality':typeCls)}</div><div class="workoutTitle"><h3>${p.type}</h3><p>${p.type==='Rest'?p.purpose:`${p.distance.toFixed(1)} km · ${p.phase}`}</p></div><span class="status ${st}">${st}</span></div><div class="workoutDetails"><div class="targets">${p.type==='Rest'?'':`<div class="target"><small>Main-set pace</small><b>${pace(p.zone.pace)}</b></div><div class="target"><small>Main-set HR</small><b>${p.zone.hr} bpm</b></div><div class="target"><small>Main-set power</small><b>${p.zone.power} W</b></div>`}</div>${p.type==='Rest'?'':`<p class="targetScope">Targets apply to: <b>${esc(p.targetScope||'main set')}</b></p>`}<div class="prescription"><p><b>Warm-up:</b> ${p.warmup}</p><p><b>Main set:</b> ${p.main}</p><p><b>Cooldown:</b> ${p.cooldown}</p>${p.distanceCheck?`<p class="distanceCheck"><b>Distance check:</b> ${esc(p.distanceCheck)} ✓</p>`:''}<p><b>Purpose:</b> ${p.purpose}</p><p><b>Coach guidance:</b> ${p.coach}</p><p><b>Fuel / hydration:</b> ${p.fuel}</p></div>${coachIntelligenceHtml(p)}${(()=>{const linked=matchingRun(p);return linked?`<button class="viewPlanRun primary full" data-plan-run="${linked.id}">View entered run details</button>`:''})()}</div></div>`;
 }
 
 function coachVisualIcon(kind){
@@ -2254,55 +2244,60 @@ function workoutTypeClass(type){
  if(/race/.test(t))return'race';if(/hill|interval|vo2|vo₂|fartlek|repetition/.test(t))return'quality';
  if(/threshold|tempo/.test(t))return'threshold';if(/long/.test(t))return'long';if(/recovery/.test(t))return'recovery';if(/rest/.test(t))return'rest';return'easy';
 }
+function uiIcon(kind){
+ const paths={
+  easy:'<path d="M5 17c4-7 7-8 14-10"/><path d="M14 5l5 2-2 5"/>',
+  quality:'<path d="M13 2L5 13h6l-1 9 9-13h-6z"/>',
+  threshold:'<path d="M12 3l7 7-7 11-7-11z"/>',
+  long:'<path d="M4 13a8 8 0 1 0 8-8"/><path d="M12 5v8l5 3"/>',
+  recovery:'<path d="M5 12a7 7 0 1 0 2-5"/><path d="M5 4v5h5"/>',
+  race:'<path d="M5 21V3"/><path d="M5 4h12l-3 4 3 4H5"/>',
+  rest:'<path d="M7 7h10M7 12h10M9 17h6"/>',
+  pace:'<path d="M4 17l5-5 4 3 7-8"/><path d="M15 7h5v5"/>',
+  load:'<path d="M4 18h16M6 18v-5M11 18V8M16 18V4"/>',
+  heart:'<path d="M12 20s-7-4.3-7-10a4 4 0 0 1 7-2 4 4 0 0 1 7 2c0 5.7-7 10-7 10z"/>',
+  pain:'<path d="M12 3a9 9 0 1 0 9 9"/><path d="M12 7v6M12 17h.01"/>',
+  compare:'<path d="M4 7h12M13 4l3 3-3 3M20 17H8M11 14l-3 3 3 3"/>',
+  rehab:'<circle cx="12" cy="12" r="9"/><path d="M12 7v10M7 12h10"/>'
+ };
+ return`<svg class="uiIcon" viewBox="0 0 24 24" aria-hidden="true">${paths[kind]||paths.easy}</svg>`;
+}
+function circularGauge(value,label=''){
+ const v=clamp(Number(value)||0,0,100);
+ return`<div class="circularGauge" style="--gauge:${v}"><div><strong>${Math.round(v)}</strong><small>${esc(label)}</small></div></div>`;
+}
+function miniSparkline(values){
+ const vals=(values||[]).map(Number).filter(Number.isFinite);
+ if(vals.length<2)return'<div class="miniSparkline empty">Not enough history</div>';
+ const w=140,h=34,min=Math.min(...vals),max=Math.max(...vals),span=max-min||1;
+ const pts=vals.map((v,i)=>`${(i/(vals.length-1)*w).toFixed(1)},${(h-4-(v-min)/span*(h-8)).toFixed(1)}`).join(' ');
+ return`<svg class="miniSparkline" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" aria-hidden="true"><polyline points="${pts}"/></svg>`;
+}
+function deltaVisual(current,baseline,betterHigh=true,unit=''){
+ if(!Number.isFinite(current)||!Number.isFinite(baseline))return'';
+ const delta=betterHigh?(current/baseline-1)*100:current-baseline;
+ const good=betterHigh?delta>=0:delta<=0;
+ const pct=betterHigh?Math.min(100,Math.abs(delta)*12):Math.min(100,Math.abs(delta)*18);
+ return`<div class="deltaVisual ${good?'good':'caution'}"><span class="deltaArrow">${delta===0?'→':good?'↑':'↓'}</span><div class="deltaTrack"><i style="width:${pct}%"></i></div><b>${delta>=0?'+':''}${delta.toFixed(1)}${unit}</b></div>`;
+}
 function visualStatusIcon(kind){
  return kind==='good'?'✓':kind==='caution'?'!':kind==='bad'?'×':'•';
 }
 
 function consolidatedTodayCoachBriefing(p){
  const engine=coachEngine(),report=evidenceBasedCoach(engine),ast=report.athleteState;
- const activeInjury=(state.injuries||[]).find(injury=>injury.id===state.activeInjuryPlanId);
- const injuryProgress=activeInjury?injuryPrediction(activeInjury):null;
- const injuryDay=activeInjury?rehabCalendarDay(activeInjury,injuryProgress,iso(today()),rehabPlanDayIndex(activeInjury,iso(today()))):null;
- const recent=completedRuns().slice().sort((a,b)=>b.date.localeCompare(a.date))[0]||null;
- const recentScore=recent?workoutScore(recent):null;
- const wd=weekData(currentWeek()),completion=wd.planned>0?Math.round(wd.actual/wd.planned*100):null;
- const hrv=ast.hrv||hrvModel();
- const pain=ast.pain||{};
- const readiness=ast.readiness||'Unknown';
- let headline='Stay disciplined and let the plan work.';
- let lead='',action='',why=[];
- if(injuryDay){
-   headline='Rehab is the priority today.';
-   lead=`${injuryDay.title}. The objective is to satisfy the next rehabilitation criterion without adding an unscheduled impact exposure.`;
-   action=`Complete today's prescribed rehabilitation exactly as written, then submit the injury check-in. Do not add running unless today's rehabilitation prescription explicitly includes it.`;
-   why.push(`Active rehabilitation plan: ${injuryDay.title}.`);
-   if(p&&p.type!=='Rest')why.push(`A running-plan session exists today, but rehabilitation takes priority.`);
- }else if(p&&p.type!=='Rest'){
-   headline=`Execute today's ${p.type.toLowerCase()} with control.`;
-   lead=p.purpose||'Deliver the intended training stimulus rather than chasing pace or extra distance.';
-   action=`Complete the prescribed session to its intended effort, then log or import the run so execution and recovery evidence can be updated.`;
-   why.push(`Scheduled: ${p.type} · ${Number(p.distance).toFixed(1)} km.`);
- }else{
-   headline='Recovery is the training today.';
-   lead='There is no purposeful running session to complete. Absorb the work already done and protect the next quality exposure.';
-   action='Keep movement comfortable, do not add catch-up mileage, and arrive at the next planned session fresh.';
-   why.push('No running workout is scheduled today.');
- }
- if(readiness!=='Normal'&&readiness!=='Unknown')why.push(`Readiness is ${String(readiness).toLowerCase()}, so progression should be conservative.`);
- if(Number.isFinite(pain.max)&&pain.max>=3)why.push(`Recent pain reached ${pain.max}/10 and remains relevant to today’s decision.`);
- if(recent&&recentScore!=null)why.push(`Latest scored run: ${recent.type} · ${recentScore}/100 execution.`);
- else if(recent)why.push(`Latest run: ${recent.type} on ${fmtDate(recent.date)}.`);
- const visuals=[];
- visuals.push({kind:injuryDay?'injury':'plan',label:'Today',value:injuryDay?'Rehab priority':p&&p.type!=='Rest'?`${p.type} · ${Number(p.distance).toFixed(1)} km`:'Recovery'});
- visuals.push({kind:'recovery',label:'Readiness',value:readiness});
- if(recent)visuals.push({kind:'trend',label:'Latest run',value:recentScore!=null?`${recentScore}/100 execution`:recent.type});
- visuals.push({kind:'load',label:'Week',value:completion===null?'No volume target':`${completion}% complete`});
- return `<section class="aiCoachBriefing todayCoachBriefing">
-   <div class="aiCoachHeader"><span class="aiCoachIcon">${coachVisualIcon('coach')}</span><div><small>TODAY'S COACH BRIEFING</small><h3>${esc(headline)}</h3></div><span class="aiCoachEvidence">${report.evidenceCoverage>0?`${report.evidenceCoverage}% training evidence`:'Evidence building'}</span></div>
-   <p class="aiCoachLead">${esc(lead)}</p>
-   <div class="aiCoachVisualGrid">${visuals.map(f=>`<div class="aiCoachVisual"><span>${coachVisualIcon(f.kind)}</span><div><small>${esc(f.label)}</small><b>${esc(f.value)}</b></div></div>`).join('')}</div>
-   <div class="aiCoachCall"><span>${coachVisualIcon('plan')}</span><div><small>COACH'S CALL TODAY</small><b>${esc(action)}</b></div></div>
- </section>`;
+ const activeInjury=(state.injuries||[]).find(injury=>injury.id===state.activeInjuryPlanId),injuryProgress=activeInjury?injuryPrediction(activeInjury):null,injuryDay=activeInjury?rehabCalendarDay(activeInjury,injuryProgress,iso(today()),rehabPlanDayIndex(activeInjury,iso(today()))):null;
+ const readiness=ast.readiness||'Unknown',pain=ast.pain||{};
+ let headline='Stay disciplined and let the plan work.',lead='',action='';
+ if(injuryDay){headline='Rehab is the priority today.';lead=`${injuryDay.title}. Complete the rehabilitation objective without adding unscheduled impact.`;action='Complete the prescribed rehabilitation and today’s check-in.';}
+ else if(p&&p.type!=='Rest'){headline=`${p.type} today.`;lead=p.purpose||'Deliver the intended training stimulus with control.';action=`Complete ${Number(p.distance).toFixed(1)} km as prescribed, then log or import the run.`;}
+ else{headline='Recovery is the training today.';lead='No purposeful running session is scheduled. Protect the next quality exposure.';action='Keep movement comfortable and do not add catch-up mileage.';}
+ const chips=[
+  {icon:injuryDay?'rehab':p&&p.type!=='Rest'?workoutTypeClass(p.type):'recovery',label:injuryDay?'Rehab':p&&p.type!=='Rest'?`${p.type} · ${Number(p.distance).toFixed(1)} km`:'Rest day',cls:'primary'},
+  {icon:'recovery',label:`Readiness: ${readiness}`,cls:readiness==='Normal'?'good':'caution'}
+ ];
+ if(Number.isFinite(pain.max))chips.push({icon:'pain',label:`Pain: ${pain.max}/10`,cls:pain.max>=3?'caution':'good'});
+ return`<section class="aiCoachBriefing todayCoachBriefing visualToday"><div class="aiCoachHeader"><span class="aiCoachIcon">${coachVisualIcon('coach')}</span><div><small>TODAY'S COACH BRIEFING</small><h3>${esc(headline)}</h3></div><span class="aiCoachEvidence">${report.evidenceCoverage>0?`${report.evidenceCoverage}% evidence`:'Evidence building'}</span></div><p class="aiCoachLead">${esc(lead)}</p><div class="todayContextChips">${chips.map(c=>`<span class="${c.cls}">${uiIcon(c.icon)}<b>${esc(c.label)}</b></span>`).join('')}</div><div class="aiCoachCall"><span>${coachVisualIcon('plan')}</span><div><small>NEXT ACTION</small><b>${esc(action)}</b></div></div></section>`;
 }
 function dailyCoachFocus(p){
  const ast=athleteState(currentWeek());
@@ -2358,7 +2353,7 @@ function weeklyReviewHtml(w=currentWeek()){
  return`<section class="weeklyReviewCard ${r.closed?'complete':'provisional'} planEffectReview"><div class="weeklyReviewHead"><div><small>${status}</small><h3>Week ${r.week} plan adaptation</h3></div><span>${r.closed?'Applied':'Building'}</span></div>
  <div class="planEffectSummary"><article><small>PERFORMANCE PRESCRIPTION</small><strong>${paceLabel}</strong><p>${Math.abs(r.paceChange)<.001?'No meaningful pace/power change is projected.':`Future quality targets are projected to change by about ${Math.abs(r.paceChange*100).toFixed(1)}%.`}</p></article><article><small>TRAINING LOAD</small><strong>${loadLabel}</strong><p>${Math.abs(r.loadChange)<.001?'No meaningful distance/load change is projected.':`Future session distance is projected to change by about ${Math.abs(r.loadChange*100).toFixed(1)}%.`}</p></article><article><small>RECOVERY CONTEXT</small><strong>${readyLabel}</strong><p>Temporary recovery context can moderate exposure without changing learned capability.</p></article></div>
 
- <details><summary>Show projected workout changes</summary><div class="weeklyReviewChanges">${rows||'<p class="muted">No material prescription changes are currently projected.</p>'}</div><p class="muted compact">Numeric calibration factors live in Progress → Adaptation.</p></details></section>`;
+ <details><summary>Show projected workout changes</summary><div class="weeklyReviewChanges">${rows||'<p class="muted">No material prescription changes are currently projected.</p>'}</div></details></section>`;
 }
 function renderPlan(){
  
@@ -3035,14 +3030,19 @@ function postRunCoachUpdateHtml(r){
 
 function intervalAnalysisHtml(r){
  const a=r?.intervalAnalysis;if(!a?.structured)return'';
- if(!a.work?.length)return`<section class="intervalAnalysisCard"><div class="intervalAnalysisHead"><div><span>INTERVAL-LEVEL FIT ANALYSIS</span><h3>Detection confidence too low</h3></div><b>Not scored</b></div><p>${esc(a.reason)}</p><p class="muted compact">Whole-run evidence remains in use; uncertain interval detection cannot lower or raise the execution score.</p></section>`;
+ if(!a.work?.length)return`<section class="intervalAnalysisCard"><div class="intervalAnalysisHead"><div><span>INTERVAL ANALYSIS</span><h3>Detection confidence too low</h3></div><b>Not scored</b></div><p>${esc(a.reason)}</p><p class="muted compact">Uncertain interval detection cannot change the execution score.</p></section>`;
  const rows=a.work.map(x=>{const extra=a.expectedReps>0&&x.rep>a.expectedReps;return`<div class="intervalRepRow ${extra?'extraRep':''}"><strong>Rep ${x.rep}${extra?' · extra':''}</strong><span>${Number.isFinite(x.distanceKm)?x.distanceKm.toFixed(2)+' km':'—'}</span><span>${Number.isFinite(x.paceSecPerKm)?pace(x.paceSecPerKm):'—'}</span><span>${Number.isFinite(x.avgPower)?Math.round(x.avgPower)+' W':'—'}</span><span>${Number.isFinite(x.avgHr)?Math.round(x.avgHr)+' bpm':'—'}</span></div>`}).join('');
  const paceChange=Number.isFinite(a.fadePace)?`${Math.abs(a.fadePace).toFixed(1)}% ${a.fadePace<0?'faster':'slower'}`:null,powerChange=Number.isFinite(a.fadePower)?`${Math.abs(a.fadePower).toFixed(1)}% ${a.fadePower>=0?'higher':'lower'}`:null;
  const late=powerChange?`Power ${powerChange}`:paceChange?`Pace ${paceChange}`:'—';
  const countText=a.expectedReps?`${a.detectedReps} detected / ${a.expectedReps} prescribed`:`${a.detectedReps} detected`;
- const pd=r.powerDiagnostics,powerDiag=pd?`<div class="powerCoverage ${pd.coverage>=.8?'good':pd.coverage>0?'partial':'missing'}"><b>Running power stream</b><span>${pd.poweredRecords} / ${pd.recordCount} FIT records · ${Math.round(pd.coverage*100)}% coverage</span><small>${esc(pd.rawSource||pd.mapping||'No record-level running power recovered')}</small></div>`:'';
- const calc=`<details class="intervalScoreCalc"><summary>How ${Number.isFinite(a.repScore)?a.repScore+'/100':'the score'} is calculated</summary><div class="intervalCalcRows">${Number.isFinite(a.paceComponent)?`<div><span>Prescribed-rep pace</span><b>${Math.round(a.paceComponent)}/100</b></div>`:''}${Number.isFinite(a.powerComponent)?`<div><span>Prescribed-rep power</span><b>${Math.round(a.powerComponent)}/100</b></div>`:''}<div><span>Base rep execution</span><b>${Number.isFinite(a.baseRepScore)?Math.round(a.baseRepScore)+'/100':'—'}</b></div>${a.extraPenalty?`<div class="penalty"><span>${a.extraReps} extra rep${a.extraReps===1?'':'s'}</span><b>−${a.extraPenalty.toFixed(0)}</b></div>`:''}${a.missingPenalty?`<div class="penalty"><span>${a.missingReps} missing rep${a.missingReps===1?'':'s'}</span><b>−${a.missingPenalty.toFixed(0)}</b></div>`:''}<div class="total"><span>Interval execution</span><b>${Number.isFinite(a.repScore)?a.repScore+'/100':'Not scored'}</b></div></div><p class="muted compact">Rep pace and power are scored on a true 0–100 scale with no artificial 45-point floor. Only prescribed reps count toward pace/power execution; extra reps can only add an adherence penalty and training load.</p></details>`;
- return`<section class="intervalAnalysisCard"><div class="intervalAnalysisHead"><div><span>INTERVAL-LEVEL FIT ANALYSIS</span><h3>${countText}</h3></div><b>${a.usableForScore&&Number.isFinite(a.repScore)?a.repScore+'/100':esc(a.quality)}</b></div><div class="intervalSummary"><div><small>Rep execution</small><strong>${a.usableForScore&&Number.isFinite(a.repScore)?a.repScore+'/100':'Not scored'}</strong></div><div><small>Rep consistency</small><strong>${Number.isFinite(a.consistencyCv)?a.consistencyCv.toFixed(1)+'% variation':'—'}</strong></div><div><small>Late-rep change</small><strong>${late}</strong></div></div>${powerDiag}${calc}<details class="intervalRepDetails"><summary>Show repetition details · ${a.detectedReps} detected</summary><div class="intervalRepTable"><div class="intervalRepHeader"><b>Rep</b><b>Distance</b><b>Pace</b><b>Power</b><b>HR</b></div>${rows}</div></details><p class="muted compact">${esc(a.reason)} ${a.usableForScore?'High-confidence prescribed-repetition evidence replaces whole-run pace/power averages in execution scoring.':'Detection is shown for inspection only and does not replace whole-run execution evidence.'}</p></section>`;
+ const prescribed=Math.max(0,Number(a.expectedReps)||0),detected=Math.max(0,Number(a.detectedReps)||0),shown=Math.min(Math.max(prescribed,detected),20);
+ const repDots=shown?Array.from({length:shown},(_,i)=>`<i class="${i<prescribed?'prescribed':''} ${i>=prescribed&&i<detected?'extra':''} ${i>=detected?'missing':''}"></i>`).join(''):'';
+ const cv=Number(a.consistencyCv),consistencyScore=Number.isFinite(cv)?clamp(100-cv*8,0,100):null;
+ const fade=Number.isFinite(a.fadePower)?a.fadePower:Number.isFinite(a.fadePace)?-a.fadePace:null;
+ const fadeScore=Number.isFinite(fade)?clamp(100-Math.abs(Math.min(0,fade))*8,0,100):null;
+ const pd=r.powerDiagnostics,powerDiag=pd?`<div class="powerCoverage ${pd.coverage>=.8?'good':pd.coverage>0?'partial':'missing'}"><b>Power stream</b><span>${Math.round(pd.coverage*100)}% FIT coverage</span><small>${esc(pd.rawSource||pd.mapping||'No record-level running power recovered')}</small></div>`:'';
+ const calc=`<details class="intervalScoreCalc"><summary>Score calculation</summary><div class="intervalCalcRows">${Number.isFinite(a.paceComponent)?`<div><span>Prescribed-rep pace</span><b>${Math.round(a.paceComponent)}/100</b></div>`:''}${Number.isFinite(a.powerComponent)?`<div><span>Prescribed-rep power</span><b>${Math.round(a.powerComponent)}/100</b></div>`:''}<div><span>Base rep execution</span><b>${Number.isFinite(a.baseRepScore)?Math.round(a.baseRepScore)+'/100':'—'}</b></div>${a.extraPenalty?`<div class="penalty"><span>${a.extraReps} extra rep${a.extraReps===1?'':'s'}</span><b>−${a.extraPenalty.toFixed(0)}</b></div>`:''}${a.missingPenalty?`<div class="penalty"><span>${a.missingReps} missing rep${a.missingReps===1?'':'s'}</span><b>−${a.missingPenalty.toFixed(0)}</b></div>`:''}<div class="total"><span>Interval execution</span><b>${Number.isFinite(a.repScore)?a.repScore+'/100':'Not scored'}</b></div></div></details>`;
+ return`<section class="intervalAnalysisCard visualInterval"><div class="intervalAnalysisHead"><div><span>INTERVAL ANALYSIS</span><h3>${countText}</h3></div><b>${a.usableForScore&&Number.isFinite(a.repScore)?a.repScore+'/100':esc(a.quality)}</b></div>${repDots?`<div class="repDotBlock"><div class="repDots">${repDots}</div><div><span><i class="legendDot prescribed"></i>${prescribed} prescribed</span>${detected>prescribed?`<span><i class="legendDot extra"></i>${detected-prescribed} extra</span>`:''}${detected<prescribed?`<span><i class="legendDot missing"></i>${prescribed-detected} missing</span>`:''}</div></div>`:''}<div class="intervalVisualMetrics"><div><small>Execution</small>${Number.isFinite(a.repScore)?`<b>${Math.round(a.repScore)}</b><i><em style="width:${clamp(a.repScore,0,100)}%"></em></i>`:'<b>—</b>'}</div><div><small>Consistency</small><b>${Number.isFinite(cv)?cv.toFixed(1)+'%':'—'}</b>${Number.isFinite(consistencyScore)?`<i><em style="width:${consistencyScore}%"></em></i>`:''}</div><div><small>Late change</small><b>${late}</b>${Number.isFinite(fadeScore)?`<i><em style="width:${fadeScore}%"></em></i>`:''}</div></div>${powerDiag}${calc}<details class="intervalRepDetails"><summary>Repetition details · ${a.detectedReps} detected</summary><div class="intervalRepTable"><div class="intervalRepHeader"><b>Rep</b><b>Distance</b><b>Pace</b><b>Power</b><b>HR</b></div>${rows}</div></details><p class="muted compact">${a.usableForScore?'Prescribed work repetitions drive interval pace/power scoring; extra repetitions add load but cannot improve execution.':'Detection is shown for inspection only.'}</p></section>`;
 }
 
 function workoutFamily(type){
@@ -3158,21 +3158,20 @@ function workoutIntelligence(run){
  return{family,verdict,interpretation,findings,details,comp,thirds};
 }
 function workoutIntelligenceHtml(run){
- const w=workoutIntelligence(run),icon=w.family==='long'?'◒':w.family==='interval'?'↯':w.family==='recovery'?'↺':w.family==='threshold'?'◆':'↗';
+ const w=workoutIntelligence(run),familyIcon=w.family==='long'?'long':w.family==='interval'?'quality':w.family==='recovery'?'recovery':w.family==='threshold'?'threshold':'easy';
  const findings=w.findings.slice(0,5).map(f=>`<div class="wiFinding ${f.kind}"><i>${visualStatusIcon(f.kind)}</i><span>${esc(f.text)}</span></div>`).join('');
- return`<section class="workoutIntelligence"><div class="wiHead"><span class="wiIcon">${icon}</span><div><small>WORKOUT INTELLIGENCE 2.0</small><h3>${esc(w.verdict)}</h3></div><a class="wiScoreLink" href="#executionBreakdownFoldout" aria-label="Open execution breakdown">${w.details?.score!=null?w.details.score+'/100':'Analysed'}<small>breakdown ↓</small></a></div><p class="wiInterpretation">${esc(w.interpretation)}</p><div class="wiFindings">${findings||'<p class="muted">Not enough detailed evidence for session-specific findings.</p>'}</div></section>`;
+ const score=w.details?.score;
+ return`<section class="workoutIntelligence"><div class="wiHead visual"><span class="wiIcon">${uiIcon(familyIcon)}</span><div><small>WORKOUT INTELLIGENCE</small><h3>${esc(w.verdict)}</h3></div><a class="wiGaugeLink" href="#executionBreakdownFoldout" aria-label="Open execution breakdown">${Number.isFinite(score)?circularGauge(score,'execution'):'<span class="analysedBadge">Analysed</span>'}</a></div><p class="wiInterpretation">${esc(w.interpretation)}</p><div class="wiFindings">${findings||'<p class="muted">Not enough detailed evidence for session-specific findings.</p>'}</div></section>`;
 }
 function comparableRunHtml(run){
- const c=comparableRunAnalysis(run);
- if(!c)return'';
- if(!c.count)return`<section class="comparableRuns"><div class="comparableHead"><div><small>COMPARABLE RUNS</small><h3>Personal baseline building</h3></div><span>Low confidence</span></div><p>No sufficiently similar historical ${esc(c.family)} runs are available yet. This run will help create the future personal baseline.</p></section>`;
- const metric=(label,current,baseline,format,betterHigh=true)=>{
-   if(!Number.isFinite(current)||!Number.isFinite(baseline))return'';
-   const d=betterHigh?(current/baseline-1)*100:current-baseline;
-   return`<div><small>${label}</small><strong>${format(current)}</strong><span>baseline ${format(baseline)} · ${d>=0?'+':''}${d.toFixed(1)}${betterHigh?'%':' pp'}</span></div>`;
+ const c=comparableRunAnalysis(run);if(!c)return'';
+ if(!c.count)return`<section class="comparableRuns visualComparable"><div class="comparableHead"><div><small>PERSONAL COMPARISON</small><h3>Baseline building</h3></div><span>Low confidence</span></div><div class="baselineEmpty">${uiIcon('compare')}<p>No sufficiently similar historical ${esc(c.family)} runs yet. This run becomes part of your future personal baseline.</p></div></section>`;
+ const metric=(label,current,baseline,format,betterHigh=true,unit='')=>{
+  if(!Number.isFinite(current)||!Number.isFinite(baseline))return'';
+  return`<div class="comparisonMetric"><small>${label}</small><div class="comparisonValues"><strong>${format(current)}</strong><span>baseline ${format(baseline)}</span></div>${deltaVisual(current,baseline,betterHigh,unit)}</div>`;
  };
  const matches=c.matches.slice(0,5).map(x=>`<div class="comparableMatch"><span>${fmtDate(x.run.date)} · ${esc(x.run.type)}</span><b>${Math.round(x.similarity)}% similar</b></div>`).join('');
- return`<section class="comparableRuns"><div class="comparableHead"><div><small>COMPARABLE RUNS</small><h3>${c.count} personal matches</h3></div><span>${c.confidence} confidence</span></div><p>Compared only with previous ${esc(c.family)} sessions in the same injury/training context. Median similarity ${Math.round(c.medianSimilarity)}%.</p><div class="comparableMetrics">${metric('Efficiency',c.current.efficiency,c.baseline.efficiency,v=>v.toFixed(1)+' J/beat',true)}${metric('Cardiac drift',c.current.drift,c.baseline.drift,v=>v.toFixed(1)+'%',false)}${metric('Heart rate',c.current.hr,c.baseline.hr,v=>Math.round(v)+' bpm',true)}${metric('RPE',c.current.rpe,c.baseline.rpe,v=>v.toFixed(1)+'/10',false)}</div><details><summary>Which runs were compared?</summary><div class="comparableMatchList">${matches}</div><p class="muted compact">Similarity weights: intensity 32%, duration 27%, distance 18%, pace 13% and exact workout type 10%. Low-confidence comparisons are descriptive only.</p></details></section>`;
+ return`<section class="comparableRuns visualComparable"><div class="comparableHead"><div><small>PERSONAL COMPARISON</small><h3>${c.count} comparable run${c.count===1?'':'s'}</h3></div><span>${c.confidence} confidence</span></div><div class="comparableMetrics visual">${metric('Efficiency',c.current.efficiency,c.baseline.efficiency,v=>v.toFixed(1)+' J/beat',true,'%')}${metric('Cardiac drift',c.current.drift,c.baseline.drift,v=>v.toFixed(1)+'%',false,' pp')}${metric('Heart rate',c.current.hr,c.baseline.hr,v=>Math.round(v)+' bpm',false,'%')}${metric('RPE',c.current.rpe,c.baseline.rpe,v=>v.toFixed(1)+'/10',false,'')}</div><details><summary>Comparison details</summary><div class="comparableMatchList">${matches}</div><p class="muted compact">Median similarity ${Math.round(c.medianSimilarity)}%. Similarity considers intensity, duration, distance, pace and workout type.</p></details></section>`;
 }
 
 function runExecutionBreakdownBodyHtml(r){
@@ -3385,7 +3384,7 @@ function renderRecovery(){
  const maturity=hrv.count===0?'No profile':hrv.count===1?'Provisional':hrv.count<=6?'Early':hrv.count<=20?'Developing':'Established';
  const confidence=hrv.count===0?'No HRV evidence':`${maturity} · ${hrv.count} value${hrv.count===1?'':'s'}`;
  const ready=readinessModel();
- statusBox.innerHTML=`<article class="panel recoveryConclusion ${conclusion.cls}"><div><span>Overall recovery</span><strong>${conclusion.label}</strong><p>${conclusion.recommendation}</p></div><span class="recoveryConfidence">${confidence}</span></article><div class="recoveryMetrics"><div class="metric-card"><span>〰 Current HRV</span><strong class="viz-stat-value">${Number.isFinite(hrv.rolling)?Math.round(hrv.rolling)+' ms':'—'}</strong><small>${dir.symbol} ${dir.label}</small></div><div class="metric-card"><span>◎ Personal baseline</span><strong class="viz-stat-value">${Number.isFinite(hrv.baseline)?Math.round(hrv.baseline)+' ms':'—'}</strong><small>${hrv.count?`${hrv.deviation>=0?'+':''}${Math.round(hrv.deviation*100)}% recent deviation`:'Log HRV with a run'}</small></div><div class="metric-card"><span>✓ HRV status</span><strong class="viz-stat-value recoveryStatusText">${hrv.status}</strong><small>${esc(hrv.detail)}</small></div><div class="metric-card"><span>! Pain signal</span><strong class="viz-stat-value recoveryStatusText">${pain.status}</strong><small>${pain.count?`Recent average ${pain.average.toFixed(1)} / 10`:'No recent ratings'}</small></div></div>`;
+ statusBox.innerHTML=`<article class="panel recoveryConclusion ${conclusion.cls} visualRecovery"><div class="recoveryMain"><span>${uiIcon('recovery')}</span><div><small>RECOVERY</small><strong>${conclusion.label}</strong></div><span class="recoveryConfidence">${confidence}</span></div><div class="recoveryQuickGrid"><div><small>HRV</small><b>${Number.isFinite(hrv.rolling)?Math.round(hrv.rolling)+' ms':'—'}</b><span>${dir.symbol} ${dir.label}</span></div><div><small>Baseline</small><b>${Number.isFinite(hrv.baseline)?Math.round(hrv.baseline)+' ms':'—'}</b><span>${hrv.count?`${hrv.deviation>=0?'+':''}${Math.round(hrv.deviation*100)}%`:'Building'}</span></div><div><small>Pain</small><b>${pain.count?pain.average.toFixed(1)+'/10':'—'}</b><span>${pain.status}</span></div></div><p class="recoveryRecommendation">${conclusion.recommendation}</p></article>`;
  $('readinessBadge').textContent=`${ready.label} · temporary ${ready.modifier.toFixed(3)}`;
  const nextImpact=ready.next&&Number.isFinite(ready.nominalDistance)?(Math.abs(ready.modifier-1)<.005
    ?`No temporary moderation is indicated. ${ready.next.type} remains ${ready.nominalDistance.toFixed(1)} km.`
@@ -4154,11 +4153,28 @@ function rehabCalendarHtml(i,p){
  return `<section class="injuryTopicCard rehabCalendarSection"><div class="injurySectionHead"><div><h4>Next 7 days</h4><p class="muted compact">The questionnaire and rehabilitation execution are tracked separately. A completed check-in does not mean the exercises were completed.</p></div><strong>${fmtDate(days[0].date)}–${fmtDate(days.at(-1).date)}</strong></div><div class="rehabCalendar">${days.map((d,n)=>`<details class="rehabDay ${d.type} rehab-${d.execution.className}"><summary><div class="rehabDate"><b>${esc(d.weekday.slice(0,3))}</b><span>${dte(d.date).getDate()}</span></div><div class="rehabDayTitle"><strong>${esc(d.title)}</strong><small>${esc(d.walkingTarget)}</small><div class="rehabStatusPair">${d.checkInCompleted?`<span class="executionBadge ${d.execution.className}">✓ Check-in · ${Number.isFinite(d.execution.score)?`${d.execution.score}% execution${d.type==='impact'&&d.executionImpact===false?' · impact not tolerated':''}`:'execution unavailable'}</span>`:`<span class="checkinBadge pending">${d.date>iso(today())?'Planned':'Check-in pending'}</span>`}</div></div><div class="rehabDayStatus">${d.updated?'Updated':''}</div></summary><div class="rehabDayBody"><div><b>Prescription</b><ul>${d.items.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div>${d.stretchGoalOffered?`<div class="rehabStretchGoal"><b>Optional progression</b><p>${esc(d.stretchGoal)}</p></div>`:''}<div class="rehabBestOutcome"><b>Today’s objective</b><p>${esc(d.bestOutcome||d.rationale||'')}</p></div><details class="rehabDayDetails"><summary>Why this plan and safety rules</summary><div class="rehabDayWhy"><p>${esc(d.rationale)}</p></div><div class="rehabDayRule"><b>Adjustment rule</b><p>${esc(d.rule)}</p></div><div class="rehabEvidenceMeter ${esc(d.evidence?.className||'low')}"><b>Evidence: ${esc(d.evidence?.level||'Low')}</b><p>${esc(d.evidence?.text||'More check-in evidence is needed.')}</p></div></details>${d.checkInCompleted?`<div class="rehabCompletionClarifier"><b>Recorded result</b><p>${esc(d.execution.label)}${Number.isFinite(d.execution.score)?` · ${d.execution.score}%`:''}</p></div>`:''}${d.updated?'<p class="rehabUpdatedNote">Updated after new check-in evidence.</p>':''}</div></details>`).join('')}</div><p class="muted compact rehabCalendarFoot">Rehabilitation status describes whether the prescribed plan was performed. Check-in status only confirms that the daily questionnaire was submitted. Future days remain pending until their date. Every saved check-in is scored from the activities scheduled for that date. Component details remain inside the expanded day; the collapsed tile shows one concise execution result.</p></section>`;
 }
 
+function rehabExerciseImage(name){
+ const map={
+  'Slow calf raise':'01_slow_calf_raise.png',
+  'Foot tripod and toe control':'02_foot_tripod_toe_control.png',
+  'Slow controlled strengthening':'03_slow_controlled_strengthening.png',
+  'Low-load isometric hold':'04_low_load_isometric_hold.png',
+  'Slow resistance exercise':'05_slow_resistance_exercise.png',
+  'Tendon isometric hold':'06_tendon_isometric_hold.png',
+  'Step-down control':'07_step_down_control.png',
+  'Supported sit-to-stand':'08_supported_sit_to_stand.png',
+  'Supported calf raise':'09_supported_calf_raise.png',
+  'Single-leg balance':'10_single_leg_balance.png',
+  'Long-lever bridge hold':'11_long_lever_bridge_hold.png',
+  'Supported hip hinge':'12_supported_hip_hinge.png',
+  'Double-leg bridge':'13_double_leg_bridge.png'
+ };
+ return map[name]?`assets/exercises/${map[name]}`:null;
+}
 function rehabTodayFocusHtml(i,p){
- const todayPlan=buildRehabCalendar(i,p)[0];
- const prescription=todayPlan.items.map(x=>`<li>${esc(x)}</li>`).join('');
- const guides=(todayPlan.guideExercises||[]).map(x=>`<details class="exerciseDetail"><summary><span><b>${esc(x.name)}</b><small>${esc(x.dose)} · ${esc(x.purpose)}</small></span><em>Technique</em></summary><div class="exerciseGuide"><div class="exerciseWhy"><b>Why this is prescribed today</b><p>${esc(x.why)}</p></div><div><b>How to perform</b><ol>${x.steps.map(y=>`<li>${esc(y)}</li>`).join('')}</ol></div><div class="exerciseRules"><div><b>Pain rule</b><p>${p.safetyHold?'Do not test impact or progress loading until assessed.':'Keep pain at 0–2/10. Stop for sharp pain, altered movement, or symptoms that worsen later or next morning.'}</p></div><div><b>Progress when</b><p>${esc(x.progress)}</p></div></div></div></details>`).join('');
- return `<section class="injuryTopicCard rehabTodayFocus"><div class="injurySectionHead"><div><h4>Today’s rehabilitation plan</h4><p class="muted compact">This is the same prescription shown for today in the seven-day calendar.</p></div><span class="status today">${esc(todayPlan.title)}</span></div><div class="todayFocus"><strong>${esc(todayPlan.title)}</strong><p>${esc(todayPlan.rationale)}</p></div><div class="todayPlanGrid"><div><b>Today’s prescription</b><ul>${prescription}</ul></div>${todayPlan.stretchGoalOffered?`<div class="rehabStretchGoal"><b>Optional progression</b><p>${esc(todayPlan.stretchGoal)}</p></div>`:''}<div class="rehabBestOutcome"><b>Today’s objective</b><p>${esc(todayPlan.bestOutcome||todayPlan.rationale||'')}</p></div><details class="rehabDayDetails"><summary>Why this plan and safety rules</summary><p>${esc(todayPlan.rationale)}</p><div class="rehabDayRule"><b>Adjustment rule</b><p>${esc(todayPlan.rule)}</p></div><div class="rehabEvidenceMeter ${esc(todayPlan.evidence?.className||'low')}"><b>Evidence: ${esc(todayPlan.evidence?.level||'Low')}</b><p>${esc(todayPlan.evidence?.text||'More check-in evidence is needed.')}</p></div></details></div><div class="rehabStatusPair">${todayPlan.checkInCompleted?`<span class="executionBadge ${todayPlan.execution.className}">✓ Check-in · ${Number.isFinite(todayPlan.execution.score)?`${todayPlan.execution.score}% execution${todayPlan.type==='impact'&&todayPlan.executionImpact===false?' · impact not tolerated':''}`:'execution unavailable'}</span>`:'<span class="checkinBadge pending">Check-in pending</span>'}</div>${guides?`<div class="todayExerciseGuides"><h5>Exercise technique</h5>${guides}</div>`:''}</section>`;
+ const todayPlan=buildRehabCalendar(i,p)[0],prescription=todayPlan.items.map(x=>`<li>${esc(x)}</li>`).join('');
+ const guides=(todayPlan.guideExercises||[]).map(x=>{const img=rehabExerciseImage(x.name);return`<details class="exerciseDetail visualExercise"><summary>${img?`<img src="${img}" alt="${esc(x.name)} exercise illustration" loading="lazy">`:`<span class="exerciseFallback">${uiIcon('rehab')}</span>`}<span><b>${esc(x.name)}</b><small>${esc(x.dose)}</small></span><em>Technique ›</em></summary><div class="exerciseGuide"><p class="exercisePurpose">${esc(x.purpose)}</p><div><b>How to perform</b><ol>${x.steps.map(y=>`<li>${esc(y)}</li>`).join('')}</ol></div><div class="exerciseRules"><div><b>Pain rule</b><p>${p.safetyHold?'Do not test impact or progress loading until assessed.':'Keep pain at 0–2/10. Stop for sharp pain, altered movement, or symptoms that worsen later or next morning.'}</p></div><div><b>Progress when</b><p>${esc(x.progress)}</p></div></div></div></details>`}).join('');
+ return`<section class="injuryTopicCard rehabTodayFocus"><div class="injurySectionHead"><div><h4>Today’s rehabilitation plan</h4><p class="muted compact">${todayPlan.weekday||dte(todayPlan.date).toLocaleDateString(undefined,{weekday:'long'})} · ${fmtDate(todayPlan.date)}</p></div><span class="status today">${esc(todayPlan.title)}</span></div><div class="todayFocus"><strong>${esc(todayPlan.title)}</strong><p>${esc(todayPlan.rationale)}</p></div><div class="todayPlanGrid"><div><b>Prescription</b><ul>${prescription}</ul></div>${todayPlan.stretchGoalOffered?`<div class="rehabStretchGoal"><b>Optional progression</b><p>${esc(todayPlan.stretchGoal)}</p></div>`:''}<details class="rehabDayDetails"><summary>Safety and progression rules</summary><div class="rehabDayRule"><b>Adjustment rule</b><p>${esc(todayPlan.rule)}</p></div><div class="rehabEvidenceMeter ${esc(todayPlan.evidence?.className||'low')}"><b>Evidence: ${esc(todayPlan.evidence?.level||'Low')}</b><p>${esc(todayPlan.evidence?.text||'More check-in evidence is needed.')}</p></div></details></div><div class="rehabStatusPair">${todayPlan.checkInCompleted?`<span class="executionBadge ${todayPlan.execution.className}">✓ ${Number.isFinite(todayPlan.execution.score)?`${todayPlan.execution.score}% execution`:'Check-in complete'}</span>`:'<span class="checkinBadge pending">Check-in pending</span>'}</div>${guides?`<div class="todayExerciseGuides"><h5>Exercise technique</h5>${guides}</div>`:''}</section>`;
 }
 
 function injuryTrajectorySvg(i,p){
