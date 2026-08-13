@@ -2084,81 +2084,137 @@ details b,details strong{color:var(--teal-text)!important}
   .exerciseRules{grid-template-columns:1fr}.sectionTitle p{font-size:11px!important}
 }
 
+
 /* ============================================================
-   v10.6.3 Runner-first information flow + contrast hardening
+   v10.6.4 Render fidelity + contrast hardening
+   Match the approved dark-teal mobile hierarchy: no white content
+   tiles on the primary runner workflow. Light colours are reserved
+   for text/icons, not card surfaces.
    ============================================================ */
 :root{
-  --contrast-primary:#ffffff;
-  --contrast-secondary:#d7eeee;
-  --contrast-tertiary:#b9d6d7;
-  --contrast-focus:#71ebe5;
+  --runner-bg:#063944;
+  --runner-panel:#07515c;
+  --runner-panel-2:#08616b;
+  --runner-panel-3:#0a4650;
+  --runner-tile:#0b5963;
+  --runner-line:rgba(146,230,223,.22);
+  --runner-text:#f7ffff;
+  --runner-copy:#d0e8e7;
+  --runner-muted:#9fc4c4;
+  --runner-accent:#58d9d3;
 }
 
-/* No low-contrast text on dark teal surfaces. */
-body,.page,.panel,.workout,.runCard,.injuryTopicCard,.uiLevel1,.uiLevel2,.uiLevel3,details{color:var(--contrast-primary)!important}
-.page p,.page span,.page small,.page .muted,.panel p,.panel span,.panel small,.panel .muted,.workout p,.workout span,.runCard p,.runCard span,.injuryTopicCard p,.injuryTopicCard span,.injuryTopicCard small{color:var(--contrast-secondary)!important}
-.page h1,.page h2,.page h3,.page h4,.page h5,.page b,.page strong,.page label{color:var(--contrast-primary)!important}
-a,.linkBtn,.exerciseChevron{color:var(--contrast-focus)!important}
-
-/* The screenshot exposed inherited light cards inside a dark Level-1 card. Keep nested content teal. */
-.planEffectSummary article{
-  background:rgba(3,56,64,.56)!important;
-  border:1px solid rgba(183,238,235,.24)!important;
-  color:#fff!important;
+/* Explicitly neutralise every legacy light card used in the runner-facing flow. */
+.kpi,.snapshotItem,.miniSession,.metricCell,.guideGrid>div,.target,
+.weekHeader,.workout,.workoutHead,.workoutDetails,.dateBox,.runCard,.runSummary,
+.todaySupportCard,.supportMetric,.planEffectSummary article,.weeklyReviewFactors>div,
+.weeklyReviewChange,.rehabTodayFocus,.rehabTodayFocus .todayPlanGrid>div,
+.recoveryOverview,.adherenceSummary,.adherenceTile,.injuryKpiGrid>div,
+.recoveryScoreWhy,.clinicalReasoningGrid>div,.criterion,.milestone,.comparisonRow,
+.checkInHistoryRow,.modelSteps section,.modelSteps code,.timelineReason,
+.importBox,.pillarCard,.personalDimension,.comparisonMetric,.evidenceDriver,
+.intervalVisualMetrics>div,.canonicalPathMetrics>div,.scienceProvenance>div{
+  background:var(--runner-tile)!important;
+  color:var(--runner-text)!important;
+  border-color:var(--runner-line)!important;
   box-shadow:none!important;
 }
-.planEffectSummary article small{color:#bfe1e0!important}
-.planEffectSummary article strong{color:#fff!important}
-.planEffectSummary article p{color:#d6eceb!important}
-.weeklyReviewHead>span{background:rgba(255,255,255,.11)!important;color:#fff!important;border:1px solid rgba(255,255,255,.18)!important}
-.weeklyReviewCard.provisional .weeklyReviewHead>span{background:rgba(239,178,92,.14)!important;color:#ffe0a7!important;border-color:rgba(239,178,92,.34)!important}
-.weekHeader{background:linear-gradient(145deg,#0c6670,#095763)!important;color:#fff!important;border-color:rgba(183,238,235,.24)!important}
-.weekHeader .muted{color:#d0e8e7!important}
 
-/* Runner-first section labels make the page sequence obvious without adding duplicate copy. */
-.planPrimaryHead,.planSecondaryHead,.logPrimaryHead{margin:16px 3px 9px}
-.planPrimaryHead>span,.planSecondaryHead>span,.logPrimaryHead>span{display:block;color:#79e7e1!important;font-size:.68rem;font-weight:950;letter-spacing:.11em}
-.planPrimaryHead p,.planSecondaryHead p,.logPrimaryHead p{margin:4px 0 0;color:#cae4e4!important;font-size:.78rem;line-height:1.4}
-.planSecondaryHead{margin-top:22px}
-
-/* Bottom navigation must remain legible even when inactive. */
-@media(max-width:760px){
-  #nav button{color:#b9d4d6!important;opacity:1!important}
-  #nav button .navIcon,#nav button .navLabel,#nav button svg{color:inherit!important;opacity:1!important;stroke:currentColor!important}
-  #nav button.active{color:#073746!important;background:#e6f4f5!important}
-  #nav button.active .navIcon,#nav button.active .navLabel,#nav button.active svg{color:#073746!important;stroke:#073746!important}
-  #moreNav{background:#074650!important;border-color:rgba(183,238,235,.28)!important}
-  #moreNav button{background:#0b5964!important;color:#f5ffff!important;border-color:rgba(183,238,235,.20)!important}
+/* Major supporting panels are one shade deeper than nested tiles. */
+.panel,.weeklyReviewCard,.todaySupportCard,.injuryTopicCard,.runCard,.workout,
+.comparableRuns,.intervalAnalysisCard,.postRunCoachUpdate,.readinessPanel,
+.predictionPanel,.programmeTimelinePanel,.planMixPanel{
+  background:linear-gradient(145deg,var(--runner-panel-2),var(--runner-panel))!important;
 }
 
-/* Controls/icons: readable in all states. */
-.weekNav button,.secondary,.buttonLike,.buttonRow button{color:#f5ffff!important}
-.workoutTypeIcon,.dateBox,.exerciseFallback{color:#8df2ec!important}
-.status,.evidenceBadge,.recoveryConfidence,.checkinBadge{font-weight:850!important}
+/* White workout-header / expanded-detail inheritance was the main live contrast bug. */
+#todayCard>.workout .workoutHead,.workout .workoutHead,.workout.open .workoutDetails,
+.workoutDetails,.runSummary{
+  background:transparent!important;
+}
 
-/* Exercise image is an explicit tap target, not a decorative thumbnail. */
-.exerciseImageButton{outline:1px solid rgba(154,240,233,.34)!important;box-shadow:0 0 0 2px rgba(0,0,0,.08)!important}
-.exerciseImageButton:after{content:'↗';position:absolute;top:6px;right:6px;width:22px;height:22px;display:grid;place-items:center;border-radius:7px;background:rgba(0,31,37,.78);color:#fff;font-size:12px;font-weight:900;pointer-events:none}
-.exerciseImageButton>em{left:5px!important;right:auto!important;bottom:5px!important;background:rgba(0,31,37,.86)!important;color:#fff!important;font-size:9px!important;font-weight:850!important}
-.exerciseImageButton:focus-visible{outline:3px solid #7af0ea!important;outline-offset:2px!important}
-.exerciseImageViewer>img{max-height:72vh!important;touch-action:pinch-zoom!important;background:#062f38!important}
-.exerciseViewerHint{color:#d6eceb!important;line-height:1.5}
-.exerciseMuscles i{color:#d8fffc!important;background:rgba(83,217,213,.16)!important;border-color:rgba(119,235,228,.34)!important}
+/* Weekly review: render as compact dark-teal strips, never white tiles. */
+.planEffectSummary article{
+  padding:12px 13px!important;
+  border:1px solid var(--runner-line)!important;
+  border-radius:12px!important;
+}
+.planEffectSummary small,.weeklyReviewFactors small{color:#9fd3d0!important}
+.planEffectSummary strong,.weeklyReviewFactors strong{color:#fff!important}
+.planEffectSummary p,.weeklyReviewFactors em,.weeklyReviewChange span,.weeklyReviewChange small{color:var(--runner-copy)!important}
+.weeklyReviewHead small{color:#a8eeea!important}
+.weeklyReviewHead h3{color:#fff!important}
+.weeklyReviewHead>span,.weeklyReviewCard.provisional .weeklyReviewHead>span{
+  background:rgba(255,255,255,.08)!important;
+  color:#dff8f5!important;
+  border:1px solid var(--runner-line)!important;
+}
 
-/* The exercise itself is the dominant object inside a rehab card. */
-.exerciseSummaryCopy>b{font-size:15px!important;color:#fff!important}
-.exerciseSummaryCopy>small{color:#d6eceb!important;font-size:11px!important}
-.exerciseInstructionBlock>b,.exerciseRules b{color:#fff!important}
-.exerciseInstructionBlock li,.exerciseRules p{color:#d8eeee!important}
+/* Today cards: action first, high contrast throughout. */
+.todaySupportCard h3,.todaySupportCard h4,.todaySupportCard b,.todaySupportCard strong,
+.todaySupportCard li{color:var(--runner-text)!important}
+.todaySupportCard p,.todaySupportCard span,.todaySupportCard small{color:var(--runner-copy)!important}
+.supportNotice{
+  background:rgba(239,178,92,.10)!important;
+  color:#ffe4b8!important;
+  border:1px solid rgba(239,178,92,.28)!important;
+  border-left:4px solid var(--teal-warn)!important;
+}
 
-/* Preserve clear hierarchy but avoid almost-black text from old rules. */
-.canonicalPathHead h4,.canonicalPathHead strong,.weeklyReviewHead h3,.intervalAnalysisHead h3,
-.recoveryMain strong,.readinessHero strong,.todaySupportHead h4,.injurySectionHead h4{color:#fff!important}
-.canonicalPathHead small,.weeklyReviewHead small,.intervalAnalysisHead span,.todaySupportHead small{color:#9df1ec!important}
+/* Workout cards mimic approved render: dark card, bright icon/date, clear metadata. */
+.workoutTitle h3,.workoutTitle b,.workoutHead strong{color:#fff!important}
+.workoutTitle p,.workoutHead p,.workoutHead span{color:var(--runner-copy)!important}
+.dateBox{background:rgba(255,255,255,.055)!important}
+.workoutTypeIcon{background:rgba(255,255,255,.055)!important;color:var(--runner-accent)!important}
+.target{background:rgba(2,36,43,.26)!important}
+.target b{color:#fff!important}.target small{color:var(--runner-muted)!important}
+
+/* KPI/evidence text can no longer inherit dark text from the old light theme. */
+.kpi label,.snapshotItem span,.metricCell small,.guideGrid p,.supportMetric span,
+.metric-card span,.metric-card small,.adherenceTile small,.adherenceTile span,
+.criterion small,.milestone small{color:var(--runner-muted)!important}
+.kpi strong,.snapshotItem b,.metricCell b,.supportMetric b,.metric-card strong,
+.adherenceTile strong,.criterion b,.milestone b{color:#fff!important}
+
+/* Links and icons remain obvious on teal without introducing pale cards. */
+a,.linkBtn,.todayInlineLink,.coachPlanLink,.logProgressLink{color:#c7fbf6!important}
+svg{color:inherit}
+.mobileBottomNav button{color:#a9c7c8!important}
+.mobileBottomNav button.active{background:#dff2f3!important;color:#083f4c!important}
+.mobileBottomNav button.active svg{color:#083f4c!important}
+
+/* Inputs remain distinct but use dark surfaces with readable values. */
+.field input,.field select,.field textarea,
+.formGrid .field input,.formGrid .field select,.formGrid .field textarea{
+  background:#0b4d57!important;color:#fff!important;border:1px solid rgba(168,235,231,.28)!important;
+}
+.field input:focus,.field select:focus,.field textarea:focus{outline:2px solid var(--runner-accent)!important;outline-offset:1px}
+.field label{color:#c0dddd!important}
+
+/* Exercise cards: thumbnail is explicitly tappable and full image opens in modal. */
+.exerciseImageButton{outline:1px solid rgba(168,235,231,.24)!important}
+.exerciseImageButton:after{
+  content:'↗';position:absolute;top:5px;right:5px;width:22px;height:22px;border-radius:50%;
+  display:grid;place-items:center;background:#052f38d9;color:#fff;font-size:12px;font-weight:900;
+}
+.exerciseImageButton>em{left:5px;right:auto;bottom:5px;background:#052f38e8!important;color:#fff!important}
+.exerciseImageViewer>img{cursor:zoom-out}
+
+/* Information flow labels should be visible but quiet. */
+.planPrimaryHead,.planSecondaryHead,.logPrimaryHead{margin:14px 2px 9px!important}
+.planPrimaryHead span,.planSecondaryHead span,.logPrimaryHead span{color:#8fe2dd!important;font-size:.68rem!important;font-weight:900!important;letter-spacing:.09em!important}
+.planPrimaryHead p,.planSecondaryHead p,.logPrimaryHead p{color:var(--runner-muted)!important;margin:4px 0 0!important;line-height:1.4!important}
+
+/* Do not allow generic inherited white backgrounds back into foldouts. */
+.uiLevel1 details,.uiLevel2 details,details,.planInsightsShell,.injuryDisclosure,.injuryTimelineDetails,
+.adherenceBreakdown,.rehabDayDetails,.exerciseDetail.visualExercise{
+  background:var(--runner-panel-3)!important;color:#fff!important;border-color:var(--runner-line)!important;
+}
+.uiLevel1 details>summary,.uiLevel2 details>summary,details>summary{
+  background:rgba(255,255,255,.035)!important;color:#fff!important;
+}
 
 @media(max-width:620px){
   .planEffectSummary{gap:9px!important}
-  .planEffectSummary article{padding:13px!important}
-  .exerciseImageButton{min-width:82px;width:82px!important;height:72px!important}
-  .exerciseDetail.visualExercise>summary{grid-template-columns:82px minmax(0,1fr)!important}
+  .planEffectSummary article{padding:11px 12px!important}
 }

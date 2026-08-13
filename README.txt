@@ -1,4 +1,4 @@
-AI Running Coach v10.6.3 Stable — build 16030
+AI Running Coach v10.6.2 Stable — build 16020
 
 Deployment
 ----------
@@ -442,15 +442,11 @@ v10.6.2 Teal hierarchy + exercise visuals
 - No training, prediction, recovery, injury, pathway or scoring equations were changed.
 
 
-v10.6.3 Runner-first hierarchy + contrast hardening
---------------------------------------------------
-- Fixes the low-contrast Plan weekly-review cards visible on dark teal: nested review cards, headings, labels and body copy now remain high-contrast teal/white rather than inheriting the former light-card styling.
-- Raises contrast for inactive bottom-navigation icons/labels, week headers, foldouts, metric labels, buttons and muted supporting copy.
-- Plan now presents the runner's actual sessions before the provisional weekly adaptation review; the review is explicitly secondary and follows the workouts it is interpreting.
-- Run Log keeps import as the immediate action, then shows recent runs, with data-entry guidance moved below the activity history.
-- Recovery wording emphasizes current readiness first, then the evidence and trend behind it.
-- Injury/Rehab moves Today's Focus and its exercise prescription immediately after the current injury/plan decision, before longitudinal recovery metrics.
-- Exercise thumbnails are explicit zoom targets: tap the image to open the large technique viewer without accidentally opening/closing the surrounding foldout. The viewer supports native pinch-zoom behavior where available.
-- Week headers and run-list dates show weekday names for faster scanning.
-- Repository remains completely flat. Exercise images are still root-level files beside app.js/styles.css, never in an assets folder.
-- No training, prediction, recovery, injury, pathway, workout-intelligence or scoring equations changed.
+v10.6.4 Render fidelity + runner-flow correction
+------------------------------------------------
+- Removes the remaining inherited white content tiles from Today, Plan, Log, Progress, Recovery and Injury/Rehab so the live app matches the approved dark-teal reference hierarchy.
+- Hardens foreground/background contrast across nested cards, weekly-review tiles, workout details, KPI/evidence cells, warnings, inputs, icons and foldouts.
+- Plan keeps the runner-first order: current week and scheduled workouts first, provisional adaptation consequences second, deeper insights last.
+- Injury/Rehab now presents today's prescribed rehabilitation immediately after the active injury/plan decision, before longitudinal recovery and adherence summaries.
+- Exercise thumbnails are explicit zoom targets; tapping the image opens the large technique viewer while written cues, target muscles, pain rule and progression remain available in the card.
+- Repository remains flat. No training, prediction, recovery, injury, pathway or execution-scoring equations changed.
