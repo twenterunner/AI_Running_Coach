@@ -4169,7 +4169,7 @@ function rehabExerciseImage(name){
   'Supported hip hinge':'12_supported_hip_hinge.png',
   'Double-leg bridge':'13_double_leg_bridge.png'
  };
- return map[name]?`assets/exercises/${map[name]}`:null;
+ return map[name]?`${map[name]}`:null;
 }
 function rehabTodayFocusHtml(i,p){
  const todayPlan=buildRehabCalendar(i,p)[0],prescription=todayPlan.items.map(x=>`<li>${esc(x)}</li>`).join('');

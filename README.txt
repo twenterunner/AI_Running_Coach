@@ -415,3 +415,5 @@ v10.6.0 Visual UX Release
 - Rehab technique cards now show the generated exercise illustrations where a matching exercise exists.
 - Removed redundant explanatory text about where numeric factors live.
 - All underlying coaching, execution, readiness, pathway and race-prediction calculations remain unchanged.
+
+- v10.6.0 flat-package revision: all exercise image assets are stored directly in the main application folder; no assets subfolder is required.
