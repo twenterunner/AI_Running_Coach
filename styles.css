@@ -1576,3 +1576,22 @@ details>summary{transition:background .15s ease,color .15s ease}details>summary:
 .technicalCalculation{margin-top:9px;border-top:1px dashed #dce6e9;padding-top:8px}
 .technicalCalculation>summary{font-size:.7rem;font-weight:850;color:#5c7180}
 @media(max-width:620px){.coachDecisionSummary{grid-template-columns:1fr}.progressiveHead{flex-direction:column}.whyDecisionResult{display:grid;grid-template-columns:1fr auto}.whyDecisionResult small{grid-column:1/-1}}
+
+/* v10.5.3 consistent pathway presentation */
+.consistentPathway .progressiveHead{min-height:42px;align-items:flex-start}
+.consistentSummary>div{min-height:72px}
+.coachPlainLanguage{margin-top:9px;padding:10px 11px;border-radius:11px;background:#f7fafb}
+.coachPlainLanguage p{margin:0 0 6px;color:#607582;font-size:.7rem;line-height:1.42}
+.coachPlainLanguage p:last-child{margin-bottom:0}
+.coachPlainLanguage b{color:#244d64}
+.evidenceDriverHeader{display:grid;grid-template-columns:1fr 72px 76px;gap:8px;padding:0 10px 5px;color:#7a8b95;font-size:.56rem;font-weight:900;letter-spacing:.05em;text-transform:uppercase}
+.evidenceDriver.consistent{grid-template-columns:1fr 72px 76px;align-items:center}
+.evidenceDriver.consistent>span{font-variant-numeric:tabular-nums;text-align:right}
+.evidenceDriver.consistent>em{grid-column:auto;text-align:right;font-size:.61rem;font-weight:750;color:#647986}
+.whyDecisionResult{grid-template-columns:1fr auto!important}
+.whyDecisionResult small{grid-column:1/-1!important}
+@media(max-width:620px){
+ .evidenceDriverHeader{grid-template-columns:1fr 64px 66px;padding-left:8px;padding-right:8px}
+ .evidenceDriver.consistent{grid-template-columns:1fr 64px 66px}
+ .consistentSummary>div{min-height:0}
+}

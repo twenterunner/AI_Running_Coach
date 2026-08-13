@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '10.5.2';
-  const BUILD = 15020;
+  const VERSION = '10.5.3';
+  const BUILD = 15030;
   const SCHEMA = 10330;
   const PRIMARY_STORAGE_KEY = 'arc_v10330_web';
   const MIRROR_STORAGE_KEY = 'arc_v10330_mirror';
@@ -2960,55 +2960,77 @@ function qualitativePathwaySignal(v){
  return'Neutral';
 }
 function pathwayEvidenceSummaryHtml(d,t){
- const items=[];
+ const rows=[];
+ const add=(name,detail,observed,role)=>rows.push(`<div class="evidenceDriver consistent"><div><b>${esc(name)}</b><small>${esc(detail||'')}</small></div><span>${esc(observed)}</span><em>${esc(role)}</em></div>`);
  if(d.pathway==='pace'){
    const comps=d.capabilityExecutionComponents||[];
    comps.forEach(c=>{
-     const influence=c.effectiveWeight>=.4?'strong':c.effectiveWeight>=.2?'moderate':'supporting';
-     items.push(`<div class="evidenceDriver"><div><b>${esc(c.name)}</b><small>${esc(c.scope||'')}</small></div><span>${Math.round(c.score)}/100</span><em>${influence} influence</em></div>`);
+     const role=c.effectiveWeight>=.35?'Primary':c.effectiveWeight>=.15?'Secondary':'Supporting';
+     add(c.name,c.scope||'',`${Math.round(c.score)}/100`,role);
    });
    const cost=(d.signalComponents||[]).find(x=>x.key==='cost');
    const comp=(d.signalComponents||[]).find(x=>x.key==='comparable');
    const personal=(d.signalComponents||[]).find(x=>x.key==='personal');
-   if(cost&&Math.abs(cost.value)>=.01)items.push(`<div class="evidenceDriver secondary"><div><b>Physiological cost</b><small>${esc(d.componentDerivation?.cost||'')}</small></div><span>${cost.value>=0?'+':''}${cost.value.toFixed(2)}</span><em>supporting</em></div>`);
-   if(comp&&Math.abs(comp.value)>=.01)items.push(`<div class="evidenceDriver secondary"><div><b>Comparable-run evidence</b><small>${esc(d.componentDerivation?.comparable||'')}</small></div><span>${comp.value>=0?'+':''}${comp.value.toFixed(2)}</span><em>supporting</em></div>`);
-   if(personal&&Math.abs(personal.value)>=.01)items.push(`<div class="evidenceDriver secondary"><div><b>Personal response</b><small>${esc(d.componentDerivation?.personal||'')}</small></div><span>${personal.value>=0?'+':''}${personal.value.toFixed(2)}</span><em>supporting</em></div>`);
+   if(cost&&Math.abs(cost.value)>=.01)add('Physiological cost',d.componentDerivation?.cost||'',`${cost.value>=0?'+':''}${cost.value.toFixed(2)}`,'Supporting');
+   if(comp&&Math.abs(comp.value)>=.01)add('Comparable-run response',d.componentDerivation?.comparable||'',`${comp.value>=0?'+':''}${comp.value.toFixed(2)}`,'Supporting');
+   if(personal&&Math.abs(personal.value)>=.01)add('Personal response',d.componentDerivation?.personal||'',`${personal.value>=0?'+':''}${personal.value.toFixed(2)}`,'Supporting');
  }else{
-   const completion=(d.signalComponents||[]).find(x=>x.key==='completion');
-   const execution=(d.signalComponents||[]).find(x=>x.key==='execution');
    const tolerance=(d.signalComponents||[]).find(x=>x.key==='tolerance');
-   if(completion)items.push(`<div class="evidenceDriver"><div><b>Planned load completion</b><small>${esc(d.componentDerivation?.completion||'')}</small></div><span>${Number.isFinite(d.completion)?Math.round(d.completion*100)+'%':(completion.value>=0?'+':'')+completion.value.toFixed(2)}</span><em>major influence</em></div>`);
-   if(Number.isFinite(d.score))items.push(`<div class="evidenceDriver"><div><b>Workout execution</b><small>Overall Execution Breakdown</small></div><span>${Math.round(d.score)}/100</span><em>supporting influence</em></div>`);
-   if(tolerance)items.push(`<div class="evidenceDriver"><div><b>Load tolerance</b><small>${esc(d.componentDerivation?.tolerance||'')}</small></div><span>${tolerance.value>=0?'+':''}${tolerance.value.toFixed(2)}</span><em>major influence</em></div>`);
+   const completion=(d.signalComponents||[]).find(x=>x.key==='completion');
+   if(completion)add('Planned distance completed',d.componentDerivation?.completion||'',Number.isFinite(d.completion)?`${Math.round(d.completion*100)}%`:`${completion.value>=0?'+':''}${completion.value.toFixed(2)}`,'Primary');
+   if(tolerance)add('Load-tolerance response',d.componentDerivation?.tolerance||'',`${tolerance.value>=0?'+':''}${tolerance.value.toFixed(2)}`,'Primary');
+   if(Number.isFinite(d.score))add('Overall workout execution','From the Execution Breakdown',`${Math.round(d.score)}/100`,'Secondary');
+   const personal=(d.signalComponents||[]).find(x=>x.key==='personal');
+   if(personal&&Math.abs(personal.value)>=.01)add('Personal response',d.componentDerivation?.personal||'',`${personal.value>=0?'+':''}${personal.value.toFixed(2)}`,'Supporting');
  }
- return items.join('');
+ return rows.join('');
 }
 
+function pathwayCoachLanguage(d,t){
+ const q=qualitativePathwaySignal(t.rawSignal),accepted=Math.abs(t.acceptedContribution)>=.00005;
+ let runMeaning='',response='';
+ if(d.pathway==='pace'){
+   if(t.rawSignal>=.35)runMeaning='This run supports a higher pace/power capability.';
+   else if(t.rawSignal>=.12)runMeaning='This run gives a small indication of improving pace/power capability.';
+   else if(t.rawSignal<=-.35)runMeaning='This run suggests the current pace/power calibration may be demanding.';
+   else if(t.rawSignal<=-.12)runMeaning='This run gives a small caution signal for pace/power capability.';
+   else runMeaning='This run is broadly consistent with the current pace/power calibration.';
+ }else{
+   if(t.rawSignal>=.35)runMeaning='This run supports progressing training distance/load.';
+   else if(t.rawSignal>=.12)runMeaning='This run gives a small indication that the current training load is being tolerated well.';
+   else if(t.rawSignal<=-.35)runMeaning='This run suggests training distance/load should be progressed more cautiously.';
+   else if(t.rawSignal<=-.12)runMeaning='This run gives a small caution signal for training-load tolerance.';
+   else runMeaning='This run is broadly consistent with the current distance/load calibration.';
+ }
+ if(accepted)response=`The run contributes ${signedFactorDelta(t.acceptedContribution)} to this pathway's weekly learning.`;
+ else if(t.safeguard)response='The signal is recorded, but the model is not changing this pathway from this run alone.';
+ else response='The evidence is not strong enough to change this pathway.';
+ return{q,runMeaning,response};
+}
 function postRunCoachUpdateHtml(r){
  const u=r?.coachUpdate;if(!u)return '';
  const plan=r.planId?state.plan.find(p=>p.id===r.planId):null,two=twoPathwayDecisionForRun(r,plan),pd=two.pace,ld=two.load,pt=pathwayEvidenceTrace(r,'pace'),lt=pathwayEvidenceTrace(r,'load');
  const branch=(title,d,t)=>{
-   const accepted=Math.abs(t.acceptedContribution)>=.00005;
-   const q=qualitativePathwaySignal(t.rawSignal);
-   const decisionText=accepted?`${signedFactorDelta(t.acceptedContribution)} contribution`:'Hold · no accepted factor change';
-   return`<section class="pathwayDecisionBranch progressivePathway">
-     <div class="progressiveHead"><div><small>${title}</small><h4>${q}</h4></div><span>${decisionText}</span></div>
-     <div class="coachDecisionSummary">
-       <div><small>WORKOUT EVIDENCE</small><strong>${q}</strong></div>
-       <div><small>COACH DECISION</small><strong>${esc(d.action)}</strong></div>
-       <div><small>CONTRIBUTION</small><strong>${accepted?signedFactorDelta(t.acceptedContribution):'0.000'}</strong></div>
+   const accepted=Math.abs(t.acceptedContribution)>=.00005,lang=pathwayCoachLanguage(d,t);
+   return`<section class="pathwayDecisionBranch progressivePathway consistentPathway">
+     <div class="progressiveHead"><div><small>${title}</small><h4>${lang.q}</h4></div></div>
+     <div class="coachDecisionSummary consistentSummary">
+       <div><small>WHAT THIS RUN SUGGESTS</small><strong>${lang.q}</strong></div>
+       <div><small>HOW THE MODEL RESPONDS</small><strong>${accepted?'Adjust':'Hold'}</strong></div>
+       <div><small>LEARNING CONTRIBUTION</small><strong>${accepted?signedFactorDelta(t.acceptedContribution):'0.000'}</strong></div>
      </div>
-     <p class="coachDecisionText">${esc(d.interpretation)}</p>
+     <div class="coachPlainLanguage"><p><b>Run interpretation.</b> ${esc(lang.runMeaning)}</p><p><b>Model response.</b> ${esc(lang.response)}</p></div>
      ${!accepted&&t.safeguard?`<div class="coachDecisionSafeguard">${esc(t.safeguard)}</div>`:''}
      <details class="whyDecision"><summary>Why?</summary>
-       <div class="whyDecisionIntro"><b>What drove this decision</b><p>The coach translates the relevant workout-execution evidence into pathway evidence before applying confidence and safeguards.</p></div>
+       <div class="whyDecisionIntro"><b>Evidence used from this run</b><p>These are the workout measures that matter for this pathway. Primary evidence carries the largest role, while secondary and supporting evidence refine the interpretation.</p></div>
+       <div class="evidenceDriverHeader"><span>Evidence</span><span>Observed</span><span>Role</span></div>
        <div class="evidenceDriverList">${pathwayEvidenceSummaryHtml(d,t)}</div>
-       <div class="whyDecisionResult"><span>Combined pathway evidence</span><b>${q}</b><small>Run signal ${t.rawSignal>=0?'+':''}${t.rawSignal.toFixed(2)}</small></div>
-       <details class="technicalCalculation"><summary>Show technical calculation</summary>${pathwayCalculationDetailsHtml(d,t)}<details class="componentEvidenceDetails"><summary>Show source evidence</summary>${(d.signals||[]).map(s=>`<div class="decisionSignalRow"><span>${esc(s.name)}</span><b>${s.value>=0?'+':''}${Number(s.value).toFixed(2)}</b><small>${esc(s.detail)}</small></div>`).join('')}</details></details>
+       <div class="whyDecisionResult"><span>Overall interpretation</span><b>${lang.q}</b><small>Run signal ${t.rawSignal>=0?'+':''}${t.rawSignal.toFixed(2)}</small></div>
+       <details class="technicalCalculation"><summary>Technical calculation</summary>${pathwayCalculationDetailsHtml(d,t)}<details class="componentEvidenceDetails"><summary>Source signal details</summary>${(d.signals||[]).map(s=>`<div class="decisionSignalRow"><span>${esc(s.name)}</span><b>${s.value>=0?'+':''}${Number(s.value).toFixed(2)}</b><small>${esc(s.detail)}</small></div>`).join('')}</details></details>
      </details>
    </section>`;
  };
- return`<section class="postRunCoachUpdate progressiveCoachUpdate"><div class="postRunCoachHead simplified"><div><span>WHAT THIS RUN TAUGHT THE COACH</span><h3>${esc(u.decision)}</h3></div></div><div class="pathwayDecisionGrid">${branch('PACE & POWER',pd,pt)}${branch('DISTANCE & LOAD',ld,lt)}</div><button type="button" class="logProgressLink" data-go="dashboard" data-anchor="progressAdaptationHome">View accumulated adaptation in Progress</button></section>`;
+ return`<section class="postRunCoachUpdate progressiveCoachUpdate"><div class="postRunCoachHead simplified"><div><span>WHAT THIS RUN CHANGES</span><h3>${esc(u.decision)}</h3></div></div><div class="pathwayDecisionGrid">${branch('PACE & POWER',pd,pt)}${branch('DISTANCE & LOAD',ld,lt)}</div><button type="button" class="logProgressLink" data-go="dashboard" data-anchor="progressAdaptationHome">View accumulated adaptation in Progress</button></section>`;
 }
 
 function intervalAnalysisHtml(r){
