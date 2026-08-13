@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '10.4.0';
-  const BUILD = 14000;
+  const VERSION = '10.4.1';
+  const BUILD = 14010;
   const SCHEMA = 10330;
   const PRIMARY_STORAGE_KEY = 'arc_v10330_web';
   const MIRROR_STORAGE_KEY = 'arc_v10330_mirror';
@@ -697,6 +697,37 @@ function personalPathwaySignal(run,model,pathway){
  return{value:clamp(value,-.12,.12),confidence:d.confidence.label,detail:`${d.name}: ${d.status} · ${d.confidence.label.toLowerCase()} confidence from ${d.count} observation${d.count===1?'':'s'}.`,dimension:d};
 }
 
+const PATHWAY_LEARNING_RATE={pace:.0065,loadPositive:.012,loadNegative:.025};
+function paceAcceptedContribution(decision){
+ if(!decision||!Number.isFinite(decision.finalSignal)||!Number.isFinite(decision.confidenceWeight))return 0;
+ return decision.finalSignal*decision.confidenceWeight*PATHWAY_LEARNING_RATE.pace;
+}
+function loadAcceptedContribution(decision){
+ if(!decision||!Number.isFinite(decision.finalSignal)||!Number.isFinite(decision.confidenceWeight))return 0;
+ const rate=decision.finalSignal>=0?PATHWAY_LEARNING_RATE.loadPositive:PATHWAY_LEARNING_RATE.loadNegative;
+ return decision.finalSignal*decision.confidenceWeight*rate;
+}
+function weeklyPaceEvidence(w=trainingWeekForDate(iso(today())),asOf=iso(today())){
+ const runs=(state.runs||[]).filter(r=>trainingWeekForDate(r.date)===w&&r.date<=asOf&&r.source!=='assessment').sort((a,b)=>a.date.localeCompare(b.date));
+ const rows=runs.map(r=>{const p=r.planId?state.plan.find(x=>x.id===r.planId):null,d=decisionSignalForRun(r,p),contribution=paceAcceptedContribution(d);return{run:r,decision:d,contribution}});
+ const bucket=sum(rows.map(x=>x.contribution));
+ return{week:w,rows,bucket,positive:rows.filter(x=>x.contribution>.00005).length,negative:rows.filter(x=>x.contribution<-.00005).length};
+}
+function pathwayEvidenceTrace(run,pathway){
+ const plan=run?.planId?state.plan.find(p=>p.id===run.planId):null,w=trainingWeekForDate(run?.date||iso(today()));
+ if(pathway==='pace'){
+   const d=decisionSignalForRun(run,plan),accepted=paceAcceptedContribution(d),weekly=weeklyPaceEvidence(w,run.date);
+   const applied=pacePowerCommittedFactor(run.date),rawProjected=clamp(applied+weekly.bucket,state.setup.minFactor,state.setup.maxFactor);
+   const roundedIndex=Math.round(rawProjected*100*2)/2,projected=Math.abs(roundedIndex-100)<.75?1:roundedIndex/100;
+   const thresholdBlocked=Math.abs(rawProjected-applied)>=.00005&&Math.abs(projected-applied)<.0005;
+   return{pathway:'pace',decision:d,rawSignal:Number.isFinite(d.rawIntegratedSignal)?d.rawIntegratedSignal:d.finalSignal,acceptedSignal:d.finalSignal,confidenceWeight:d.confidenceWeight,learningRate:PATHWAY_LEARNING_RATE.pace,acceptedContribution:accepted,weeklyBucket:weekly.bucket,weeklyRows:weekly.rows,applied,rawProjected,projected,thresholdBlocked,
+    safeguard:d.safeguardNote||'No additional safeguard changed the integrated signal.',status:thresholdBlocked?'Accepted evidence is accumulating, but the pathway update threshold has not yet been crossed.':Math.abs(projected-applied)>=.0005?'Projected change pending weekly review.':'No accepted factor change from current evidence.'};
+ }
+ const d=loadDecisionSignalForRun(run,plan),accepted=loadAcceptedContribution(d),weekly=weeklyLoadEvidence(w,false),applied=adaptiveFactorDetails(w).cumulativeFactor,rawProjected=clamp(applied+weekly.runDelta,state.setup.minFactor,state.setup.maxFactor);
+ return{pathway:'load',decision:d,rawSignal:Number.isFinite(d.rawIntegratedSignal)?d.rawIntegratedSignal:d.finalSignal,acceptedSignal:d.finalSignal,confidenceWeight:d.confidenceWeight,learningRate:d.finalSignal>=0?PATHWAY_LEARNING_RATE.loadPositive:PATHWAY_LEARNING_RATE.loadNegative,acceptedContribution:accepted,weeklyBucket:weekly.runDelta,weeklyRows:weekly.decisions.map(x=>({run:x.run,decision:x.decision,contribution:loadAcceptedContribution(x.decision)})),applied,rawProjected,projected:rawProjected,thresholdBlocked:false,
+   safeguard:d.safeguardNote||'No additional safeguard changed the integrated signal.',status:Math.abs(rawProjected-applied)>=.0005?'Projected change pending weekly review.':'No accepted factor change from current evidence.'};
+}
+
 function decisionSignalForRun(run,plan=run?.planId?state.plan.find(p=>p.id===run.planId):null){
  const details=workoutScoreDetails(run,plan),score=details?.score??null,family=workoutFamily(plan?.type||run.type),type=plan?.type||run.type;
  const baseWeight=EVIDENCE_WEIGHT[run.type]??EVIDENCE_WEIGHT[baseType(run.type)]??.15;
@@ -739,20 +770,22 @@ function decisionSignalForRun(run,plan=run?.planId?state.plan.find(p=>p.id===run
  if(personalSignal!==0)signals.push({name:'Personal pace response',value:personalSignal,detail:personal.detail});
 
  let combined=performanceSignal*.58+comparableSignal*.24+costSignal*.12+personalSignal*.06;
- let conflict=false,interpretation='';
- if(performanceSignal>.25&&costSignal<-.25){conflict=true;combined=Math.min(combined*.25,.15);interpretation='Performance capability was positive, but physiological cost was unusually high. Pace progression is deliberately held back.'}
- else if(performanceSignal<-.25&&comparableSignal>.35){conflict=true;combined=Math.max(combined*.4,-.15);interpretation='Target execution underperformed, but comparable-run physiology remained positive. Pace evidence is mixed rather than clearly negative.'}
+ const initialIntegratedSignal=combined;
+ let conflict=false,interpretation='',safeguardNote='';
+ if(performanceSignal>.25&&costSignal<-.25){conflict=true;combined=Math.min(combined*.25,.15);safeguardNote='Conflicting evidence safeguard: positive performance was damped because physiological cost was unusually high.';interpretation='Performance capability was positive, but physiological cost was unusually high. Pace progression is deliberately held back.'}
+ else if(performanceSignal<-.25&&comparableSignal>.35){conflict=true;combined=Math.max(combined*.4,-.15);safeguardNote='Mixed-evidence safeguard: negative target execution was moderated because comparable-run physiology remained positive.';interpretation='Target execution underperformed, but comparable-run physiology remained positive. Pace evidence is mixed rather than clearly negative.'}
  else if(combined>.25)interpretation='The session provides positive evidence that Pace & Power capability is improving.'
  else if(combined<-.25)interpretation='The session provides evidence for a more conservative Pace & Power calibration.'
  else interpretation='The session mainly supports holding the current Pace & Power calibration.';
 
  const pain=Number(run.pain);
- if(Number.isFinite(pain)&&pain>=5){combined=Math.min(0,combined);confidenceWeight*=.45;interpretation=`Pain ${pain}/10 overrides positive Pace & Power evidence.`;confidenceReasons.push('pain safety override')}
- else if(Number.isFinite(pain)&&pain>=3){if(combined>0)combined*=.25;confidenceWeight*=.55;confidenceReasons.push('pain reduced positive evidence')}
- if(combined<0&&confidenceWeight<.35)combined=0;
+ if(Number.isFinite(pain)&&pain>=5){combined=Math.min(0,combined);confidenceWeight*=.45;safeguardNote=`Pain safety override: pain ${pain}/10 prevents positive capability progression.`;interpretation=`Pain ${pain}/10 overrides positive Pace & Power evidence.`;confidenceReasons.push('pain safety override')}
+ else if(Number.isFinite(pain)&&pain>=3){if(combined>0)combined*=.25;confidenceWeight*=.55;safeguardNote=`Pain safeguard: pain ${pain}/10 strongly reduces positive capability evidence.`;confidenceReasons.push('pain reduced positive evidence')}
+ const preProtectionSignal=combined;
+ if(combined<0&&confidenceWeight<.35){combined=0;safeguardNote=`Developing-confidence protection: the negative signal ${preProtectionSignal.toFixed(2)} is recorded, but is not accepted as a capability downgrade until evidence confidence increases.`;}
  const confidencePct=clamp(Math.round(confidenceWeight/.65*100),0,100),confidence=confidencePct>=75?'High':confidencePct>=45?'Moderate':'Developing';
  const action=combined>.25?'Positive Pace & Power evidence':combined<-.25?'Conservative Pace & Power evidence':'Hold Pace & Power';
- return{pathway:'pace',family,score,capabilityScore,signals,performanceSignal,comparableSignal,costSignal,personalSignal,personalResponse:personal,finalSignal:clamp(combined,-1,1),confidenceWeight,confidencePct,confidence,conflict,confidenceReasons,interpretation,action,completion,comparison};
+ return{pathway:'pace',family,score,capabilityScore,signals,performanceSignal,comparableSignal,costSignal,personalSignal,personalResponse:personal,rawIntegratedSignal:initialIntegratedSignal,preProtectionSignal,finalSignal:clamp(combined,-1,1),confidenceWeight,confidencePct,confidence,conflict,confidenceReasons,safeguardNote,interpretation,action,completion,comparison};
 }
 
 function loadDecisionSignalForRun(run,plan=run?.planId?state.plan.find(p=>p.id===run.planId):null){
@@ -800,14 +833,16 @@ function loadDecisionSignalForRun(run,plan=run?.planId?state.plan.find(p=>p.id==
  if(personalSignal!==0)signals.push({name:'Personal load response',value:personalSignal,detail:personal.detail});
 
  let combined=completionSignal*.40+toleranceSignal*.38+executionSignal*.14+personalSignal*.08;
+ const rawIntegratedSignal=combined;
+ let safeguardNote='';
  const pain=Number(run.pain);
- if(Number.isFinite(pain)&&pain>=5){combined=Math.min(combined,-.65);confidenceWeight=Math.max(confidenceWeight,.45);confidenceReasons.push('pain safety/tolerance signal')}
- else if(Number.isFinite(pain)&&pain>=3){combined=Math.min(combined,-.25);confidenceReasons.push('pain limited load-tolerance evidence')}
- if(Number.isFinite(run.rpe)&&Number(run.rpe)>=9&&(family==='long'||family==='aerobic'))combined=Math.min(combined,-.20);
+ if(Number.isFinite(pain)&&pain>=5){combined=Math.min(combined,-.65);confidenceWeight=Math.max(confidenceWeight,.45);safeguardNote=`Pain safety override: pain ${pain}/10 is treated as strong conservative load-tolerance evidence.`;confidenceReasons.push('pain safety/tolerance signal')}
+ else if(Number.isFinite(pain)&&pain>=3){combined=Math.min(combined,-.25);safeguardNote=`Pain safeguard: pain ${pain}/10 prevents positive load progression from this run.`;confidenceReasons.push('pain limited load-tolerance evidence')}
+ if(Number.isFinite(run.rpe)&&Number(run.rpe)>=9&&(family==='long'||family==='aerobic')){combined=Math.min(combined,-.20);safeguardNote=safeguardNote||`High-cost safeguard: RPE ${Number(run.rpe)}/10 limits positive load-tolerance interpretation.`;}
  const confidencePct=clamp(Math.round(confidenceWeight/.70*100),0,100),confidence=confidencePct>=75?'High':confidencePct>=45?'Moderate':'Developing';
  const action=combined>.18?'Positive Distance & Load evidence':combined<-.18?'Conservative Distance & Load evidence':'Hold Distance & Load';
  const interpretation=combined>.18?'The run provides positive evidence that this load was tolerated well.':combined<-.18?'The run provides evidence that load progression should be more conservative.':'The run does not materially change the current Distance & Load calibration.';
- return{pathway:'load',family,score,signals,completionSignal,toleranceSignal,executionSignal,personalSignal,personalResponse:personal,finalSignal:clamp(combined,-1,1),confidenceWeight,confidencePct,confidence,confidenceReasons,interpretation,action,completion};
+ return{pathway:'load',family,score,signals,completionSignal,toleranceSignal,executionSignal,personalSignal,personalResponse:personal,rawIntegratedSignal,finalSignal:clamp(combined,-1,1),confidenceWeight,confidencePct,confidence,confidenceReasons,safeguardNote,interpretation,action,completion};
 }
 function twoPathwayDecisionForRun(run,plan=run?.planId?state.plan.find(p=>p.id===run.planId):null){
  return{pace:decisionSignalForRun(run,plan),load:loadDecisionSignalForRun(run,plan)};
@@ -817,9 +852,9 @@ function trainingEvidence(asOf=iso(today())){
  runs.forEach(r=>{
    const p=r.planId?state.plan.find(x=>x.id===r.planId):null,decision=twoPathwayDecisionForRun(r,p).pace;
    if(decision.score==null)return;
-   const confidence=decision.confidenceWeight,maxMove=confidence*.65,signal=decision.finalSignal,delta=signal*maxMove;
+   const confidence=decision.confidenceWeight,signal=decision.finalSignal,acceptedContribution=paceAcceptedContribution(decision),delta=acceptedContribution*100;
    raw=clamp(raw+delta,95,105);evidence+=confidence;
-   events.push({date:r.date,type:r.type,score:decision.score,delta,confidence,signal,decision});
+   events.push({date:r.date,type:r.type,score:decision.score,delta,acceptedContribution,confidence,signal,decision});
  });
  let applied=Math.round((raw-100)*2)/2+100;if(Math.abs(applied-100)<.75)applied=100;
  let confidence=clamp(Math.round(evidence/4*100),0,100);
@@ -923,7 +958,7 @@ function painAdjustment(pain=recoveryPainState()){
  return{adjustment:0,detail:`Recent maximum pain ${max}/10 adds no load reduction.`};
 }
 function weeklyLoadEvidence(w,finalised=true){
- const wd=weekData(w),runs=wd.runs||[],decisions=runs.map(r=>({run:r,decision:loadDecisionSignalForRun(r,r.planId?state.plan.find(p=>p.id===r.planId):null)}));
+ const wd=weekData(w),runs=wd.runs||[],decisions=runs.map(r=>{const decision=loadDecisionSignalForRun(r,r.planId?state.plan.find(p=>p.id===r.planId):null);return{run:r,decision,contribution:loadAcceptedContribution(decision)}});
  const usable=decisions.filter(x=>Number.isFinite(x.decision.finalSignal)&&x.decision.confidenceWeight>0);
  const weight=sum(usable.map(x=>x.decision.confidenceWeight)),meanSignal=weight?sum(usable.map(x=>x.decision.finalSignal*x.decision.confidenceWeight))/weight:0;
  let completionDelta=0,completionDetail='Completion is not scored until the week closes.';
@@ -931,16 +966,15 @@ function weeklyLoadEvidence(w,finalised=true){
  if(finalised&&Number.isFinite(completion)){
    if(completion<.70){completionDelta=-.03;completionDetail=`${Math.round(completion*100)}% completed; insufficient exposure reduces next-week load conservatively.`}
    else if(completion<.85){completionDelta=-.015;completionDetail=`${Math.round(completion*100)}% completed; progression is moderated.`}
-   else if(completion<=1.05){completionDelta=0;completionDetail=`${Math.round(completion*100)}% completed; completion itself is neutral and tolerance evidence decides progression.`}
+   else if(completion<=1.05){completionDelta=0;completionDetail=`${Math.round(completion*100)}% completed; completion itself is neutral and run-level tolerance evidence decides progression.`}
    else{completionDelta=-.005;completionDetail=`${Math.round(completion*100)}% completed; excess load is not rewarded.`}
  }
- const runDelta=meanSignal>=0?meanSignal*.012:meanSignal*.025;
- const learningDelta=clamp(completionDelta+runDelta,-.05,.015);
- const positive=usable.filter(x=>x.decision.finalSignal>.18).length,negative=usable.filter(x=>x.decision.finalSignal<-.18).length;
- return{week:w,planned:wd.planned,actual:wd.actual,completion,decisions,meanSignal,completionDelta,runDelta,learningDelta,positive,negative,
+ const rawRunBucket=sum(usable.map(x=>x.contribution)),runDelta=clamp(rawRunBucket,-.035,.015),learningDelta=clamp(completionDelta+runDelta,-.05,.015);
+ const positive=usable.filter(x=>x.contribution>.00005).length,negative=usable.filter(x=>x.contribution<-.00005).length;
+ return{week:w,planned:wd.planned,actual:wd.actual,completion,decisions,meanSignal,completionDelta,rawRunBucket,runDelta,learningDelta,positive,negative,
    items:[
     {name:'Weekly completion',adjustment:completionDelta,detail:completionDetail,status:finalised?'available':'pending'},
-    {name:'Run-level load tolerance',adjustment:runDelta,detail:usable.length?`${usable.length} run decision${usable.length===1?'':'s'} · integrated load-tolerance signal ${meanSignal>=0?'+':''}${meanSignal.toFixed(2)} (${positive} positive, ${negative} conservative).`:'No qualifying run-level load evidence.',status:usable.length?'available':'insufficient'}
+    {name:'Accepted run evidence bucket',adjustment:runDelta,detail:usable.length?`${usable.length} run contribution${usable.length===1?'':'s'} sum to ${signedFactorDelta(rawRunBucket)}${Math.abs(rawRunBucket-runDelta)>.00005?` and are bounded to ${signedFactorDelta(runDelta)}`:''} (${positive} positive, ${negative} conservative).`:'No qualifying accepted run-level load evidence.',status:usable.length?'available':'insufficient'}
    ]};
 }
 function adaptiveFactorDetails(w){
@@ -2756,7 +2790,7 @@ function postRunCoachSnapshot(date=iso(today())){
 }
 function signedFactorDelta(v){if(!Number.isFinite(v)||Math.abs(v)<.0005)return '↔ 0.000';return `${v>0?'+':''}${v.toFixed(3)}`;}
 function postRunCoachUpdate(run,before,after){
- const plan=run.planId?state.plan.find(p=>p.id===run.planId):null,details=workoutScoreDetails(run,plan),score=details?.score??null,two=twoPathwayDecisionForRun(run,plan),paceDecision=two.pace,loadDecision=two.load;
+ const plan=run.planId?state.plan.find(p=>p.id===run.planId):null,details=workoutScoreDetails(run,plan),score=details?.score??null,two=twoPathwayDecisionForRun(run,plan),paceDecision=two.pace,loadDecision=two.load,paceTrace=pathwayEvidenceTrace(run,'pace'),loadTrace=pathwayEvidenceTrace(run,'load');
  const paceProvisionalDelta=(after.paceProvisional||after.paceFactor)-(before.paceProvisional||before.paceFactor),loadProvisionalDelta=(after.loadProvisional||after.loadFactor)-(before.loadProvisional||before.loadFactor),readyDelta=after.readiness-before.readiness,predDelta=(Number.isFinite(after.predictionSec)&&Number.isFinite(before.predictionSec))?after.predictionSec-before.predictionSec:null;
  const reasons=[
    `Pace & Power — ${paceDecision.interpretation}`,
@@ -2782,16 +2816,23 @@ function postRunCoachUpdate(run,before,after){
  const distancePolicyNote='Distance & Load is learned separately from Pace & Power and commits at the weekly review. Readiness can still temporarily moderate an upcoming session without changing either learned pathway.';
  const decision=paceDecision.finalSignal>.18||loadDecision.finalSignal>.18?'This run added positive evidence to at least one pathway.':paceDecision.finalSignal<-.18||loadDecision.finalSignal<-.18?'This run added conservative evidence to at least one pathway.':'This run mainly reinforced the current two-pathway calibration.';
  const confidence=[paceDecision.confidence,loadDecision.confidence].includes('Developing')?'Developing':[paceDecision.confidence,loadDecision.confidence].includes('Moderate')?'Moderate':'High';
- return{createdAt:new Date().toISOString(),score,evidenceQuality:details?.evidenceQuality||'limited',before,after,paceProvisionalDelta,loadProvisionalDelta,readinessDelta:readyDelta,predictionDeltaSec:predDelta,reasons:reasons.slice(0,7),impact,nextChange,prescriptionChanges:prescriptionChanges.slice(0,6),distancePolicyNote,confidence,decision,twoPathway:two,decisionEngine:paceDecision};
+ return{createdAt:new Date().toISOString(),score,evidenceQuality:details?.evidenceQuality||'limited',before,after,paceProvisionalDelta,loadProvisionalDelta,readinessDelta:readyDelta,predictionDeltaSec:predDelta,reasons:reasons.slice(0,7),impact,nextChange,prescriptionChanges:prescriptionChanges.slice(0,6),distancePolicyNote,confidence,decision,twoPathway:two,pathwayTrace:{pace:paceTrace,load:loadTrace},decisionEngine:paceDecision};
 }
 function postRunCoachUpdateHtml(r){
  const u=r?.coachUpdate;if(!u)return '';
  const plan=r.planId?state.plan.find(p=>p.id===r.planId):null,two=u.twoPathway||twoPathwayDecisionForRun(r,plan),pd=two.pace,ld=two.load;
  const future=(u.prescriptionChanges||[]).length?`<details class="postRunProjectedImpact"><summary>Projected impact at next weekly review</summary><div class="futurePrescriptionList">${u.prescriptionChanges.map(x=>{const distChanged=Math.abs(Number(x.distanceDeltaKm))>=.05,paceChanged=Math.abs(Number(x.paceDeltaSec))>=.5,powerChanged=Math.abs(Number(x.powerDeltaW))>=1;return`<div class="futurePrescriptionRow"><div><strong>${esc(fmtDate(x.date))} · ${esc(x.type)}</strong><small>${distChanged?`${Number(x.beforeDistance).toFixed(1)} → ${Number(x.afterDistance).toFixed(1)} km`:`${Number(x.afterDistance).toFixed(1)} km · held`}</small></div><div><span>${paceChanged?`${pace(x.beforePace)} → ${pace(x.afterPace)}`:`${pace(x.afterPace)} · unchanged`}</span><span>${powerChanged?`${Math.round(x.beforePower)} → ${Math.round(x.afterPower)} W`:`${Math.round(x.afterPower)} W · unchanged`}</span></div></div>`}).join('')}</div><p class="muted compact">${esc(u.distancePolicyNote||'')}</p></details>`:'';
- const branch=(title,d,delta)=>`<div class="pathwayDecisionBranch"><small>${title}</small><strong>${esc(d.action)}</strong><span>${d.finalSignal>=0?'+':''}${d.finalSignal.toFixed(2)} integrated signal · ${d.confidence}% confidence</span><p>${esc(d.interpretation)}</p><details><summary>Evidence for this pathway</summary>${(d.signals||[]).map(s=>`<div class="decisionSignalRow"><span>${esc(s.name)}</span><b>${s.value>=0?'+':''}${Number(s.value).toFixed(2)}</b><small>${esc(s.detail)}</small></div>`).join('')}<div class="decisionFormula"><span>Provisional factor effect</span><b>${esc(signedFactorDelta(Number(delta)||0))}</b></div></details></div>`;
+ const branch=(title,d,trace)=>{const rows=(trace.weeklyRows||[]).map(x=>`<div class="evidenceBucketRow"><span>${fmtDate(x.run.date)} · ${esc(x.run.type)}</span><b>${signedFactorDelta(x.contribution)}</b></div>`).join('');return`<div class="pathwayDecisionBranch evidenceChain"><small>${title}</small><strong>${esc(d.action)}</strong><p>${esc(d.interpretation)}</p><div class="evidenceChainSteps">
+ <div><i>1</i><span><small>RAW RUN EVIDENCE</small><b>${trace.rawSignal>=0?'+':''}${trace.rawSignal.toFixed(2)}</b><em>Integrated observation before confidence and safeguards.</em></span></div>
+ <div><i>2</i><span><small>EVIDENCE CONFIDENCE</small><b>${d.confidence} · ${Math.round(trace.confidenceWeight*100)}% weight</b><em>${d.confidenceReasons?.length?esc(d.confidenceReasons.join(' · ')):'No confidence reduction applied.'}</em></span></div>
+ <div><i>3</i><span><small>SAFEGUARD / ACCEPTED SIGNAL</small><b>${trace.acceptedSignal>=0?'+':''}${trace.acceptedSignal.toFixed(2)}</b><em>${esc(trace.safeguard)}</em></span></div>
+ <div><i>4</i><span><small>ACCEPTED CONTRIBUTION FROM THIS RUN</small><b>${signedFactorDelta(trace.acceptedContribution)}</b><em>${trace.acceptedSignal.toFixed(2)} × ${trace.confidenceWeight.toFixed(2)} × ${(trace.learningRate*100).toFixed(2)}% learning rate</em></span></div>
+ <div><i>5</i><span><small>ACCUMULATED EVIDENCE THIS WEEK</small><b>${signedFactorDelta(trace.weeklyBucket)}</b><em>${trace.weeklyRows?.length||0} run contribution${(trace.weeklyRows?.length||0)===1?'':'s'} in the current bucket.</em></span></div>
+ <div><i>6</i><span><small>PROJECTED NEXT FACTOR</small><b>${trace.applied.toFixed(3)} → ${trace.projected.toFixed(3)}</b><em>${esc(trace.status)}</em></span></div>
+ </div><details><summary>Show underlying evidence and weekly bucket</summary>${(d.signals||[]).map(s=>`<div class="decisionSignalRow"><span>${esc(s.name)}</span><b>${s.value>=0?'+':''}${Number(s.value).toFixed(2)}</b><small>${esc(s.detail)}</small></div>`).join('')}<div class="evidenceBucketList"><b>Weekly accepted contributions</b>${rows||'<p class="muted compact">No accepted contributions yet.</p>'}</div>${trace.thresholdBlocked?`<div class="evidenceThresholdNotice"><b>Why the projected factor is still unchanged</b><p>The evidence was accepted into the bucket, but Pace & Power uses a stability threshold before a small accumulated change is displayed as a new provisional factor.</p><p>Raw projected factor before that threshold: <b>${trace.rawProjected.toFixed(4)}</b>.</p></div>`:''}</details></div>`};
  return `<section class="postRunCoachUpdate"><div class="postRunCoachHead"><div><span>POST-RUN COACH UPDATE</span><h3>${esc(u.decision)}</h3></div><b>${esc(u.confidence)} confidence</b></div>
  <div class="postRunFactorGrid"><div><small>Pace & Power applied</small><strong>${Number(u.after?.paceFactor||1).toFixed(3)}</strong><em>Next review ${Number(u.after?.paceProvisional||u.after?.paceFactor||1).toFixed(3)} · ${esc(signedFactorDelta(Number(u.paceProvisionalDelta)||0))}</em></div><div><small>Distance & Load applied</small><strong>${Number(u.after?.loadFactor||1).toFixed(3)}</strong><em>Next review ${Number(u.after?.loadProvisional||u.after?.loadFactor||1).toFixed(3)} · ${esc(signedFactorDelta(Number(u.loadProvisionalDelta)||0))}</em></div><div><small>Readiness</small><strong>${Number(u.after?.readiness||1).toFixed(3)}</strong><em>Temporary overlay · ${esc(signedFactorDelta(Number(u.readinessDelta)||0))}</em></div></div>
- <section class="twoPathwayDecisionEngine"><div class="decisionEngineHead"><div><small>UNIFIED TWO-PATHWAY DECISION ENGINE</small><h4>One evidence set · two independent learning decisions</h4></div></div><div class="decisionFlowCompact"><div><small>OBSERVATIONS</small><b>Workout + FIT + comparable runs + personal response</b></div><i>→</i><div><small>COACH INTERPRETATION</small><b>Capability vs load tolerance</b></div></div><div class="pathwayDecisionGrid">${branch('PACE & POWER',pd,u.paceProvisionalDelta)}${branch('DISTANCE & LOAD',ld,u.loadProvisionalDelta)}</div><div class="readinessSeparate"><small>RECOVERY OVERLAY</small><b>Readiness ${Number(u.after?.readiness||1).toFixed(3)}</b><span>Temporary only — does not alter either learned pathway.</span></div></section>
+ <section class="twoPathwayDecisionEngine"><div class="decisionEngineHead"><div><small>UNIFIED TWO-PATHWAY DECISION ENGINE</small><h4>One evidence set · two independent learning decisions</h4></div></div><div class="decisionFlowCompact"><div><small>OBSERVATIONS</small><b>Workout + FIT + comparable runs + personal response</b></div><i>→</i><div><small>COACH INTERPRETATION</small><b>Capability vs load tolerance</b></div></div><div class="pathwayDecisionGrid">${branch('PACE & POWER',pd,pathwayEvidenceTrace(r,'pace'))}${branch('DISTANCE & LOAD',ld,pathwayEvidenceTrace(r,'load'))}</div><div class="readinessSeparate"><small>RECOVERY OVERLAY</small><b>Readiness ${Number(u.after?.readiness||1).toFixed(3)}</b><span>Temporary only — does not alter either learned pathway.</span></div></section>
  <div class="postRunCoachSection"><b>Why</b>${(u.reasons||[]).map(x=>`<p>${esc(x)}</p>`).join('')}</div><div class="postRunCoachSection"><b>What changed</b>${(u.impact||[]).map(x=>`<p>${esc(x)}</p>`).join('')}</div>${future}<div class="postRunNext"><b>What this changes next</b><p>${esc(u.nextChange||'No immediate prescription change.')}</p></div></section>`;
 }
 
