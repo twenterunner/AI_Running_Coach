@@ -1,4 +1,4 @@
-AI Running Coach v10.6.1 Stable — build 16010
+AI Running Coach v10.6.2 Stable — build 16020
 
 Deployment
 ----------
@@ -13,7 +13,7 @@ Replace only these six application files in the GitHub Pages repository:
 
 Retain your existing image assets separately and unchanged. The image references remain exactly as supplied in v10.0.32, including their existing cache-query values. Keep the separately managed icon, favicon, Apple touch icon and social-preview files beside these application files.
 
-After upgrading an installed PWA, fully close and reopen it once so cache arc-v1061-stable-16010-premium1 activates. Existing v10.x local data are migrated into schema 10330 and retained under a deterministic primary/mirror storage pair.
+After upgrading an installed PWA, fully close and reopen it once so cache arc-v1062-stable-16020-teal1 activates. Existing v10.x local data are migrated into schema 10330 and retained under a deterministic primary/mirror storage pair.
 
 
 UI refinement release
@@ -430,3 +430,13 @@ v10.6.1 Unified Teal Design System
 - Plan workout cards retain workout-type icons but no longer change the card surface color.
 - Applied across Today, Plan, Log, Progress, Recovery and Injury/Rehab.
 - No coaching/model logic changed.
+
+
+v10.6.2 Teal hierarchy + exercise visuals
+------------------------------------------
+- Applies one consistent teal visual hierarchy across all tabs: level 1 = dominant teal hero/decision, level 2 = supporting teal cards, level 3 = quiet detail, with one foldout treatment everywhere.
+- Removes inherited white/yellow card fills from the main information hierarchy and uses semantic amber/red/green only as compact status accents.
+- Keeps weekday names with dates throughout plan, run, recovery and rehabilitation views.
+- Rehabilitation exercise cards now use the existing rendered exercise pictures directly in the cards, show target-muscle chips, clearer technique cues, and open the full image in the app modal when tapped.
+- Exercise images remain flat root-level repository files (no assets folder). Expected filenames: 01_slow_calf_raise.png through 13_double_leg_bridge.png as already referenced by the app.
+- No training, prediction, recovery, injury, pathway or scoring equations were changed.

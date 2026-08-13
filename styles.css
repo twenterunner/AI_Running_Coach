@@ -1654,7 +1654,7 @@ details>summary{transition:background .15s ease,color .15s ease}details>summary:
 
 
 /* ============================================================
-   v10.6.1 Unified Teal Information-Level Design System
+   v10.6.2 Unified Teal Information-Level Design System
    ============================================================ */
 
 :root{
@@ -1951,4 +1951,135 @@ button,.buttonLike,.todayInlineLink,.logProgressLink,.coachPlanLink{
   .uiLevel2{padding:12px !important}
   .uiLevel3{padding:10px !important}
   details>summary{padding:10px 11px !important}
+}
+
+/* ============================================================
+   v10.6.2 Render-matched teal hierarchy
+   One visual grammar across Today / Plan / Log / Progress /
+   Recovery / Injury / Settings. Semantic colours are accents only.
+   ============================================================ */
+:root{
+  --app-bg:#073b46;
+  --app-bg-2:#052f38;
+  --teal-l1:#08717a;
+  --teal-l1-2:#0b7f82;
+  --teal-l2:#0b5d68;
+  --teal-l2-2:#0d6570;
+  --teal-l3:#104f59;
+  --teal-fold:#0c5661;
+  --teal-line:rgba(151,232,225,.18);
+  --teal-line-strong:rgba(151,232,225,.30);
+  --teal-text:#f5ffff;
+  --teal-muted:#b7d6d6;
+  --teal-dim:#89afb0;
+  --teal-accent:#53d9d5;
+  --teal-good:#78d5a5;
+  --teal-warn:#efb25c;
+  --teal-bad:#ef8585;
+  --ui-ink:var(--teal-text);
+  --ui-muted:var(--teal-muted);
+  --ui-line:var(--teal-line);
+}
+
+html,body{background:var(--app-bg-2)!important;color:var(--teal-text)!important}
+body{background:linear-gradient(180deg,#064553 0,#073943 44%,#052f38 100%) fixed!important}
+main{background:transparent!important}
+.topbar{background:linear-gradient(180deg,#064d5e,#063f4b)!important;box-shadow:0 1px 0 var(--teal-line),0 10px 30px #001b2180!important}
+nav,.mobileBottomNav{background:#063c46!important;border-color:var(--teal-line)!important}
+nav button{background:transparent!important;color:var(--teal-muted)!important}
+nav button.active{background:#0b6871!important;color:#fff!important}
+.sectionTitle h2,.sectionTitle p,.panelHead h3,.panelHead p{color:inherit!important}
+.sectionTitle p{color:var(--teal-muted)!important}
+
+/* L1 = the answer / decision / current state */
+.uiLevel1,.aiCoachBriefing.uiLevel1,.canonicalAdaptationHome.uiLevel1,.weeklyReviewCard.uiLevel1,
+.recoveryConclusion.uiLevel1,.rehabTodayFocus.uiLevel1,.hero,.outlookHero{
+  background:linear-gradient(145deg,var(--teal-l1-2),var(--teal-l1))!important;
+  color:var(--teal-text)!important;border:1px solid var(--teal-line-strong)!important;
+  box-shadow:0 12px 28px #001e2460!important;
+}
+.uiLevel1 p,.uiLevel1 span,.uiLevel1 small,.uiLevel1 .muted,.hero p{color:#d2eceb!important}
+
+/* L2 = supporting cards / interpretation */
+.uiLevel2,.panel,.workout,.runCard,.injuryTopicCard,.todaySupportCard,.intervalAnalysisCard,
+.comparableRuns,.postRunCoachUpdate,.adaptationVisualCard,.modelValidationPanel,.readinessHero,
+.recoveryStatus,.weekHeader,.miniSession,.pillarCard,.personalDimension,.predictionPanel,
+.readinessPanel,.importBox,.programmeTimelinePanel,.planMixPanel{
+  background:linear-gradient(145deg,var(--teal-l2-2),var(--teal-l2))!important;
+  color:var(--teal-text)!important;border:1px solid var(--teal-line)!important;
+  box-shadow:none!important;
+}
+.panel h1,.panel h2,.panel h3,.panel h4,.panel strong,.panel b,
+.workout h3,.runCard h3,.injuryTopicCard h4,.uiLevel2 h1,.uiLevel2 h2,.uiLevel2 h3,.uiLevel2 h4,.uiLevel2 strong,.uiLevel2 b{color:var(--teal-text)!important}
+.panel p,.panel span,.panel small,.panel .muted,.workout p,.workout span,.runCard p,.runCard span,
+.injuryTopicCard p,.injuryTopicCard span,.injuryTopicCard small,.uiLevel2 p,.uiLevel2 span,.uiLevel2 small,.uiLevel2 .muted{color:var(--teal-muted)!important}
+
+/* L3 = evidence / metrics / inputs */
+.uiLevel3,.metric-card,.metricCell,.guideGrid>div,.target,.supportMetric,.canonicalPathMetrics>div,
+.recoveryQuickGrid>div,.scienceProvenance>div,.comparisonMetric,.powerCoverage,.coachPlainLanguage,
+.evidenceDriver,.whyDecisionResult,.intervalVisualMetrics>div,.repDotBlock,.adherenceTile,
+.prognosisStrip>div,.injuryKpiGrid>div,.clinicalReasoningGrid>div,.todayPlanGrid>div,
+.recoveryScoreWhy,.timelineReason,.comparisonRow,.criterion,.milestone,.checkInHistoryRow,
+.formGrid .field input,.formGrid .field select,.formGrid .field textarea,.field input,.field select,.field textarea{
+  background:var(--teal-l3)!important;color:var(--teal-text)!important;border:1px solid var(--teal-line)!important;box-shadow:none!important;
+}
+.metric-card span,.metric-card small,.metricCell small,.target small,.guideGrid p,.adherenceTile span,.criterion small,.milestone small,.field label{color:var(--teal-muted)!important}
+input::placeholder,textarea::placeholder{color:#86aaac!important}
+select option{background:#104f59;color:#fff}
+
+/* One foldout treatment everywhere */
+details,details.uiLevel3,.uiLevel1 details,.uiLevel2 details{
+  background:var(--teal-fold)!important;border:1px solid var(--teal-line)!important;border-radius:13px!important;color:var(--teal-text)!important;
+}
+details>summary,.uiLevel1 details>summary,.uiLevel2 details>summary{
+  background:rgba(255,255,255,.035)!important;color:var(--teal-text)!important;border:0!important;
+}
+details[open]>summary{border-bottom:1px solid var(--teal-line)!important}
+details>summary:after{color:var(--teal-accent)!important}
+details p,details span,details small{color:var(--teal-muted)!important}
+details b,details strong{color:var(--teal-text)!important}
+
+/* Remove legacy white/yellow/semantic card fills */
+.note,.note.good,.note.warn,.note.bad,.executionNotice,.coachDecisionSafeguard,.validationCaution,
+.rehabStretchGoal,.powerCoverage.good,.powerCoverage.partial,.powerCoverage.missing,.status.completed,
+.status.missed,.status.today,.status.upcoming,.status.rest,.evidenceBadge{
+  background:rgba(255,255,255,.055)!important;color:var(--teal-text)!important;border-color:var(--teal-line)!important;
+}
+.note.good{border-left-color:var(--teal-good)!important}.note.warn{border-left-color:var(--teal-warn)!important}.note.bad{border-left-color:var(--teal-bad)!important}
+.status.completed,.executionBadge.complete{color:var(--teal-good)!important}.status.missed{color:var(--teal-bad)!important}.status.today,.evidenceBadge{color:var(--teal-accent)!important}
+
+/* Icons and visual cues */
+.workoutTypeIcon,.dateBox,.exerciseFallback{background:rgba(255,255,255,.07)!important;border:1px solid var(--teal-line)!important;color:var(--teal-accent)!important}
+.dateBox small,.dateBox span{color:var(--teal-muted)!important}.dateBox b{color:#fff!important}
+.workout:before,.adaptationVisualCard:before{background:var(--teal-accent)!important}
+.sectionTitle h2:before{display:inline-grid;place-items:center;width:28px;height:28px;margin-right:9px;border-radius:9px;background:rgba(83,217,213,.12);color:var(--teal-accent);font-size:15px;vertical-align:2px}
+#today .sectionTitle h2:before{content:'◉'}#plan .sectionTitle h2:before{content:'▣'}#runs .sectionTitle h2:before{content:'↗'}#dashboard .sectionTitle h2:before{content:'⌁'}#recovery .sectionTitle h2:before{content:'◌'}#injury .sectionTitle h2:before{content:'✚'}#settings .sectionTitle h2:before{content:'⚙'}
+
+/* Buttons */
+.primary,.todayInlineLink,.logProgressLink,.filePick{background:#0e7d83!important;color:#fff!important;border:1px solid rgba(255,255,255,.10)!important}
+.secondary,.buttonLike,.buttonRow button,.weekNav button{background:#0b5964!important;color:#eaffff!important;border:1px solid var(--teal-line)!important}
+.danger{color:#ffd1d1!important;border-color:rgba(239,133,133,.5)!important}
+
+/* Exercise pictures: actual root-level rendered assets + full-screen view */
+.todayExerciseGuides{display:grid;gap:10px;margin-top:14px}.todayExerciseGuides h5{display:flex;align-items:center;gap:8px;margin:0;color:#fff;font-size:13px}
+.exerciseDetail.visualExercise{padding:0!important;overflow:hidden!important;background:var(--teal-l2)!important}
+.exerciseDetail.visualExercise>summary{display:grid!important;grid-template-columns:92px minmax(0,1fr) auto;gap:12px;align-items:center;padding:9px!important}
+.exerciseImageButton{position:relative;width:92px;height:74px;padding:0;border:0!important;border-radius:10px!important;overflow:hidden;background:#073f49!important;color:#fff;cursor:zoom-in}
+.exerciseImageButton img{width:100%;height:100%;object-fit:cover;display:block}.exerciseImageButton>em{position:absolute;right:5px;bottom:5px;background:#052f38cc;color:#fff;font-style:normal;font-size:9px;padding:3px 5px;border-radius:6px}.exerciseImageButton.noImage{cursor:default}
+.exerciseFallback{width:100%;height:100%;display:flex;align-items:center;justify-content:center}.exerciseSummaryCopy{min-width:0}.exerciseSummaryCopy>b{display:block;font-size:14px!important}.exerciseSummaryCopy>small{display:block;margin:3px 0 6px;color:var(--teal-muted)!important}.exerciseChevron{font-style:normal;color:var(--teal-accent);font-size:11px;font-weight:800}
+.exerciseMuscles{display:flex!important;gap:5px;flex-wrap:wrap}.exerciseMuscles i{font-style:normal;font-size:9px;font-weight:800;letter-spacing:.02em;background:rgba(83,217,213,.11);color:#bff8f3;border:1px solid rgba(83,217,213,.20);border-radius:999px;padding:4px 6px}
+.exerciseGuide{padding:13px}.exercisePurpose{margin:0 0 12px!important;padding:10px!important;background:rgba(255,255,255,.045)!important;border:1px solid var(--teal-line)!important;border-radius:10px!important;color:#e8ffff!important}.exerciseInstructionBlock ol{padding-left:20px}.exerciseInstructionBlock li{margin:7px 0;color:#d8eeee}.exerciseRules{display:grid;grid-template-columns:1fr 1fr;gap:9px}.exerciseRules>div{background:rgba(255,255,255,.045);border:1px solid var(--teal-line);border-radius:10px;padding:10px}
+.exerciseImageViewer{max-width:620px;margin:auto;color:var(--teal-text)}.exerciseViewerHeading small{color:var(--teal-accent);font-weight:900;letter-spacing:.08em}.exerciseViewerHeading h3{margin:4px 0 9px}.exerciseImageViewer>img{width:100%;max-height:65vh;object-fit:contain;border-radius:16px;background:#062f38;border:1px solid var(--teal-line);margin:14px 0}.exerciseImageViewer p{color:var(--teal-muted)}
+.modal{background:#001a20d9!important}.modalCard{background:#073f49!important;color:#fff!important;border:1px solid var(--teal-line)!important}.close{background:#0b5964!important;color:#fff!important}
+
+/* Reduce duplicated chrome and keep hierarchy tight */
+.planPrimaryHead p,.importBox>div>p+.muted,.rehabCalendarFoot{max-width:760px}
+.panelHead p.compact,.sectionTitle p{line-height:1.35}
+.appFooter{background:#052f38!important;color:var(--teal-dim)!important;border-color:var(--teal-line)!important}
+
+@media(max-width:620px){
+  main{padding-left:10px!important;padding-right:10px!important}
+  .panel,.uiLevel1,.uiLevel2,.injuryTopicCard{border-radius:14px!important}
+  .exerciseDetail.visualExercise>summary{grid-template-columns:78px minmax(0,1fr);gap:10px}.exerciseImageButton{width:78px;height:66px}.exerciseChevron{display:none}
+  .exerciseRules{grid-template-columns:1fr}.sectionTitle p{font-size:11px!important}
 }
