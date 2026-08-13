@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '10.0.55';
-  const BUILD = 10550;
+  const VERSION = '10.1.0';
+  const BUILD = 11000;
   const SCHEMA = 10330;
   const PRIMARY_STORAGE_KEY = 'arc_v10330_web';
   const MIRROR_STORAGE_KEY = 'arc_v10330_mirror';
@@ -2419,6 +2419,8 @@ function postRunCoachUpdate(run,before,after){
  if(score!=null){if(score>82)reasons.unshift(`${run.type} execution scored ${score}/100, adding positive Pace & Power evidence.`);else if(score===82)reasons.unshift(`${run.type} execution scored ${score}/100, neutral for Pace & Power calibration.`);else reasons.unshift(`${run.type} execution scored ${score}/100${evidenceWeight<.35?', but low-confidence negative evidence is protected from reducing established capability.':', providing negative Pace & Power evidence.'}`);}
  if(Number.isFinite(run.powerDrift))reasons.push(`Power-based cardiac drift was ${Number(run.powerDrift).toFixed(1)}%, contributing to execution and load-tolerance evidence where applicable.`);
  if(Number.isFinite(run.rpe))reasons.push(`RPE ${Number(run.rpe).toFixed(0)}/10 was included in the session-specific execution score.`);
+ const comparison=comparableRunAnalysis(run);
+ if(comparison&&comparison.confidence!=='Low'&&Number.isFinite(comparison.efficiencyDelta))reasons.push(`Versus ${comparison.count} comparable ${comparison.family} runs, efficiency was ${Math.abs(comparison.efficiencyDelta).toFixed(1)}% ${comparison.efficiencyDelta>=0?'better':'worse'} (${comparison.confidence.toLowerCase()} comparison confidence).`);
  if(plan)reasons.push(`${Number(run.distanceKm).toFixed(1)} of ${Number(plan.distance).toFixed(1)} planned km was recorded and contributes to weekly completion.`);
  const paceDelta=after.paceFactor-before.paceFactor,paceProvisionalDelta=(after.paceProvisional||after.paceFactor)-(before.paceProvisional||before.paceFactor),loadDelta=after.loadFactor-before.loadFactor,readyDelta=after.readiness-before.readiness,predDelta=(Number.isFinite(after.predictionSec)&&Number.isFinite(before.predictionSec))?after.predictionSec-before.predictionSec:null;
  let impact=[];
@@ -2454,6 +2456,137 @@ function intervalAnalysisHtml(r){
  const calc=`<details class="intervalScoreCalc"><summary>How ${Number.isFinite(a.repScore)?a.repScore+'/100':'the score'} is calculated</summary><div class="intervalCalcRows">${Number.isFinite(a.paceComponent)?`<div><span>Prescribed-rep pace</span><b>${Math.round(a.paceComponent)}/100</b></div>`:''}${Number.isFinite(a.powerComponent)?`<div><span>Prescribed-rep power</span><b>${Math.round(a.powerComponent)}/100</b></div>`:''}<div><span>Base rep execution</span><b>${Number.isFinite(a.baseRepScore)?Math.round(a.baseRepScore)+'/100':'—'}</b></div>${a.extraPenalty?`<div class="penalty"><span>${a.extraReps} extra rep${a.extraReps===1?'':'s'}</span><b>−${a.extraPenalty.toFixed(0)}</b></div>`:''}${a.missingPenalty?`<div class="penalty"><span>${a.missingReps} missing rep${a.missingReps===1?'':'s'}</span><b>−${a.missingPenalty.toFixed(0)}</b></div>`:''}<div class="total"><span>Interval execution</span><b>${Number.isFinite(a.repScore)?a.repScore+'/100':'Not scored'}</b></div></div><p class="muted compact">Rep pace and power are scored on a true 0–100 scale with no artificial 45-point floor. Only prescribed reps count toward pace/power execution; extra reps can only add an adherence penalty and training load.</p></details>`;
  return`<section class="intervalAnalysisCard"><div class="intervalAnalysisHead"><div><span>INTERVAL-LEVEL FIT ANALYSIS</span><h3>${countText}</h3></div><b>${a.usableForScore&&Number.isFinite(a.repScore)?a.repScore+'/100':esc(a.quality)}</b></div><div class="intervalSummary"><div><small>Rep execution</small><strong>${a.usableForScore&&Number.isFinite(a.repScore)?a.repScore+'/100':'Not scored'}</strong></div><div><small>Rep consistency</small><strong>${Number.isFinite(a.consistencyCv)?a.consistencyCv.toFixed(1)+'% variation':'—'}</strong></div><div><small>Late-rep change</small><strong>${late}</strong></div></div>${powerDiag}${calc}<div class="intervalRepTable"><div class="intervalRepHeader"><b>Rep</b><b>Distance</b><b>Pace</b><b>Power</b><b>HR</b></div>${rows}</div><p class="muted compact">${esc(a.reason)} ${a.usableForScore?'High-confidence prescribed-repetition evidence replaces whole-run pace/power averages in execution scoring.':'Detection is shown for inspection only and does not replace whole-run execution evidence.'}</p></section>`;
 }
+
+function workoutFamily(type){
+ const t=String(type||'').toLowerCase();
+ if(/recovery|shakeout/.test(t))return'recovery';
+ if(/long run|specific long|race rehearsal/.test(t))return'long';
+ if(/interval|vo₂|vo2|fartlek|hill|repetition/.test(t))return'interval';
+ if(/threshold|tempo|marathon-specific|half-marathon-specific/.test(t))return'threshold';
+ if(/assessment|race/.test(t))return'assessment';
+ return'aerobic';
+}
+function runIntensityRatio(r){
+ const cp=Number(state.setup.criticalPower)||0,pw=Number(r.avgPower)||0;
+ if(cp>0&&pw>0)return pw/cp;
+ const hr=Number(r.avgHr)||0,thr=Number(state.setup.thresholdHr)||0;
+ return thr>0&&hr>0?hr/thr:null;
+}
+function injuryContextForRun(r){
+ const d=dte(r.date);
+ return(state.injuries||[]).some(i=>{
+   const start=dte(i.date),end=i.fullDate?dte(i.fullDate):new Date(start.getTime()+42*DAY);
+   return d>=start&&d<=end;
+ });
+}
+function comparableRunAnalysis(run){
+ if(!run)return null;
+ const family=workoutFamily(run.type),dur=Number(run.durationSec)||0,dist=Number(run.distanceKm)||0,intensity=runIntensityRatio(run),paceNow=metrics(run).pace;
+ const constrained=injuryContextForRun(run);
+ const pool=completedRuns(run.date).filter(r=>r.id!==run.id&&r.date<run.date&&workoutFamily(r.type)===family&&injuryContextForRun(r)===constrained);
+ const scored=pool.map(r=>{
+   const rd=Number(r.durationSec)||0,rk=Number(r.distanceKm)||0,ri=runIntensityRatio(r),rp=metrics(r).pace;
+   const simDur=dur&&rd?Math.max(0,1-Math.abs(rd-dur)/Math.max(dur,rd)):0;
+   const simDist=dist&&rk?Math.max(0,1-Math.abs(rk-dist)/Math.max(dist,rk)):0;
+   const simIntensity=Number.isFinite(intensity)&&Number.isFinite(ri)?Math.max(0,1-Math.abs(ri-intensity)/.22):.55;
+   const simPace=Number.isFinite(paceNow)&&Number.isFinite(rp)?Math.max(0,1-Math.abs(rp-paceNow)/Math.max(paceNow,rp)/.22):.55;
+   const exactType=r.type===run.type?1:.82;
+   const similarity=(simDur*.27+simDist*.18+simIntensity*.32+simPace*.13+exactType*.10)*100;
+   return{run:r,similarity};
+ }).filter(x=>x.similarity>=55).sort((a,b)=>b.similarity-a.similarity).slice(0,8);
+ const matches=scored.map(x=>x.run),sims=scored.map(x=>x.similarity);
+ const vals=(fn)=>matches.map(fn).filter(Number.isFinite);
+ const eff=vals(r=>metrics(r).efficiencyJ),drift=vals(r=>Number(r.powerDrift)),hr=vals(r=>Number(r.avgHr)),rpe=vals(r=>Number(r.rpe));
+ const current={efficiency:metrics(run).efficiencyJ,drift:Number(run.powerDrift),hr:Number(run.avgHr),rpe:Number(run.rpe)};
+ const baseline={efficiency:avg(eff),drift:avg(drift),hr:avg(hr),rpe:avg(rpe)};
+ const deltaPct=(v,b)=>Number.isFinite(v)&&Number.isFinite(b)&&b!==0?(v/b-1)*100:null;
+ const confidence=scored.length>=6&&avg(sims)>=80?'High':scored.length>=3&&avg(sims)>=68?'Moderate':'Low';
+ return{family,matches:scored,count:scored.length,medianSimilarity:scored.length?median(sims):null,confidence,current,baseline,
+   efficiencyDelta:deltaPct(current.efficiency,baseline.efficiency),
+   driftDelta:Number.isFinite(current.drift)&&Number.isFinite(baseline.drift)?current.drift-baseline.drift:null,
+   hrDelta:deltaPct(current.hr,baseline.hr),rpeDelta:Number.isFinite(current.rpe)&&Number.isFinite(baseline.rpe)?current.rpe-baseline.rpe:null};
+}
+function streamThirds(run){
+ const records=(run.fitRecords||[]).filter(r=>Number.isFinite(Number(r.t)));
+ if(records.length<30)return null;
+ const start=records[0].t,end=records.at(-1).t,total=end-start;if(!(total>0))return null;
+ const segment=(lo,hi)=>{
+   const rows=records.filter(r=>r.t>=start+total*lo&&r.t<=start+total*hi),powers=rows.map(r=>Number(r.power)).filter(v=>v>0),hrs=rows.map(r=>Number(r.hr)).filter(v=>v>0),speeds=rows.map(r=>Number(r.speed)).filter(v=>v>0);
+   const pw=avg(powers),hr=avg(hrs),speed=avg(speeds);
+   return{power:pw,hr,pace:speed>0?1000/speed:null,efficiency:Number.isFinite(pw)&&Number.isFinite(hr)&&hr>0?pw*60/hr:null};
+ };
+ return{early:segment(0,.333),middle:segment(.333,.667),late:segment(.667,1)};
+}
+function workoutIntelligence(run){
+ const plan=run.planId?state.plan.find(p=>p.id===run.planId):null,family=workoutFamily(plan?.type||run.type),details=workoutScoreDetails(run,plan),comp=comparableRunAnalysis(run),thirds=streamThirds(run),m=metrics(run);
+ const findings=[],positives=[],cautions=[];
+ const add=(kind,text)=>{findings.push({kind,text});(kind==='positive'?positives:cautions).push(text)};
+ if(family==='interval'){
+   const ia=run.intervalAnalysis;
+   if(ia?.usableForScore&&ia.scoredWork?.length){
+     if(ia.detectedReps===ia.expectedReps)add('positive',`All ${ia.expectedReps} prescribed repetitions were detected.`);
+     else if(ia.extraReps>0)add('caution',`${ia.extraReps} extra repetition${ia.extraReps===1?'':'s'} added load beyond the prescription.`);
+     else if(ia.missingReps>0)add('caution',`${ia.missingReps} prescribed repetition${ia.missingReps===1?' was':'s were'} not detected.`);
+     if(Number.isFinite(ia.consistencyCv))add(ia.consistencyCv<=3?'positive':ia.consistencyCv>7?'caution':'neutral',`Rep variation was ${ia.consistencyCv.toFixed(1)}%.`);
+     if(Number.isFinite(ia.fadePower))add(Math.abs(ia.fadePower)<=3?'positive':ia.fadePower<-6?'caution':'neutral',`Late-rep power was ${Math.abs(ia.fadePower).toFixed(1)}% ${ia.fadePower>=0?'higher':'lower'} than early-rep power.`);
+   } else add('caution','Interval structure could not be scored with high confidence; whole-run evidence remains secondary.');
+ } else if(family==='recovery'){
+   if(Number.isFinite(run.rpe))add(run.rpe<=3?'positive':run.rpe>=5?'caution':'neutral',`RPE was ${run.rpe}/10 for a recovery-focused session.`);
+   if(Number.isFinite(run.powerDrift))add(run.powerDrift<=3?'positive':run.powerDrift>6?'caution':'neutral',`Power-based cardiac drift was ${run.powerDrift.toFixed(1)}%.`);
+   if(plan&&Number(run.distanceKm)>Number(plan.distance)*1.08)add('caution','Extra distance reduced recovery specificity; faster or longer is not rewarded on a recovery day.');
+ } else if(family==='aerobic'){
+   if(Number.isFinite(run.powerDrift))add(run.powerDrift<=3?'positive':run.powerDrift>6?'caution':'neutral',`Aerobic cardiac drift was ${run.powerDrift.toFixed(1)}%.`);
+   if(comp&&Number.isFinite(comp.efficiencyDelta))add(comp.efficiencyDelta>=2?'positive':comp.efficiencyDelta<=-3?'caution':'neutral',`Efficiency was ${Math.abs(comp.efficiencyDelta).toFixed(1)}% ${comp.efficiencyDelta>=0?'above':'below'} the comparable-run baseline.`);
+ } else if(family==='long'){
+   if(thirds){
+     const e=thirds.early,l=thirds.late;
+     const effDelta=Number.isFinite(e.efficiency)&&Number.isFinite(l.efficiency)&&e.efficiency>0?(l.efficiency/e.efficiency-1)*100:null;
+     const powerDelta=Number.isFinite(e.power)&&Number.isFinite(l.power)&&e.power>0?(l.power/e.power-1)*100:null;
+     if(Number.isFinite(effDelta))add(effDelta>=-4?'positive':effDelta<=-8?'caution':'neutral',`Late-run efficiency was ${Math.abs(effDelta).toFixed(1)}% ${effDelta>=0?'higher':'lower'} than the opening third.`);
+     if(Number.isFinite(powerDelta))add(Math.abs(powerDelta)<=4?'positive':powerDelta<-7?'caution':'neutral',`Late-run power was ${Math.abs(powerDelta).toFixed(1)}% ${powerDelta>=0?'higher':'lower'} than the opening third.`);
+   }
+   if(Number.isFinite(run.powerDrift))add(run.powerDrift<=4?'positive':run.powerDrift>7?'caution':'neutral',`Whole-run power-based drift was ${run.powerDrift.toFixed(1)}%.`);
+ } else if(family==='threshold'){
+   if(thirds){
+     const e=thirds.early,l=thirds.late,pd=Number.isFinite(e.power)&&Number.isFinite(l.power)&&e.power>0?(l.power/e.power-1)*100:null;
+     if(Number.isFinite(pd))add(Math.abs(pd)<=3?'positive':Math.abs(pd)>=7?'caution':'neutral',`Power changed ${pd>=0?'+':''}${pd.toFixed(1)}% from early to late.`);
+     if(Number.isFinite(e.hr)&&Number.isFinite(l.hr))add('neutral',`Heart rate developed from ${Math.round(e.hr)} to ${Math.round(l.hr)} bpm.`);
+   }
+ } else if(family==='assessment'){
+   add('neutral','This session is treated primarily as benchmark evidence rather than a normal training-response session.');
+ }
+ if(Number(run.pain)>=3)add('caution',`Pain was ${Number(run.pain)}/10 and limits positive interpretation.`);
+ let verdict='Solid execution';
+ if(details?.score>=90&&cautions.length===0)verdict='Excellent execution';
+ else if(details?.score<70||cautions.length>=2)verdict='Execution needs attention';
+ else if(positives.length>=2)verdict='Strong session';
+ let interpretation='';
+ if(family==='recovery')interpretation=cautions.length?'The session may have been too demanding for a recovery objective.':'The session stayed appropriately restorative.';
+ else if(family==='long')interpretation=cautions.length?'Durability or late-run stability deserves attention.':'The long-run response was stable enough to support durability development.';
+ else if(family==='interval')interpretation=cautions.length?'Quality work was completed, but prescription adherence or repetition stability limits progression confidence.':'The quality-session structure and repetition response were well controlled.';
+ else if(family==='threshold')interpretation=cautions.length?'The target may be sustainable, but physiological or late-session cost argues against automatic progression.':'The sustained-quality stimulus was delivered with good control.';
+ else if(family==='aerobic')interpretation=comp?.confidence!=='Low'&&Number.isFinite(comp.efficiencyDelta)?`Aerobic cost was ${comp.efficiencyDelta>=0?'better':'worse'} than the recent comparable baseline.`:'The session is interpreted mainly from intensity control and aerobic stability.';
+ else interpretation='This session provides useful benchmark evidence.';
+ return{family,verdict,interpretation,findings,details,comp,thirds};
+}
+function workoutIntelligenceHtml(run){
+ const w=workoutIntelligence(run),icon=w.family==='long'?'◒':w.family==='interval'?'↯':w.family==='recovery'?'↺':w.family==='threshold'?'◆':'↗';
+ const findings=w.findings.slice(0,5).map(f=>`<div class="wiFinding ${f.kind}"><i>${f.kind==='positive'?'✓':f.kind==='caution'?'!':'•'}</i><span>${esc(f.text)}</span></div>`).join('');
+ return`<section class="workoutIntelligence"><div class="wiHead"><span class="wiIcon">${icon}</span><div><small>WORKOUT INTELLIGENCE 2.0</small><h3>${esc(w.verdict)}</h3></div><b>${w.details?.score!=null?w.details.score+'/100':'Analysed'}</b></div><p class="wiInterpretation">${esc(w.interpretation)}</p><div class="wiFindings">${findings||'<p class="muted">Not enough detailed evidence for session-specific findings.</p>'}</div></section>`;
+}
+function comparableRunHtml(run){
+ const c=comparableRunAnalysis(run);
+ if(!c)return'';
+ if(!c.count)return`<section class="comparableRuns"><div class="comparableHead"><div><small>COMPARABLE RUNS</small><h3>Personal baseline building</h3></div><span>Low confidence</span></div><p>No sufficiently similar historical ${esc(c.family)} runs are available yet. This run will help create the future personal baseline.</p></section>`;
+ const metric=(label,current,baseline,format,betterHigh=true)=>{
+   if(!Number.isFinite(current)||!Number.isFinite(baseline))return'';
+   const d=betterHigh?(current/baseline-1)*100:current-baseline;
+   return`<div><small>${label}</small><strong>${format(current)}</strong><span>baseline ${format(baseline)} · ${d>=0?'+':''}${d.toFixed(1)}${betterHigh?'%':' pp'}</span></div>`;
+ };
+ const matches=c.matches.slice(0,5).map(x=>`<div class="comparableMatch"><span>${fmtDate(x.run.date)} · ${esc(x.run.type)}</span><b>${Math.round(x.similarity)}% similar</b></div>`).join('');
+ return`<section class="comparableRuns"><div class="comparableHead"><div><small>COMPARABLE RUNS</small><h3>${c.count} personal matches</h3></div><span>${c.confidence} confidence</span></div><p>Compared only with previous ${esc(c.family)} sessions in the same injury/training context. Median similarity ${Math.round(c.medianSimilarity)}%.</p><div class="comparableMetrics">${metric('Efficiency',c.current.efficiency,c.baseline.efficiency,v=>v.toFixed(1)+' J/beat',true)}${metric('Cardiac drift',c.current.drift,c.baseline.drift,v=>v.toFixed(1)+'%',false)}${metric('Heart rate',c.current.hr,c.baseline.hr,v=>Math.round(v)+' bpm',true)}${metric('RPE',c.current.rpe,c.baseline.rpe,v=>v.toFixed(1)+'/10',false)}</div><details><summary>Which runs were compared?</summary><div class="comparableMatchList">${matches}</div><p class="muted compact">Similarity weights: intensity 32%, duration 27%, distance 18%, pace 13% and exact workout type 10%. Low-confidence comparisons are descriptive only.</p></details></section>`;
+}
+
 function runExecutionBreakdownHtml(r){
  const plan=r.planId?state.plan.find(p=>p.id===r.planId):null,d=workoutScoreDetails(r,plan);
  if(!d)return'<section class="runExecutionBreakdown"><h3>Execution breakdown</h3><p class="muted">Not enough distance and duration information to calculate a score.</p></section>';
@@ -2461,9 +2594,9 @@ function runExecutionBreakdownHtml(r){
  const rows=d.components.map(c=>`<div class="executionCalcRow"><span>${esc(c.name)}</span><b>${Math.round(c.score)}/100</b><small>Effective weight ${Math.round(c.effectiveWeight*100)}%${c.reliability<1?` · ${Math.round(c.reliability*100)}% metric reliability`:''} · ${esc(c.detail)}</small></div>`).join('');
  const paceComp=d.components.find(c=>c.key==='pace'),powerComp=d.components.find(c=>c.key==='power');
  const conflict=paceComp&&powerComp&&Math.abs(paceComp.score-powerComp.score)>=12?`<div class="executionNotice"><b>Pace and power disagree</b><p>Terrain, wind, GPS or whole-run averaging may explain the difference. The coach treats this as mixed evidence rather than assuming either metric is correct on its own.</p></div>`:'';
- return `${intervalHtml}<section class="runExecutionBreakdown"><div class="executionBreakdownHead"><div><h3>Execution breakdown</h3><p class="muted compact">How this run delivered the intended physiological objective.</p></div><strong>${d.score}/100</strong></div><div class="executionObjective"><small>WORKOUT OBJECTIVE</small><b>${esc(d.objective)}</b><span>${esc(d.interpretation)} · ${esc(d.evidenceQuality)} evidence</span></div>${plan?`<p class="muted compact">Matched to ${fmtDate(plan.date)} · ${esc(plan.type)} · ${plan.distance.toFixed(1)} km.</p>`:'<p class="muted compact">Ad hoc run: only directly observable components are scored. Missing targets reduce evidence quality rather than being awarded neutral points.</p>'}${conflict}<div class="executionCalcTable">${rows}</div><div class="adjustmentCalcTotal"><span>Weighted score before pain adjustment</span><b>${Math.round(d.rawScore)}/100</b>${d.capReason?`<small>${esc(d.capReason)}</small>`:'<small>No pain-related cap applied.</small>'}</div></section>`;
+ return `${workoutIntelligenceHtml(r)}${comparableRunHtml(r)}${intervalHtml}<section class="runExecutionBreakdown"><div class="executionBreakdownHead"><div><h3>Execution breakdown</h3><p class="muted compact">How this run delivered the intended physiological objective.</p></div><strong>${d.score}/100</strong></div><div class="executionObjective"><small>WORKOUT OBJECTIVE</small><b>${esc(d.objective)}</b><span>${esc(d.interpretation)} · ${esc(d.evidenceQuality)} evidence</span></div>${plan?`<p class="muted compact">Matched to ${fmtDate(plan.date)} · ${esc(plan.type)} · ${plan.distance.toFixed(1)} km.</p>`:'<p class="muted compact">Ad hoc run: only directly observable components are scored. Missing targets reduce evidence quality rather than being awarded neutral points.</p>'}${conflict}<div class="executionCalcTable">${rows}</div><div class="adjustmentCalcTotal"><span>Weighted score before pain adjustment</span><b>${Math.round(d.rawScore)}/100</b>${d.capReason?`<small>${esc(d.capReason)}</small>`:'<small>No pain-related cap applied.</small>'}</div></section>`;
 }
-function renderRuns(){$('runList').innerHTML=state.runs.slice().sort((a,b)=>b.date.localeCompare(a.date)).map(r=>{let m=metrics(r),ws=workoutScore(r);return`<div class="runCard clickable" role="button" tabindex="0" aria-label="Open ${esc(fmtDate(r.date))} ${esc(r.type)} run details" data-run="${r.id}"><div class="runSummary"><div><h3>${fmtDate(r.date)} · ${esc(r.type)}</h3><p>${r.distanceKm.toFixed(2)} km · ${fmtTime(r.durationSec)} · ${pace(m.pace)}</p><p class="muted compact"><b>Plan:</b> ${esc(matchSummary(r))}${ws!=null?` · <b>Workout score ${ws}/100</b>`:''}</p><div class="runStats"><span>HR ${r.avgHr?Math.round(r.avgHr):'—'}</span><span>${r.avgPower?Math.round(r.avgPower):'—'} W</span><span>${dec(m.efficiencyJ,1)} J/beat</span><span>${Number.isFinite(r.powerDrift)?r.powerDrift.toFixed(1)+'% drift':'— drift'}</span><span>${r.hrv!==null&&r.hrv!==undefined&&Number.isFinite(Number(r.hrv))?Math.round(Number(r.hrv))+' ms HRV':'— HRV'}</span></div></div><span aria-hidden="true">›</span></div></div>`}).join('')||'<div class="panel">No completed runs saved yet.</div>'}
+function renderRuns(){$('runList').innerHTML=state.runs.slice().sort((a,b)=>b.date.localeCompare(a.date)).map(r=>{let m=metrics(r),ws=workoutScore(r),cr=comparableRunAnalysis(r),compareBadge=cr&&cr.confidence!=='Low'&&Number.isFinite(cr.efficiencyDelta)?`<span class="runCompareBadge ${cr.efficiencyDelta>=0?'better':'worse'}">${cr.efficiencyDelta>=0?'↑':'↓'} ${Math.abs(cr.efficiencyDelta).toFixed(1)}% vs similar</span>`:'';return`<div class="runCard clickable" role="button" tabindex="0" aria-label="Open ${esc(fmtDate(r.date))} ${esc(r.type)} run details" data-run="${r.id}"><div class="runSummary"><div><h3>${fmtDate(r.date)} · ${esc(r.type)}</h3><p>${r.distanceKm.toFixed(2)} km · ${fmtTime(r.durationSec)} · ${pace(m.pace)}</p><p class="muted compact"><b>Plan:</b> ${esc(matchSummary(r))}${ws!=null?` · <b>Workout score ${ws}/100</b>`:''} ${compareBadge}</p><div class="runStats"><span>HR ${r.avgHr?Math.round(r.avgHr):'—'}</span><span>${r.avgPower?Math.round(r.avgPower):'—'} W</span><span>${dec(m.efficiencyJ,1)} J/beat</span><span>${Number.isFinite(r.powerDrift)?r.powerDrift.toFixed(1)+'% drift':'— drift'}</span><span>${r.hrv!==null&&r.hrv!==undefined&&Number.isFinite(Number(r.hrv))?Math.round(Number(r.hrv))+' ms HRV':'— HRV'}</span></div></div><span aria-hidden="true">›</span></div></div>`}).join('')||'<div class="panel">No completed runs saved yet.</div>'}
 function migrateImportedPower(){
  let changed=false,weight=Number(state.setup.bodyWeight)||0;
  if(!weight)return;
