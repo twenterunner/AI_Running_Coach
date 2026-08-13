@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '10.4.7';
-  const BUILD = 14070;
+  const VERSION = '10.4.8';
+  const BUILD = 14080;
   const SCHEMA = 10330;
   const PRIMARY_STORAGE_KEY = 'arc_v10330_web';
   const MIRROR_STORAGE_KEY = 'arc_v10330_mirror';
@@ -779,7 +779,13 @@ function decisionSignalForRun(run,plan=run?.planId?state.plan.find(p=>p.id===run
  const personalModel=personalResponseModel(run.date,run.id),personal=personalPathwaySignal(run,personalModel,'pace'),personalSignal=personal.value;
  if(personalSignal!==0)signals.push({name:'Personal pace response',value:personalSignal,detail:personal.detail});
 
- let combined=performanceSignal*.58+comparableSignal*.24+costSignal*.12+personalSignal*.06;
+ const signalComponents=[
+   {key:'performance',label:'Performance capability',value:performanceSignal,weight:.58},
+   {key:'comparable',label:'Comparable-run efficiency',value:comparableSignal,weight:.24},
+   {key:'cost',label:'Physiological cost',value:costSignal,weight:.12},
+   {key:'personal',label:'Personal pace response',value:personalSignal,weight:.06}
+ ];
+ let combined=sum(signalComponents.map(x=>x.value*x.weight));
  const initialIntegratedSignal=combined;
  let conflict=false,interpretation='',safeguardNote='';
  if(performanceSignal>.25&&costSignal<-.25){conflict=true;combined=Math.min(combined*.25,.15);safeguardNote='Conflicting evidence safeguard: positive performance was damped because physiological cost was unusually high.';interpretation='Performance capability was positive, but physiological cost was unusually high. Pace progression is deliberately held back.'}
@@ -795,7 +801,7 @@ function decisionSignalForRun(run,plan=run?.planId?state.plan.find(p=>p.id===run
  if(combined<0&&confidenceWeight<.35){combined=0;safeguardNote=`Developing-confidence protection: the negative signal ${preProtectionSignal.toFixed(2)} is recorded, but is not accepted as a capability downgrade until evidence confidence increases.`;}
  const confidencePct=clamp(Math.round(confidenceWeight/.65*100),0,100),confidence=confidencePct>=75?'High':confidencePct>=45?'Moderate':'Developing';
  const action=combined>.25?'Positive Pace & Power evidence':combined<-.25?'Conservative Pace & Power evidence':'Hold Pace & Power';
- return{pathway:'pace',family,score,capabilityScore,signals,performanceSignal,comparableSignal,costSignal,personalSignal,personalResponse:personal,rawIntegratedSignal:initialIntegratedSignal,preProtectionSignal,finalSignal:clamp(combined,-1,1),baseConfidenceWeight:baseWeight,confidenceWeight,confidencePct,confidence,confidenceMultipliers,conflict,confidenceReasons,safeguardNote,interpretation,action,completion,comparison};
+ return{pathway:'pace',family,score,capabilityScore,signals,signalComponents,performanceSignal,comparableSignal,costSignal,personalSignal,personalResponse:personal,rawIntegratedSignal:initialIntegratedSignal,preProtectionSignal,finalSignal:clamp(combined,-1,1),baseConfidenceWeight:baseWeight,confidenceWeight,confidencePct,confidence,confidenceMultipliers,conflict,confidenceReasons,safeguardNote,interpretation,action,completion,comparison,componentDerivation:{performance:Number.isFinite(capabilityScore)?`(${capabilityScore.toFixed(1)} − 82) ÷ 18, bounded to −1…+1`:(Number.isFinite(score)&&score<65?`(${score} − 70) ÷ 30, bounded to −0.35…0`:'No direct capability signal'),comparable:comparison&&comparison.confidence!=='Low'&&Number.isFinite(comparison.efficiencyDelta)?`${comparison.efficiencyDelta.toFixed(1)}% ÷ 5, bounded to −1…+1`:'No Moderate/High-confidence comparable-run signal',cost:'Rules from RPE and, where relevant, cardiac drift',personal:personalSignal!==0?personal.detail:'No mature personal-response contribution'}};
 }
 
 function loadDecisionSignalForRun(run,plan=run?.planId?state.plan.find(p=>p.id===run.planId):null){
@@ -842,7 +848,13 @@ function loadDecisionSignalForRun(run,plan=run?.planId?state.plan.find(p=>p.id==
  const personalModel=personalResponseModel(run.date,run.id),personal=personalPathwaySignal(run,personalModel,'load'),personalSignal=personal.value;
  if(personalSignal!==0)signals.push({name:'Personal load response',value:personalSignal,detail:personal.detail});
 
- let combined=completionSignal*.40+toleranceSignal*.38+executionSignal*.14+personalSignal*.08;
+ const signalComponents=[
+   {key:'completion',label:'Prescribed load completion',value:completionSignal,weight:.40},
+   {key:'tolerance',label:'Load-tolerance response',value:toleranceSignal,weight:.38},
+   {key:'execution',label:'Execution support',value:executionSignal,weight:.14},
+   {key:'personal',label:'Personal load response',value:personalSignal,weight:.08}
+ ];
+ let combined=sum(signalComponents.map(x=>x.value*x.weight));
  const rawIntegratedSignal=combined;
  let safeguardNote='';
  const pain=Number(run.pain);
@@ -852,7 +864,7 @@ function loadDecisionSignalForRun(run,plan=run?.planId?state.plan.find(p=>p.id==
  const confidencePct=clamp(Math.round(confidenceWeight/.70*100),0,100),confidence=confidencePct>=75?'High':confidencePct>=45?'Moderate':'Developing';
  const action=combined>.18?'Positive Distance & Load evidence':combined<-.18?'Conservative Distance & Load evidence':'Hold Distance & Load';
  const interpretation=combined>.18?'The run provides positive evidence that this load was tolerated well.':combined<-.18?'The run provides evidence that load progression should be more conservative.':'The run does not materially change the current Distance & Load calibration.';
- return{pathway:'load',family,score,signals,completionSignal,toleranceSignal,executionSignal,personalSignal,personalResponse:personal,rawIntegratedSignal,finalSignal:clamp(combined,-1,1),baseConfidenceWeight:loadWeight,confidenceWeight,confidencePct,confidence,confidenceMultipliers,confidenceReasons,safeguardNote,interpretation,action,completion};
+ return{pathway:'load',family,score,signals,signalComponents,completionSignal,toleranceSignal,executionSignal,personalSignal,personalResponse:personal,rawIntegratedSignal,finalSignal:clamp(combined,-1,1),baseConfidenceWeight:loadWeight,confidenceWeight,confidencePct,confidence,confidenceMultipliers,confidenceReasons,safeguardNote,interpretation,action,completion,componentDerivation:{completion:Number.isFinite(completion)?`${Math.round(completion*100)}% completion → ${completionSignal>=0?'+':''}${completionSignal.toFixed(2)} by the completion rule`:'No matched planned distance',tolerance:toleranceDetails.length?toleranceDetails.join(' · '):'No strong run-specific tolerance observation',execution:Number.isFinite(score)?`${score}/100 execution → ${executionSignal>=0?'+':''}${executionSignal.toFixed(2)} support signal`:'No execution score',personal:personalSignal!==0?personal.detail:'No mature personal-response contribution'}};
 }
 function twoPathwayDecisionForRun(run,plan=run?.planId?state.plan.find(p=>p.id===run.planId):null){
  return{pace:decisionSignalForRun(run,plan),load:loadDecisionSignalForRun(run,plan)};
@@ -2855,12 +2867,52 @@ function postRunCoachUpdate(run,before,after){
  const confidence=[paceDecision.confidence,loadDecision.confidence].includes('Developing')?'Developing':[paceDecision.confidence,loadDecision.confidence].includes('Moderate')?'Moderate':'High';
  return{createdAt:new Date().toISOString(),score,evidenceQuality:details?.evidenceQuality||'limited',before,after,paceProvisionalDelta,loadProvisionalDelta,readinessDelta:readyDelta,predictionDeltaSec:predDelta,nextChange,prescriptionChanges:prescriptionChanges.slice(0,6),distancePolicyNote,confidence,decision,decisionSummary:{pace:{action:paceDecision.action,confidence:paceDecision.confidence},load:{action:loadDecision.action,confidence:loadDecision.confidence}}};
 }
+function pathwayCalculationDetailsHtml(d,t){
+ const comps=d.signalComponents||[];
+ const fmtSigned=(v,digits=2)=>`${Number(v)>=0?'+':''}${Number(v).toFixed(digits)}`;
+ const weightedRows=comps.map(c=>{
+   const product=c.value*c.weight,derivation=d.componentDerivation?.[c.key]||'';
+   return`<div class="pathCalcComponent"><div><b>${esc(c.label)}</b><small>${esc(derivation)}</small></div><span>${fmtSigned(c.value)} × ${(c.weight*100).toFixed(0)}%</span><strong>${fmtSigned(product,3)}</strong></div>`;
+ }).join('');
+ const sumExpr=comps.map(c=>`(${fmtSigned(c.value)} × ${(c.weight*100).toFixed(0)}%)`).join(' + ');
+ const raw=t.rawSignal;
+ const accepted=t.acceptedSignal;
+ const safeguardChanged=Math.abs(raw-accepted)>=.005;
+ const confidenceBase=d.baseConfidenceWeight??t.confidenceWeight;
+ const multiplierText=(d.confidenceMultipliers||[]).length?(d.confidenceMultipliers||[]).map(m=>` × ${m.factor.toFixed(2)} (${esc(m.label)})`).join(''):'';
+ const contributionCalc=accepted*t.confidenceWeight*t.learningRate;
+ return`<div class="pathCalcAudit">
+   <section>
+     <h5>1. How the Run signal is calculated</h5>
+     <div class="pathCalcComponents">${weightedRows}</div>
+     <div class="pathCalcEquation"><span>Weighted sum</span><code>${sumExpr}</code><b>= ${fmtSigned(raw)}</b></div>
+     <p class="pathCalcNote">The component values are normalized evidence signals, not percentages. The pathway weights sum to 100%.</p>
+   </section>
+   <section>
+     <h5>2. Safeguard / accepted signal</h5>
+     <div class="pathCalcStep"><span>Run signal</span><b>${fmtSigned(raw)}</b></div>
+     <div class="pathCalcStep"><span>Accepted signal</span><b>${fmtSigned(accepted)}</b></div>
+     <p>${safeguardChanged?esc(t.safeguard):'No safeguard changed the Run signal.'}</p>
+   </section>
+   <section>
+     <h5>3. Learning confidence</h5>
+     <div class="pathCalcEquation"><span>Confidence calculation</span><code>${Math.round(confidenceBase*100)}%${multiplierText}</code><b>= ${Math.round(t.confidenceWeight*100)}%</b></div>
+     <p>${d.confidenceReasons?.length?esc(d.confidenceReasons.join(' · ')):'No confidence reduction applied.'}</p>
+   </section>
+   <section>
+     <h5>4. How the Accepted contribution is calculated</h5>
+     <div class="pathCalcEquation contribution"><span>Factor contribution</span><code>${fmtSigned(accepted)} × ${t.confidenceWeight.toFixed(2)} × ${(t.learningRate*100).toFixed(2)}%</code><b>= ${signedFactorDelta(contributionCalc)}</b></div>
+     <p>This is the amount this run contributes to the learned pathway. It is not the new factor itself.</p>
+   </section>
+ </div>`;
+}
+
 function postRunCoachUpdateHtml(r){
  const u=r?.coachUpdate;if(!u)return '';
  const plan=r.planId?state.plan.find(p=>p.id===r.planId):null,two=twoPathwayDecisionForRun(r,plan),pd=two.pace,ld=two.load,pt=pathwayEvidenceTrace(r,'pace'),lt=pathwayEvidenceTrace(r,'load');
  const branch=(title,d,t)=>{
    const accepted=Math.abs(t.acceptedContribution)>=.00005;
-   return`<section class="pathwayDecisionBranch logContributionOnly"><div class="logContributionHead"><div><small>${title}</small><h4>${esc(d.action)}</h4></div><b>${accepted?signedFactorDelta(t.acceptedContribution):'0.000'}</b></div><div class="logContributionBody"><div><small>RUN SIGNAL</small><strong>${t.rawSignal>=0?'+':''}${t.rawSignal.toFixed(2)}</strong></div><div><small>ACCEPTED CONTRIBUTION</small><strong>${accepted?signedFactorDelta(t.acceptedContribution):'0.000'}</strong></div></div><p>${esc(d.interpretation)}</p><small class="learningConfidence">${d.confidence} confidence · ${Math.round(t.confidenceWeight*100)}% learning confidence weight</small>${!accepted&&t.safeguard?`<div class="logSafeguard">${esc(t.safeguard)}</div>`:''}<details><summary>Calculation details</summary><div class="confidenceDerivation"><b>Learning confidence weight</b><p>Base ${Math.round((d.baseConfidenceWeight??t.confidenceWeight)*100)}%${(d.confidenceMultipliers||[]).length?` ${d.confidenceMultipliers.map(m=>`× ${m.factor.toFixed(2)} (${esc(m.label)})`).join(' ')}`:''} = <strong>${Math.round(t.confidenceWeight*100)}%</strong></p></div><p class="compactFormula">Accepted signal ${t.acceptedSignal>=0?'+':''}${t.acceptedSignal.toFixed(2)} × learning confidence ${t.confidenceWeight.toFixed(2)} × learning rate ${(t.learningRate*100).toFixed(2)}% = <b>${signedFactorDelta(t.acceptedContribution)}</b></p>${(d.signals||[]).map(s=>`<div class="decisionSignalRow"><span>${esc(s.name)}</span><b>${s.value>=0?'+':''}${Number(s.value).toFixed(2)}</b><small>${esc(s.detail)}</small></div>`).join('')}</details></section>`;
+   return`<section class="pathwayDecisionBranch logContributionOnly"><div class="logContributionHead"><div><small>${title}</small><h4>${esc(d.action)}</h4></div></div><div class="logContributionBody"><div><small>RUN SIGNAL</small><strong>${t.rawSignal>=0?'+':''}${t.rawSignal.toFixed(2)}</strong></div><div><small>ACCEPTED CONTRIBUTION</small><strong>${accepted?signedFactorDelta(t.acceptedContribution):'0.000'}</strong></div></div><p>${esc(d.interpretation)}</p><small class="learningConfidence">${d.confidence} confidence · ${Math.round(t.confidenceWeight*100)}% learning confidence weight</small>${!accepted&&t.safeguard?`<div class="logSafeguard">${esc(t.safeguard)}</div>`:''}<details><summary>Calculation details</summary>${pathwayCalculationDetailsHtml(d,t)}<details class="componentEvidenceDetails"><summary>Show source evidence</summary>${(d.signals||[]).map(s=>`<div class="decisionSignalRow"><span>${esc(s.name)}</span><b>${s.value>=0?'+':''}${Number(s.value).toFixed(2)}</b><small>${esc(s.detail)}</small></div>`).join('')}</details></details></section>`;
  };
  return`<section class="postRunCoachUpdate logAdaptationSummary"><div class="postRunCoachHead simplified"><div><span>WHAT THIS RUN TAUGHT THE COACH</span><h3>${esc(u.decision)}</h3></div></div><div class="pathwayDecisionGrid">${branch('PACE & POWER',pd,pt)}${branch('DISTANCE & LOAD',ld,lt)}</div><button type="button" class="logProgressLink" data-go="dashboard" data-anchor="progressAdaptationHome">View accumulated adaptation in Progress</button></section>`;
 }
