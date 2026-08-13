@@ -555,3 +555,12 @@ v10.7.3 User-Palette Rebuild
 - Main cards use royal blue, nested modules use mid blue, icons/bars use light blue, and pale blue is reserved for selected/highlight states.
 - Native intensity distribution bars remain enabled for Next week, Completed to date and Overall programme.
 - No training, prediction, pathway, recovery, injury or scoring equations changed.
+
+v11.0.0 Clean-slate GUI
+-----------------------
+The visual layer was rebuilt from scratch around the supplied five-blue palette.
+No training, prediction, adaptation, recovery, injury, assessment, import, scoring,
+storage, migration or calculation engine was intentionally changed.
+Information architecture retained:
+Today = decision/action; Plan = prescription; Log = observed execution;
+Progress = longitudinal learning/prediction; More = assessments/recovery/injury/race/settings.
