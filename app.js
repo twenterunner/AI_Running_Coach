@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '10.5.4';
-  const BUILD = 15040;
+  const VERSION = '10.5.5';
+  const BUILD = 15050;
   const SCHEMA = 10330;
   const PRIMARY_STORAGE_KEY = 'arc_v10330_web';
   const MIRROR_STORAGE_KEY = 'arc_v10330_mirror';
@@ -3178,7 +3178,7 @@ function runExecutionBreakdownHtml(r){
  const rows=d.components.map(c=>`<div class="executionCalcRow"><span>${esc(c.name)}</span><b>${Math.round(c.score)}/100</b><small><b>Scope: ${esc(c.scope||'whole session')}</b> · Effective weight ${Math.round(c.effectiveWeight*100)}%${c.reliability<1?` · ${Math.round(c.reliability*100)}% metric reliability`:''} · ${esc(c.detail)}</small></div>`).join('');
  const paceComp=d.components.find(c=>c.key==='pace'),powerComp=d.components.find(c=>c.key==='power');
  const conflict=paceComp&&powerComp&&Math.abs(paceComp.score-powerComp.score)>=12?`<div class="executionNotice"><b>Pace and power disagree</b><p>Terrain, wind, GPS or whole-run averaging may explain the difference. The coach treats this as mixed evidence rather than assuming either metric is correct on its own.</p></div>`:'';
- return `${workoutIntelligenceHtml(r)}${comparableRunHtml(r)}${intervalHtml}<section class="runExecutionBreakdown"><div class="executionBreakdownHead"><div><h3>Execution breakdown</h3><p class="muted compact">How this run delivered the intended physiological objective.</p></div><strong>${d.score}/100</strong></div><div class="executionObjective"><small>WORKOUT OBJECTIVE</small><b>${esc(d.objective)}</b><span>${esc(d.interpretation)} · ${esc(d.evidenceQuality)} evidence</span></div>${plan?`<p class="muted compact">Matched to ${fmtDate(plan.date)} · ${esc(plan.type)} · ${plan.distance.toFixed(1)} km.</p>`:'<p class="muted compact">Ad hoc run: only directly observable components are scored. Missing targets reduce evidence quality rather than being awarded neutral points.</p>'}${conflict}<details class="metricScopeGuide"><summary>Why some metrics use work sections and others use the whole run</summary><div><b>Intervals / repetitions</b><p>Pace and power use detected work repetitions. HR uses later work reps only as low-weight support because HR lags short efforts. Whole-run cardiac drift is not scored. RPE remains a whole-session measure.</p><b>Threshold / tempo</b><p>Detected work sections are preferred for pace, power and HR. If unavailable, whole-run pace/power are supporting-only because warm-up and cooldown dilute the target block. Drift is supporting-only.</p><b>Easy / recovery</b><p>Distance, HR and drift use the whole run. Pace and power are treated mainly as intensity ceilings: slower/lower is not penalised simply for being easy.</p><b>Long run</b><p>Whole-run distance, HR and drift matter, with early-to-late stability handled by Workout Intelligence. Specific/race-rehearsal long runs use detected work sections where available.</p><b>RPE</b><p>RPE is always session-level because it describes the perceived effort of the workout as a whole.</p></div></details><div class="executionCalcTable">${rows}</div><div class="adjustmentCalcTotal"><span>Weighted score before pain adjustment</span><b>${Math.round(d.rawScore)}/100</b>${d.capReason?`<small>${esc(d.capReason)}</small>`:'<small>No pain-related cap applied.</small>'}</div></section>`;
+ return `${intervalHtml}<section class="runExecutionBreakdown"><div class="executionBreakdownHead"><div><h3>Execution breakdown</h3><p class="muted compact">How this run delivered the intended physiological objective.</p></div><strong>${d.score}/100</strong></div><div class="executionObjective"><small>WORKOUT OBJECTIVE</small><b>${esc(d.objective)}</b><span>${esc(d.interpretation)} · ${esc(d.evidenceQuality)} evidence</span></div>${plan?`<p class="muted compact">Matched to ${fmtDate(plan.date)} · ${esc(plan.type)} · ${plan.distance.toFixed(1)} km.</p>`:'<p class="muted compact">Ad hoc run: only directly observable components are scored. Missing targets reduce evidence quality rather than being awarded neutral points.</p>'}${conflict}<details class="metricScopeGuide"><summary>Why some metrics use work sections and others use the whole run</summary><div><b>Intervals / repetitions</b><p>Pace and power use detected work repetitions. HR uses later work reps only as low-weight support because HR lags short efforts. Whole-run cardiac drift is not scored. RPE remains a whole-session measure.</p><b>Threshold / tempo</b><p>Detected work sections are preferred for pace, power and HR. If unavailable, whole-run pace/power are supporting-only because warm-up and cooldown dilute the target block. Drift is supporting-only.</p><b>Easy / recovery</b><p>Distance, HR and drift use the whole run. Pace and power are treated mainly as intensity ceilings: slower/lower is not penalised simply for being easy.</p><b>Long run</b><p>Whole-run distance, HR and drift matter, with early-to-late stability handled by Workout Intelligence. Specific/race-rehearsal long runs use detected work sections where available.</p><b>RPE</b><p>RPE is always session-level because it describes the perceived effort of the workout as a whole.</p></div></details><div class="executionCalcTable">${rows}</div><div class="adjustmentCalcTotal"><span>Weighted score before pain adjustment</span><b>${Math.round(d.rawScore)}/100</b>${d.capReason?`<small>${esc(d.capReason)}</small>`:'<small>No pain-related cap applied.</small>'}</div></section>`;
 }
 function renderRuns(){$('runList').innerHTML=state.runs.slice().sort((a,b)=>b.date.localeCompare(a.date)).map(r=>{let m=metrics(r),ws=workoutScore(r),cr=comparableRunAnalysis(r),compareBadge=cr&&cr.confidence!=='Low'&&Number.isFinite(cr.efficiencyDelta)?`<span class="runCompareBadge ${cr.efficiencyDelta>=0?'better':'worse'}">${cr.efficiencyDelta>=0?'↑':'↓'} ${Math.abs(cr.efficiencyDelta).toFixed(1)}% vs similar</span>`:'';return`<div class="runCard clickable" role="button" tabindex="0" aria-label="Open ${esc(fmtDate(r.date))} ${esc(r.type)} run details" data-run="${r.id}"><div class="runSummary"><div><h3>${fmtDate(r.date)} · ${esc(r.type)}</h3><p>${r.distanceKm.toFixed(2)} km · ${fmtTime(r.durationSec)} · ${pace(m.pace)}</p><p class="muted compact"><b>Plan:</b> ${esc(matchSummary(r))}${ws!=null?` · <b>Workout score ${ws}/100</b>`:''} ${compareBadge}</p><div class="runStats"><span>HR ${r.avgHr?Math.round(r.avgHr):'—'}</span><span>${r.avgPower?Math.round(r.avgPower):'—'} W</span><span>${dec(m.efficiencyJ,1)} J/beat</span><span>${Number.isFinite(r.powerDrift)?r.powerDrift.toFixed(1)+'% drift':'— drift'}</span><span>${r.hrv!==null&&r.hrv!==undefined&&Number.isFinite(Number(r.hrv))?Math.round(Number(r.hrv))+' ms HRV':'— HRV'}</span></div></div><span aria-hidden="true">›</span></div></div>`}).join('')||'<div class="panel">No completed runs saved yet.</div>'}
 function migrateImportedPower(){
@@ -4434,21 +4434,30 @@ function updatedRunFromForm(r){
  refreshIntervalAnalysis(updated,updated.planId?state.plan.find(p=>p.id===updated.planId):null);
  return updated;
 }
+function runAnalysisStackHtml(r,includeEditor=false){
+ const intelligence=workoutIntelligenceHtml(r);
+ const comparable=comparableRunHtml(r);
+ const pathways=postRunCoachUpdateHtml(r);
+ const execution=runExecutionBreakdownHtml(r);
+ const editor=includeEditor?runEditorHtml(r):'';
+ return`${intelligence}${comparable}${pathways}${execution}${editor}`;
+}
+
 function openRunDetails(runId){
  let r=state.runs.find(x=>x.id===runId);if(!r)return;
  if(r.source==='assessment'&&r.assessmentId){
-   $('modalContent').innerHTML=runExecutionBreakdownHtml(r)+`<div class="note">This run was created from a fitness assessment. Edit it from the Assessments tab so both records remain synchronized.</div>`;
+   $('modalContent').innerHTML=workoutIntelligenceHtml(r)+comparableRunHtml(r)+runExecutionBreakdownHtml(r)+`<div class="note">This run was created from a fitness assessment. Edit it from the Assessments tab so both records remain synchronized.</div>`;
    $('modal').className='modal';
    return;
  }
- $('modalContent').innerHTML=postRunCoachUpdateHtml(r)+runExecutionBreakdownHtml(r)+runEditorHtml(r)+`<button id="deleteEditedRun" class="danger buttonLike full">Delete run</button>`;
+ $('modalContent').innerHTML=runAnalysisStackHtml(r,true)+`<button id="deleteEditedRun" class="danger buttonLike full">Delete run</button>`;
  $('modal').className='modal';
  bindEditorPlanRefresh(r);
  $('saveRunEdit').onclick=()=>{
    try{
     let updated=updatedRunFromForm(r),i=state.runs.findIndex(x=>x.id===r.id);
     if(i<0)throw Error('Run not found.');
-    state.runs.splice(i,1);const before=postRunCoachSnapshot(updated.date);state.runs.splice(i,0,updated);recordPredictionSnapshot(updated.date,'Run update',updated.id);const after=postRunCoachSnapshot(updated.date);updated.coachUpdate=postRunCoachUpdate(updated,before,after);save();renderAll();$('modalContent').innerHTML=postRunCoachUpdateHtml(updated)+`<button id="closeCoachUpdate" class="primary full" type="button">Done</button>`;$('modal').className='modal';$('closeCoachUpdate').onclick=closeDialog;toast('Run updated and coaching update recalculated.');
+    state.runs.splice(i,1);const before=postRunCoachSnapshot(updated.date);state.runs.splice(i,0,updated);recordPredictionSnapshot(updated.date,'Run update',updated.id);const after=postRunCoachSnapshot(updated.date);updated.coachUpdate=postRunCoachUpdate(updated,before,after);save();renderAll();$('modalContent').innerHTML=runAnalysisStackHtml(updated,false)+`<button id="closeCoachUpdate" class="primary full" type="button">Done</button>`;$('modal').className='modal';$('closeCoachUpdate').onclick=closeDialog;toast('Run updated and coaching update recalculated.');
    }catch(err){toast(err.message,true)}
  };
  $('deleteEditedRun').onclick=()=>{
@@ -4464,7 +4473,7 @@ $('manualRunBtn').onclick=()=>{
  $('modal').className='modal';
  bindEditorPlanRefresh(r);
  $('saveRunEdit').onclick=()=>{
-   try{let created=updatedRunFromForm(r),before=postRunCoachSnapshot(created.date);state.runs.push(created);recordPredictionSnapshot(created.date,'Run saved',created.id);let after=postRunCoachSnapshot(created.date);created.coachUpdate=postRunCoachUpdate(created,before,after);save();renderAll();$('modalContent').innerHTML=postRunCoachUpdateHtml(created)+`<button id="closeCoachUpdate" class="primary full" type="button">Done</button>`;$('modal').className='modal';$('closeCoachUpdate').onclick=closeDialog;toast('Run saved and coaching update calculated.')}catch(err){toast(err.message,true)}
+   try{let created=updatedRunFromForm(r),before=postRunCoachSnapshot(created.date);state.runs.push(created);recordPredictionSnapshot(created.date,'Run saved',created.id);let after=postRunCoachSnapshot(created.date);created.coachUpdate=postRunCoachUpdate(created,before,after);save();renderAll();$('modalContent').innerHTML=runAnalysisStackHtml(created,false)+`<button id="closeCoachUpdate" class="primary full" type="button">Done</button>`;$('modal').className='modal';$('closeCoachUpdate').onclick=closeDialog;toast('Run saved and coaching update calculated.')}catch(err){toast(err.message,true)}
  };
 };
 $('closeModal').onclick=closeDialog;

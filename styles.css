@@ -1602,3 +1602,9 @@ details>summary{transition:background .15s ease,color .15s ease}details>summary:
 .coachDecisionSummary.singleContribution{grid-template-columns:1fr;margin-top:9px}
 .coachDecisionSummary.singleContribution>div{min-height:0}
 @media(max-width:620px){.pathwayHeadline{align-items:flex-start}.pathwayHeadline>span{align-self:flex-start}}
+
+/* v10.5.5 run-detail information hierarchy */
+.workoutIntelligence + .comparableRuns{margin-top:12px}
+.comparableRuns + .postRunCoachUpdate{margin-top:12px}
+.postRunCoachUpdate + .intervalAnalysisCard,
+.postRunCoachUpdate + .runExecutionBreakdown{margin-top:14px}
