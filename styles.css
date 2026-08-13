@@ -1616,3 +1616,13 @@ details>summary{transition:background .15s ease,color .15s ease}details>summary:
 .intervalRepDetails{margin-top:10px;border-top:1px solid #dfe8eb;padding-top:8px}.intervalRepDetails>summary{font-size:.72rem;font-weight:850;color:#1d506b}
 .executionFoldout{background:#fff;padding:0!important;scroll-margin-top:82px}.executionFoldout>summary{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:14px 16px;cursor:pointer;color:#173e59;font-weight:900}.executionFoldout>summary b{padding:5px 8px;border-radius:999px;background:#eaf3f5;font-variant-numeric:tabular-nums}.executionFoldoutBody{padding:12px 16px 16px;border-top:1px solid #e7edef}
 .planInsightsShell,.todaySupportCard,.weeklyReviewCard{border-radius:18px}
+
+/* v10.5.7 visual simplification + date context */
+.workoutHead{display:grid;grid-template-columns:auto 42px 1fr auto;gap:10px;align-items:center}
+.dateBox{min-width:58px}.dateBox small,.dateBox b,.dateBox span{display:block;text-align:center}.dateBox small{font-size:.58rem;font-weight:900;text-transform:uppercase;color:#718492}.dateBox b{line-height:1.05}
+.workoutTypeIcon{width:38px;height:38px;border-radius:11px;display:grid;place-items:center;font-size:1.15rem;font-weight:900;background:#edf5f7;color:#1f6077}
+.workoutTypeIcon.quality{background:#fff1e8;color:#a85b28}.workoutTypeIcon.threshold{background:#fff5df;color:#9a6a13}.workoutTypeIcon.long{background:#f0ecfa;color:#675395}.workoutTypeIcon.recovery{background:#eaf6ef;color:#3c7757}.workoutTypeIcon.race{background:#fff3d5;color:#8a6513}.workoutTypeIcon.rest{background:#f2f1f7;color:#716a84}
+.workout{position:relative;overflow:hidden}.workout:before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:#79a9ba}.workout-quality:before{background:#d98448}.workout-threshold:before{background:#d3a53c}.workout-long:before{background:#8171aa}.workout-recovery:before{background:#64a47c}.workout-race:before{background:#d4a72e}.workout-rest:before{background:#9993a9}
+.wiFindings{display:grid;grid-template-columns:1fr 1fr;gap:7px}.wiFinding{margin:0!important;min-height:44px;padding:9px 10px!important}.wiFinding i{width:24px;height:24px;flex:0 0 24px}.wiFinding span{font-size:.7rem;line-height:1.35}
+.recoveryMetrics .metric-card>span{font-weight:850;color:#526d7c}
+@media(max-width:620px){.workoutHead{grid-template-columns:auto 36px 1fr auto}.workoutTypeIcon{width:34px;height:34px}.wiFindings{grid-template-columns:1fr}}

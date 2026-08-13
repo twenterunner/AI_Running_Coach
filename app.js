@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '10.5.6';
-  const BUILD = 15060;
+  const VERSION = '10.5.7';
+  const BUILD = 15070;
   const SCHEMA = 10330;
   const PRIMARY_STORAGE_KEY = 'arc_v10330_web';
   const MIRROR_STORAGE_KEY = 'arc_v10330_mirror';
@@ -2221,8 +2221,10 @@ function coachIntelligenceHtml(p){
  if(p.type==='Rest'||p.type==='Race Day')return'';
  return `<div class="coachWhy"><h4>Coach intelligence</h4><p><b>Why this workout:</b> ${esc(p.whyThis||p.purpose)}</p><p><b>Why this amount:</b> ${esc(p.whyAmount||'The prescribed amount reflects the current phase, weekly load and Weekly Plan Adjustment.')}</p><p><b>If you skip it:</b> ${esc(p.skipImpact||'Do not catch up by stacking sessions. Continue with the next appropriate workout.')}</p></div>`;
 }
-function workoutHtml(p){let st=status(p);return`<div class="workout" data-id="${p.id}"><div class="workoutHead"><div class="dateBox"><b>${new Date(p.date+'T00:00:00').getDate()}</b><span>${new Date(p.date+'T00:00:00').toLocaleDateString(undefined,{month:'short'})}</span></div><div class="workoutTitle"><h3>${p.type}</h3><p>${p.type==='Rest'?p.purpose:`${p.distance.toFixed(1)} km · ${p.phase}`}</p></div><span class="status ${st}">${st}</span></div><div class="workoutDetails"><div class="targets">${p.type==='Rest'?'':`<div class="target"><small>Main-set pace</small><b>${pace(p.zone.pace)}</b></div><div class="target"><small>Main-set HR</small><b>${p.zone.hr} bpm</b></div><div class="target"><small>Main-set power</small><b>${p.zone.power} W</b></div>`}</div>${p.type==='Rest'?'':`<p class="targetScope">Targets apply to: <b>${esc(p.targetScope||'main set')}</b></p>`}<div class="prescription"><p><b>Warm-up:</b> ${p.warmup}</p><p><b>Main set:</b> ${p.main}</p><p><b>Cooldown:</b> ${p.cooldown}</p>${p.distanceCheck?`<p class="distanceCheck"><b>Distance check:</b> ${esc(p.distanceCheck)} ✓</p>`:''}<p><b>Purpose:</b> ${p.purpose}</p><p><b>Coach guidance:</b> ${p.coach}</p><p><b>Fuel / hydration:</b> ${p.fuel}</p></div>${coachIntelligenceHtml(p)}${(()=>{const linked=matchingRun(p);return linked?`<button class="viewPlanRun primary full" data-plan-run="${linked.id}">View entered run details</button>`:''})()}</div></div>`}
-
+function workoutHtml(p){
+ let st=status(p),dt=new Date(p.date+'T00:00:00'),day=dt.toLocaleDateString(undefined,{weekday:'short'}),month=dt.toLocaleDateString(undefined,{month:'short'}),typeCls=workoutTypeClass(p.type);
+ return`<div class="workout workout-${typeCls}" data-id="${p.id}"><div class="workoutHead"><div class="dateBox"><small>${day}</small><b>${dt.getDate()}</b><span>${month}</span></div><div class="workoutTypeIcon ${typeCls}">${workoutTypeIcon(p.type)}</div><div class="workoutTitle"><h3>${p.type}</h3><p>${p.type==='Rest'?p.purpose:`${p.distance.toFixed(1)} km · ${p.phase}`}</p></div><span class="status ${st}">${st}</span></div><div class="workoutDetails"><div class="targets">${p.type==='Rest'?'':`<div class="target"><small>Main-set pace</small><b>${pace(p.zone.pace)}</b></div><div class="target"><small>Main-set HR</small><b>${p.zone.hr} bpm</b></div><div class="target"><small>Main-set power</small><b>${p.zone.power} W</b></div>`}</div>${p.type==='Rest'?'':`<p class="targetScope">Targets apply to: <b>${esc(p.targetScope||'main set')}</b></p>`}<div class="prescription"><p><b>Warm-up:</b> ${p.warmup}</p><p><b>Main set:</b> ${p.main}</p><p><b>Cooldown:</b> ${p.cooldown}</p>${p.distanceCheck?`<p class="distanceCheck"><b>Distance check:</b> ${esc(p.distanceCheck)} ✓</p>`:''}<p><b>Purpose:</b> ${p.purpose}</p><p><b>Coach guidance:</b> ${p.coach}</p><p><b>Fuel / hydration:</b> ${p.fuel}</p></div>${coachIntelligenceHtml(p)}${(()=>{const linked=matchingRun(p);return linked?`<button class="viewPlanRun primary full" data-plan-run="${linked.id}">View entered run details</button>`:''})()}</div></div>`;
+}
 
 function coachVisualIcon(kind){
  const icons={
@@ -2236,6 +2238,26 @@ function coachVisualIcon(kind){
  };
  return icons[kind]||icons.coach;
 }
+function workoutTypeIcon(type){
+ const t=String(type||'').toLowerCase();
+ if(/race/.test(t))return'⚑';
+ if(/hill/.test(t))return'⌁';
+ if(/interval|vo2|vo₂|fartlek|repetition/.test(t))return'⚡';
+ if(/threshold|tempo/.test(t))return'◆';
+ if(/long/.test(t))return'◒';
+ if(/recovery/.test(t))return'↻';
+ if(/rest/.test(t))return'○';
+ return'↗';
+}
+function workoutTypeClass(type){
+ const t=String(type||'').toLowerCase();
+ if(/race/.test(t))return'race';if(/hill|interval|vo2|vo₂|fartlek|repetition/.test(t))return'quality';
+ if(/threshold|tempo/.test(t))return'threshold';if(/long/.test(t))return'long';if(/recovery/.test(t))return'recovery';if(/rest/.test(t))return'rest';return'easy';
+}
+function visualStatusIcon(kind){
+ return kind==='good'?'✓':kind==='caution'?'!':kind==='bad'?'×':'•';
+}
+
 function consolidatedTodayCoachBriefing(p){
  const engine=coachEngine(),report=evidenceBasedCoach(engine),ast=report.athleteState;
  const activeInjury=(state.injuries||[]).find(injury=>injury.id===state.activeInjuryPlanId);
@@ -2339,20 +2361,7 @@ function weeklyReviewHtml(w=currentWeek()){
  <details><summary>Show projected workout changes</summary><div class="weeklyReviewChanges">${rows||'<p class="muted">No material prescription changes are currently projected.</p>'}</div><p class="muted compact">Numeric calibration factors live in Progress → Adaptation.</p></details></section>`;
 }
 function renderPlan(){
- const ast=athleteState(state.weekView||currentWeek());if($('fitnessEvidence')){
-  const evidence=ast.fitnessEvidence,fitnessTarget=ast.fitnessDelta,fitnessFactor=1+fitnessTarget/100,recoveryImpact=Math.round((ast.hrv.factor-1)*100);
-  const painAction=!ast.pain.count?'Log pain after runs so injury restrictions can be evidence based.':ast.pain.max>=5?'Stop demanding running and reassess before the next session.':ast.pain.max>=3?'Keep running easy; do not add load or intensity.':'No pain-based restriction is currently applied.';
-  const completionText=!Number.isFinite(ast.completion)?'No planned distance available':ast.weekComplete?`${Math.round(ast.completion*100)}% of the completed week’s planned km`:`${Math.round(ast.completion*100)}% completed so far; the week remains in progress`;
-  const calc=ast.weekComplete&&ast.nextAfd.status==='calculated'?ast.nextAfd:ast.preview;
-  const calcTitle=ast.weekComplete&&ast.nextAfd.status==='calculated'?`Final Week ${ast.nextWeek} load calculation`:`Provisional next-review calculation`;
-  const appliedTitle=`Applied throughout Week ${ast.currentWeek}`;
-  const calcRows=[{name:'Previous cumulative factor',adjustment:0,detail:`The new week starts from the learned factor ${Number(calc.baseFactor||1).toFixed(3)}, not from 1.000.`},...(calc.items||[])];
-  const evidenceRows=(evidence.events||[]).slice().sort((a,b)=>b.date.localeCompare(a.date)).slice(0,8);
-  const confidenceMeaning=evidence.confidence<20?'Very limited evidence; pace and power targets are held stable.':evidence.confidence<50?'Early evidence; only small accumulated changes can affect targets.':evidence.confidence<80?'Moderate evidence; recent execution can meaningfully calibrate targets.':'Strong evidence; pace and power calibration is well supported by recent training and tests.';
-  const paceDecision=fitnessTarget>0?`Increase pace & power ${fitnessTarget.toFixed(1)}%`:fitnessTarget<0?`Reduce pace & power ${Math.abs(fitnessTarget).toFixed(1)}%`:'Maintain pace & power';
-  const paceAction=fitnessTarget>0?`Future pace and power targets are increased by ${fitnessTarget.toFixed(1)}%. Heart-rate targets remain unchanged.`:fitnessTarget<0?`Future pace and power targets are reduced by ${Math.abs(fitnessTarget).toFixed(1)}%. Heart-rate targets remain unchanged.`:`Keep future pace and power targets unchanged. ${confidenceMeaning}`;
-  $('fitnessEvidence').innerHTML=`<section class="planAdaptationEffect"><div class="planAdaptationEffectHead"><div><small>HOW THE MODEL AFFECTS THE PLAN</small><h3>Prescription consequences, not calibration factors</h3></div></div><div class="planEffectNotes"><div><b>Pace & power</b><p>Changes appear here as faster/slower workout targets only after accepted capability evidence is sufficient.</p></div><div><b>Distance & load</b><p>Changes appear here as more/less planned exposure after the weekly load-tolerance review.</p></div><div><b>Readiness</b><p>Can temporarily reduce exposure without rewriting either learned pathway.</p></div></div><button type="button" class="todayInlineLink" data-go="dashboard" data-anchor="progressAdaptationHome">View numeric adaptation factors in Progress</button></section>`;
- }
+ 
  if(!state.weekView)state.weekView=currentWeek();let arr=state.plan.filter(p=>p.week===state.weekView),wd=weekData(state.weekView);$('weekHeader').innerHTML=`<b>Week ${state.weekView} · ${detailedPhase(state.weekView)}</b><br><span class="muted">${fmtDate(iso(weekStart(state.weekView)))} · ${wd.planned.toFixed(1)} km planned · ${wd.actual.toFixed(1)} km completed</span>`;
  if($('weeklyReview'))$('weeklyReview').innerHTML=weeklyReviewHtml(state.weekView);
 $('planCards').innerHTML=arr.map(workoutHtml).join('');
@@ -3150,7 +3159,7 @@ function workoutIntelligence(run){
 }
 function workoutIntelligenceHtml(run){
  const w=workoutIntelligence(run),icon=w.family==='long'?'◒':w.family==='interval'?'↯':w.family==='recovery'?'↺':w.family==='threshold'?'◆':'↗';
- const findings=w.findings.slice(0,5).map(f=>`<div class="wiFinding ${f.kind}"><i>${f.kind==='positive'?'✓':f.kind==='caution'?'!':'•'}</i><span>${esc(f.text)}</span></div>`).join('');
+ const findings=w.findings.slice(0,5).map(f=>`<div class="wiFinding ${f.kind}"><i>${visualStatusIcon(f.kind)}</i><span>${esc(f.text)}</span></div>`).join('');
  return`<section class="workoutIntelligence"><div class="wiHead"><span class="wiIcon">${icon}</span><div><small>WORKOUT INTELLIGENCE 2.0</small><h3>${esc(w.verdict)}</h3></div><a class="wiScoreLink" href="#executionBreakdownFoldout" aria-label="Open execution breakdown">${w.details?.score!=null?w.details.score+'/100':'Analysed'}<small>breakdown ↓</small></a></div><p class="wiInterpretation">${esc(w.interpretation)}</p><div class="wiFindings">${findings||'<p class="muted">Not enough detailed evidence for session-specific findings.</p>'}</div></section>`;
 }
 function comparableRunHtml(run){
@@ -3376,7 +3385,7 @@ function renderRecovery(){
  const maturity=hrv.count===0?'No profile':hrv.count===1?'Provisional':hrv.count<=6?'Early':hrv.count<=20?'Developing':'Established';
  const confidence=hrv.count===0?'No HRV evidence':`${maturity} · ${hrv.count} value${hrv.count===1?'':'s'}`;
  const ready=readinessModel();
- statusBox.innerHTML=`<article class="panel recoveryConclusion ${conclusion.cls}"><div><span>Overall recovery</span><strong>${conclusion.label}</strong><p>${conclusion.recommendation}</p></div><span class="recoveryConfidence">${confidence}</span></article><div class="recoveryMetrics"><div class="metric-card"><span>Current HRV</span><strong class="viz-stat-value">${Number.isFinite(hrv.rolling)?Math.round(hrv.rolling)+' ms':'—'}</strong><small>${dir.symbol} ${dir.label}</small></div><div class="metric-card"><span>Personal baseline</span><strong class="viz-stat-value">${Number.isFinite(hrv.baseline)?Math.round(hrv.baseline)+' ms':'—'}</strong><small>${hrv.count?`${hrv.deviation>=0?'+':''}${Math.round(hrv.deviation*100)}% recent deviation`:'Log HRV with a run'}</small></div><div class="metric-card"><span>HRV status</span><strong class="viz-stat-value recoveryStatusText">${hrv.status}</strong><small>${esc(hrv.detail)}</small></div><div class="metric-card"><span>Pain signal</span><strong class="viz-stat-value recoveryStatusText">${pain.status}</strong><small>${pain.count?`Recent average ${pain.average.toFixed(1)} / 10`:'No recent ratings'}</small></div></div>`;
+ statusBox.innerHTML=`<article class="panel recoveryConclusion ${conclusion.cls}"><div><span>Overall recovery</span><strong>${conclusion.label}</strong><p>${conclusion.recommendation}</p></div><span class="recoveryConfidence">${confidence}</span></article><div class="recoveryMetrics"><div class="metric-card"><span>〰 Current HRV</span><strong class="viz-stat-value">${Number.isFinite(hrv.rolling)?Math.round(hrv.rolling)+' ms':'—'}</strong><small>${dir.symbol} ${dir.label}</small></div><div class="metric-card"><span>◎ Personal baseline</span><strong class="viz-stat-value">${Number.isFinite(hrv.baseline)?Math.round(hrv.baseline)+' ms':'—'}</strong><small>${hrv.count?`${hrv.deviation>=0?'+':''}${Math.round(hrv.deviation*100)}% recent deviation`:'Log HRV with a run'}</small></div><div class="metric-card"><span>✓ HRV status</span><strong class="viz-stat-value recoveryStatusText">${hrv.status}</strong><small>${esc(hrv.detail)}</small></div><div class="metric-card"><span>! Pain signal</span><strong class="viz-stat-value recoveryStatusText">${pain.status}</strong><small>${pain.count?`Recent average ${pain.average.toFixed(1)} / 10`:'No recent ratings'}</small></div></div>`;
  $('readinessBadge').textContent=`${ready.label} · temporary ${ready.modifier.toFixed(3)}`;
  const nextImpact=ready.next&&Number.isFinite(ready.nominalDistance)?(Math.abs(ready.modifier-1)<.005
    ?`No temporary moderation is indicated. ${ready.next.type} remains ${ready.nominalDistance.toFixed(1)} km.`
@@ -3406,7 +3415,7 @@ function drawHrvChart(){
  ctx.save();ctx.strokeStyle='#8793a1';ctx.setLineDash([14,10]);ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(left,py(base));ctx.lineTo(W-right,py(base));ctx.stroke();ctx.restore();
  ctx.strokeStyle='#58a65c';ctx.lineWidth=4;ctx.beginPath();rolling.forEach((v,i)=>i?ctx.lineTo(px(i),py(v)):ctx.moveTo(px(i),py(v)));ctx.stroke();
  ctx.strokeStyle='#2d82c7';ctx.lineWidth=4;ctx.beginPath();vals.forEach((v,i)=>i?ctx.lineTo(px(i),py(v)):ctx.moveTo(px(i),py(v)));ctx.stroke();vals.forEach((v,i)=>{ctx.fillStyle='#2d82c7';ctx.beginPath();ctx.arc(px(i),py(v),6,0,Math.PI*2);ctx.fill()});
- ctx.font='18px system-ui';ctx.fillStyle='#748293';ctx.textAlign='center';const step=Math.max(1,Math.ceil(shown.length/6));shown.forEach((x,i)=>{if(i%step&&i!==shown.length-1)return;const d=dte(x.date);ctx.fillText(`${d.getDate()}/${d.getMonth()+1}`,px(i),H-32)});ctx.save();ctx.translate(24,H/2);ctx.rotate(-Math.PI/2);ctx.fillText('HRV (ms)',0,0);ctx.restore();
+ ctx.font='18px system-ui';ctx.fillStyle='#748293';ctx.textAlign='center';const step=Math.max(1,Math.ceil(shown.length/6));shown.forEach((x,i)=>{if(i%step&&i!==shown.length-1)return;const d=dte(x.date);ctx.fillText(`${d.toLocaleDateString(undefined,{weekday:'short'})} ${d.getDate()}/${d.getMonth()+1}`,px(i),H-32)});ctx.save();ctx.translate(24,H/2);ctx.rotate(-Math.PI/2);ctx.fillText('HRV (ms)',0,0);ctx.restore();
 }
 function renderPlanHealth(){
  const box=$('planHealthContent');if(!box)return;
