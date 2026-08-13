@@ -1431,3 +1431,19 @@ details>summary{transition:background .15s ease,color .15s ease}details>summary:
 .readinessImpact{padding:12px 13px;border-radius:13px;background:#edf5f8}.readinessImpact b{display:block;margin-top:4px;color:#173f5a;line-height:1.42}.readinessImpact p{margin:4px 0 0;color:#657986;font-size:.75rem}
 .readinessSvg{width:100%;height:auto;min-height:150px}.readinessBaseline{stroke:#8998a3;stroke-width:2;stroke-dasharray:7 7}.readinessLine{fill:none;stroke:#238fa0;stroke-width:4;stroke-linejoin:round;stroke-linecap:round}.readinessPoint{fill:#238fa0}.readinessAxis text{fill:#778994;font-size:13px}
 @media(max-width:560px){.readinessHero,.readinessExplanationGrid{grid-template-columns:1fr}}
+
+/* v10.0.55 — rehabilitation adherence windows */
+.adherencePeriods.threeTiles{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}
+.adherenceTile{display:flex;flex-direction:column;gap:3px;padding:13px;border-radius:14px;background:#f4f7f9;border:1px solid #e5ebee}
+.adherenceTile small{font-size:.64rem;font-weight:900;letter-spacing:.08em;color:#7b8995}
+.adherenceTile strong{font-size:1.35rem;color:#173d58}
+.adherenceTile span{font-size:.71rem;line-height:1.35;color:#6d7d89}
+.adherenceBreakdown{margin-top:11px;border:1px solid #e2e9ed;border-radius:13px}
+.adherenceBreakdown>summary{padding:11px 12px;font-weight:850;color:#17425f}
+.adherenceBreakdown>p{padding:0 12px;color:#617583;font-size:.77rem;line-height:1.45}
+.adherenceLegend{display:flex;gap:12px;flex-wrap:wrap;padding:7px 12px 10px;font-size:.69rem;color:#667985}
+.adherenceLegend span{display:flex;align-items:center;gap:5px}.adherenceLegend i{width:9px;height:9px;border-radius:50%}
+.adherenceLegend i.done{background:#25956d}.adherenceLegend i.partial{background:#d39a32}.adherenceLegend i.missed{background:#b64b55}
+.adherenceHistory{padding:0 12px 11px}.adherenceHistory>div{display:flex;justify-content:space-between;gap:12px;padding:8px 0;border-top:1px solid #edf1f3;font-size:.75rem}
+.adherenceHistory .done b{color:#23785d}.adherenceHistory .partial b{color:#94661e}.adherenceHistory .missed b{color:#a33e49}
+@media(max-width:560px){.adherencePeriods.threeTiles{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.adherenceTile{padding:10px 8px}.adherenceTile strong{font-size:1.18rem}.adherenceTile span{font-size:.64rem}}
