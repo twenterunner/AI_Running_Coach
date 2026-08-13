@@ -1549,3 +1549,30 @@ details>summary{transition:background .15s ease,color .15s ease}details>summary:
 .executionToPathwayBridge{padding:11px!important;background:#edf6f7!important;border:1px solid #dcebed}
 .executionToPathwayBridge>p{margin:5px 0 9px!important}.executionBridgeComponents{display:grid;gap:4px;margin:7px 0}.executionBridgeComponent{display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:center;padding:7px 0;border-bottom:1px solid #dce7e9}.executionBridgeComponent b,.executionBridgeComponent small{display:block}.executionBridgeComponent b{font-size:.69rem;color:#214d66}.executionBridgeComponent small{font-size:.59rem;color:#758692}.executionBridgeComponent span{font-size:.65rem;color:#5e7481}.executionBridgeComponent strong{font-size:.7rem;color:#173e59}.executionBridgeResult,.executionBridgeEquation{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;padding:8px 9px;margin-top:6px;border-radius:9px;background:#fff}.executionBridgeResult span,.executionBridgeEquation span{font-size:.65rem;color:#617682}.executionBridgeResult b,.executionBridgeEquation b{font-size:.72rem;color:#173e59}.executionBridgeEquation code{grid-column:1/2;font-family:inherit;font-size:.65rem;color:#45606f}.bridgeNote{font-size:.62rem!important;color:#6e808a!important}
 @media(max-width:620px){.executionBridgeComponent{grid-template-columns:1fr auto}.executionBridgeComponent strong{grid-column:2}.executionBridgeEquation{grid-template-columns:1fr auto}}
+
+/* v10.5.2 Progressive disclosure for post-run adaptation */
+.progressivePathway{padding:14px!important}
+.progressiveHead{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+.progressiveHead small{display:block;font-size:.61rem;font-weight:900;letter-spacing:.08em;color:#26798a}
+.progressiveHead h4{margin:3px 0;color:#173e59;font-size:1rem}
+.progressiveHead>span{padding:5px 8px;border-radius:999px;background:#edf5f7;color:#285f72;font-size:.64rem;font-weight:850;text-align:right}
+.coachDecisionSummary{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-top:11px}
+.coachDecisionSummary>div{padding:10px;border-radius:11px;background:#f5f8f9}
+.coachDecisionSummary small,.coachDecisionSummary strong{display:block}
+.coachDecisionSummary small{font-size:.54rem;font-weight:900;letter-spacing:.06em;color:#788a95}
+.coachDecisionSummary strong{margin-top:3px;color:#173e59;font-size:.83rem}
+.coachDecisionText{margin:10px 0 0;color:#607582;font-size:.73rem;line-height:1.45}
+.coachDecisionSafeguard{margin-top:8px;padding:9px 10px;border-radius:10px;background:#fff7e8;color:#75654e;font-size:.68rem;line-height:1.4}
+.whyDecision{margin-top:10px;border-top:1px solid #e7edef;padding-top:9px}
+.whyDecision>summary{font-size:.75rem;font-weight:900;color:#1b506c}
+.whyDecisionIntro{padding:8px 0}.whyDecisionIntro b{color:#214d66}.whyDecisionIntro p{margin:3px 0;color:#6b7d88;font-size:.68rem;line-height:1.4}
+.evidenceDriverList{display:grid;gap:6px}
+.evidenceDriver{display:grid;grid-template-columns:1fr auto;gap:8px;padding:9px 10px;border-radius:10px;background:#f6f9fa}
+.evidenceDriver b,.evidenceDriver small{display:block}.evidenceDriver b{font-size:.69rem;color:#214d66}.evidenceDriver small{margin-top:2px;color:#788a95;font-size:.6rem}
+.evidenceDriver>span{font-size:.75rem;font-weight:850;color:#173e59}.evidenceDriver>em{grid-column:2;font-size:.59rem;color:#6d808a;font-style:normal;text-align:right}
+.evidenceDriver.secondary{background:#f9fbfb}
+.whyDecisionResult{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:8px;padding:10px;border-radius:11px;background:#edf6f5}
+.whyDecisionResult span,.whyDecisionResult b,.whyDecisionResult small{display:block}.whyDecisionResult span{font-size:.65rem;color:#55736f}.whyDecisionResult b{color:#245b50}.whyDecisionResult small{font-size:.61rem;color:#6d8581}
+.technicalCalculation{margin-top:9px;border-top:1px dashed #dce6e9;padding-top:8px}
+.technicalCalculation>summary{font-size:.7rem;font-weight:850;color:#5c7180}
+@media(max-width:620px){.coachDecisionSummary{grid-template-columns:1fr}.progressiveHead{flex-direction:column}.whyDecisionResult{display:grid;grid-template-columns:1fr auto}.whyDecisionResult small{grid-column:1/-1}}
