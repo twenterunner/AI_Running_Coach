@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '10.1.0';
-  const BUILD = 11000;
+  const VERSION = '10.2.0';
+  const BUILD = 12000;
   const SCHEMA = 10330;
   const PRIMARY_STORAGE_KEY = 'arc_v10330_web';
   const MIRROR_STORAGE_KEY = 'arc_v10330_mirror';
@@ -457,8 +457,73 @@ function workoutScoreDetails(run,plan=run?.planId?state.plan.find(p=>p.id===run.
  return{score:final,rawScore:Number.isFinite(raw)?raw:null,components,cap,capReason,plan,objective:plan?.purpose||profile.objective,interpretation:scoreBand(final),evidenceQuality};
 }
 function workoutScore(run,plan=run?.planId?state.plan.find(p=>p.id===run.planId):null){return workoutScoreDetails(run,plan)?.score??null}
-function trainingEvidence(asOf=iso(today())){let valid=state.assessments.filter(a=>a.valid&&a.date<=asOf).sort((a,b)=>a.date.localeCompare(b.date)),anchor=valid.at(-1),anchorDate=anchor?.date||state.setup.planStart,runs=state.runs.filter(r=>r.date>=anchorDate&&r.date<=asOf&&r.source!=='assessment').sort((a,b)=>a.date.localeCompare(b.date)),raw=100,evidence=0,events=[];runs.forEach(r=>{let p=r.planId?state.plan.find(x=>x.id===r.planId):null,score=workoutScore(r,p),weight=EVIDENCE_WEIGHT[r.type]??EVIDENCE_WEIGHT[baseType(r.type)]??.15;if(score==null)return;let confidence=weight;if(Number(r.pain)>=3||(!p&&r.type!=='Race'))confidence*=.35;if(p&&Number(r.distanceKm)<Number(p.distance)*.7)confidence*=.35;let maxMove=confidence*.65,signal=clamp((score-82)/18,-1,1);if(signal<0&&confidence<.35)signal=0;let delta=signal*maxMove;raw=clamp(raw+delta,95,105);evidence+=confidence;events.push({date:r.date,type:r.type,score,delta,confidence})});let applied=Math.round((raw-100)*2)/2+100;if(Math.abs(applied-100)<.75)applied=100;let confidence=clamp(Math.round(evidence/4*100),0,100);return{rawIndex:raw,index:applied,adjustment:applied/100,confidence,events,anchorDate,anchorType:anchor?'Fitness assessment':'Setup baseline'}}
+function decisionSignalForRun(run,plan=run?.planId?state.plan.find(p=>p.id===run.planId):null){
+ const details=workoutScoreDetails(run,plan),score=details?.score??null,family=workoutFamily(plan?.type||run.type);
+ const baseWeight=EVIDENCE_WEIGHT[run.type]??EVIDENCE_WEIGHT[baseType(run.type)]??.15;
+ let confidenceWeight=baseWeight,confidenceReasons=[],signals=[];
+ if(!plan&&run.type!=='Race'){confidenceWeight*=.35;confidenceReasons.push('not matched to a planned workout')}
+ const completion=plan&&Number(plan.distance)>0?Number(run.distanceKm)/Number(plan.distance):null;
+ if(Number.isFinite(completion)&&completion<.7){confidenceWeight*=.35;confidenceReasons.push('less than 70% of prescribed distance completed')}
+ const comparison=comparableRunAnalysis(run);
+ if(comparison?.confidence==='High')confidenceWeight=Math.min(.95,confidenceWeight*1.15);
+ else if(comparison?.confidence==='Moderate')confidenceWeight=Math.min(.95,confidenceWeight*1.05);
+ const performanceSignal=Number.isFinite(score)?clamp((score-82)/18,-1,1):0;
+ signals.push({name:'Workout execution',value:performanceSignal,detail:Number.isFinite(score)?`${score}/100 execution score`:'No execution score'});
+ let comparableSignal=0;
+ if(comparison&&comparison.confidence!=='Low'&&Number.isFinite(comparison.efficiencyDelta)){
+   comparableSignal=clamp(comparison.efficiencyDelta/5,-1,1);
+   signals.push({name:'Comparable-run response',value:comparableSignal,detail:`Efficiency ${comparison.efficiencyDelta>=0?'+':''}${comparison.efficiencyDelta.toFixed(1)}% vs ${comparison.count} comparable runs`});
+ }
+ let costSignal=0,costDetails=[];
+ const drift=Number(run.powerDrift);
+ if(Number.isFinite(drift)){
+   const good=family==='long'?4:family==='recovery'||family==='aerobic'?3:5,bad=family==='long'?8:family==='recovery'||family==='aerobic'?7:9;
+   if(drift<=good)costSignal+=.15;
+   else if(drift>=bad){costSignal-=.45;costDetails.push(`drift ${drift.toFixed(1)}%`)}
+ }
+ const rpe=Number(run.rpe),expectedMax=family==='recovery'?3:family==='aerobic'?4:family==='long'?6:family==='threshold'?8:family==='interval'?9:9;
+ if(Number.isFinite(rpe)&&rpe>expectedMax+1){costSignal-=.35;costDetails.push(`RPE ${rpe}/10 above expected cost`)}
+ else if(Number.isFinite(rpe)&&rpe<=expectedMax)costSignal+=.05;
+ costSignal=clamp(costSignal,-1,.25);
+ signals.push({name:'Physiological cost',value:costSignal,detail:costDetails.length?costDetails.join(' · '):'No excessive cost signal'});
+ let combined=performanceSignal*.65+comparableSignal*.20+costSignal*.15;
+ let conflict=false,interpretation='';
+ if(performanceSignal>.25&&costSignal<-.25){
+   conflict=true;
+   combined=Math.min(combined*.25,.15);
+   interpretation='Performance was positive, but the physiological cost was unusually high. Progression evidence is deliberately held back.';
+ }else if(performanceSignal<-.25&&comparableSignal>.35){
+   conflict=true;
+   combined=Math.max(combined*.4,-.15);
+   interpretation='This workout underperformed its prescription, but comparable-run physiology remained positive. The evidence is mixed rather than clearly negative.';
+ }else if(combined>.25)interpretation='The session provides positive evidence that the current prescription is being absorbed well.';
+ else if(combined<-.25)interpretation='The session provides evidence for a more conservative calibration.';
+ else interpretation='The session mainly supports holding the current calibration.';
+ const pain=Number(run.pain);
+ if(Number.isFinite(pain)&&pain>=5){combined=Math.min(0,combined);confidenceWeight*=.45;interpretation=`Pain ${pain}/10 overrides positive progression evidence; capability is not progressed from this session.`;confidenceReasons.push('pain safety override')}
+ else if(Number.isFinite(pain)&&pain>=3){if(combined>0)combined*=.25;confidenceWeight*=.55;confidenceReasons.push('pain reduced positive evidence')}
+ if(combined<0&&confidenceWeight<.35)combined=0;
+ const confidencePct=clamp(Math.round(confidenceWeight/.65*100),0,100);
+ const confidence=confidencePct>=75?'High':confidencePct>=45?'Moderate':'Developing';
+ const action=combined>.25?'Positive evidence':combined<-.25?'Conservative evidence':'Hold calibration';
+ const rawObserved=performanceSignal;
+ const finalSignal=clamp(combined,-1,1);
+ return{family,score,signals,rawObserved,performanceSignal,comparableSignal,costSignal,finalSignal,confidenceWeight,confidencePct,confidence,conflict,confidenceReasons,interpretation,action,completion,comparison};
+}
 
+function trainingEvidence(asOf=iso(today())){
+ let valid=state.assessments.filter(a=>a.valid&&a.date<=asOf).sort((a,b)=>a.date.localeCompare(b.date)),anchor=valid.at(-1),anchorDate=anchor?.date||state.setup.planStart,runs=state.runs.filter(r=>r.date>=anchorDate&&r.date<=asOf&&r.source!=='assessment').sort((a,b)=>a.date.localeCompare(b.date)),raw=100,evidence=0,events=[];
+ runs.forEach(r=>{
+   const p=r.planId?state.plan.find(x=>x.id===r.planId):null,decision=decisionSignalForRun(r,p);
+   if(decision.score==null)return;
+   const confidence=decision.confidenceWeight,maxMove=confidence*.65,signal=decision.finalSignal,delta=signal*maxMove;
+   raw=clamp(raw+delta,95,105);evidence+=confidence;
+   events.push({date:r.date,type:r.type,score:decision.score,delta,confidence,signal,decision});
+ });
+ let applied=Math.round((raw-100)*2)/2+100;if(Math.abs(applied-100)<.75)applied=100;
+ let confidence=clamp(Math.round(evidence/4*100),0,100);
+ return{rawIndex:raw,index:applied,adjustment:applied/100,confidence,events,anchorDate,anchorType:anchor?'Fitness assessment':'Setup baseline'};
+}
 function trainingWeekForDate(date=iso(today())){
  const d=dte(date);
  if(!(d instanceof Date)||Number.isNaN(d.getTime()))return currentWeek();
@@ -1555,6 +1620,15 @@ function coachReportHtml(report,compact=false){
  return `<div class="coachReport ${compact?'compactReport':''}"><div class="coachVerdict"><span>LONGITUDINAL TRAINING REVIEW</span><p class="coachConclusion">${esc(report.conclusion)}</p><p class="coachProjection">${esc(report.projected)}</p><small>Evidence coverage ${report.evidenceCoverage}% · Coaching uses logged, configured, plan-linked and execution-score evidence.</small></div><div class="coachPathwaySummary"><article class="coachPathwayCard paceSummary"><span class="coachPathwayLabel">PACE & POWER PATHWAY</span><b class="coachPathwayDecision">${esc(paceDecision)}</b><div class="coachFactorPair coachFactorTriple"><div><small>Current factor</small><strong>${paceCurrentFactor.toFixed(3)}</strong></div><div><small>This week</small><strong>${signedFactorDelta(ast.pathways.pace.weekChange)}</strong></div><div><small>Since start</small><strong>${signedFactorDelta(ast.pathways.pace.sinceStart)}</strong></div></div><p>Execution, assessments and races calibrate future pace and power.</p></article><article class="coachPathwayCard loadSummary"><span class="coachPathwayLabel">DISTANCE & LOAD PATHWAY</span><b class="coachPathwayDecision">${esc(loadDecision)}</b><div class="coachFactorPair coachFactorTriple"><div><small>Current factor</small><strong>${loadCurrentFactor.toFixed(3)}</strong></div><div><small>This week</small><strong>${signedFactorDelta(ast.pathways.load.weekChange)}</strong></div><div><small>Since start</small><strong>${signedFactorDelta(ast.pathways.load.sinceStart)}</strong></div></div><p>Recovery, pain and load tolerance calibrate distance and session load.</p></article></div><div class="coachRecoverySummary"><div><span>Recovery</span><b>${esc(ast.readiness)}</b><small>${esc(recoverySummary)}</small></div><div><span>Pain</span><b>${ast.pain.count?`${ast.pain.max}/10`:'No data'}</b><small>${esc(painSummary)}</small></div></div><button class="coachPlanLink" data-go="plan">View pathway calculations in Plan →</button>${executionHtml}<div class="coachEvidenceGrid"><section><h4>Verified strengths</h4>${strengths}</section><section><h4>Priority opportunities</h4>${opportunities}</section></div><section class="coachActions"><h4>Next actions</h4>${report.actions.map((a,i)=>`<div class="coachAction"><strong>${i+1}</strong><div><b>${esc(a.title)}</b><p>${esc(a.text)}</p><small>Based on: ${esc(a.source)}</small></div></div>`).join('')}</section></div>`;
 }
 function progressCard(x){let pct=clamp(x.value/Math.max(.01,x.target)*100,0,100);let value=x.unit==='km'?`${x.value.toFixed(1)} / ${x.target.toFixed(1)} km`:`${Math.round(x.value)} / ${Math.round(x.target)} ${x.unit}`;return `<div class="progressCard"><div><b>${x.label}</b><span>${value}</span></div><strong>${Math.round(pct)}%</strong><div class="progressTrack"><i style="width:${pct}%"></i></div></div>`}
+function decisionHistoryHtml(){
+ const rows=completedRuns().slice().sort((a,b)=>b.date.localeCompare(a.date)).slice(0,10).map(r=>{
+   const de=r.coachUpdate?.decisionEngine||decisionSignalForRun(r,r.planId?state.plan.find(p=>p.id===r.planId):null);
+   const delta=r.coachUpdate?.paceProvisionalDelta;
+   return`<div class="decisionHistoryRow"><div><b>${fmtDate(r.date)} · ${esc(r.type)}</b><small>${esc(de.interpretation)}</small></div><span class="${de.action==='Positive evidence'?'positive':de.action==='Conservative evidence'?'negative':'hold'}">${esc(de.action)}</span><em>${de.confidence} · ${Number.isFinite(delta)?signedFactorDelta(delta):'historical'}</em></div>`;
+ });
+ return rows.length?`<details class="decisionHistoryPanel"><summary><span>Adaptation decision history</span><b>${rows.length} recent decisions</b></summary><p class="muted compact">A persistent audit trail of how uploaded runs were interpreted before pathway evidence was updated.</p><div>${rows.join('')}</div></details>`:'';
+}
+
 function renderDashboard(){
  let engine=coachEngine(),{c,pred,cw,wd}=engine;
  $('phaseBadge').textContent=phase(cw);
@@ -1590,6 +1664,7 @@ function renderDashboard(){
  if(projectedCard)projectedCard.classList.add(engine.projectedModel.probability>=70?'metric-good':engine.projectedModel.probability>=45?'metric-watch':'metric-action');
  const coachReport=evidenceBasedCoach(engine);
  $('assessmentText').innerHTML=coachReportHtml(coachReport,true);
+ const decisionHistory=$('decisionHistory');if(decisionHistory)decisionHistory.innerHTML=decisionHistoryHtml();
  const pf=engine.projection.profile;
  const predictionModelContent=$('predictionModelContent');
  if(predictionModelContent)predictionModelContent.innerHTML=`<div class="modelSteps"><section><b>Race today — central time</b><p>Latest valid assessment is extrapolated to ${state.setup.raceDistance.toFixed(1)} km. Marathon durability changes the distance exponent from 1.06 toward 1.115 when long-run, weekly-volume and specific-session evidence is incomplete.</p><code>${fmtTime(engine.pred)} at ${pace(engine.pred/state.setup.raceDistance)}</code></section><section><b>Follow programme — central time</b><p>The programme scenario recalculates durability and plan-derived fitness from the actual settings. Plan Health is ${Math.round(engine.projection.planHealthScore)}/100: peak ${pf.plannedPeak.toFixed(1)} km/week, longest run ${pf.peakLong.toFixed(1)} km, ${pf.enabledDays} running days/week, ${(pf.growth*100).toFixed(1)}% growth, ${pf.taperDays} taper days and ${Math.round(pf.qualityShare*100)}% quality distance.</p><code>${fmtTime(engine.projection.predictedTime)} at ${pace(engine.projection.predictedTime/state.setup.raceDistance)} · durability exponent ${engine.projection.projectedExponent.toFixed(3)} · projected fitness ${engine.projection.projectedFitnessIndex.toFixed(1)} · taper ${(engine.projection.taperGain*100).toFixed(1)}% · completion ${Math.round(clamp(Number(engine.projection.completionAssumption)||.85,.75,.93)*100)}%</code></section><section><b>Target probability</b><p>The central time is treated as the median of an asymmetric finish-time distribution. The faster tail is narrower and the slower tail wider. Current evidence and execution confidence control the width. Probability is the area finishing at or before ${fmtTime(state.setup.targetTime)}.</p><code>Today ${Math.round(engine.currentModel.probability)}% · programme ${Math.round(engine.projectedModel.probability)}% · displayed as central 70% ranges</code></section></div><p class="muted compact">The relationships are evidence-informed but the exact coefficients are app calibration assumptions, not a clinically or externally validated prediction equation.</p>`;
@@ -2411,20 +2486,14 @@ function postRunCoachSnapshot(date=iso(today())){
 }
 function signedFactorDelta(v){if(!Number.isFinite(v)||Math.abs(v)<.0005)return '↔ 0.000';return `${v>0?'+':''}${v.toFixed(3)}`;}
 function postRunCoachUpdate(run,before,after){
- const plan=run.planId?state.plan.find(p=>p.id===run.planId):null,details=workoutScoreDetails(run,plan),score=details?.score??null,baseWeight=EVIDENCE_WEIGHT[run.type]??EVIDENCE_WEIGHT[baseType(run.type)]??.15;
- let evidenceWeight=baseWeight,reasons=[];
- if(Number(run.pain)>=3){evidenceWeight*=.35;reasons.push(`Pain ${Number(run.pain)}/10 reduced the performance evidence strength.`)}
- if(!plan&&run.type!=='Race'){evidenceWeight*=.35;reasons.push('The run was not linked to a planned workout, so performance evidence was discounted.')}
- if(plan&&Number(run.distanceKm)<Number(plan.distance)*.7){evidenceWeight*=.35;reasons.push('Less than 70% of prescribed distance was completed, so performance evidence was discounted.')}
- if(score!=null){if(score>82)reasons.unshift(`${run.type} execution scored ${score}/100, adding positive Pace & Power evidence.`);else if(score===82)reasons.unshift(`${run.type} execution scored ${score}/100, neutral for Pace & Power calibration.`);else reasons.unshift(`${run.type} execution scored ${score}/100${evidenceWeight<.35?', but low-confidence negative evidence is protected from reducing established capability.':', providing negative Pace & Power evidence.'}`);}
- if(Number.isFinite(run.powerDrift))reasons.push(`Power-based cardiac drift was ${Number(run.powerDrift).toFixed(1)}%, contributing to execution and load-tolerance evidence where applicable.`);
- if(Number.isFinite(run.rpe))reasons.push(`RPE ${Number(run.rpe).toFixed(0)}/10 was included in the session-specific execution score.`);
- const comparison=comparableRunAnalysis(run);
- if(comparison&&comparison.confidence!=='Low'&&Number.isFinite(comparison.efficiencyDelta))reasons.push(`Versus ${comparison.count} comparable ${comparison.family} runs, efficiency was ${Math.abs(comparison.efficiencyDelta).toFixed(1)}% ${comparison.efficiencyDelta>=0?'better':'worse'} (${comparison.confidence.toLowerCase()} comparison confidence).`);
+ const plan=run.planId?state.plan.find(p=>p.id===run.planId):null,details=workoutScoreDetails(run,plan),score=details?.score??null,decisionEngine=decisionSignalForRun(run,plan);
+ let reasons=[];
+ decisionEngine.signals.forEach(s=>reasons.push(`${s.name}: ${s.detail}.`));
+ if(decisionEngine.confidenceReasons.length)reasons.push(`Evidence confidence reduced because ${decisionEngine.confidenceReasons.join(' and ')}.`);
  if(plan)reasons.push(`${Number(run.distanceKm).toFixed(1)} of ${Number(plan.distance).toFixed(1)} planned km was recorded and contributes to weekly completion.`);
  const paceDelta=after.paceFactor-before.paceFactor,paceProvisionalDelta=(after.paceProvisional||after.paceFactor)-(before.paceProvisional||before.paceFactor),loadDelta=after.loadFactor-before.loadFactor,readyDelta=after.readiness-before.readiness,predDelta=(Number.isFinite(after.predictionSec)&&Number.isFinite(before.predictionSec))?after.predictionSec-before.predictionSec:null;
  let impact=[];
- impact.push(`Applied Pace & Power remains ${after.paceFactor.toFixed(3)} until the weekly review. Provisional next-review value ${(after.paceProvisional||after.paceFactor).toFixed(3)} (${signedFactorDelta(paceProvisionalDelta)} from this run).`);
+ impact.push(`Applied Pace & Power remains ${after.paceFactor.toFixed(3)} until the weekly review. Provisional next-review value ${(after.paceProvisional||after.paceFactor).toFixed(3)} (${signedFactorDelta(paceProvisionalDelta)} from the updated evidence set).`);
  impact.push(Math.abs(loadDelta)>=.0005?`Learned Distance & Load ${before.loadFactor.toFixed(3)} → ${after.loadFactor.toFixed(3)} (${signedFactorDelta(loadDelta)}).`:`Applied Distance & Load remains ${after.loadFactor.toFixed(3)}; this run contributes to the next weekly review rather than changing planned distance immediately.`);
  if(Math.abs(readyDelta)>=.0005)impact.push(`Readiness ${before.readiness.toFixed(3)} → ${after.readiness.toFixed(3)}.`);
  if(predDelta!=null&&Math.abs(predDelta)>=1)impact.push(`Central race estimate ${predDelta<0?'improved':'moved slower'} by ${fmtTime(Math.abs(predDelta))}.`);
@@ -2435,15 +2504,18 @@ function postRunCoachUpdate(run,before,after){
  if(changedPrescriptions.length){const c=changedPrescriptions[0],bits=[];if(Math.abs(c.paceDeltaSec)>=.5)bits.push(`pace ${pace(c.beforePace)} → ${pace(c.afterPace)}`);if(Math.abs(c.powerDeltaW)>=1)bits.push(`power ${Math.round(c.beforePower)} → ${Math.round(c.afterPower)} W`);nextChange=`If the provisional Pace & Power factor is confirmed at weekly review, ${c.type} on ${fmtDate(c.date)} would change to ${bits.join(' · ')}.`;}
  else if(after.next)nextChange=`No pace/power prescription change is currently projected for ${after.next.type} on ${fmtDate(after.next.date)}.`;
  const distancePolicyNote='Future distances do not change after an individual run. Distance & Load is committed at the weekly review; readiness can still reduce an upcoming session immediately for protection.';
- const confidence=after.paceConfidence>=70?'High':after.paceConfidence>=35?'Moderate':'Developing';
- return{createdAt:new Date().toISOString(),score,evidenceQuality:details?.evidenceQuality||'limited',before,after,paceDelta,paceProvisionalDelta,loadDelta,readinessDelta:readyDelta,predictionDeltaSec:predDelta,reasons:reasons.slice(0,5),impact,nextChange,prescriptionChanges:prescriptionChanges.slice(0,6),distancePolicyNote,confidence,decision:paceProvisionalDelta>0||loadDelta>0?'This run strengthened the evidence behind the next weekly review.':paceProvisionalDelta<0||loadDelta<0?'This run produced evidence for a more conservative next weekly review.':'This run mainly reinforced the current calibration.'};
+ const decision=decisionEngine.action==='Positive evidence'?'This run strengthened the evidence behind the next weekly review.':decisionEngine.action==='Conservative evidence'?'This run produced evidence for a more conservative next weekly review.':'This run mainly reinforced the current calibration.';
+ return{createdAt:new Date().toISOString(),score,evidenceQuality:details?.evidenceQuality||'limited',before,after,paceDelta,paceProvisionalDelta,loadDelta,readinessDelta:readyDelta,predictionDeltaSec:predDelta,reasons:reasons.slice(0,6),impact,nextChange,prescriptionChanges:prescriptionChanges.slice(0,6),distancePolicyNote,confidence:decisionEngine.confidence,decision,decisionEngine};
 }
 function postRunCoachUpdateHtml(r){
  const u=r?.coachUpdate;if(!u)return '';
- const future=(u.prescriptionChanges||[]).length?`<div class="postRunCoachSection"><b>Projected impact at next weekly review</b><div class="futurePrescriptionList">${u.prescriptionChanges.map(x=>{const distChanged=Math.abs(Number(x.distanceDeltaKm))>=.05,paceChanged=Math.abs(Number(x.paceDeltaSec))>=.5,powerChanged=Math.abs(Number(x.powerDeltaW))>=1;return`<div class="futurePrescriptionRow"><div><strong>${esc(fmtDate(x.date))} · ${esc(x.type)}</strong><small>${distChanged?`${Number(x.beforeDistance).toFixed(1)} → ${Number(x.afterDistance).toFixed(1)} km`:`${Number(x.afterDistance).toFixed(1)} km · held`}</small></div><div><span>${paceChanged?`${pace(x.beforePace)} → ${pace(x.afterPace)}`:`${pace(x.afterPace)} · unchanged`}</span><span>${powerChanged?`${Math.round(x.beforePower)} → ${Math.round(x.afterPower)} W`:`${Math.round(x.afterPower)} W · unchanged`}</span></div></div>`}).join('')}</div><p class="muted compact">${esc(u.distancePolicyNote||'')}</p></div>`:'';
- return `<section class="postRunCoachUpdate"><div class="postRunCoachHead"><div><span>POST-RUN COACH UPDATE</span><h3>${esc(u.decision)}</h3></div><b>${esc(u.confidence)} confidence</b></div><div class="postRunFactorGrid"><div><small>Pace & Power applied</small><strong>${Number(u.after?.paceFactor||1).toFixed(3)}</strong><em>Next review ${Number(u.after?.paceProvisional||u.after?.paceFactor||1).toFixed(3)} · ${esc(signedFactorDelta(Number(u.paceProvisionalDelta)||0))}</em></div><div><small>Distance & Load applied</small><strong>${Number(u.after?.loadFactor||1).toFixed(3)}</strong><em>Weekly review only</em></div><div><small>Readiness</small><strong>${Number(u.after?.readiness||1).toFixed(3)}</strong><em>${esc(signedFactorDelta(Number(u.readinessDelta)||0))}</em></div></div><div class="postRunCoachSection"><b>Why</b>${(u.reasons||[]).map(x=>`<p>${esc(x)}</p>`).join('')}</div><div class="postRunCoachSection"><b>What changed</b>${(u.impact||[]).map(x=>`<p>${esc(x)}</p>`).join('')}</div>${future}<div class="postRunNext"><b>What this changes next</b><p>${esc(u.nextChange||'No immediate prescription change.')}</p><small>Readiness remains temporary rather than changing learned capability.</small></div></section>`;
+ const de=u.decisionEngine||decisionSignalForRun(r,r.planId?state.plan.find(p=>p.id===r.planId):null);
+ const future=(u.prescriptionChanges||[]).length?`<details class="postRunProjectedImpact"><summary>Projected impact at next weekly review</summary><div class="futurePrescriptionList">${u.prescriptionChanges.map(x=>{const distChanged=Math.abs(Number(x.distanceDeltaKm))>=.05,paceChanged=Math.abs(Number(x.paceDeltaSec))>=.5,powerChanged=Math.abs(Number(x.powerDeltaW))>=1;return`<div class="futurePrescriptionRow"><div><strong>${esc(fmtDate(x.date))} · ${esc(x.type)}</strong><small>${distChanged?`${Number(x.beforeDistance).toFixed(1)} → ${Number(x.afterDistance).toFixed(1)} km`:`${Number(x.afterDistance).toFixed(1)} km · held`}</small></div><div><span>${paceChanged?`${pace(x.beforePace)} → ${pace(x.afterPace)}`:`${pace(x.afterPace)} · unchanged`}</span><span>${powerChanged?`${Math.round(x.beforePower)} → ${Math.round(x.afterPower)} W`:`${Math.round(x.afterPower)} W · unchanged`}</span></div></div>`}).join('')}</div><p class="muted compact">${esc(u.distancePolicyNote||'')}</p></details>`:'';
+ const signalRows=(de.signals||[]).map(s=>`<div class="decisionSignalRow"><span>${esc(s.name)}</span><b>${s.value>=0?'+':''}${Number(s.value).toFixed(2)}</b><small>${esc(s.detail)}</small></div>`).join('');
+ return `<section class="postRunCoachUpdate"><div class="postRunCoachHead"><div><span>POST-RUN COACH UPDATE</span><h3>${esc(u.decision)}</h3></div><b>${esc(u.confidence)} confidence</b></div><div class="postRunFactorGrid"><div><small>Pace & Power applied</small><strong>${Number(u.after?.paceFactor||1).toFixed(3)}</strong><em>Next review ${Number(u.after?.paceProvisional||u.after?.paceFactor||1).toFixed(3)} · ${esc(signedFactorDelta(Number(u.paceProvisionalDelta)||0))}</em></div><div><small>Distance & Load applied</small><strong>${Number(u.after?.loadFactor||1).toFixed(3)}</strong><em>Weekly review only</em></div><div><small>Readiness</small><strong>${Number(u.after?.readiness||1).toFixed(3)}</strong><em>${esc(signedFactorDelta(Number(u.readinessDelta)||0))}</em></div></div>
+ <section class="decisionEngineCard"><div class="decisionEngineHead"><div><small>TRAINING DECISION ENGINE</small><h4>${esc(de.action)}</h4></div><span>${de.confidencePct}% evidence confidence</span></div><div class="decisionFlow"><div><small>EVIDENCE</small><b>${de.score!=null?de.score+'/100 execution':'Limited'}</b></div><i>→</i><div><small>INTERPRETATION</small><b>${esc(de.conflict?'Mixed evidence':de.finalSignal>.25?'Positive':de.finalSignal<-.25?'Conservative':'Stable')}</b></div><i>→</i><div><small>DECISION</small><b>${esc(de.action)}</b></div><i>→</i><div><small>CONSEQUENCE</small><b>${Math.abs(Number(u.paceProvisionalDelta)||0)>=.0005?`Provisional ${signedFactorDelta(Number(u.paceProvisionalDelta)||0)}`:'Hold'}</b></div></div><p>${esc(de.interpretation)}</p><details><summary>Show decision calculation</summary><div class="decisionSignals">${signalRows}</div><div class="decisionFormula"><span>Integrated signal</span><b>${de.finalSignal>=0?'+':''}${Number(de.finalSignal).toFixed(2)}</b><small>Confidence weight ${Number(de.confidenceWeight).toFixed(2)} · conflict handling ${de.conflict?'applied':'not needed'}</small></div></details></section>
+ <div class="postRunCoachSection"><b>Why</b>${(u.reasons||[]).map(x=>`<p>${esc(x)}</p>`).join('')}</div><div class="postRunCoachSection"><b>What changed</b>${(u.impact||[]).map(x=>`<p>${esc(x)}</p>`).join('')}</div>${future}<div class="postRunNext"><b>What this changes next</b><p>${esc(u.nextChange||'No immediate prescription change.')}</p><small>Readiness remains temporary rather than changing learned capability.</small></div></section>`;
 }
-
 
 function intervalAnalysisHtml(r){
  const a=r?.intervalAnalysis;if(!a?.structured)return'';
