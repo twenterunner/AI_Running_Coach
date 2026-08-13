@@ -1,4 +1,4 @@
-AI Running Coach v10.6.10 Stable — build 16100
+AI Running Coach v10.7.0 Stable — build 17000
 
 Deployment
 ----------
@@ -507,3 +507,18 @@ v10.6.10 Stronger logo-blue palette
 - Dark navy remains the application shell; level-1 cards use deep blue, level-2 cards medium blue, level-3 tiles brighter blue, with pale blue and white for contrast.
 - Semantic green remains limited to success indicators only.
 - No coaching, prediction, recovery, injury, pathway or scoring logic changed.
+
+
+v10.7.0 Icon-derived visual system
+-----------------------------------
+- Full visual-system refactor based on the app icon: deep navy, royal/sky blue and white; teal/green is no longer structural.
+- Four consistent information levels are applied across Today, Plan, Log, Progress, Recovery and Injury/Rehab.
+- Added compact line-icon wells, circular gauges, horizontal progress bars and consistent metric tracks.
+- Plan week header now shows planned/completed/remaining distance plus a graphical completion bar.
+- Training-intensity doughnut charts are replaced with more readable horizontal blue bar distributions.
+- Progress sections are normalized to one cadence and no longer use independent gradients/colour islands.
+- Model-validation percentages now include compact evidence bars.
+- Injury prognosis adds a stage timeline with central-estimate and confidence visualization.
+- Modal/run analysis, charts, foldouts, forms and navigation all use the same icon-derived palette.
+- Semantic green/amber/red are reserved for success/caution/problem accents only.
+- Training, prediction, recovery, injury, pathway and scoring equations are unchanged.

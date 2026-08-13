@@ -3,145 +3,85 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#0b3157"><title>AI Running Coach</title>
-<link rel="manifest" href="manifest.webmanifest?v=16100"><link rel="stylesheet" href="styles.css?v=16100-blue-unified">
+<link rel="manifest" href="manifest.webmanifest?v=17000"><link rel="stylesheet" href="styles.css?v=17000-brand-ui">
 <style id="logoBlueThemeLock">
-/* v10.6.8 logo-blue visual system. This is intentionally the last theme block
-   in the document so legacy teal/light-card declarations cannot win. */
+/* v10.7.0 — icon-derived visual system. Structural palette = navy/blue/white only. */
 :root{
-  --lb-bg:#071f35;--lb-bg2:#082945;--lb-navy:#0b3157;--lb-deep:#0d3f65;
-  --lb-card:#104f79;--lb-card2:#155e8b;--lb-card3:#1c6f9e;
-  --lb-accent:#57b7e6;--lb-accent2:#8ad3f2;--lb-line:rgba(137,205,241,.24);
-  --lb-text:#ffffff;--lb-copy:#d8eaf6;--lb-muted:#a8c8dc;--lb-soft:#c7e0ef;
+ --brand-950:#061a2e;--brand-900:#082642;--brand-850:#0a3154;--brand-800:#0c3d68;
+ --brand-700:#11558b;--brand-600:#176cae;--brand-500:#168ee1;--brand-400:#43adf0;
+ --brand-300:#79c8f5;--brand-200:#b9e3fa;--brand-100:#e6f5fd;--brand-white:#fff;
+ --ink:#fff;--copy:#d9e9f5;--muted:#9fbad0;--line:rgba(112,185,235,.22);
+ --success:#75d7aa;--warn:#f2b24d;--danger:#ff7d8c;
 }
-html,body{background:var(--lb-bg)!important;color:var(--lb-text)!important}
-body{background:linear-gradient(180deg,var(--lb-bg2) 0%,var(--lb-bg) 100%) fixed!important}
-.topbar{background:var(--lb-navy)!important;background-image:none!important;border-bottom:1px solid var(--lb-line)!important}
-#mainContent,#mainContent .page{background:transparent!important;color:var(--lb-text)!important}
-#mainContent .sectionTitle :is(h1,h2,h3),#mainContent h1,#mainContent h2,#mainContent h3,#mainContent h4{color:#fff!important}
-#mainContent :is(p,li,dd,dt,span,small,label){color:var(--lb-copy)!important}
-#mainContent :is(.muted,.compact,.meta,.caption,.eyebrow,[class*="Meta"],[class*="Label"]){color:var(--lb-muted)!important}
+html,body{background:var(--brand-950)!important;color:var(--brand-white)!important}
+body{background:linear-gradient(180deg,var(--brand-900),var(--brand-950) 42rem) fixed!important}
+.topbar{background:var(--brand-850)!important;background-image:none!important;border-bottom:1px solid var(--line)!important}
+#mainContent,.page{background:transparent!important;color:var(--brand-white)!important}
+#mainContent :is(h1,h2,h3,h4,h5,strong,b){color:#fff!important}
+#mainContent :is(p,li,dd,dt,label){color:var(--copy)!important}
+#mainContent :is(.muted,.compact,.meta,.caption,.eyebrow,small){color:var(--muted)!important}
 
-/* One consistent hierarchy on every tab, including Progress. */
-#mainContent .page :is(.hero,.panel,.kpi,.workout,.runCard,.weekHeader,.miniSession,.todaySupportCard,
- .snapshotItem,.supportMetric,.injuryTopicCard,.rehabTodayFocus,.recoveryStatus,.readinessCenter,
- .readinessPanel,.predictionPanel,.importBox,.programmeTimelinePanel,.planMixPanel,.comparableRuns,
- .intervalAnalysisCard,.postRunCoachUpdate,.adaptationVisualCard,.modelValidationPanel,.personalModelPanel,
- .personalDimension,.pathwayHistoryPanel,.planFactorUsePanel,.weeklyReviewCard,.weeklyReviewPanel,
- .coachAssessmentPanel,.raceOutlookCard,.outlookCard,.injuryCard,.recoveryCard,.assessmentCard,.metricCard,
- .coachCard,.workoutIntelligenceCard,.personalComparison,.pathwayCard,.trainingDecisionCard,.evidenceCard,
- .diagnosisBox,.rehabAdherence,.rehabCalendar,.predictionSummary,.personalResponseModel){
-  background:var(--lb-card)!important;background-image:none!important;color:#fff!important;
-  border:1px solid var(--lb-line)!important;box-shadow:none!important;
-}
-#mainContent .page :is(.workoutHead,.workoutDetails,.runSummary,.planEffectSummary article,
- .canonicalPathMetrics>div,.modelValidationGrid>article,.scienceProvenance>div,.intervalVisualMetrics>div,
- .repDotBlock,.comparisonMetric,.comparisonRow,.evidenceDriver,.metricCell,.metric-card,.target,
- .guideGrid>div,.todayPlanGrid>div,.injuryKpiGrid>div,.clinicalReasoningGrid>div,.adherenceTile,
- .criterion,.milestone,.checkInHistoryRow,.preparationHeadline>div,.pathStats span,.executionKpis span,
- .coachFactorPair>div,.coachRecoverySummary>div,.pathFactorSummary>div,.weeklyReviewFactors>div,
- .powerCoverage,.rehabStretchGoal,.exercisePurpose,.exerciseRules>div,.supportNotice,.note,
- .personalComparisonBody,.comparisonSummary,.intervalMetric,.pathMetric,.evidenceMetric,.metricTile,
- .summaryTile,.infoTile,.statusTile,.reviewTile,.dataTile,.planTile,.calibrationTile,
- .personalModelSummary>div,.personalModelNote,.personalDimensionGrid>*,.predictionSummary>*,
- .diagnosisRanking>div,.rehabAdherence .adherenceTile>span,.mixGrid>div){
-  background:var(--lb-card2)!important;background-image:none!important;color:#fff!important;
-  border:1px solid var(--lb-line)!important;box-shadow:none!important;
-}
-#mainContent .page :is(.dashboardSection,.grid2,.kpis,.sessionGrid,.metricGrid,.guideGrid,.targets,
- .planEffectSummary,.canonicalPathMetrics,.modelValidationGrid,.scienceProvenance,.intervalVisualMetrics,
- .todayPlanGrid,.injuryKpiGrid,.clinicalReasoningGrid,.weeklyReviewFactors,.mixGrid,.planCards,
- .runList,.injuryList,.formGrid,.buttonRow,.pathwayGrid,.comparisonGrid){background:transparent!important;border:0!important}
+/* Four-level information hierarchy used identically on every tab. */
+#mainContent :is(.uiLevel1,.hero,.aiCoachBriefing,.canonicalAdaptationHome,.weeklyReviewCard,.recoveryConclusion,.rehabTodayFocus){background:var(--brand-800)!important;background-image:none!important;border:1px solid rgba(67,173,240,.28)!important;color:#fff!important;box-shadow:0 12px 26px rgba(0,12,25,.12)!important}
+#mainContent :is(.uiLevel2,.panel,.workout,.runCard,.todaySupportCard,.injuryTopicCard,.injuryCard,.recoveryStatus,.readinessCenter,.readinessPanel,.predictionPanel,.importBox,.programmeTimelinePanel,.planMixPanel,.comparableRuns,.intervalAnalysisCard,.postRunCoachUpdate,.workoutIntelligence,.personalComparison,.adaptationVisualCard,.modelValidationPanel,.personalResponseModel,.personalDimension,.pathwayHistoryPanel,.assessmentCard,.coachCard,.recoveryCard){background:var(--brand-850)!important;background-image:none!important;border:1px solid var(--line)!important;color:#fff!important;box-shadow:none!important}
+#mainContent :is(.uiLevel3,.metricCell,.metric-card,.target,.guideGrid>div,.supportMetric,.canonicalPathMetrics>div,.scienceProvenance>div,.comparisonMetric,.powerCoverage,.evidenceDriver,.intervalVisualMetrics>div,.repDotBlock,.adherenceTile,.prognosisStrip>div,.injuryKpiGrid>div,.clinicalReasoningGrid>div,.modelValidationGrid>article,.preparationHeadline>div,.executionKpis span,.planEffectSummary article,.predictionSummary>div,.predictionSummary article,.diagnosisBox,.reviewTile,.summaryTile,.infoTile,.dataTile,.statusTile,.planTile,.calibrationTile,.metricTile,.intervalMetric,.pathMetric,.evidenceMetric){background:var(--brand-800)!important;background-image:none!important;border:1px solid var(--line)!important;color:#fff!important;box-shadow:none!important}
+#mainContent :is(.intervalVisualMetrics>div,.canonicalPathMetrics>div,.adherenceTile>span,.comparisonSummary,.todayFocus,.exerciseRules>div,.weeklyReviewFactors>div){background:var(--brand-700)!important;background-image:none!important}
+#dashboard :is(.dashboardSection,.personalResponseModel,.personalDimension,.adaptationVisualCard,.modelValidationPanel,.predictionPanel,.coachAssessmentPanel){background-image:none!important}
 
-/* Progress must not introduce a different blue gradient or visual language. */
-#dashboard .personalModelPanel,#dashboard .personalResponseModel,#dashboard .modelValidationPanel,
-#dashboard .predictionPanel,#dashboard .adaptationVisualCard,#dashboard .pathwayCard,
-#dashboard [class*="personalModel"],#dashboard [class*="ModelPanel"]{background:var(--lb-card)!important;background-image:none!important}
-#dashboard [class*="personalModel"] :is(p,span,small){color:var(--lb-copy)!important}
-#dashboard [class*="personalModel"] :is(h2,h3,h4,strong,b){color:#fff!important}
+/* Icon wells: one elegant line-icon language. */
+.uiIcon,.todaySupportHead svg,.aiCoachIcon svg,.coachVisual svg,.workoutTypeIcon svg{fill:none!important;stroke:currentColor!important;stroke-width:1.8!important;stroke-linecap:round!important;stroke-linejoin:round!important}
+:is(.workoutTypeIcon,.todaySupportHead>span,.aiCoachIcon,.coachVisualIcon,.sectionVisualIcon,.exerciseFallback){background:rgba(22,142,225,.14)!important;color:var(--brand-300)!important;border:1px solid rgba(121,200,245,.18)!important;border-radius:12px!important}
+.workout:before,.adaptationVisualCard:before{background:var(--brand-400)!important}
 
-/* Cards generated with legacy inline pale fills. */
-#mainContent .page [style*="background:#fff"],#mainContent .page [style*="background: #fff"],
-#mainContent .page [style*="background:white"],#mainContent .page [style*="background: white"],
-#mainContent .page [style*="background:#f"],#mainContent .page [style*="background: #f"],
-.modalCard [style*="background:#fff"],.modalCard [style*="background: #fff"]{
-  background:var(--lb-card2)!important;background-image:none!important;color:#fff!important;
-}
+/* Buttons: blue, compact, high contrast. */
+#mainContent :is(button,.primary,.secondary,.buttonLike,.filePick,.todayInlineLink,.coachPlanLink,.logProgressLink),.modalCard :is(button,.primary,.secondary,.buttonLike,.filePick),#moreNav button{background:var(--brand-600)!important;background-image:none!important;color:#fff!important;border:1px solid rgba(185,227,250,.18)!important;box-shadow:none!important}
+#mainContent :is(button,.primary,.secondary,.buttonLike,.filePick,.todayInlineLink,.coachPlanLink,.logProgressLink) *,#moreNav button *{color:#fff!important}
+#mainContent a:not(.skipLink){color:var(--brand-300)!important}
 
-/* Buttons and links: never white-on-white or pale-on-pale. */
-#mainContent :is(button,.primary,.secondary,.buttonLike,.filePick,.todayInlineLink,.coachPlanLink,.logProgressLink),
-.modalCard :is(button,.primary,.secondary,.buttonLike,.filePick),#moreNav button{
-  background:var(--lb-card3)!important;background-image:none!important;color:#fff!important;
-  border:1px solid rgba(138,211,242,.35)!important;box-shadow:none!important;text-decoration:none!important;
-}
-#mainContent :is(button,.primary,.secondary,.buttonLike,.filePick,.todayInlineLink,.coachPlanLink,.logProgressLink) *,
-.modalCard :is(button,.primary,.secondary,.buttonLike,.filePick) *,#moreNav button *{color:#fff!important}
-#mainContent a:not(.skipLink){color:var(--lb-accent2)!important}
-#mainContent .close,.modal .close{background:var(--lb-deep)!important;color:#fff!important}
+/* Week header is now a visual summary instead of a text box. */
+.weekHeader{background:var(--brand-850)!important;border:1px solid var(--line)!important;border-radius:16px!important;padding:16px!important}
+.weekHeroLine{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}.weekHeroLine>div{display:grid;gap:2px}.weekHeroLine small{font-size:10px;font-weight:900;letter-spacing:.1em;color:var(--brand-300)!important}.weekHeroLine b{font-size:20px}.weekHeroLine span{font-size:12px;color:var(--muted)!important}.weekHeroLine>strong{font-size:26px;color:var(--brand-300)!important}
+.weekMetricRow{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:14px 0 10px}.weekMetricRow span{display:flex;flex-direction:column;padding:9px 10px;background:var(--brand-800);border:1px solid var(--line);border-radius:11px}.weekMetricRow b{font-size:14px}.weekMetricRow small{font-size:9px;text-transform:uppercase;letter-spacing:.05em}
+.brandProgress{height:8px;background:rgba(121,200,245,.13);border-radius:99px;overflow:hidden}.brandProgress i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,var(--brand-500),var(--brand-300))}.brandProgress.slim{height:5px;margin:8px 0 10px}.metricHeadLine{display:flex;justify-content:space-between;align-items:center;gap:8px}.metricHeadLine strong{font-size:18px}
 
-/* More pop-over: no white shell and always readable. */
-#moreNav,.moreNav{background:var(--lb-deep)!important;background-image:none!important;border:1px solid var(--lb-line)!important;box-shadow:0 16px 34px rgba(0,17,32,.35)!important}
-#moreNav button,.moreNav button{background:var(--lb-card2)!important;color:#fff!important}
-#moreNav button[aria-current="page"]{background:var(--lb-card3)!important;color:#fff!important}
+/* Plan workout rows are compact, scan-first rows. */
+.workout{border-radius:14px!important;overflow:hidden!important;position:relative!important}.workoutHead{display:grid!important;grid-template-columns:52px 42px minmax(0,1fr) auto!important;gap:9px!important;padding:11px 12px!important;background:transparent!important}.dateBox{background:var(--brand-800)!important;border:1px solid var(--line)!important;border-radius:10px!important;padding:6px 3px!important}.dateBox b{font-size:16px!important}.workoutTypeIcon{width:40px!important;height:40px!important;background:rgba(22,142,225,.11)!important;color:var(--brand-300)!important;border:1px solid var(--line)!important}.workoutTitle h3{font-size:15px!important}.workoutTitle p{font-size:11px!important;color:var(--muted)!important}.status{font-size:9px!important;padding:4px 7px!important;background:rgba(22,142,225,.08)!important;border:1px solid var(--line)!important}.status.completed{color:var(--success)!important}.status.today{color:var(--brand-300)!important}.status.missed{color:var(--danger)!important}.status.rest{color:#9fb4c8!important}.workoutDetails{background:var(--brand-900)!important;border-top:1px solid var(--line)!important}
 
-/* Workouts and daily run rows. */
-#mainContent .workout{background:var(--lb-card)!important;border-radius:14px!important;overflow:hidden!important;position:relative!important}
-#mainContent .workout:before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--lb-accent)!important}
-#mainContent .workoutHead{background:var(--lb-card)!important}
-#mainContent .workoutDetails{background:var(--lb-deep)!important;border-top:1px solid var(--lb-line)!important}
-#mainContent .dateBox,#mainContent .workoutTypeIcon{background:var(--lb-card2)!important;border:1px solid var(--lb-line)!important;color:var(--lb-accent2)!important}
-#mainContent .dateBox :is(b,small,span),#mainContent .workoutTitle :is(h3,p){color:inherit!important}
-#mainContent .workoutTitle h3,#mainContent .dateBox b{color:#fff!important}
-#mainContent .workoutTitle p,#mainContent .dateBox small,#mainContent .dateBox span{color:var(--lb-muted)!important}
+/* Gauges, progress bars and metric bars. */
+.circularGauge{background:conic-gradient(var(--brand-400) calc(var(--gauge)*1%),rgba(121,200,245,.14) 0)!important;box-shadow:none!important}.circularGauge>div{background:var(--brand-850)!important}.progressTrack,.pillarBar,.deltaTrack,.bar{background:rgba(121,200,245,.13)!important}.progressTrack i,.pillarBar i,.deltaTrack i,.bar i{background:linear-gradient(90deg,var(--brand-500),var(--brand-300))!important}.intervalVisualMetrics>div:has(.caution) .bar i{background:var(--warn)!important}
 
-/* Foldouts. */
-#mainContent .page details,#mainContent .page .planInsightsShell{background:var(--lb-deep)!important;background-image:none!important;color:#fff!important;border:1px solid var(--lb-line)!important;box-shadow:none!important}
-#mainContent .page details>summary,#mainContent .page .planInsightsShell>summary{background:var(--lb-card2)!important;background-image:none!important;color:#fff!important;border:0!important}
-#mainContent .page details>summary *,#mainContent .page .planInsightsShell>summary *{color:#fff!important}
-#mainContent .page details>summary:after{color:var(--lb-accent2)!important}
+/* Training intensity: horizontal blue bars replace doughnuts. */
+.mixGrid{display:grid!important;grid-template-columns:1fr!important;gap:10px!important}.mixGrid>div{background:var(--brand-850)!important;border:1px solid var(--line)!important;border-radius:14px!important;padding:12px!important}.mixGrid>div h4{font-size:13px!important;margin:0 0 6px!important}.mixGrid canvas,#nextWeekMixChart,#completedMixChart,#overallMixChart{height:auto!important;min-height:138px!important;background:var(--brand-900)!important;border:0!important;border-radius:10px!important}
 
-/* Charts: blue surfaces and blue-led palette, no white surrounds. */
-#mainContent .mixGrid>div{background:var(--lb-card)!important;border:1px solid var(--lb-line)!important;padding:12px!important}
-#mainContent .mixGrid>div>h4{color:#fff!important}
-#mainContent canvas,#mainContent .panel canvas,#nextWeekMixChart,#completedMixChart,#overallMixChart{
-  background:var(--lb-deep)!important;background-image:none!important;border:1px solid rgba(137,205,241,.16)!important;border-radius:11px!important;
-}
-#mainContent .bar,#mainContent [class*="Bar"]{background:#082f4d!important}
-#mainContent .bar i,#mainContent [class*="Bar"] i,#mainContent [class*="Bar"] em{background:linear-gradient(90deg,var(--lb-accent),var(--lb-accent2))!important}
+/* Every chart is embedded, not a white sheet. */
+#mainContent canvas,.modalCard canvas{background:var(--brand-900)!important;border:1px solid rgba(121,200,245,.12)!important;border-radius:12px!important}.chartDataDisclosure,.chartDataDetails,.chartSummaryDetails,.chartTableDetails{background:var(--brand-900)!important;border-color:var(--line)!important}.chartDataDisclosure>summary,.chartDataDetails>summary,.chartSummaryDetails>summary,.chartTableDetails>summary{background:var(--brand-800)!important;color:#fff!important}
 
-/* Interval/run-detail modal. */
-.modal,.modalCard,.exerciseImageViewer{color:#fff!important}
-.modalCard,.exerciseImageViewer{background:var(--lb-deep)!important;background-image:none!important;border:1px solid var(--lb-line)!important}
-.modalCard :is(.intervalAnalysisCard,.comparableRuns,.personalComparison,.workoutIntelligenceCard,.pathwayCard,.postRunCoachUpdate){background:var(--lb-card)!important;background-image:none!important;border:1px solid var(--lb-line)!important;color:#fff!important}
-.modalCard :is(.intervalVisualMetrics>div,.repDotBlock,.powerCoverage,.comparisonSummary,.comparisonRow,.metricCell,.intervalMetric){background:var(--lb-card2)!important;color:#fff!important;border:1px solid var(--lb-line)!important}
-.modalCard :is(h1,h2,h3,h4,strong,b){color:#fff!important}.modalCard :is(p,span,small,li){color:var(--lb-copy)!important}
-.modalCard [class*="score" i],.modalCard [class*="Score"]{background:var(--lb-card3)!important;color:#fff!important;border-color:var(--lb-line)!important}
+/* Foldouts: one quiet treatment everywhere. */
+#mainContent details,.modalCard details{background:var(--brand-900)!important;border:1px solid var(--line)!important;color:#fff!important;box-shadow:none!important}.page details>summary,.modalCard details>summary{background:var(--brand-800)!important;color:#fff!important;border:0!important}.page details>summary *,.modalCard details>summary *{color:#fff!important}.page details>summary:after,.modalCard details>summary:after{color:var(--brand-300)!important}
 
-/* Status accents remain small. */
-#mainContent .status,#mainContent .badge,#mainContent .evidenceBadge{background:rgba(87,183,230,.10)!important;border:1px solid var(--lb-line)!important;color:var(--lb-soft)!important}
-#mainContent .status.completed{color:#9ee1bd!important}#mainContent .status.today{color:var(--lb-accent2)!important}
-#mainContent .status.upcoming,#mainContent .status.rest{color:var(--lb-soft)!important}#mainContent .status.missed{color:#ffaaaa!important}
+/* Progress: fewer visual islands; one coherent information cadence. */
+#dashboard .dashboardSection{border:0!important;background:transparent!important;padding-left:0!important;padding-right:0!important}.dashboardSectionHead span{background:var(--brand-600)!important;color:#fff!important}.canonicalAdaptationHome{background:var(--brand-850)!important}.adaptationVisualCard{background:var(--brand-800)!important;border-radius:15px!important}.canonicalPathMetrics>div{background:var(--brand-700)!important}.personalResponseModel,.modelValidationPanel,.predictionPanel,.coachAssessmentPanel{background:var(--brand-850)!important}.personalDimension,.modelValidationGrid>article,.executionKpis span,.verifiedStrength,.verifiedLimiter{background:var(--brand-800)!important}.scienceProvenance>div{background:var(--brand-800)!important}
 
-/* Inputs. */
-#mainContent input,#mainContent select,#mainContent textarea{background:var(--lb-deep)!important;color:#fff!important;border:1px solid var(--lb-line)!important}
-#mainContent input::placeholder,#mainContent textarea::placeholder{color:var(--lb-muted)!important}
+/* Injury: timeline is the principal prognosis visual. */
+.recoveryTimelineVisual{margin:16px 0 12px;padding:18px 10px 8px;background:var(--brand-900);border:1px solid var(--line);border-radius:14px}.timelineRail{height:62px;position:relative;margin:0 18px}.timelineRail:before{content:"";position:absolute;left:0;right:0;top:14px;height:4px;background:rgba(121,200,245,.14);border-radius:99px}.timelineRail>i{position:absolute;left:0;top:14px;height:4px;background:linear-gradient(90deg,var(--brand-500),var(--brand-300));border-radius:99px}.timelineRail>span{position:absolute;top:2px;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;width:76px;text-align:center}.timelineRail>span b{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;background:var(--brand-800);border:2px solid rgba(121,200,245,.25);font-size:11px}.timelineRail>span.done b,.timelineRail>span.active b{background:var(--brand-500);border-color:var(--brand-300)}.timelineRail>span small{font-size:8px;line-height:1.15;margin-top:4px}.timelineDates{display:flex;justify-content:space-between;gap:12px;border-top:1px solid var(--line);padding-top:10px}.timelineDates span{font-size:12px;color:#fff!important}.timelineDates small{display:block;font-size:8px;text-transform:uppercase}.confidenceDots{display:flex;gap:4px;margin-top:6px}.confidenceDots i{width:18px;height:4px;border-radius:99px;background:rgba(121,200,245,.14)}.confidenceDots i:first-child,.confidenceDots i.on{background:var(--brand-400)}
 
-/* Exercise visuals. */
-.exerciseImageButton{background:var(--lb-card2)!important;border:1px solid var(--lb-line)!important;color:#fff!important}
-.exerciseMuscles i{background:var(--lb-card3)!important;color:#fff!important;border:1px solid var(--lb-line)!important}
+/* Today: branded hero and supporting modules. */
+.aiCoachBriefing{background:var(--brand-800)!important}.aiCoachEvidence,.todayContextChips>span{background:rgba(22,142,225,.12)!important;border:1px solid var(--line)!important}.aiCoachCall{background:var(--brand-700)!important;border:1px solid var(--line)!important}.todaySupportGrid{gap:10px!important}.todaySupportCard{background:var(--brand-850)!important}.supportMetric{background:var(--brand-800)!important}
 
-/* Navigation uses logo colours and stays readable; no white active tile. */
-.mobileBottomNav,#nav.mobileBottomNav{background:var(--lb-navy)!important;border-top:1px solid var(--lb-line)!important;box-shadow:none!important}
-.mobileBottomNav button,#nav.mobileBottomNav button{background:var(--lb-deep)!important;background-image:none!important;color:#8fb2c9!important;border:1px solid rgba(137,205,241,.08)!important;box-shadow:none!important}
-.mobileBottomNav button.active,#nav.mobileBottomNav button.active{background:var(--lb-card3)!important;color:#fff!important;border-color:rgba(138,211,242,.3)!important}
-.mobileBottomNav button.active *,#nav.mobileBottomNav button.active *{color:#fff!important}
-.mobileBottomNav button:not(.active) *,#nav.mobileBottomNav button:not(.active) *{color:#8fb2c9!important}
-nav:not(.mobileBottomNav){background:var(--lb-navy)!important;border-color:var(--lb-line)!important}
-nav:not(.mobileBottomNav) button{background:var(--lb-deep)!important;color:var(--lb-copy)!important}nav:not(.mobileBottomNav) button.active{background:var(--lb-card3)!important;color:#fff!important}
+/* Semantic accents are accents only. */
+.note.good,.note.warn,.note.bad{background:var(--brand-800)!important}.note.good{border-left-color:var(--success)!important}.note.warn{border-left-color:var(--warn)!important}.note.bad{border-left-color:var(--danger)!important}.badge,.evidenceBadge,.injuryFamilyPill,.activePlanBadge{background:rgba(22,142,225,.12)!important;color:var(--brand-200)!important;border:1px solid var(--line)!important}
 
-@media(max-width:620px){
- #mainContent{padding-left:12px!important;padding-right:12px!important}
- #mainContent .panel,#mainContent .workout,#mainContent .runCard,#mainContent .todaySupportCard,#mainContent .injuryTopicCard{border-radius:14px!important}
-}
+/* Modals, exercise viewer and forms. */
+.modal{background:rgba(2,14,28,.9)!important}.modalCard,.exerciseImageViewer,.onboardingCard{background:var(--brand-900)!important;border:1px solid var(--line)!important;color:#fff!important}.modalCard :is(.workoutIntelligence,.intervalAnalysisCard,.comparableRuns,.postRunCoachUpdate,.personalComparison,.pathwayCard){background:var(--brand-850)!important}.modalCard :is(.intervalVisualMetrics>div,.repDotBlock,.powerCoverage,.comparisonSummary,.comparisonRow){background:var(--brand-800)!important}#mainContent :is(input,select,textarea),.modalCard :is(input,select,textarea){background:var(--brand-900)!important;color:#fff!important;border:1px solid var(--line)!important}.exerciseImageButton{background:var(--brand-800)!important;border:1px solid var(--line)!important}.exerciseMuscles i{background:var(--brand-700)!important;color:#fff!important;border:1px solid var(--line)!important}
+
+/* Navigation mirrors the app icon: navy + bright blue + white. */
+.mobileBottomNav,#nav.mobileBottomNav{background:var(--brand-850)!important;border-top:1px solid var(--line)!important;box-shadow:0 -8px 24px rgba(0,9,20,.16)!important}.mobileBottomNav button,#nav.mobileBottomNav button{background:transparent!important;color:#7394af!important;border:0!important;box-shadow:none!important}.mobileBottomNav button.active,#nav.mobileBottomNav button.active{background:var(--brand-100)!important;color:var(--brand-850)!important;border-radius:16px!important}.mobileBottomNav button.active *,#nav.mobileBottomNav button.active *{color:var(--brand-850)!important}.mobileBottomNav button:not(.active) *,#nav.mobileBottomNav button:not(.active) *{color:#7394af!important}nav:not(.mobileBottomNav){background:var(--brand-850)!important;border-color:var(--line)!important}nav:not(.mobileBottomNav) button{background:var(--brand-800)!important;color:var(--copy)!important}nav:not(.mobileBottomNav) button.active{background:var(--brand-600)!important;color:#fff!important}
+#moreNav,.moreNav{background:var(--brand-900)!important;border:1px solid var(--line)!important}#moreNav button{background:var(--brand-800)!important}
+
+/* Explicitly neutralize old structural teal/green backgrounds and gradients. */
+#mainContent [style*="background:#0b6"],#mainContent [style*="background:#0f7"],#mainContent [style*="background:#128"],#mainContent [style*="background:#159"],#mainContent [style*="background:#087"],#mainContent [style*="background:#0a7"]{background:var(--brand-800)!important;background-image:none!important}
+
+@media(max-width:620px){#mainContent{padding-left:12px!important;padding-right:12px!important}.panel,.workout,.runCard,.todaySupportCard,.injuryTopicCard{border-radius:14px!important}.weekMetricRow{gap:6px}.weekMetricRow span{padding:8px}.timelineRail>span small{display:none}.timelineRail{height:38px}}
 </style>
 <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png?v=10320">
 <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png?v=10320">
@@ -154,7 +94,7 @@ nav:not(.mobileBottomNav) button{background:var(--lb-deep)!important;color:var(-
 <body>
 <a class="skipLink" href="#mainContent">Skip to main content</a>
 <header class="topbar">
-  <div class="brand"><img class="logo" src="icon-192.png?v=10320" alt="AI Running Coach logo"><div class="brand-copy"><h1>AI Running Coach</h1><p>Race-specific adaptive planning · v10.6.10 · build 16100</p></div></div>
+  <div class="brand"><img class="logo" src="icon-192.png?v=10320" alt="AI Running Coach logo"><div class="brand-copy"><h1>AI Running Coach</h1><p>Race-specific adaptive planning · v10.7.0 · build 17000</p></div></div>
   <button id="installBtn" class="install hidden">Install</button>
 </header>
 <nav id="nav" aria-label="Primary navigation"></nav>
@@ -254,7 +194,7 @@ nav:not(.mobileBottomNav) button{background:var(--lb-deep)!important;color:var(-
     <summary><span>Training insights &amp; adaptation</span><small>Timeline, prescription effects and intensity distribution</small></summary>
     <div class="planInsightsBody">
       <article class="panel programmeTimelinePanel"><div class="panelHead"><div><h3>Programme timeline</h3><p class="muted compact">Training blocks and current position on the path to race day.</p></div></div><div id="raceTimeline"></div></article>
-      <article class="panel planMixPanel"><div class="panelHead"><div><h3>Training intensity mix</h3><p class="muted compact">Distance distribution by workout category</p></div></div><div class="mixGrid"><div><h4>Next week</h4><canvas id="nextWeekMixChart" width="1000" height="340" role="img" aria-label="Next week training intensity mix">Next week intensity distribution.</canvas></div><div><h4>Completed to date</h4><canvas id="completedMixChart" width="1000" height="340" role="img" aria-label="Completed training intensity mix">Completed intensity distribution.</canvas></div><div><h4>Overall programme</h4><canvas id="overallMixChart" width="1000" height="340" role="img" aria-label="Overall programme training intensity mix">Overall programme intensity distribution.</canvas></div></div></article>
+      <article class="panel planMixPanel"><div class="panelHead"><div><h3>Training intensity mix</h3><p class="muted compact">Blue-bar distribution by workout category</p></div></div><div class="mixGrid"><div><h4>Next week</h4><canvas id="nextWeekMixChart" width="1000" height="340" role="img" aria-label="Next week training intensity mix">Next week intensity distribution.</canvas></div><div><h4>Completed to date</h4><canvas id="completedMixChart" width="1000" height="340" role="img" aria-label="Completed training intensity mix">Completed intensity distribution.</canvas></div><div><h4>Overall programme</h4><canvas id="overallMixChart" width="1000" height="340" role="img" aria-label="Overall programme training intensity mix">Overall programme intensity distribution.</canvas></div></div></article>
     </div>
   </details>
 </section>
@@ -338,7 +278,7 @@ nav:not(.mobileBottomNav) button{background:var(--lb-deep)!important;color:var(-
   <article class="panel"><h3>Data</h3><div class="buttonRow"><button id="backupBtn">Download backup</button><label for="restoreFile" class="buttonLike">Restore backup</label><input id="restoreFile" type="file" accept=".json"><button id="undoRestoreBtn" type="button" class="secondary hidden">Undo last restore</button><button id="exportBtn">Export runs CSV</button><button id="resetBtn" class="danger">Reset app</button></div></article>
 </section>
 </main>
-<footer class="appFooter"><span>AI Running Coach</span><small>v10.6.10 · build 16100</small></footer>
+<footer class="appFooter"><span>AI Running Coach</span><small>v10.7.0 · build 17000</small></footer>
 
 <div id="modal" class="modal hidden" role="dialog" aria-modal="true" aria-label="AI Running Coach dialog" tabindex="-1"><div class="modalCard"><button id="closeModal" class="close" type="button" aria-label="Close dialog">×</button><div id="modalContent"></div></div></div>
 
@@ -367,5 +307,5 @@ nav:not(.mobileBottomNav) button{background:var(--lb-deep)!important;color:var(-
     <button class="primary full" type="submit">Review and create my plan</button>
   </form>
 </div>
-<script src="app.js?v=16100-blue-unified"></script>
+<script src="app.js?v=17000-brand-ui"></script>
 </body></html>
