@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '10.5.0';
-  const BUILD = 15000;
+  const VERSION = '10.5.1';
+  const BUILD = 15010;
   const SCHEMA = 10330;
   const PRIMARY_STORAGE_KEY = 'arc_v10330_web';
   const MIRROR_STORAGE_KEY = 'arc_v10330_mirror';
@@ -750,6 +750,7 @@ function decisionSignalForRun(run,plan=run?.planId?state.plan.find(p=>p.id===run
  const capabilityComponents=(details?.components||[]).filter(c=>['pace','power','repAdherence'].includes(c.key));
  const capabilityWeight=sum(capabilityComponents.map(c=>c.effectiveWeight||0));
  const capabilityScore=capabilityComponents.length&&capabilityWeight>0?sum(capabilityComponents.map(c=>c.score*(c.effectiveWeight||0)))/capabilityWeight:null;
+ const capabilityExecutionComponents=capabilityComponents.map(c=>({name:c.name,score:c.score,effectiveWeight:capabilityWeight>0?(c.effectiveWeight||0)/capabilityWeight:0,scope:c.scope,detail:c.detail}));
  let performanceSignal=0;
  if(qualitySession&&Number.isFinite(capabilityScore))performanceSignal=clamp((capabilityScore-82)/18,-1,1);
  else if(Number.isFinite(score)&&score<65)performanceSignal=clamp((score-70)/30,-.35,0); // poor execution can weaken confidence, easy running cannot manufacture speed gains
@@ -801,7 +802,7 @@ function decisionSignalForRun(run,plan=run?.planId?state.plan.find(p=>p.id===run
  if(combined<0&&confidenceWeight<.35){combined=0;safeguardNote=`Developing-confidence protection: the negative signal ${preProtectionSignal.toFixed(2)} is recorded, but is not accepted as a capability downgrade until evidence confidence increases.`;}
  const confidencePct=clamp(Math.round(confidenceWeight/.65*100),0,100),confidence=confidencePct>=75?'High':confidencePct>=45?'Moderate':'Developing';
  const action=combined>.25?'Positive Pace & Power evidence':combined<-.25?'Conservative Pace & Power evidence':'Hold Pace & Power';
- return{pathway:'pace',family,score,capabilityScore,signals,signalComponents,performanceSignal,comparableSignal,costSignal,personalSignal,personalResponse:personal,rawIntegratedSignal:initialIntegratedSignal,preProtectionSignal,finalSignal:clamp(combined,-1,1),baseConfidenceWeight:baseWeight,confidenceWeight,confidencePct,confidence,confidenceMultipliers,conflict,confidenceReasons,safeguardNote,interpretation,action,completion,comparison,componentDerivation:{performance:Number.isFinite(capabilityScore)?`(${capabilityScore.toFixed(1)} − 82) ÷ 18, bounded to −1…+1`:(Number.isFinite(score)&&score<65?`(${score} − 70) ÷ 30, bounded to −0.35…0`:'No direct capability signal'),comparable:comparison&&comparison.confidence!=='Low'&&Number.isFinite(comparison.efficiencyDelta)?`${comparison.efficiencyDelta.toFixed(1)}% ÷ 5, bounded to −1…+1`:'No Moderate/High-confidence comparable-run signal',cost:'Rules from RPE and, where relevant, cardiac drift',personal:personalSignal!==0?personal.detail:'No mature personal-response contribution'}};
+ return{pathway:'pace',family,score,capabilityScore,capabilityExecutionComponents,signals,signalComponents,performanceSignal,comparableSignal,costSignal,personalSignal,personalResponse:personal,rawIntegratedSignal:initialIntegratedSignal,preProtectionSignal,finalSignal:clamp(combined,-1,1),baseConfidenceWeight:baseWeight,confidenceWeight,confidencePct,confidence,confidenceMultipliers,conflict,confidenceReasons,safeguardNote,interpretation,action,completion,comparison,componentDerivation:{performance:Number.isFinite(capabilityScore)?`(${capabilityScore.toFixed(1)} − 82) ÷ 18, bounded to −1…+1`:(Number.isFinite(score)&&score<65?`(${score} − 70) ÷ 30, bounded to −0.35…0`:'No direct capability signal'),comparable:comparison&&comparison.confidence!=='Low'&&Number.isFinite(comparison.efficiencyDelta)?`${comparison.efficiencyDelta.toFixed(1)}% ÷ 5, bounded to −1…+1`:'No Moderate/High-confidence comparable-run signal',cost:'Rules from RPE and, where relevant, cardiac drift',personal:personalSignal!==0?personal.detail:'No mature personal-response contribution'}};
 }
 
 function loadDecisionSignalForRun(run,plan=run?.planId?state.plan.find(p=>p.id===run.planId):null){
@@ -2882,6 +2883,31 @@ function postRunCoachUpdate(run,before,after){
  const confidence=[paceDecision.confidence,loadDecision.confidence].includes('Developing')?'Developing':[paceDecision.confidence,loadDecision.confidence].includes('Moderate')?'Moderate':'High';
  return{createdAt:new Date().toISOString(),score,evidenceQuality:details?.evidenceQuality||'limited',before,after,paceProvisionalDelta,loadProvisionalDelta,readinessDelta:readyDelta,predictionDeltaSec:predDelta,nextChange,prescriptionChanges:prescriptionChanges.slice(0,6),distancePolicyNote,confidence,decision,decisionSummary:{pace:{action:paceDecision.action,confidence:paceDecision.confidence},load:{action:loadDecision.action,confidence:loadDecision.confidence}}};
 }
+function pathwayExecutionBridgeHtml(d){
+ const details=d?.score!=null?null:null;
+ const path=d.pathway;
+ const source=(d.signals||[]);
+ const executionRows=[];
+ if(path==='pace'){
+   const cap=Number(d.capabilityScore);
+   const perf=d.signalComponents?.find(x=>x.key==='performance');
+   if(Number.isFinite(cap)){
+     const capRows=(d.capabilityExecutionComponents||[]).map(c=>`<div class="executionBridgeComponent"><div><b>${esc(c.name)}</b><small>${esc(c.scope||'')}</small></div><span>${c.score.toFixed(0)}/100 × ${(c.effectiveWeight*100).toFixed(0)}%</span><strong>${(c.score*c.effectiveWeight).toFixed(1)}</strong></div>`).join('');
+     executionRows.push(`<div class="executionBridgeComponents">${capRows}</div><div class="executionBridgeResult"><span>Weighted capability score</span><b>${cap.toFixed(1)}/100</b></div>`);
+     executionRows.push(`<div class="executionBridgeEquation"><span>Convert capability score to pathway signal</span><code>(${cap.toFixed(1)} − 82) ÷ 18</code><b>= ${perf?`${perf.value>=0?'+':''}${perf.value.toFixed(2)}`:'—'}</b></div>`);
+   }else{
+     executionRows.push(`<div class="executionBridgeResult"><span>Relevant Execution Breakdown</span><b>No direct capability score</b></div>`);
+   }
+   return`<section class="executionToPathwayBridge"><h5>1. Execution Breakdown → pathway evidence</h5><p>The Pace & Power pathway does not use the overall execution score directly. It takes the execution components that measure target capability: <b>pace, power and repetition adherence</b>, using their effective Execution Breakdown weights.</p>${executionRows.join('')}<p class="bridgeNote">Heart-rate control, cardiac drift and RPE can affect physiological-cost evidence where relevant, but they are not silently folded into the capability score.</p></section>`;
+ }
+ const completion=d.signalComponents?.find(x=>x.key==='completion'),execution=d.signalComponents?.find(x=>x.key==='execution'),tolerance=d.signalComponents?.find(x=>x.key==='tolerance');
+ return`<section class="executionToPathwayBridge"><h5>1. Execution Breakdown → pathway evidence</h5><p>Distance & Load uses the run differently. <b>Planned-load completion</b> creates the completion signal, the <b>overall Execution Breakdown score</b> provides limited execution support, and run-specific tolerance evidence is evaluated separately.</p>
+ <div class="executionBridgeResult"><span>Overall Execution Breakdown → execution-support signal</span><b>${Number.isFinite(d.score)?`${Math.round(d.score)}/100 → ${execution?`${execution.value>=0?'+':''}${execution.value.toFixed(2)}`:'—'}`:'No score'}</b></div>
+ <div class="executionBridgeResult"><span>Planned-load completion → completion signal</span><b>${Number.isFinite(d.completion)?`${Math.round(d.completion*100)}% → ${completion?`${completion.value>=0?'+':''}${completion.value.toFixed(2)}`:'—'}`:'No matched plan'}</b></div>
+ <div class="executionBridgeResult"><span>Run-specific tolerance evidence</span><b>${tolerance?`${tolerance.value>=0?'+':''}${tolerance.value.toFixed(2)}`:'0.00'}</b></div>
+ <p class="bridgeNote">This separation prevents the same execution metric from automatically dominating both capability and load-tolerance learning.</p></section>`;
+}
+
 function pathwayCalculationDetailsHtml(d,t){
  const comps=d.signalComponents||[];
  const fmtSigned=(v,digits=2)=>`${Number(v)>=0?'+':''}${Number(v).toFixed(digits)}`;
@@ -2897,25 +2923,26 @@ function pathwayCalculationDetailsHtml(d,t){
  const multiplierText=(d.confidenceMultipliers||[]).length?(d.confidenceMultipliers||[]).map(m=>` × ${m.factor.toFixed(2)} (${esc(m.label)})`).join(''):'';
  const contributionCalc=accepted*t.confidenceWeight*t.learningRate;
  return`<div class="pathCalcAudit">
+   ${pathwayExecutionBridgeHtml(d)}
    <section>
-     <h5>1. How the Run signal is calculated</h5>
+     <h5>2. Pathway evidence → Run signal</h5>
      <div class="pathCalcComponents">${weightedRows}</div>
      <div class="pathCalcEquation"><span>Weighted sum</span><code>${sumExpr}</code><b>= ${fmtSigned(raw)}</b></div>
      <p class="pathCalcNote">The component values are normalized evidence signals, not percentages. The pathway weights sum to 100%.</p>
    </section>
    <section>
-     <h5>2. Safeguard / accepted signal</h5>
+     <h5>3. Safeguard / accepted signal</h5>
      <div class="pathCalcStep"><span>Run signal</span><b>${fmtSigned(raw)}</b></div>
      <div class="pathCalcStep"><span>Accepted signal</span><b>${fmtSigned(accepted)}</b></div>
      <p>${safeguardChanged?esc(t.safeguard):'No safeguard changed the Run signal.'}</p>
    </section>
    <section>
-     <h5>3. Learning confidence</h5>
+     <h5>4. Learning confidence</h5>
      <div class="pathCalcEquation"><span>Confidence calculation</span><code>${Math.round(confidenceBase*100)}%${multiplierText}</code><b>= ${Math.round(t.confidenceWeight*100)}%</b></div>
      <p>${d.confidenceReasons?.length?esc(d.confidenceReasons.join(' · ')):'No confidence reduction applied.'}</p>
    </section>
    <section>
-     <h5>4. How the Accepted contribution is calculated</h5>
+     <h5>5. Accepted signal → factor contribution</h5>
      <div class="pathCalcEquation contribution"><span>Factor contribution</span><code>${fmtSigned(accepted)} × ${t.confidenceWeight.toFixed(2)} × ${(t.learningRate*100).toFixed(2)}%</code><b>= ${signedFactorDelta(contributionCalc)}</b></div>
      <p>This is the amount this run contributes to the learned pathway. It is not the new factor itself.</p>
    </section>
