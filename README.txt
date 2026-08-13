@@ -1,4 +1,4 @@
-AI Running Coach v10.6.2 Stable — build 16020
+AI Running Coach v10.6.3 Stable — build 16030
 
 Deployment
 ----------
@@ -440,3 +440,17 @@ v10.6.2 Teal hierarchy + exercise visuals
 - Rehabilitation exercise cards now use the existing rendered exercise pictures directly in the cards, show target-muscle chips, clearer technique cues, and open the full image in the app modal when tapped.
 - Exercise images remain flat root-level repository files (no assets folder). Expected filenames: 01_slow_calf_raise.png through 13_double_leg_bridge.png as already referenced by the app.
 - No training, prediction, recovery, injury, pathway or scoring equations were changed.
+
+
+v10.6.3 Runner-first hierarchy + contrast hardening
+--------------------------------------------------
+- Fixes the low-contrast Plan weekly-review cards visible on dark teal: nested review cards, headings, labels and body copy now remain high-contrast teal/white rather than inheriting the former light-card styling.
+- Raises contrast for inactive bottom-navigation icons/labels, week headers, foldouts, metric labels, buttons and muted supporting copy.
+- Plan now presents the runner's actual sessions before the provisional weekly adaptation review; the review is explicitly secondary and follows the workouts it is interpreting.
+- Run Log keeps import as the immediate action, then shows recent runs, with data-entry guidance moved below the activity history.
+- Recovery wording emphasizes current readiness first, then the evidence and trend behind it.
+- Injury/Rehab moves Today's Focus and its exercise prescription immediately after the current injury/plan decision, before longitudinal recovery metrics.
+- Exercise thumbnails are explicit zoom targets: tap the image to open the large technique viewer without accidentally opening/closing the surrounding foldout. The viewer supports native pinch-zoom behavior where available.
+- Week headers and run-list dates show weekday names for faster scanning.
+- Repository remains completely flat. Exercise images are still root-level files beside app.js/styles.css, never in an assets folder.
+- No training, prediction, recovery, injury, pathway, workout-intelligence or scoring equations changed.

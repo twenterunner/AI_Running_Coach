@@ -2083,3 +2083,82 @@ details b,details strong{color:var(--teal-text)!important}
   .exerciseDetail.visualExercise>summary{grid-template-columns:78px minmax(0,1fr);gap:10px}.exerciseImageButton{width:78px;height:66px}.exerciseChevron{display:none}
   .exerciseRules{grid-template-columns:1fr}.sectionTitle p{font-size:11px!important}
 }
+
+/* ============================================================
+   v10.6.3 Runner-first information flow + contrast hardening
+   ============================================================ */
+:root{
+  --contrast-primary:#ffffff;
+  --contrast-secondary:#d7eeee;
+  --contrast-tertiary:#b9d6d7;
+  --contrast-focus:#71ebe5;
+}
+
+/* No low-contrast text on dark teal surfaces. */
+body,.page,.panel,.workout,.runCard,.injuryTopicCard,.uiLevel1,.uiLevel2,.uiLevel3,details{color:var(--contrast-primary)!important}
+.page p,.page span,.page small,.page .muted,.panel p,.panel span,.panel small,.panel .muted,.workout p,.workout span,.runCard p,.runCard span,.injuryTopicCard p,.injuryTopicCard span,.injuryTopicCard small{color:var(--contrast-secondary)!important}
+.page h1,.page h2,.page h3,.page h4,.page h5,.page b,.page strong,.page label{color:var(--contrast-primary)!important}
+a,.linkBtn,.exerciseChevron{color:var(--contrast-focus)!important}
+
+/* The screenshot exposed inherited light cards inside a dark Level-1 card. Keep nested content teal. */
+.planEffectSummary article{
+  background:rgba(3,56,64,.56)!important;
+  border:1px solid rgba(183,238,235,.24)!important;
+  color:#fff!important;
+  box-shadow:none!important;
+}
+.planEffectSummary article small{color:#bfe1e0!important}
+.planEffectSummary article strong{color:#fff!important}
+.planEffectSummary article p{color:#d6eceb!important}
+.weeklyReviewHead>span{background:rgba(255,255,255,.11)!important;color:#fff!important;border:1px solid rgba(255,255,255,.18)!important}
+.weeklyReviewCard.provisional .weeklyReviewHead>span{background:rgba(239,178,92,.14)!important;color:#ffe0a7!important;border-color:rgba(239,178,92,.34)!important}
+.weekHeader{background:linear-gradient(145deg,#0c6670,#095763)!important;color:#fff!important;border-color:rgba(183,238,235,.24)!important}
+.weekHeader .muted{color:#d0e8e7!important}
+
+/* Runner-first section labels make the page sequence obvious without adding duplicate copy. */
+.planPrimaryHead,.planSecondaryHead,.logPrimaryHead{margin:16px 3px 9px}
+.planPrimaryHead>span,.planSecondaryHead>span,.logPrimaryHead>span{display:block;color:#79e7e1!important;font-size:.68rem;font-weight:950;letter-spacing:.11em}
+.planPrimaryHead p,.planSecondaryHead p,.logPrimaryHead p{margin:4px 0 0;color:#cae4e4!important;font-size:.78rem;line-height:1.4}
+.planSecondaryHead{margin-top:22px}
+
+/* Bottom navigation must remain legible even when inactive. */
+@media(max-width:760px){
+  #nav button{color:#b9d4d6!important;opacity:1!important}
+  #nav button .navIcon,#nav button .navLabel,#nav button svg{color:inherit!important;opacity:1!important;stroke:currentColor!important}
+  #nav button.active{color:#073746!important;background:#e6f4f5!important}
+  #nav button.active .navIcon,#nav button.active .navLabel,#nav button.active svg{color:#073746!important;stroke:#073746!important}
+  #moreNav{background:#074650!important;border-color:rgba(183,238,235,.28)!important}
+  #moreNav button{background:#0b5964!important;color:#f5ffff!important;border-color:rgba(183,238,235,.20)!important}
+}
+
+/* Controls/icons: readable in all states. */
+.weekNav button,.secondary,.buttonLike,.buttonRow button{color:#f5ffff!important}
+.workoutTypeIcon,.dateBox,.exerciseFallback{color:#8df2ec!important}
+.status,.evidenceBadge,.recoveryConfidence,.checkinBadge{font-weight:850!important}
+
+/* Exercise image is an explicit tap target, not a decorative thumbnail. */
+.exerciseImageButton{outline:1px solid rgba(154,240,233,.34)!important;box-shadow:0 0 0 2px rgba(0,0,0,.08)!important}
+.exerciseImageButton:after{content:'↗';position:absolute;top:6px;right:6px;width:22px;height:22px;display:grid;place-items:center;border-radius:7px;background:rgba(0,31,37,.78);color:#fff;font-size:12px;font-weight:900;pointer-events:none}
+.exerciseImageButton>em{left:5px!important;right:auto!important;bottom:5px!important;background:rgba(0,31,37,.86)!important;color:#fff!important;font-size:9px!important;font-weight:850!important}
+.exerciseImageButton:focus-visible{outline:3px solid #7af0ea!important;outline-offset:2px!important}
+.exerciseImageViewer>img{max-height:72vh!important;touch-action:pinch-zoom!important;background:#062f38!important}
+.exerciseViewerHint{color:#d6eceb!important;line-height:1.5}
+.exerciseMuscles i{color:#d8fffc!important;background:rgba(83,217,213,.16)!important;border-color:rgba(119,235,228,.34)!important}
+
+/* The exercise itself is the dominant object inside a rehab card. */
+.exerciseSummaryCopy>b{font-size:15px!important;color:#fff!important}
+.exerciseSummaryCopy>small{color:#d6eceb!important;font-size:11px!important}
+.exerciseInstructionBlock>b,.exerciseRules b{color:#fff!important}
+.exerciseInstructionBlock li,.exerciseRules p{color:#d8eeee!important}
+
+/* Preserve clear hierarchy but avoid almost-black text from old rules. */
+.canonicalPathHead h4,.canonicalPathHead strong,.weeklyReviewHead h3,.intervalAnalysisHead h3,
+.recoveryMain strong,.readinessHero strong,.todaySupportHead h4,.injurySectionHead h4{color:#fff!important}
+.canonicalPathHead small,.weeklyReviewHead small,.intervalAnalysisHead span,.todaySupportHead small{color:#9df1ec!important}
+
+@media(max-width:620px){
+  .planEffectSummary{gap:9px!important}
+  .planEffectSummary article{padding:13px!important}
+  .exerciseImageButton{min-width:82px;width:82px!important;height:72px!important}
+  .exerciseDetail.visualExercise>summary{grid-template-columns:82px minmax(0,1fr)!important}
+}
