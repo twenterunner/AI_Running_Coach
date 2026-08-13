@@ -1,4 +1,4 @@
-AI Running Coach v10.7.0 Stable — build 17000
+AI Running Coach v10.7.1 Stable — build 17010
 
 Deployment
 ----------
@@ -522,3 +522,15 @@ v10.7.0 Icon-derived visual system
 - Modal/run analysis, charts, foldouts, forms and navigation all use the same icon-derived palette.
 - Semantic green/amber/red are reserved for success/caution/problem accents only.
 - Training, prediction, recovery, injury, pathway and scoring equations are unchanged.
+
+v10.7.1 Clean Blue Restart
+--------------------------
+- Rebuilds the visual palette from one canonical token system rather than layering another colour patch.
+- Structural colours are restricted to deep navy, dark blue, medium blue and one action blue; teal, purple and green are no longer structural surfaces.
+- Green, amber and red are semantic-only status colours.
+- Removes the v10.7.0 inline theme lock and the accumulated v10.6.x theme-override blocks from the active stylesheet.
+- Training-intensity visuals are now deterministic HTML horizontal bars, so Next week, Completed to date and Overall programme always render even when the insights disclosure starts collapsed.
+- Adds graphical confidence bars to Personal Response Model dimensions, score bars to verified strengths/opportunities, and bars to workout-execution KPIs.
+- Interval repetition dots and metric bars now use the same blue family, with amber used only for extra/unplanned repetitions.
+- Progress, Today, Plan, Log, Recovery and Injury/Rehab share the same Level 1 / Level 2 / metric / foldout treatments.
+- No training, prediction, pathway, recovery, injury or scoring equations were changed.
