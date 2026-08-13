@@ -1496,3 +1496,6 @@ details>summary{transition:background .15s ease,color .15s ease}details>summary:
 
 /* v10.4.4 consistency fixes */
 .compactPathwayFlow>div>em{display:block;margin-top:4px;color:#7b6b58;font-size:.62rem;line-height:1.35;font-style:normal}
+
+/* v10.4.5 confidence transparency */
+.confidenceDerivation{margin:8px 0;padding:9px 10px;border-radius:10px;background:#f4f7f9}.confidenceDerivation>b{display:block;color:#214d66;font-size:.72rem}.confidenceDerivation p{margin:3px 0 0;color:#647784;font-size:.68rem;line-height:1.4}.confidenceDerivation strong{color:#173e59}
