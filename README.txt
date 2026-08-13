@@ -1,4 +1,4 @@
-AI Running Coach v10.6.7 Stable — build 16070
+AI Running Coach v10.6.8 Stable — build 16080
 
 Deployment
 ----------
@@ -477,3 +477,14 @@ v10.6.7 Target-render fidelity lock
 - All runner-facing buttons use dark teal with white text for reliable contrast.
 - Chart canvases and chart-detail wrappers are embedded dark teal, and canvas labels/grid lines were recoloured for dark-background readability.
 - No training, prediction, recovery, injury, pathway or scoring equations changed.
+
+
+v10.6.8 Logo-blue visual system
+--------------------------------
+- Replaces the teal visual system with the dark-blue, light-blue and white palette used by the AI Running Coach icon.
+- Standardises Progress so Personal Response Model, validation, prediction and pathway sections use the same card hierarchy rather than introducing a separate gradient treatment.
+- Fixes low-contrast buttons/links, More-menu text, interval score elements and remaining pale-on-pale labels.
+- Removes white shells around Plan intensity-mix charts and uses a dark-blue chart canvas with blue-led series colours.
+- Daily workout, rehab, run-detail modal, pathway, validation, adherence and diagnosis surfaces share the same blue hierarchy.
+- Bottom navigation uses navy/blue active states rather than white tiles.
+- No training, prediction, recovery, injury, pathway or execution calculations changed.

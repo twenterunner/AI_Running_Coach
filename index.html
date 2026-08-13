@@ -3,34 +3,36 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#0b3157"><title>AI Running Coach</title>
-<link rel="manifest" href="manifest.webmanifest?v=16060"><link rel="stylesheet" href="styles.css?v=16070-target">
-<style id="referenceRenderLock">
-/* v10.6.7 reference-render lock: deliberately lives after styles.css so legacy
-   light-theme selectors cannot reintroduce white content tiles. */
+<link rel="manifest" href="manifest.webmanifest?v=16080"><link rel="stylesheet" href="styles.css?v=16080-logo-blue">
+<style id="logoBlueThemeLock">
+/* v10.6.8 logo-blue visual system. This is intentionally the last theme block
+   in the document so legacy teal/light-card declarations cannot win. */
 :root{
-  --rr-bg:#063e47;--rr-bg2:#04363f;--rr-card:#07535d;--rr-card2:#0a606a;
-  --rr-card3:#0d6972;--rr-line:rgba(139,232,226,.18);--rr-text:#f7ffff;
-  --rr-copy:#c7e1df;--rr-muted:#93bfbd;--rr-accent:#57dcd5;--rr-navy:#0b3c5d;
+  --lb-bg:#071f35;--lb-bg2:#082945;--lb-navy:#0b3157;--lb-deep:#0d3f65;
+  --lb-card:#104f79;--lb-card2:#155e8b;--lb-card3:#1c6f9e;
+  --lb-accent:#57b7e6;--lb-accent2:#8ad3f2;--lb-line:rgba(137,205,241,.24);
+  --lb-text:#ffffff;--lb-copy:#d8eaf6;--lb-muted:#a8c8dc;--lb-soft:#c7e0ef;
 }
-html,body{background:var(--rr-bg2)!important;color:var(--rr-text)!important}
-body{background:linear-gradient(180deg,var(--rr-bg) 0%,var(--rr-bg2) 100%) fixed!important}
-#mainContent{background:transparent!important;color:var(--rr-text)!important}
-#mainContent .page{background:transparent!important}
-#mainContent .sectionTitle h1,#mainContent .sectionTitle h2,#mainContent .sectionTitle h3{color:#fff!important}
-#mainContent .sectionTitle p,#mainContent .muted{color:var(--rr-muted)!important}
+html,body{background:var(--lb-bg)!important;color:var(--lb-text)!important}
+body{background:linear-gradient(180deg,var(--lb-bg2) 0%,var(--lb-bg) 100%) fixed!important}
+.topbar{background:var(--lb-navy)!important;background-image:none!important;border-bottom:1px solid var(--lb-line)!important}
+#mainContent,#mainContent .page{background:transparent!important;color:var(--lb-text)!important}
+#mainContent .sectionTitle :is(h1,h2,h3),#mainContent h1,#mainContent h2,#mainContent h3,#mainContent h4{color:#fff!important}
+#mainContent :is(p,li,dd,dt,span,small,label){color:var(--lb-copy)!important}
+#mainContent :is(.muted,.compact,.meta,.caption,.eyebrow,[class*="Meta"],[class*="Label"]){color:var(--lb-muted)!important}
 
-/* PRIMARY CARDS — there are intentionally no white content surfaces. */
+/* One consistent hierarchy on every tab, including Progress. */
 #mainContent .page :is(.hero,.panel,.kpi,.workout,.runCard,.weekHeader,.miniSession,.todaySupportCard,
  .snapshotItem,.supportMetric,.injuryTopicCard,.rehabTodayFocus,.recoveryStatus,.readinessCenter,
  .readinessPanel,.predictionPanel,.importBox,.programmeTimelinePanel,.planMixPanel,.comparableRuns,
- .intervalAnalysisCard,.postRunCoachUpdate,.adaptationVisualCard,.modelValidationPanel,.personalDimension,
- .pathwayHistoryPanel,.planFactorUsePanel,.weeklyReviewCard,.weeklyReviewPanel,.coachAssessmentPanel,
- .raceOutlookCard,.outlookCard,.injuryCard,.recoveryCard,.assessmentCard,.metricCard,.coachCard,
- .workoutIntelligenceCard,.personalComparison,.pathwayCard,.trainingDecisionCard,.evidenceCard){
-  background:var(--rr-card)!important;background-image:none!important;color:var(--rr-text)!important;
-  border:1px solid var(--rr-line)!important;box-shadow:none!important;
+ .intervalAnalysisCard,.postRunCoachUpdate,.adaptationVisualCard,.modelValidationPanel,.personalModelPanel,
+ .personalDimension,.pathwayHistoryPanel,.planFactorUsePanel,.weeklyReviewCard,.weeklyReviewPanel,
+ .coachAssessmentPanel,.raceOutlookCard,.outlookCard,.injuryCard,.recoveryCard,.assessmentCard,.metricCard,
+ .coachCard,.workoutIntelligenceCard,.personalComparison,.pathwayCard,.trainingDecisionCard,.evidenceCard,
+ .diagnosisBox,.rehabAdherence,.rehabCalendar,.predictionSummary,.personalResponseModel){
+  background:var(--lb-card)!important;background-image:none!important;color:#fff!important;
+  border:1px solid var(--lb-line)!important;box-shadow:none!important;
 }
-/* Generated children that formerly carried their own pale backgrounds. */
 #mainContent .page :is(.workoutHead,.workoutDetails,.runSummary,.planEffectSummary article,
  .canonicalPathMetrics>div,.modelValidationGrid>article,.scienceProvenance>div,.intervalVisualMetrics>div,
  .repDotBlock,.comparisonMetric,.comparisonRow,.evidenceDriver,.metricCell,.metric-card,.target,
@@ -39,95 +41,108 @@ body{background:linear-gradient(180deg,var(--rr-bg) 0%,var(--rr-bg2) 100%) fixed
  .coachFactorPair>div,.coachRecoverySummary>div,.pathFactorSummary>div,.weeklyReviewFactors>div,
  .powerCoverage,.rehabStretchGoal,.exercisePurpose,.exerciseRules>div,.supportNotice,.note,
  .personalComparisonBody,.comparisonSummary,.intervalMetric,.pathMetric,.evidenceMetric,.metricTile,
- .summaryTile,.infoTile,.statusTile,.reviewTile,.dataTile,.planTile,.calibrationTile){
-  background:var(--rr-card2)!important;background-image:none!important;color:var(--rr-text)!important;
-  border-color:var(--rr-line)!important;box-shadow:none!important;
+ .summaryTile,.infoTile,.statusTile,.reviewTile,.dataTile,.planTile,.calibrationTile,
+ .personalModelSummary>div,.personalModelNote,.personalDimensionGrid>*,.predictionSummary>*,
+ .diagnosisRanking>div,.rehabAdherence .adherenceTile>span,.mixGrid>div){
+  background:var(--lb-card2)!important;background-image:none!important;color:#fff!important;
+  border:1px solid var(--lb-line)!important;box-shadow:none!important;
 }
-/* Any common generic card classes not explicitly known above. */
-#mainContent .page :is(article,section)[class*="Card"],
-#mainContent .page :is(div,article,section)[class*="Tile"],
-#mainContent .page :is(div,article,section)[class*="Metric"]{
-  --_rr:var(--rr-card2);background-color:var(--_rr)!important;background-image:none!important;
-}
-/* Preserve wrapper transparency where a container is only structural. */
 #mainContent .page :is(.dashboardSection,.grid2,.kpis,.sessionGrid,.metricGrid,.guideGrid,.targets,
  .planEffectSummary,.canonicalPathMetrics,.modelValidationGrid,.scienceProvenance,.intervalVisualMetrics,
  .todayPlanGrid,.injuryKpiGrid,.clinicalReasoningGrid,.weeklyReviewFactors,.mixGrid,.planCards,
  .runList,.injuryList,.formGrid,.buttonRow,.pathwayGrid,.comparisonGrid){background:transparent!important;border:0!important}
 
-/* Kill explicit white/pale inline fills left by legacy render helpers. */
+/* Progress must not introduce a different blue gradient or visual language. */
+#dashboard .personalModelPanel,#dashboard .personalResponseModel,#dashboard .modelValidationPanel,
+#dashboard .predictionPanel,#dashboard .adaptationVisualCard,#dashboard .pathwayCard,
+#dashboard [class*="personalModel"],#dashboard [class*="ModelPanel"]{background:var(--lb-card)!important;background-image:none!important}
+#dashboard [class*="personalModel"] :is(p,span,small){color:var(--lb-copy)!important}
+#dashboard [class*="personalModel"] :is(h2,h3,h4,strong,b){color:#fff!important}
+
+/* Cards generated with legacy inline pale fills. */
 #mainContent .page [style*="background:#fff"],#mainContent .page [style*="background: #fff"],
 #mainContent .page [style*="background:white"],#mainContent .page [style*="background: white"],
-#mainContent .page [style*="background:#f"],#mainContent .page [style*="background: #f"]{
-  background:var(--rr-card2)!important;background-image:none!important;
+#mainContent .page [style*="background:#f"],#mainContent .page [style*="background: #f"],
+.modalCard [style*="background:#fff"],.modalCard [style*="background: #fff"]{
+  background:var(--lb-card2)!important;background-image:none!important;color:#fff!important;
 }
 
-/* TYPOGRAPHY — white primary, aqua secondary, no low-contrast pale-on-pale text. */
-#mainContent .page :is(h1,h2,h3,h4,h5,strong,b){color:#fff!important}
-#mainContent .page :is(p,li,dd,dt,span,small,label){color:var(--rr-copy)!important}
-#mainContent .page :is(.muted,.compact,.meta,.caption,.eyebrow,[class*="Meta"],[class*="Label"]){color:var(--rr-muted)!important}
-#mainContent .page a,#mainContent .page button.linkBtn,#mainContent .page .todayInlineLink,
-#mainContent .page .coachPlanLink,#mainContent .page .logProgressLink{color:#d3fffb!important}
-
-/* WORKOUT ROWS — compact dark rows like supplied render. */
-#mainContent .workout{border-radius:14px!important;overflow:hidden!important;position:relative!important}
-#mainContent .workout:before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--rr-accent)!important}
-#mainContent .workoutHead{background:var(--rr-card)!important;min-height:72px!important}
-#mainContent .dateBox,#mainContent .workoutTypeIcon{background:#0a5b65!important;border:1px solid var(--rr-line)!important;color:var(--rr-accent)!important}
-#mainContent .dateBox b,#mainContent .workoutTitle h3{color:#fff!important}
-#mainContent .dateBox small,#mainContent .dateBox span,#mainContent .workoutTitle p{color:var(--rr-muted)!important}
-#mainContent .workoutDetails{background:#064b55!important;border-top:1px solid var(--rr-line)!important}
-#mainContent .target{background:var(--rr-card2)!important}
-
-/* FOLDOUTS — one dark strip, teal chevron. */
-#mainContent .page details,#mainContent .page .planInsightsShell{
-  background:#064e58!important;background-image:none!important;color:#fff!important;
-  border:1px solid var(--rr-line)!important;box-shadow:none!important;
+/* Buttons and links: never white-on-white or pale-on-pale. */
+#mainContent :is(button,.primary,.secondary,.buttonLike,.filePick,.todayInlineLink,.coachPlanLink,.logProgressLink),
+.modalCard :is(button,.primary,.secondary,.buttonLike,.filePick),#moreNav button{
+  background:var(--lb-card3)!important;background-image:none!important;color:#fff!important;
+  border:1px solid rgba(138,211,242,.35)!important;box-shadow:none!important;text-decoration:none!important;
 }
-#mainContent .page details>summary,#mainContent .page .planInsightsShell>summary{
-  background:#075863!important;background-image:none!important;color:#fff!important;border:0!important;
+#mainContent :is(button,.primary,.secondary,.buttonLike,.filePick,.todayInlineLink,.coachPlanLink,.logProgressLink) *,
+.modalCard :is(button,.primary,.secondary,.buttonLike,.filePick) *,#moreNav button *{color:#fff!important}
+#mainContent a:not(.skipLink){color:var(--lb-accent2)!important}
+#mainContent .close,.modal .close{background:var(--lb-deep)!important;color:#fff!important}
+
+/* More pop-over: no white shell and always readable. */
+#moreNav,.moreNav{background:var(--lb-deep)!important;background-image:none!important;border:1px solid var(--lb-line)!important;box-shadow:0 16px 34px rgba(0,17,32,.35)!important}
+#moreNav button,.moreNav button{background:var(--lb-card2)!important;color:#fff!important}
+#moreNav button[aria-current="page"]{background:var(--lb-card3)!important;color:#fff!important}
+
+/* Workouts and daily run rows. */
+#mainContent .workout{background:var(--lb-card)!important;border-radius:14px!important;overflow:hidden!important;position:relative!important}
+#mainContent .workout:before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--lb-accent)!important}
+#mainContent .workoutHead{background:var(--lb-card)!important}
+#mainContent .workoutDetails{background:var(--lb-deep)!important;border-top:1px solid var(--lb-line)!important}
+#mainContent .dateBox,#mainContent .workoutTypeIcon{background:var(--lb-card2)!important;border:1px solid var(--lb-line)!important;color:var(--lb-accent2)!important}
+#mainContent .dateBox :is(b,small,span),#mainContent .workoutTitle :is(h3,p){color:inherit!important}
+#mainContent .workoutTitle h3,#mainContent .dateBox b{color:#fff!important}
+#mainContent .workoutTitle p,#mainContent .dateBox small,#mainContent .dateBox span{color:var(--lb-muted)!important}
+
+/* Foldouts. */
+#mainContent .page details,#mainContent .page .planInsightsShell{background:var(--lb-deep)!important;background-image:none!important;color:#fff!important;border:1px solid var(--lb-line)!important;box-shadow:none!important}
+#mainContent .page details>summary,#mainContent .page .planInsightsShell>summary{background:var(--lb-card2)!important;background-image:none!important;color:#fff!important;border:0!important}
+#mainContent .page details>summary *,#mainContent .page .planInsightsShell>summary *{color:#fff!important}
+#mainContent .page details>summary:after{color:var(--lb-accent2)!important}
+
+/* Charts: blue surfaces and blue-led palette, no white surrounds. */
+#mainContent .mixGrid>div{background:var(--lb-card)!important;border:1px solid var(--lb-line)!important;padding:12px!important}
+#mainContent .mixGrid>div>h4{color:#fff!important}
+#mainContent canvas,#mainContent .panel canvas,#nextWeekMixChart,#completedMixChart,#overallMixChart{
+  background:var(--lb-deep)!important;background-image:none!important;border:1px solid rgba(137,205,241,.16)!important;border-radius:11px!important;
 }
-#mainContent .page details>summary :is(span,b,strong,small),#mainContent .page .planInsightsShell>summary :is(span,b,strong,small){color:#fff!important}
-#mainContent .page details>summary:after{color:var(--rr-accent)!important}
+#mainContent .bar,#mainContent [class*="Bar"]{background:#082f4d!important}
+#mainContent .bar i,#mainContent [class*="Bar"] i,#mainContent [class*="Bar"] em{background:linear-gradient(90deg,var(--lb-accent),var(--lb-accent2))!important}
 
-/* STATUS — colour is a small cue, never a whole pale card. */
-#mainContent .status,#mainContent .badge,#mainContent .evidenceBadge{background:rgba(255,255,255,.055)!important;border:1px solid var(--rr-line)!important}
-#mainContent .status.completed{color:#77e4a4!important}#mainContent .status.today{color:#63e2dc!important}
-#mainContent .status.upcoming{color:#cfe3e2!important}#mainContent .status.rest{color:#abc7c6!important}
-#mainContent .status.missed{color:#ff9c9c!important}
-#mainContent .note,#mainContent .supportNotice{background:var(--rr-card2)!important;color:var(--rr-copy)!important}
-#mainContent .note.warn,#mainContent .supportNotice{border-left:4px solid #e7a84d!important}
-#mainContent .note.good{border-left:4px solid #75dca0!important}#mainContent .note.bad{border-left:4px solid #ec8080!important}
+/* Interval/run-detail modal. */
+.modal,.modalCard,.exerciseImageViewer{color:#fff!important}
+.modalCard,.exerciseImageViewer{background:var(--lb-deep)!important;background-image:none!important;border:1px solid var(--lb-line)!important}
+.modalCard :is(.intervalAnalysisCard,.comparableRuns,.personalComparison,.workoutIntelligenceCard,.pathwayCard,.postRunCoachUpdate){background:var(--lb-card)!important;background-image:none!important;border:1px solid var(--lb-line)!important;color:#fff!important}
+.modalCard :is(.intervalVisualMetrics>div,.repDotBlock,.powerCoverage,.comparisonSummary,.comparisonRow,.metricCell,.intervalMetric){background:var(--lb-card2)!important;color:#fff!important;border:1px solid var(--lb-line)!important}
+.modalCard :is(h1,h2,h3,h4,strong,b){color:#fff!important}.modalCard :is(p,span,small,li){color:var(--lb-copy)!important}
+.modalCard [class*="score" i],.modalCard [class*="Score"]{background:var(--lb-card3)!important;color:#fff!important;border-color:var(--lb-line)!important}
 
-/* CHARTS / BARS — teal canvas, cyan/green/orange cues supplied by chart JS remain visible. */
-#mainContent .page canvas{background:#064a54!important;border:1px solid rgba(139,232,226,.12)!important;border-radius:12px!important}
-#mainContent .bar,#mainContent [class*="Bar"]{background:#043f48!important}
-#mainContent .bar i,#mainContent [class*="Bar"] i,#mainContent [class*="Bar"] em{background:linear-gradient(90deg,#50d9d3,#76dfa1)!important}
+/* Status accents remain small. */
+#mainContent .status,#mainContent .badge,#mainContent .evidenceBadge{background:rgba(87,183,230,.10)!important;border:1px solid var(--lb-line)!important;color:var(--lb-soft)!important}
+#mainContent .status.completed{color:#9ee1bd!important}#mainContent .status.today{color:var(--lb-accent2)!important}
+#mainContent .status.upcoming,#mainContent .status.rest{color:var(--lb-soft)!important}#mainContent .status.missed{color:#ffaaaa!important}
 
-/* INPUTS / MODALS */
-#mainContent input,#mainContent select,#mainContent textarea{background:#095762!important;color:#fff!important;border:1px solid var(--rr-line)!important}
-#mainContent input::placeholder,#mainContent textarea::placeholder{color:#8cb5b3!important}
-.modalCard,.exerciseImageViewer{background:#064b55!important;color:#fff!important;border:1px solid var(--rr-line)!important}
-.exerciseGuide,.rehabDayBody,.modelDetailBody,.planInsightsBody{background:transparent!important}
-.exerciseImageButton{background:#075863!important;border:1px solid var(--rr-line)!important}
-.exerciseMuscles i{background:#0b6670!important;color:#e4fffc!important;border:1px solid var(--rr-line)!important}
+/* Inputs. */
+#mainContent input,#mainContent select,#mainContent textarea{background:var(--lb-deep)!important;color:#fff!important;border:1px solid var(--lb-line)!important}
+#mainContent input::placeholder,#mainContent textarea::placeholder{color:var(--lb-muted)!important}
 
-/* NAVIGATION — reference render has no white active pill. */
-.mobileBottomNav{background:#073f49!important;border-top:1px solid var(--rr-line)!important;box-shadow:none!important}
-.mobileBottomNav button,.mobileBottomNav button.active{background:transparent!important;background-image:none!important;color:#8facad!important;border:0!important;box-shadow:none!important;border-radius:0!important}
-.mobileBottomNav button.active{color:#63ded8!important;position:relative!important}
-.mobileBottomNav button.active:before{content:"";position:absolute;left:28%;right:28%;top:0;height:3px;background:#5bdad4!important}
-.mobileBottomNav button.active :is(svg,.navIcon,span){color:#63ded8!important}
-nav{background:#073f49!important;border-color:var(--rr-line)!important}nav button{background:#095762!important;color:#cfe3e2!important}nav button.active{background:#0a6670!important;color:#fff!important}
+/* Exercise visuals. */
+.exerciseImageButton{background:var(--lb-card2)!important;border:1px solid var(--lb-line)!important;color:#fff!important}
+.exerciseMuscles i{background:var(--lb-card3)!important;color:#fff!important;border:1px solid var(--lb-line)!important}
 
-/* Desktop/mobile spacing fidelity. */
+/* Navigation uses logo colours and stays readable; no white active tile. */
+.mobileBottomNav,#nav.mobileBottomNav{background:var(--lb-navy)!important;border-top:1px solid var(--lb-line)!important;box-shadow:none!important}
+.mobileBottomNav button,#nav.mobileBottomNav button{background:var(--lb-deep)!important;background-image:none!important;color:#8fb2c9!important;border:1px solid rgba(137,205,241,.08)!important;box-shadow:none!important}
+.mobileBottomNav button.active,#nav.mobileBottomNav button.active{background:var(--lb-card3)!important;color:#fff!important;border-color:rgba(138,211,242,.3)!important}
+.mobileBottomNav button.active *,#nav.mobileBottomNav button.active *{color:#fff!important}
+.mobileBottomNav button:not(.active) *,#nav.mobileBottomNav button:not(.active) *{color:#8fb2c9!important}
+nav:not(.mobileBottomNav){background:var(--lb-navy)!important;border-color:var(--lb-line)!important}
+nav:not(.mobileBottomNav) button{background:var(--lb-deep)!important;color:var(--lb-copy)!important}nav:not(.mobileBottomNav) button.active{background:var(--lb-card3)!important;color:#fff!important}
+
 @media(max-width:620px){
  #mainContent{padding-left:12px!important;padding-right:12px!important}
  #mainContent .panel,#mainContent .workout,#mainContent .runCard,#mainContent .todaySupportCard,#mainContent .injuryTopicCard{border-radius:14px!important}
- #mainContent .workoutHead{padding:11px 12px!important}
 }
 </style>
-
 <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png?v=10320">
 <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png?v=10320">
 <link rel="icon" href="favicon.ico?v=10320">
@@ -135,18 +150,11 @@ nav{background:#073f49!important;border-color:var(--rr-line)!important}nav butto
 <meta property="og:image" content="github-banner.png">
 
 
-<style id="targetRenderEmergencyLock">
-/* Last stylesheet in the document: blocks any legacy white surface with selector precedence. */
-#mainContent .mixGrid>div,.modalCard .intervalAnalysisCard,.modalCard .comparableRuns,#mainContent .predictionSummary>*,#mainContent .diagnosisBox,#mainContent .adherenceTile>span{background:#075763!important;background-image:none!important;color:#c5dddd!important}
-#mainContent :is(.todayInlineLink,.coachPlanLink,.logProgressLink,.primary,.secondary,.buttonLike),.modalCard :is(.primary,.secondary,.buttonLike){background:#0a7079!important;color:#fff!important;border-color:rgba(123,230,224,.22)!important}
-#mainContent :is(.todayInlineLink,.coachPlanLink,.logProgressLink,.primary,.secondary,.buttonLike) *, .modalCard :is(.primary,.secondary,.buttonLike) *{color:#fff!important}
-.mobileBottomNav button,.mobileBottomNav button.active,#nav.mobileBottomNav button,#nav.mobileBottomNav button.active{background:transparent!important;background-color:transparent!important;background-image:none!important;border-radius:0!important;box-shadow:none!important}
-</style>
 </head>
 <body>
 <a class="skipLink" href="#mainContent">Skip to main content</a>
 <header class="topbar">
-  <div class="brand"><img class="logo" src="icon-192.png?v=10320" alt="AI Running Coach logo"><div class="brand-copy"><h1>AI Running Coach</h1><p>Race-specific adaptive planning · v10.6.7 · build 16070</p></div></div>
+  <div class="brand"><img class="logo" src="icon-192.png?v=10320" alt="AI Running Coach logo"><div class="brand-copy"><h1>AI Running Coach</h1><p>Race-specific adaptive planning · v10.6.8 · build 16080</p></div></div>
   <button id="installBtn" class="install hidden">Install</button>
 </header>
 <nav id="nav" aria-label="Primary navigation"></nav>
@@ -330,7 +338,7 @@ nav{background:#073f49!important;border-color:var(--rr-line)!important}nav butto
   <article class="panel"><h3>Data</h3><div class="buttonRow"><button id="backupBtn">Download backup</button><label for="restoreFile" class="buttonLike">Restore backup</label><input id="restoreFile" type="file" accept=".json"><button id="undoRestoreBtn" type="button" class="secondary hidden">Undo last restore</button><button id="exportBtn">Export runs CSV</button><button id="resetBtn" class="danger">Reset app</button></div></article>
 </section>
 </main>
-<footer class="appFooter"><span>AI Running Coach</span><small>v10.6.7 · build 16070</small></footer>
+<footer class="appFooter"><span>AI Running Coach</span><small>v10.6.8 · build 16080</small></footer>
 
 <div id="modal" class="modal hidden" role="dialog" aria-modal="true" aria-label="AI Running Coach dialog" tabindex="-1"><div class="modalCard"><button id="closeModal" class="close" type="button" aria-label="Close dialog">×</button><div id="modalContent"></div></div></div>
 
@@ -359,5 +367,5 @@ nav{background:#073f49!important;border-color:var(--rr-line)!important}nav butto
     <button class="primary full" type="submit">Review and create my plan</button>
   </form>
 </div>
-<script src="app.js?v=16070-target"></script>
+<script src="app.js?v=16080-logo-blue"></script>
 </body></html>
