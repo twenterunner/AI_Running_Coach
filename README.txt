@@ -1,4 +1,4 @@
-AI Running Coach v10.2.0 Stable — build 12000
+AI Running Coach v10.3.0 Stable — build 13000
 
 Deployment
 ----------
@@ -13,7 +13,7 @@ Replace only these six application files in the GitHub Pages repository:
 
 Retain your existing image assets separately and unchanged. The image references remain exactly as supplied in v10.0.32, including their existing cache-query values. Keep the separately managed icon, favicon, Apple touch icon and social-preview files beside these application files.
 
-After upgrading an installed PWA, fully close and reopen it once so cache arc-v1020-stable-12000-premium1 activates. Existing v10.x local data are migrated into schema 10330 and retained under a deterministic primary/mirror storage pair.
+After upgrading an installed PWA, fully close and reopen it once so cache arc-v1030-stable-13000-premium1 activates. Existing v10.x local data are migrated into schema 10330 and retained under a deterministic primary/mirror storage pair.
 
 
 UI refinement release
@@ -52,12 +52,12 @@ Privacy and safety
 Athlete data remain in browser local storage unless the user explicitly downloads a backup or CSV. Coaching and injury guidance are decision support, not diagnosis or emergency care.
 
 
-v10.2.0 Post-run Coach Update
+v10.3.0 Post-run Coach Update
 -----------------------------
 After a manual or FIT/CSV run is saved, the app now captures before/after Pace & Power, learned Distance & Load, readiness, race estimate and the next prescribed workout target. It stores an explainable Coach Update with the run and shows Why, What changed, and What this changes next. Editing a run recalculates the update. Existing training, prediction, recovery and plan decision logic is unchanged.
 
 
-v10.2.0 Post-run prescription impact and mobile modal fix
+v10.3.0 Post-run prescription impact and mobile modal fix
 ----------------------------------------------------------
 - Post-run Coach Update now compares the next six planned sessions before vs after the saved run.
 - It explicitly shows distance, pace and power changes, including unchanged values.
@@ -65,7 +65,7 @@ v10.2.0 Post-run prescription impact and mobile modal fix
 - Import/review modals are portrait-safe on mobile: the modal body scrolls within the viewport and the final action button remains reachable/sticky above the safe-area inset.
 
 
-v10.2.0 Weekly pathway commitment
+v10.3.0 Weekly pathway commitment
 ----------------------------------
 - Pace & Power and Distance & Load are now treated as weekly-committed learned capabilities.
 - Completed runs update Pace & Power provisionally during the week; future pace/power prescriptions stay on the applied factor until the weekly review.
@@ -74,7 +74,7 @@ v10.2.0 Weekly pathway commitment
 - Readiness remains an immediate protective modifier and may still reduce an upcoming session before the weekly review.
 
 
-v10.2.0 Scheduled-activity progression fix
+v10.3.0 Scheduled-activity progression fix
 -------------------------------------------
 - Optional rehabilitation progression is now generated from the activities actually prescribed for that date, not merely from the overall rehab stage.
 - Strength days can only progress scheduled strength work (or the walking target); they can never introduce an unscheduled run.
@@ -86,7 +86,7 @@ v10.2.0 Scheduled-activity progression fix
 - Carries forward the v10.0.38 Save analysed run reliability fix.
 
 
-v10.2.0 Visual Design v2
+v10.3.0 Visual Design v2
 -------------------------
 - Stronger five-item mobile bottom navigation with larger type, icons, active-state tile and touch feedback.
 - New brand palette and stronger hierarchy with navy/blue/teal gradients, softer neutral page surfaces, fewer heavy borders and more selective elevation.
@@ -96,7 +96,7 @@ v10.2.0 Visual Design v2
 - No training, prediction, recovery, injury or pathway calculation logic changed in this visual release.
 
 
-v10.2.0 Bottom navigation interaction fix
+v10.3.0 Bottom navigation interaction fix
 ------------------------------------------
 - Fixes mobile bottom-navigation taps after v10.0.40 introduced SVG icons and nested label spans.
 - Navigation now resolves the closest button rather than requiring the exact tapped child element to contain data-page.
@@ -104,7 +104,7 @@ v10.2.0 Bottom navigation interaction fix
 - More-menu items use the same robust delegated click handling.
 
 
-v10.2.0 Coach-first Today
+v10.3.0 Coach-first Today
 --------------------------
 - Today now begins with a consolidated AI Coach Briefing rather than a workout/rehab card.
 - The briefing synthesizes race status, target estimate/probability, race time remaining, latest run execution, pain, active rehabilitation, weekly completion, Pace & Power, Distance & Load, readiness and evidence coverage.
@@ -115,7 +115,7 @@ v10.2.0 Coach-first Today
 - No underlying training, injury, recovery, prediction or pathway equations were changed.
 
 
-v10.2.0 Today simplification and evidence clarity
+v10.3.0 Today simplification and evidence clarity
 --------------------------------------------------
 - Removed the duplicate Rehab Day hero from Today; rehabilitation is already represented in the supporting Rehabilitation tile below the AI Coach Briefing.
 - Removed the Log/Import, This Week and Rehab Plan shortcut buttons from Today because those destinations are already available from the bottom navigation and supporting tiles.
@@ -124,10 +124,10 @@ v10.2.0 Today simplification and evidence clarity
 - Added an explanation that training-evidence coverage measures qualifying completed runs, assessments and linked execution evidence used by the race-performance model; it does not represent all information the app knows about the athlete.
 
 
-v10.2.0: Top header AI Running Coach title is larger, heavier and pure white.
+v10.3.0: Top header AI Running Coach title is larger, heavier and pure white.
 
 
-v10.2.0 Coach-perspective separation
+v10.3.0 Coach-perspective separation
 -------------------------------------
 - Today now presents Today's Coach Briefing: one immediate coaching decision based on today's schedule, active rehabilitation, readiness, recent pain, latest run execution and current-week completion.
 - Detailed race probability, pathway calibration and longitudinal strengths/limiters are intentionally omitted from Today unless they materially affect today's action.
@@ -135,7 +135,7 @@ v10.2.0 Coach-perspective separation
 - Both views continue to use the same underlying coach/athlete-state engine, preventing contradictory coaching while giving each tab a distinct time horizon and purpose.
 
 
-v10.2.0 Interval FIT intelligence + Weekly Review
+v10.3.0 Interval FIT intelligence + Weekly Review
 --------------------------------------------------
 - FIT imports now retain lap summaries and identify likely work repetitions for structured workouts.
 - When sufficient lap evidence exists, interval pace and power execution are scored from the identified repetitions instead of whole-run averages.
@@ -144,7 +144,7 @@ v10.2.0 Interval FIT intelligence + Weekly Review
 - Weekly pathway commitment rules remain unchanged: learned changes commit at weekly review; acute readiness remains an immediate protective modifier.
 
 
-v10.2.0 Weekly review pathway clarification
+v10.3.0 Weekly review pathway clarification
 --------------------------------------------
 - Weekly Adaptation Review now shows only the two cumulative learned pathways: Pace & Power and Distance & Load.
 - Readiness is no longer presented as a third equivalent factor.
@@ -152,7 +152,7 @@ v10.2.0 Weekly review pathway clarification
 - The UI explicitly states that recovery context is temporary and does not change learned Distance & Load capability.
 
 
-v10.2.0 Record-stream interval detection
+v10.3.0 Record-stream interval detection
 -----------------------------------------
 - Structured-workout interval detection now uses second-by-second FIT pace transitions rather than assuming FIT lap boundaries are workout repetitions.
 - FIT lap boundaries remain a fallback inspection source only.
@@ -163,7 +163,7 @@ v10.2.0 Record-stream interval detection
 - Late-rep pace/power is now written in plain language such as '7.5% faster' rather than a confusing signed percentage.
 
 
-v10.2.0 Stryd per-repetition power + interval score transparency
+v10.3.0 Stryd per-repetition power + interval score transparency
 -----------------------------------------------------------------
 - Raw Stryd developer Power samples are retained instead of being reduced to activity average only.
 - When decoded record power is absent, Stryd power samples are aligned to the FIT record stream so detected repetitions receive average running power.
@@ -175,7 +175,7 @@ v10.2.0 Stryd per-repetition power + interval score transparency
 - Interval details now include a 'How score is calculated' foldout showing pace, power, base execution and adherence penalties.
 
 
-v10.2.0 Native + developer FIT record power
+v10.3.0 Native + developer FIT record power
 --------------------------------------------
 - Low-level FIT parsing now reads native Record.power (standard FIT field 7, watts) as well as developer-field Stryd Power.
 - One raw power slot is retained per FIT Record message so power can be aligned directly to the second-by-second pace/HR stream.
@@ -184,7 +184,7 @@ v10.2.0 Native + developer FIT record power
 - This makes missing per-repetition power diagnosable rather than silently displaying dashes.
 
 
-v10.2.0 Drift chart FIT-stream repair
+v10.3.0 Drift chart FIT-stream repair
 --------------------------------------
 - Progress now recalculates missing power-based cardiac drift from stored FIT record streams after import.
 - Saved v10.0.50 FIT runs with timestamped HR + power can therefore populate drift without being re-imported when the stored record stream is sufficient.
@@ -193,13 +193,13 @@ v10.2.0 Drift chart FIT-stream repair
 - Import preview now explicitly displays the power-based drift candidate.
 
 
-v10.2.0: Renamed Strength between running exposures to Strength & recovery day; removed WHY THIS IS TODAY'S CALL, the Today-vs-Progress scope footer, and the Progress expand-conclusion instruction.
+v10.3.0: Renamed Strength between running exposures to Strength & recovery day; removed WHY THIS IS TODAY'S CALL, the Today-vs-Progress scope footer, and the Progress expand-conclusion instruction.
 
 
-v10.2.0: Progress Snapshot reordered: Week Distance + Readiness on row 1; Pace & Power + Distance & Load on row 2.
+v10.3.0: Progress Snapshot reordered: Week Distance + Readiness on row 1; Pace & Power + Distance & Load on row 2.
 
 
-v10.2.0 Readiness Center
+v10.3.0 Readiness Center
 -------------------------
 - Recovery is now the primary home for Readiness.
 - Added explicit HRV and pain contributions, exact temporary modifier, learned Distance & Load factor, and combined effective load context.
@@ -208,7 +208,7 @@ v10.2.0 Readiness Center
 - Readiness is clearly presented as a temporary recovery overlay rather than a third learned pathway.
 
 
-v10.2.0 Rehabilitation adherence correction
+v10.3.0 Rehabilitation adherence correction
 ---------------------------------------------
 - Adherence no longer averages only reported check-ins.
 - Every past scheduled rehab day is included in the denominator.
@@ -220,7 +220,7 @@ v10.2.0 Rehabilitation adherence correction
 - Added a foldout with the full day-by-day adherence history.
 
 
-v10.2.0 Workout Intelligence 2.0 + Comparable Runs
+v10.3.0 Workout Intelligence 2.0 + Comparable Runs
 --------------------------------------------------
 - Major intelligence release; manual FIT/CSV upload remains the intended workflow.
 - Added workout-family-specific interpretation for recovery, aerobic/easy, long-run, threshold/tempo, interval and assessment/race sessions.
@@ -238,7 +238,7 @@ v10.2.0 Workout Intelligence 2.0 + Comparable Runs
 - Existing Pace & Power, Distance & Load and Readiness equations are intentionally unchanged in v10.1; the new layer improves observation quality and explanation first.
 
 
-v10.2.0 Training Decision Engine
+v10.3.0 Training Decision Engine
 --------------------------------
 - Added formal Evidence → Interpretation → Decision → Consequence architecture.
 - Pace & Power evidence now routes through a confidence-weighted decision signal rather than execution score alone.
@@ -249,3 +249,19 @@ v10.2.0 Training Decision Engine
 - Projected impact at next weekly review is now collapsed by default as a foldout.
 - Top three post-run factor tiles use aligned label/value/detail rows.
 - Progress includes an Adaptation Decision History audit trail.
+
+
+v10.3.0 Personal Response Model
+-------------------------------
+- Added an athlete-specific Personal Response Model under Progress.
+- Learns slowly from repeated observations in six areas: volume tolerance, intensity tolerance, long-run tolerance, recovery speed, performance responsiveness and long-run durability signals.
+- Volume tolerance compares weekly progression with following-week execution and pain.
+- Intensity tolerance evaluates repeated quality-session execution, RPE, drift, pain and subsequent-session response.
+- Long-run tolerance uses long-run drift, late-run efficiency, pain and completed distance.
+- Recovery speed observes demanding-session → next-recorded-session response within 72 hours.
+- Performance responsiveness uses moderate/high-confidence Comparable Run efficiency differences.
+- Every dimension displays observation count, evidence maturity, confidence, summary and supporting observations.
+- All learned relationships are explicitly described as observational associations rather than causal proof.
+- Personal response now contributes a small capped signal (±0.15 maximum) to the Training Decision Engine only when evidence has reached Emerging confidence or better.
+- Personalization cannot override pain/safety logic or temporary Readiness.
+- Post-run Decision Engine shows the relevant personal-response context when it is mature enough to influence the decision.
