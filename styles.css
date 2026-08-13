@@ -1651,3 +1651,304 @@ details>summary{transition:background .15s ease,color .15s ease}details>summary:
  .recoveryQuickGrid{grid-template-columns:repeat(3,1fr)}
  .visualExercise>summary{grid-template-columns:66px 1fr}.visualExercise>summary img,.exerciseFallback{width:66px;height:58px}.visualExercise>summary em{grid-column:2}
 }
+
+
+/* ============================================================
+   v10.6.1 Unified Teal Information-Level Design System
+   ============================================================ */
+
+:root{
+  --ui-teal-900:#0d4f63;
+  --ui-teal-800:#12697b;
+  --ui-teal-700:#167d8b;
+  --ui-teal-600:#2b8d98;
+  --ui-teal-200:#cfe6e9;
+  --ui-teal-100:#eaf4f5;
+  --ui-teal-050:#f5fafb;
+  --ui-ink:#173e59;
+  --ui-muted:#667b87;
+  --ui-line:#d9e7ea;
+  --ui-warn:#c98b38;
+  --ui-bad:#b95f56;
+  --ui-good:#4e987c;
+  --ui-radius:18px;
+  --ui-shadow:0 8px 22px rgba(13,79,99,.08);
+}
+
+/* ---------- LEVEL 1: primary conclusion ---------- */
+.uiLevel1,
+.workoutIntelligence.uiLevel1,
+.aiCoachBriefing.uiLevel1,
+.canonicalAdaptationHome.uiLevel1,
+.weeklyReviewCard.uiLevel1,
+.recoveryConclusion.uiLevel1,
+.rehabTodayFocus.uiLevel1{
+  background:linear-gradient(145deg,var(--ui-teal-900),var(--ui-teal-700)) !important;
+  color:#fff !important;
+  border:0 !important;
+  border-radius:var(--ui-radius) !important;
+  box-shadow:var(--ui-shadow) !important;
+}
+
+.uiLevel1 h1,.uiLevel1 h2,.uiLevel1 h3,.uiLevel1 h4,
+.uiLevel1 strong,.uiLevel1 b,
+.uiLevel1 .viz-stat-value{
+  color:#fff !important;
+}
+
+.uiLevel1 p,.uiLevel1 span,.uiLevel1 small,
+.uiLevel1 .muted,.uiLevel1 .compact{
+  color:rgba(255,255,255,.82) !important;
+}
+
+.uiLevel1 .uiIcon,
+.uiLevel1 svg{
+  color:#fff;
+}
+
+/* Level-1 nested metrics become translucent, never a different card system */
+.uiLevel1 .metric-card,
+.uiLevel1 .canonicalPathMetrics>div,
+.uiLevel1 .recoveryQuickGrid>div,
+.uiLevel1 .todayContextChips>span,
+.uiLevel1 .aiCoachVisual,
+.uiLevel1 .aiCoachCall,
+.uiLevel1 .todayFocus,
+.uiLevel1 .todayPlanGrid>div{
+  background:rgba(255,255,255,.10) !important;
+  border:1px solid rgba(255,255,255,.12) !important;
+  color:#fff !important;
+  box-shadow:none !important;
+}
+
+/* ---------- LEVEL 2: supporting interpretation ---------- */
+.uiLevel2,
+.intervalAnalysisCard.uiLevel2,
+.comparableRuns.uiLevel2,
+.postRunCoachUpdate.uiLevel2,
+.workout.uiLevel2,
+.adaptationVisualCard.uiLevel2,
+.modelValidationPanel.uiLevel2,
+.readinessHero.uiLevel2,
+.exerciseDetail.uiLevel2,
+.todaySupportCard.uiLevel2{
+  background:var(--ui-teal-100) !important;
+  color:var(--ui-ink) !important;
+  border:1px solid var(--ui-teal-200) !important;
+  border-radius:var(--ui-radius) !important;
+  box-shadow:none !important;
+}
+
+.uiLevel2 h1,.uiLevel2 h2,.uiLevel2 h3,.uiLevel2 h4,
+.uiLevel2 strong,.uiLevel2 b{
+  color:var(--ui-ink) !important;
+}
+
+.uiLevel2 p,.uiLevel2 span,.uiLevel2 small,.uiLevel2 .muted{
+  color:var(--ui-muted) !important;
+}
+
+/* Level-2 nested blocks all use one consistent sub-surface */
+.uiLevel2 .intervalVisualMetrics>div,
+.uiLevel2 .repDotBlock,
+.uiLevel2 .comparisonMetric,
+.uiLevel2 .powerCoverage,
+.uiLevel2 .coachPlainLanguage,
+.uiLevel2 .evidenceDriver,
+.uiLevel2 .whyDecisionResult,
+.uiLevel2 .canonicalPathMetrics>div,
+.uiLevel2 .scienceProvenance>div,
+.uiLevel2 .validationCaution,
+.uiLevel2 .exercisePurpose,
+.uiLevel2 .supportMetric{
+  background:#fff !important;
+  border:1px solid var(--ui-line) !important;
+  border-radius:12px !important;
+  box-shadow:none !important;
+}
+
+/* ---------- LEVEL 3: detail/evidence ---------- */
+.uiLevel3,
+.executionFoldout.uiLevel3,
+.pathwayDecisionBranch.uiLevel3{
+  background:#fff !important;
+  color:var(--ui-ink) !important;
+  border:1px solid var(--ui-line) !important;
+  border-radius:14px !important;
+  box-shadow:none !important;
+}
+
+.uiLevel3 h1,.uiLevel3 h2,.uiLevel3 h3,.uiLevel3 h4,
+.uiLevel3 strong,.uiLevel3 b{
+  color:var(--ui-ink) !important;
+}
+.uiLevel3 p,.uiLevel3 span,.uiLevel3 small{
+  color:var(--ui-muted) !important;
+}
+
+/* ---------- One foldout style everywhere ---------- */
+details{
+  border:1px solid var(--ui-line) !important;
+  border-radius:12px !important;
+  background:#fff !important;
+  overflow:hidden;
+  box-shadow:none !important;
+}
+
+details>summary{
+  list-style:none;
+  cursor:pointer;
+  padding:11px 13px !important;
+  color:var(--ui-teal-900) !important;
+  font-weight:850 !important;
+  background:var(--ui-teal-050) !important;
+  border:0 !important;
+}
+details>summary::-webkit-details-marker{display:none}
+details>summary:after{
+  content:"⌄";
+  float:right;
+  color:var(--ui-teal-700);
+  font-size:.9rem;
+  transform:translateY(-1px);
+}
+details[open]>summary:after{content:"⌃"}
+
+details[open]>summary{
+  border-bottom:1px solid var(--ui-line) !important;
+}
+
+details>*:not(summary){
+  margin-left:0;
+  margin-right:0;
+}
+
+/* Foldouts inside teal level-1 cards remain visually subordinate */
+.uiLevel1 details{
+  background:rgba(255,255,255,.96) !important;
+  border-color:rgba(255,255,255,.18) !important;
+}
+.uiLevel1 details>summary{
+  background:rgba(255,255,255,.92) !important;
+  color:var(--ui-teal-900) !important;
+}
+.uiLevel1 details p,.uiLevel1 details span,.uiLevel1 details small,
+.uiLevel1 details b,.uiLevel1 details strong{
+  color:var(--ui-ink) !important;
+}
+
+/* ---------- Warning/status treatment: accent only ---------- */
+.good,.positive,.complete{
+  --semantic-accent:var(--ui-good);
+}
+.warn,.warning,.caution,.provisional,.partial{
+  --semantic-accent:var(--ui-warn);
+}
+.bad,.danger,.missing,.restricted{
+  --semantic-accent:var(--ui-bad);
+}
+
+/* Remove full yellow/green/red card variants and use a small status rail instead */
+.weeklyReviewCard.warn,
+.weeklyReviewCard.provisional,
+.recoveryConclusion.warn,
+.recoveryConclusion.bad,
+.rehabEvidenceMeter.low,
+.rehabEvidenceMeter.moderate,
+.executionNotice,
+.coachDecisionSafeguard,
+.validationCaution,
+.rehabStretchGoal{
+  border-color:var(--ui-line) !important;
+  box-shadow:none !important;
+}
+
+.executionNotice,
+.coachDecisionSafeguard,
+.validationCaution,
+.rehabStretchGoal,
+.powerCoverage.partial,
+.powerCoverage.missing{
+  background:#fff !important;
+  border:1px solid var(--ui-line) !important;
+  border-left:4px solid var(--semantic-accent,var(--ui-warn)) !important;
+  color:var(--ui-ink) !important;
+}
+
+/* ---------- Buttons and chips ---------- */
+button,.buttonLike,.todayInlineLink,.logProgressLink,.coachPlanLink{
+  border-radius:11px !important;
+}
+
+.primary,.todayInlineLink,.logProgressLink{
+  background:var(--ui-teal-800) !important;
+  color:#fff !important;
+  border:0 !important;
+}
+
+.status,
+.recoveryConfidence,
+.aiCoachEvidence,
+.executionBadge,
+.checkinBadge{
+  border-radius:999px !important;
+  border:0 !important;
+  box-shadow:none !important;
+}
+
+/* ---------- Consistent card spacing ---------- */
+.uiLevel1{padding:16px !important}
+.uiLevel2{padding:14px !important}
+.uiLevel3{padding:12px !important}
+
+.page .panel,
+.page .workout,
+.page .injuryTopicCard,
+.page .modelValidationPanel,
+.page .canonicalAdaptationHome,
+.page .postRunCoachUpdate,
+.page .intervalAnalysisCard,
+.page .comparableRuns{
+  margin-bottom:12px;
+}
+
+/* ---------- Plan workout type: keep icon semantics, not card color semantics ---------- */
+.workout:before{background:var(--ui-teal-700) !important}
+.workoutTypeIcon{
+  background:#fff !important;
+  border:1px solid var(--ui-teal-200) !important;
+  color:var(--ui-teal-800) !important;
+}
+.workoutTypeIcon.quality,
+.workoutTypeIcon.threshold,
+.workoutTypeIcon.long,
+.workoutTypeIcon.recovery,
+.workoutTypeIcon.race,
+.workoutTypeIcon.rest{
+  background:#fff !important;
+  color:var(--ui-teal-800) !important;
+}
+
+/* ---------- Pathway states stay in teal system ---------- */
+.adaptationVisualCard:before{background:var(--ui-teal-700) !important}
+.adaptationVisualCard.up:before{background:var(--ui-good) !important}
+.adaptationVisualCard.down:before{background:var(--ui-warn) !important}
+
+/* ---------- Remove stray yellow/green card backgrounds from inherited styles ---------- */
+.rehabStretchGoal,
+.validationCaution,
+.executionNotice,
+.coachDecisionSafeguard,
+.powerCoverage.good,
+.powerCoverage.partial,
+.powerCoverage.missing{
+  background:#fff !important;
+}
+
+/* ---------- Mobile consistency ---------- */
+@media(max-width:620px){
+  .uiLevel1{padding:14px !important}
+  .uiLevel2{padding:12px !important}
+  .uiLevel3{padding:10px !important}
+  details>summary{padding:10px 11px !important}
+}
