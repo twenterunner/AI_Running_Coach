@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '10.3.0';
-  const BUILD = 13000;
+  const VERSION = '10.4.0';
+  const BUILD = 14000;
   const SCHEMA = 10330;
   const PRIMARY_STORAGE_KEY = 'arc_v10330_web';
   const MIRROR_STORAGE_KEY = 'arc_v10330_mirror';
@@ -432,29 +432,103 @@ function workoutScoreDetails(run,plan=run?.planId?state.plan.find(p=>p.id===run.
  if(!run)return null;
  const actualKm=Number(run.distanceKm)||0,dur=Number(run.durationSec)||0;
  if(!(actualKm>0&&dur>0))return null;
- const type=plan?.type||run.type||'Easy',profile=executionProfile(type),plannedKm=plan?Math.max(.1,Number(plan.distance)||0):null,actualPace=dur/actualKm;
- const components=[],add=(key,name,score,baseWeight,detail,reliability=1)=>{if(Number.isFinite(score)&&baseWeight>0)components.push({key,name,score:clamp(score,0,100),baseWeight,weight:baseWeight*reliability,detail,reliability})};
+ const type=plan?.type||run.type||'Easy',b=baseType(type),family=workoutFamily(type),profile=executionProfile(type),plannedKm=plan?Math.max(.1,Number(plan.distance)||0):null,actualPace=dur/actualKm;
+ const isShortIntervals=family==='interval'||b==='Repetition',isThreshold=family==='threshold',isTargetedLong=['Specific long run','Race rehearsal','Progression'].includes(type);
+ const ia=run.intervalAnalysis?.structured&&run.intervalAnalysis?.usableForScore&&run.intervalAnalysis?.scoredWork?.length?run.intervalAnalysis:null;
+ const components=[],add=(key,name,score,baseWeight,detail,reliability=1,scope='whole session')=>{if(Number.isFinite(score)&&baseWeight>0&&reliability>0)components.push({key,name,score:clamp(score,0,100),baseWeight,weight:baseWeight*reliability,detail,reliability,scope})};
+ let completionRatio=null;
  if(plan){
-  const ratio=actualKm/plannedKm,diff=Math.abs(ratio-1),score=diff<=.05?100:ratio<1?clamp(100-(diff-.05)*125,35,100):clamp(100-(diff-.05)*95,35,100);
-  const direction=ratio>1.05?'Over-completion is not rewarded because it adds unplanned load.':ratio<.95?'The intended volume was not fully completed.':'Completed within the intended distance range.';
-  add('distance','Distance execution',score,profile.distance,`${actualKm.toFixed(2)} km completed versus ${plannedKm.toFixed(2)} km planned. ${direction}`);
+  completionRatio=actualKm/plannedKm;
+  const diff=Math.abs(completionRatio-1),score=diff<=.05?100:completionRatio<1?clamp(100-(diff-.05)*125,0,100):clamp(100-(diff-.05)*95,0,100);
+  const direction=completionRatio>1.05?'Over-completion is not rewarded because it adds unplanned load.':completionRatio<.95?'The intended volume was not fully completed.':'Completed within the intended distance range.';
+  add('distance','Distance execution',score,profile.distance,`${actualKm.toFixed(2)} km completed versus ${plannedKm.toFixed(2)} km planned. ${direction}`,1,'entire run');
  }
- const reliability=targetMetricReliability(plan),aggregateNote=reliability<.5?' Whole-run averages include warm-up, recoveries and cooldown, so this is supporting evidence only.':'';
- const ia=run.intervalAnalysis?.structured&&run.intervalAnalysis?.usableForScore&&run.intervalAnalysis?.scoredWork?.length?run.intervalAnalysis:null,ip=ia?ia.scoredWork.map(x=>x.paceScore).filter(Number.isFinite):[],iw=ia?ia.scoredWork.map(x=>x.powerScore).filter(Number.isFinite):[];
- if(plan?.zone?.pace>0){if(ip.length>=2)add('pace','Interval pace execution',avg(ip),profile.pace,`${ip.length} FIT work repetitions compared directly with ${pace(plan.zone.pace)} target.`,1);else{const ratio=plan.zone.pace/actualPace,score=clamp(100-Math.abs(1-ratio)*145,45,100);add('pace','Pace execution',score,profile.pace,`${pace(actualPace)} whole-run average versus ${pace(plan.zone.pace)} target for the prescribed target portion.${aggregateNote}`,reliability)}}
- if(Number(run.avgPower)>0&&plan?.zone?.power>0){if(iw.length>=2)add('power','Interval power execution',avg(iw),profile.power,`${iw.length} FIT work repetitions compared directly with ${Math.round(plan.zone.power)} W target.`,1);else{const ratio=Number(run.avgPower)/plan.zone.power,score=clamp(100-Math.abs(1-ratio)*140,45,100);add('power','Power execution',score,profile.power,`${Math.round(Number(run.avgPower))} W whole-run average versus ${Math.round(plan.zone.power)} W target.${aggregateNote}`,reliability)}}
- if(ia&&Number(ia.adherencePenalty)>0){const adherenceScore=clamp(100-ia.adherencePenalty*5,0,100);add('repAdherence','Repetition prescription adherence',adherenceScore,.12,`${ia.detectedReps} detected versus ${ia.expectedReps} prescribed. ${ia.extraReps?`${ia.extraReps} extra rep${ia.extraReps===1?'':'s'} added unplanned load.`:''}${ia.missingReps?`${ia.missingReps} prescribed rep${ia.missingReps===1?' was':'s were'} not detected.`:''}`,1)}
- if(Number(run.avgHr)>0&&plan?.zone?.hr>0){const hr=Number(run.avgHr),guide=plan.zone.hr,delta=(hr-guide)/Math.max(1,guide),score=hr<=guide?100:clamp(100-delta*180,55,100);add('hr','Heart-rate control',score,profile.hr,`${Math.round(hr)} bpm whole-run average versus ${Math.round(guide)} bpm guide. Lower-than-guide HR receives full, not extra, credit.${aggregateNote}`,reliability)}
- if(Number.isFinite(Number(run.powerDrift))){const drift=Number(run.powerDrift),score=clamp(100-Math.max(0,drift-2)*6,55,100),relevance=['Intervals','Repetition','Fitness assessment'].includes(baseType(type))?.45:1;add('drift','Cardiac drift',score,profile.drift,`${drift.toFixed(1)}% power-based drift; values up to about 2% receive full credit.${relevance<1?' Drift has limited relevance for short-repetition sessions.':''}`,relevance)}
- const rpe=Number(run.rpe),range=expectedRpe(type);if(Number.isFinite(rpe)&&rpe>0){const dist=rpe<range[0]?range[0]-rpe:rpe>range[1]?rpe-range[1]:0,score=clamp(100-dist*14,45,100);add('rpe','Effort appropriateness',score,profile.rpe,`RPE ${rpe}/10 versus expected ${range[0]}–${range[1]} for this session objective.`)}
+
+ const workPace=ia?ia.scoredWork.map(x=>x.paceScore).filter(Number.isFinite):[];
+ const workPower=ia?ia.scoredWork.map(x=>x.powerScore).filter(Number.isFinite):[];
+ const useWorkTargets=!!ia&&(isShortIntervals||isThreshold||isTargetedLong);
+
+ // Pace/power scope is workout-specific.
+ // Short intervals/repetitions are never scored from a whole-run average because warm-up/recoveries/cooldown dominate it.
+ if(plan?.zone?.pace>0){
+   if(useWorkTargets&&workPace.length>=2)add('pace',isShortIntervals?'Interval pace execution':'Work-segment pace execution',avg(workPace),profile.pace,`${workPace.length} detected work repetitions/segments compared directly with ${pace(plan.zone.pace)} target.`,1,'detected work sections');
+   else if(!isShortIntervals){
+     const exactTarget=isThreshold||['Marathon','Fitness assessment','Race'].includes(b)||isTargetedLong;
+     let score,reliability,scope;
+     if(!exactTarget){
+       const fastRatio=plan.zone.pace/actualPace; // >1 means faster than guide
+       score=fastRatio<=1.03?100:clamp(100-(fastRatio-1.03)*220,0,100);
+       reliability=family==='recovery'||family==='aerobic'||family==='long'?.9:.75;scope='entire run · intensity ceiling';
+     }else{
+       const ratio=plan.zone.pace/actualPace;score=clamp(100-Math.abs(1-ratio)*145,0,100);
+       reliability=isThreshold||isTargetedLong?.35:b==='Marathon'?.6:.65;scope='entire run · supporting target estimate';
+     }
+     add('pace',exactTarget?'Pace execution':'Pace control',score,profile.pace,`${pace(actualPace)} whole-run average versus ${pace(plan.zone.pace)} ${exactTarget?'target':'intensity guide'}.${exactTarget&&reliability<.5?' Warm-up/cooldown make the whole-run value supporting evidence only.':' Slower-than-guide running is not penalised for this session type.'}`,reliability,scope);
+   }
+ }
+ if(Number(run.avgPower)>0&&plan?.zone?.power>0){
+   if(useWorkTargets&&workPower.length>=2)add('power',isShortIntervals?'Interval power execution':'Work-segment power execution',avg(workPower),profile.power,`${workPower.length} detected work repetitions/segments compared directly with ${Math.round(plan.zone.power)} W target.`,1,'detected work sections');
+   else if(!isShortIntervals){
+     const exactTarget=isThreshold||['Marathon','Fitness assessment','Race'].includes(b)||isTargetedLong;
+     let score,reliability,scope;
+     if(!exactTarget){
+       const ratio=Number(run.avgPower)/plan.zone.power;score=ratio<=1.05?100:clamp(100-(ratio-1.05)*200,0,100);
+       reliability=family==='recovery'||family==='aerobic'||family==='long'?.9:.75;scope='entire run · intensity ceiling';
+     }else{
+       const ratio=Number(run.avgPower)/plan.zone.power;score=clamp(100-Math.abs(1-ratio)*140,0,100);
+       reliability=isThreshold||isTargetedLong?.35:b==='Marathon'?.6:.65;scope='entire run · supporting target estimate';
+     }
+     add('power',exactTarget?'Power execution':'Power control',score,profile.power,`${Math.round(Number(run.avgPower))} W whole-run average versus ${Math.round(plan.zone.power)} W ${exactTarget?'target':'intensity guide'}.${exactTarget&&reliability<.5?' Warm-up/cooldown make the whole-run value supporting evidence only.':' Lower-than-guide power is not penalised for this session type.'}`,reliability,scope);
+   }
+ }
+ if(ia&&Number(ia.adherencePenalty)>0){
+   const adherenceScore=clamp(100-ia.adherencePenalty*5,0,100);
+   add('repAdherence','Repetition prescription adherence',adherenceScore,.12,`${ia.detectedReps} detected versus ${ia.expectedReps} prescribed. ${ia.extraReps?`${ia.extraReps} extra rep${ia.extraReps===1?'':'s'} added unplanned load.`:''}${ia.missingReps?`${ia.missingReps} prescribed rep${ia.missingReps===1?' was':'s were'} not detected.`:''}`,1,'workout structure');
+ }
+
+ // Heart rate: continuous aerobic sessions use the whole run; quality sessions use detected work sections when available.
+ if(Number(run.avgHr)>0&&plan?.zone?.hr>0){
+   let hr=Number(run.avgHr),reliability=1,scope='entire run',label='Heart-rate control';
+   if(ia&&(isShortIntervals||isThreshold)){
+     const hrRows=ia.scoredWork.map(x=>Number(x.avgHr)).filter(v=>Number.isFinite(v)&&v>0);
+     if(hrRows.length>=2){
+       const later=hrRows.slice(Math.floor(hrRows.length/2));hr=avg(later.length?later:hrRows);
+       reliability=isShortIntervals?(b==='Repetition'?.25:.45):.7;scope='later detected work sections';label='Work-section heart-rate control';
+     }else reliability=isShortIntervals?.2:.3;
+   }else if(isTargetedLong){reliability=.55;scope='entire run · mixed-session support'}
+   else if(['Fitness assessment','Race'].includes(b)){reliability=.5;scope='entire run · supporting only'}
+   const guide=plan.zone.hr,delta=(hr-guide)/Math.max(1,guide),score=hr<=guide?100:clamp(100-delta*180,0,100);
+   add('hr',label,score,profile.hr,`${Math.round(hr)} bpm ${scope.includes('work')?'work-section':'whole-run'} value versus ${Math.round(guide)} bpm guide. Heart rate is treated as an upper control guide; lower HR receives full, not extra, credit.${isShortIntervals?' HR lags short repetitions, so its execution weight is deliberately low.':''}`,reliability,scope);
+ }
+
+ // Power-based cardiac drift is a continuous-aerobic metric. It is not an execution score for short intervals/repetitions.
+ if(Number.isFinite(Number(run.powerDrift))){
+   const drift=Number(run.powerDrift),score=clamp(100-Math.max(0,drift-2)*6,0,100);
+   let relevance=1,scope='entire run';
+   if(isShortIntervals)relevance=0;
+   else if(isThreshold)relevance=.35;
+   else if(['Fitness assessment','Race'].includes(b))relevance=0;
+   else if(isTargetedLong)relevance=.6;
+   if(relevance>0)add('drift','Cardiac drift',score,profile.drift,`${drift.toFixed(1)}% power-based drift; values up to about 2% receive full credit.${relevance<1?' This mixed/intense session makes drift supporting rather than primary evidence.':''}`,relevance,scope);
+ }
+
+ // RPE is always a whole-session measure. For a substantially incomplete quality workout its reliability is reduced to avoid double-penalising incompletion.
+ const rpe=Number(run.rpe),range=expectedRpe(type);
+ if(Number.isFinite(rpe)&&rpe>0){
+   const dist=rpe<range[0]?range[0]-rpe:rpe>range[1]?rpe-range[1]:0,score=clamp(100-dist*14,0,100);
+   const rpeReliability=Number.isFinite(completionRatio)&&completionRatio<.7&&(isShortIntervals||isThreshold)?.65:1;
+   add('rpe','Session effort appropriateness',score,profile.rpe,`Session RPE ${rpe}/10 versus expected ${range[0]}–${range[1]} for this workout objective.${rpeReliability<1?' Reliability is reduced because less than 70% of planned distance was completed.':''}`,rpeReliability,'entire session');
+ }
+
  const weightTotal=sum(components.map(c=>c.weight));components.forEach(c=>c.effectiveWeight=weightTotal?c.weight/weightTotal:0);
  let raw=weightTotal?sum(components.map(c=>c.score*c.weight))/weightTotal:null,cap=null,capReason='';
  if(Number(run.pain)>=7){cap=50;capReason=`Pain ${Number(run.pain)}/10 substantially reduced the training value and caps the final score at 50.`}
- else if(Number(run.pain)>=5){cap=70;capReason=`Although the observable execution may have been sound, pain ${Number(run.pain)}/10 limits the training value and caps the final score at 70.`}
+ else if(Number(run.pain)>=5){cap=70;capReason=`Although observable execution may have been sound, pain ${Number(run.pain)}/10 limits the training value and caps the final score at 70.`}
  else if(Number(run.pain)>=3){cap=82;capReason=`Although the workout may have been executed well, pain ${Number(run.pain)}/10 limits progression and caps the final score at 82.`}
  const final=Number.isFinite(raw)?Math.round(clamp(cap==null?raw:Math.min(raw,cap),0,100)):null;
- const evidenceQuality=plan?(reliability>=.8?'high':'moderate'):(components.length>=2?'low':'very low');
- return{score:final,rawScore:Number.isFinite(raw)?raw:null,components,cap,capReason,plan,objective:plan?.purpose||profile.objective,interpretation:scoreBand(final),evidenceQuality};
+ const baseWeightTotal=sum(components.map(c=>c.baseWeight)),weightedReliability=baseWeightTotal?sum(components.map(c=>c.baseWeight*c.reliability))/baseWeightTotal:0;
+ const evidenceQuality=plan?(weightedReliability>=.8?'high':weightedReliability>=.55?'moderate':'limited'):(components.length>=2?'low':'very low');
+ return{score:final,rawScore:Number.isFinite(raw)?raw:null,components,cap,capReason,plan,objective:plan?.purpose||profile.objective,interpretation:scoreBand(final),evidenceQuality,weightedReliability};
 }
 function workoutScore(run,plan=run?.planId?state.plan.find(p=>p.id===run.planId):null){return workoutScoreDetails(run,plan)?.score??null}
 
@@ -609,66 +683,139 @@ function personalResponseModelHtml(){
  return`<section class="personalModelPanel"><div class="personalModelHead"><div><small>PERSONAL RESPONSE MODEL</small><h3>How your training response is being learned</h3></div><span>${esc(m.overallConfidence.label)} overall confidence</span></div><p>The model learns from repeated relationships between training load, workout execution, comparable-run physiology, long-run stability, pain and subsequent sessions. It deliberately learns slowly.</p>${m.strength||m.limiter?`<div class="personalModelSummary">${m.strength?`<div class="strength"><small>CURRENT STRENGTH</small><b>${esc(m.strength.name)} · ${esc(m.strength.status)}</b></div>`:''}${m.limiter?`<div class="limiter"><small>CURRENT LIMITER / WATCH</small><b>${esc(m.limiter.name)} · ${esc(m.limiter.status)}</b></div>`:''}</div>`:''}<div class="personalDimensionGrid">${cards}</div><div class="personalModelNote"><b>How it is used</b><p>Only Emerging-or-better personal patterns can add a small signal to the Training Decision Engine. The personal signal is capped at ±0.15 and cannot override pain/safety logic or Readiness.</p><p>${esc(m.note)}</p></div></section>`;
 }
 
+function personalPathwaySignal(run,model,pathway){
+ if(!run||!model)return{value:0,confidence:'Insufficient',detail:'No mature personal-response pattern available.'};
+ const family=workoutFamily(run.type);
+ let key;
+ if(pathway==='pace')key=(family==='interval'||family==='threshold')?'intensity':'performance';
+ else key=family==='long'?'long':family==='interval'||family==='threshold'?'intensity':'volume';
+ const d=model.dimensions.find(x=>x.key===key);
+ if(!d||d.confidence.rank<2)return{value:0,confidence:d?.confidence.label||'Insufficient',detail:`${d?.name||'Relevant personal pattern'} is not mature enough to influence this pathway.`};
+ let value=0;
+ if(/good|improving|tolerated|preferred/i.test(d.status))value=.10;
+ else if(/cautious|developing|slow|pressure/i.test(d.status))value=-.10;
+ return{value:clamp(value,-.12,.12),confidence:d.confidence.label,detail:`${d.name}: ${d.status} · ${d.confidence.label.toLowerCase()} confidence from ${d.count} observation${d.count===1?'':'s'}.`,dimension:d};
+}
+
 function decisionSignalForRun(run,plan=run?.planId?state.plan.find(p=>p.id===run.planId):null){
- const details=workoutScoreDetails(run,plan),score=details?.score??null,family=workoutFamily(plan?.type||run.type);
+ const details=workoutScoreDetails(run,plan),score=details?.score??null,family=workoutFamily(plan?.type||run.type),type=plan?.type||run.type;
  const baseWeight=EVIDENCE_WEIGHT[run.type]??EVIDENCE_WEIGHT[baseType(run.type)]??.15;
  let confidenceWeight=baseWeight,confidenceReasons=[],signals=[];
  if(!plan&&run.type!=='Race'){confidenceWeight*=.35;confidenceReasons.push('not matched to a planned workout')}
  const completion=plan&&Number(plan.distance)>0?Number(run.distanceKm)/Number(plan.distance):null;
  if(Number.isFinite(completion)&&completion<.7){confidenceWeight*=.35;confidenceReasons.push('less than 70% of prescribed distance completed')}
+
+ const qualitySession=family==='interval'||family==='threshold'||family==='assessment'||['Marathon-specific','Half-marathon-specific','Race rehearsal'].includes(type);
+ const capabilityComponents=(details?.components||[]).filter(c=>['pace','power','repAdherence'].includes(c.key));
+ const capabilityWeight=sum(capabilityComponents.map(c=>c.effectiveWeight||0));
+ const capabilityScore=capabilityComponents.length&&capabilityWeight>0?sum(capabilityComponents.map(c=>c.score*(c.effectiveWeight||0)))/capabilityWeight:null;
+ let performanceSignal=0;
+ if(qualitySession&&Number.isFinite(capabilityScore))performanceSignal=clamp((capabilityScore-82)/18,-1,1);
+ else if(Number.isFinite(score)&&score<65)performanceSignal=clamp((score-70)/30,-.35,0); // poor execution can weaken confidence, easy running cannot manufacture speed gains
+ signals.push({name:'Performance capability',value:performanceSignal,detail:Number.isFinite(capabilityScore)?`${Math.round(capabilityScore)}/100 from pace/power/work-repetition evidence`:qualitySession?'No reliable target-section capability score':'Easy/long execution is not treated as direct evidence of faster capability'});
+
  const comparison=comparableRunAnalysis(run);
  if(comparison?.confidence==='High')confidenceWeight=Math.min(.95,confidenceWeight*1.15);
  else if(comparison?.confidence==='Moderate')confidenceWeight=Math.min(.95,confidenceWeight*1.05);
- const performanceSignal=Number.isFinite(score)?clamp((score-82)/18,-1,1):0;
- signals.push({name:'Workout execution',value:performanceSignal,detail:Number.isFinite(score)?`${score}/100 execution score`:'No execution score'});
  let comparableSignal=0;
  if(comparison&&comparison.confidence!=='Low'&&Number.isFinite(comparison.efficiencyDelta)){
    comparableSignal=clamp(comparison.efficiencyDelta/5,-1,1);
-   signals.push({name:'Comparable-run response',value:comparableSignal,detail:`Efficiency ${comparison.efficiencyDelta>=0?'+':''}${comparison.efficiencyDelta.toFixed(1)}% vs ${comparison.count} comparable runs`});
+   signals.push({name:'Comparable-run efficiency',value:comparableSignal,detail:`Efficiency ${comparison.efficiencyDelta>=0?'+':''}${comparison.efficiencyDelta.toFixed(1)}% vs ${comparison.count} comparable runs`});
  }
+
  let costSignal=0,costDetails=[];
  const drift=Number(run.powerDrift);
- if(Number.isFinite(drift)){
+ if(Number.isFinite(drift)&&!['interval'].includes(family)){
    const good=family==='long'?4:family==='recovery'||family==='aerobic'?3:5,bad=family==='long'?8:family==='recovery'||family==='aerobic'?7:9;
-   if(drift<=good)costSignal+=.15;
-   else if(drift>=bad){costSignal-=.45;costDetails.push(`drift ${drift.toFixed(1)}%`)}
+   if(drift<=good)costSignal+=.10;
+   else if(drift>=bad){costSignal-=.40;costDetails.push(`drift ${drift.toFixed(1)}%`)}
  }
  const rpe=Number(run.rpe),expectedMax=family==='recovery'?3:family==='aerobic'?4:family==='long'?6:family==='threshold'?8:family==='interval'?9:9;
  if(Number.isFinite(rpe)&&rpe>expectedMax+1){costSignal-=.35;costDetails.push(`RPE ${rpe}/10 above expected cost`)}
- else if(Number.isFinite(rpe)&&rpe<=expectedMax)costSignal+=.05;
- costSignal=clamp(costSignal,-1,.25);
+ costSignal=clamp(costSignal,-1,.20);
  signals.push({name:'Physiological cost',value:costSignal,detail:costDetails.length?costDetails.join(' · '):'No excessive cost signal'});
- const personalModel=personalResponseModel(run.date,run.id),personal=personalResponseSignal(run,personalModel),personalSignal=personal.value;
- if(personalSignal!==0)signals.push({name:'Personal response',value:personalSignal,detail:personal.detail});
- let combined=performanceSignal*.60+comparableSignal*.18+costSignal*.12+personalSignal*.10;
+
+ const personalModel=personalResponseModel(run.date,run.id),personal=personalPathwaySignal(run,personalModel,'pace'),personalSignal=personal.value;
+ if(personalSignal!==0)signals.push({name:'Personal pace response',value:personalSignal,detail:personal.detail});
+
+ let combined=performanceSignal*.58+comparableSignal*.24+costSignal*.12+personalSignal*.06;
  let conflict=false,interpretation='';
- if(performanceSignal>.25&&costSignal<-.25){
-   conflict=true;
-   combined=Math.min(combined*.25,.15);
-   interpretation='Performance was positive, but the physiological cost was unusually high. Progression evidence is deliberately held back.';
- }else if(performanceSignal<-.25&&comparableSignal>.35){
-   conflict=true;
-   combined=Math.max(combined*.4,-.15);
-   interpretation='This workout underperformed its prescription, but comparable-run physiology remained positive. The evidence is mixed rather than clearly negative.';
- }else if(combined>.25)interpretation='The session provides positive evidence that the current prescription is being absorbed well.';
- else if(combined<-.25)interpretation='The session provides evidence for a more conservative calibration.';
- else interpretation='The session mainly supports holding the current calibration.';
+ if(performanceSignal>.25&&costSignal<-.25){conflict=true;combined=Math.min(combined*.25,.15);interpretation='Performance capability was positive, but physiological cost was unusually high. Pace progression is deliberately held back.'}
+ else if(performanceSignal<-.25&&comparableSignal>.35){conflict=true;combined=Math.max(combined*.4,-.15);interpretation='Target execution underperformed, but comparable-run physiology remained positive. Pace evidence is mixed rather than clearly negative.'}
+ else if(combined>.25)interpretation='The session provides positive evidence that Pace & Power capability is improving.'
+ else if(combined<-.25)interpretation='The session provides evidence for a more conservative Pace & Power calibration.'
+ else interpretation='The session mainly supports holding the current Pace & Power calibration.';
+
  const pain=Number(run.pain);
- if(Number.isFinite(pain)&&pain>=5){combined=Math.min(0,combined);confidenceWeight*=.45;interpretation=`Pain ${pain}/10 overrides positive progression evidence; capability is not progressed from this session.`;confidenceReasons.push('pain safety override')}
+ if(Number.isFinite(pain)&&pain>=5){combined=Math.min(0,combined);confidenceWeight*=.45;interpretation=`Pain ${pain}/10 overrides positive Pace & Power evidence.`;confidenceReasons.push('pain safety override')}
  else if(Number.isFinite(pain)&&pain>=3){if(combined>0)combined*=.25;confidenceWeight*=.55;confidenceReasons.push('pain reduced positive evidence')}
  if(combined<0&&confidenceWeight<.35)combined=0;
- const confidencePct=clamp(Math.round(confidenceWeight/.65*100),0,100);
- const confidence=confidencePct>=75?'High':confidencePct>=45?'Moderate':'Developing';
- const action=combined>.25?'Positive evidence':combined<-.25?'Conservative evidence':'Hold calibration';
- const rawObserved=performanceSignal;
- const finalSignal=clamp(combined,-1,1);
- return{family,score,signals,rawObserved,performanceSignal,comparableSignal,costSignal,personalSignal,personalResponse:personal,finalSignal,confidenceWeight,confidencePct,confidence,conflict,confidenceReasons,interpretation,action,completion,comparison};
+ const confidencePct=clamp(Math.round(confidenceWeight/.65*100),0,100),confidence=confidencePct>=75?'High':confidencePct>=45?'Moderate':'Developing';
+ const action=combined>.25?'Positive Pace & Power evidence':combined<-.25?'Conservative Pace & Power evidence':'Hold Pace & Power';
+ return{pathway:'pace',family,score,capabilityScore,signals,performanceSignal,comparableSignal,costSignal,personalSignal,personalResponse:personal,finalSignal:clamp(combined,-1,1),confidenceWeight,confidencePct,confidence,conflict,confidenceReasons,interpretation,action,completion,comparison};
 }
 
+function loadDecisionSignalForRun(run,plan=run?.planId?state.plan.find(p=>p.id===run.planId):null){
+ const details=workoutScoreDetails(run,plan),score=details?.score??null,family=workoutFamily(plan?.type||run.type);
+ const loadWeight={long:.70,aerobic:.45,recovery:.25,threshold:.30,interval:.25,assessment:.18}[family]??.25;
+ let confidenceWeight=loadWeight,confidenceReasons=[],signals=[];
+ const completion=plan&&Number(plan.distance)>0?Number(run.distanceKm)/Number(plan.distance):null;
+ let completionSignal=0;
+ if(Number.isFinite(completion)){
+   if(completion<.70)completionSignal=-.75;
+   else if(completion<.85)completionSignal=-.35;
+   else if(completion<=1.05)completionSignal=.15;
+   else if(completion<=1.12)completionSignal=0;
+   else completionSignal=-.20;
+   signals.push({name:'Prescribed load completion',value:completionSignal,detail:`${Math.round(completion*100)}% of planned distance completed`});
+ }else{confidenceWeight*=.5;confidenceReasons.push('no matched planned load')}
+
+ let toleranceSignal=0,toleranceDetails=[];
+ const drift=Number(run.powerDrift);
+ if(Number.isFinite(drift)&&(family==='aerobic'||family==='recovery'||family==='long')){
+   if(drift<=3){toleranceSignal+=.25;toleranceDetails.push(`drift ${drift.toFixed(1)}%`)}
+   else if(drift>7){toleranceSignal-=.55;toleranceDetails.push(`high drift ${drift.toFixed(1)}%`)}
+   else if(drift>5){toleranceSignal-=.25;toleranceDetails.push(`elevated drift ${drift.toFixed(1)}%`)}
+ }
+ if(family==='long'){
+   const late=runLateEfficiencyDelta(run);
+   if(Number.isFinite(late)){
+     if(late>=-4){toleranceSignal+=.30;toleranceDetails.push(`late-run efficiency ${late>=0?'+':''}${late.toFixed(1)}%`)}
+     else if(late<=-8){toleranceSignal-=.45;toleranceDetails.push(`late-run efficiency ${late.toFixed(1)}%`)}
+   }
+ }
+ if(family==='interval'&&run.intervalAnalysis?.structured){
+   const ia=run.intervalAnalysis;
+   if(ia.expectedReps>0&&ia.detectedReps===ia.expectedReps)toleranceSignal+=.10;
+   if(ia.extraReps>0)toleranceSignal-=Math.min(.25,ia.extraReps*.06);
+ }
+ toleranceSignal=clamp(toleranceSignal,-1,.5);
+ signals.push({name:'Load-tolerance response',value:toleranceSignal,detail:toleranceDetails.length?toleranceDetails.join(' · '):'No strong run-specific tolerance signal'});
+
+ let executionSignal=0;
+ if(Number.isFinite(score)){if(score>=88)executionSignal=.15;else if(score<65)executionSignal=-.20}
+ signals.push({name:'Execution support',value:executionSignal,detail:Number.isFinite(score)?`${score}/100 workout execution`:'No execution score'});
+
+ const personalModel=personalResponseModel(run.date,run.id),personal=personalPathwaySignal(run,personalModel,'load'),personalSignal=personal.value;
+ if(personalSignal!==0)signals.push({name:'Personal load response',value:personalSignal,detail:personal.detail});
+
+ let combined=completionSignal*.40+toleranceSignal*.38+executionSignal*.14+personalSignal*.08;
+ const pain=Number(run.pain);
+ if(Number.isFinite(pain)&&pain>=5){combined=Math.min(combined,-.65);confidenceWeight=Math.max(confidenceWeight,.45);confidenceReasons.push('pain safety/tolerance signal')}
+ else if(Number.isFinite(pain)&&pain>=3){combined=Math.min(combined,-.25);confidenceReasons.push('pain limited load-tolerance evidence')}
+ if(Number.isFinite(run.rpe)&&Number(run.rpe)>=9&&(family==='long'||family==='aerobic'))combined=Math.min(combined,-.20);
+ const confidencePct=clamp(Math.round(confidenceWeight/.70*100),0,100),confidence=confidencePct>=75?'High':confidencePct>=45?'Moderate':'Developing';
+ const action=combined>.18?'Positive Distance & Load evidence':combined<-.18?'Conservative Distance & Load evidence':'Hold Distance & Load';
+ const interpretation=combined>.18?'The run provides positive evidence that this load was tolerated well.':combined<-.18?'The run provides evidence that load progression should be more conservative.':'The run does not materially change the current Distance & Load calibration.';
+ return{pathway:'load',family,score,signals,completionSignal,toleranceSignal,executionSignal,personalSignal,personalResponse:personal,finalSignal:clamp(combined,-1,1),confidenceWeight,confidencePct,confidence,confidenceReasons,interpretation,action,completion};
+}
+function twoPathwayDecisionForRun(run,plan=run?.planId?state.plan.find(p=>p.id===run.planId):null){
+ return{pace:decisionSignalForRun(run,plan),load:loadDecisionSignalForRun(run,plan)};
+}
 function trainingEvidence(asOf=iso(today())){
  let valid=state.assessments.filter(a=>a.valid&&a.date<=asOf).sort((a,b)=>a.date.localeCompare(b.date)),anchor=valid.at(-1),anchorDate=anchor?.date||state.setup.planStart,runs=state.runs.filter(r=>r.date>=anchorDate&&r.date<=asOf&&r.source!=='assessment').sort((a,b)=>a.date.localeCompare(b.date)),raw=100,evidence=0,events=[];
  runs.forEach(r=>{
-   const p=r.planId?state.plan.find(x=>x.id===r.planId):null,decision=decisionSignalForRun(r,p);
+   const p=r.planId?state.plan.find(x=>x.id===r.planId):null,decision=twoPathwayDecisionForRun(r,p).pace;
    if(decision.score==null)return;
    const confidence=decision.confidenceWeight,maxMove=confidence*.65,signal=decision.finalSignal,delta=signal*maxMove;
    raw=clamp(raw+delta,95,105);evidence+=confidence;
@@ -775,50 +922,37 @@ function painAdjustment(pain=recoveryPainState()){
  if(max>=3)return{adjustment:-.03,detail:`Recent maximum pain ${max}/10 limits progression and intensity.`};
  return{adjustment:0,detail:`Recent maximum pain ${max}/10 adds no load reduction.`};
 }
+function weeklyLoadEvidence(w,finalised=true){
+ const wd=weekData(w),runs=wd.runs||[],decisions=runs.map(r=>({run:r,decision:loadDecisionSignalForRun(r,r.planId?state.plan.find(p=>p.id===r.planId):null)}));
+ const usable=decisions.filter(x=>Number.isFinite(x.decision.finalSignal)&&x.decision.confidenceWeight>0);
+ const weight=sum(usable.map(x=>x.decision.confidenceWeight)),meanSignal=weight?sum(usable.map(x=>x.decision.finalSignal*x.decision.confidenceWeight))/weight:0;
+ let completionDelta=0,completionDetail='Completion is not scored until the week closes.';
+ const completion=wd.planned>0?wd.actual/wd.planned:null;
+ if(finalised&&Number.isFinite(completion)){
+   if(completion<.70){completionDelta=-.03;completionDetail=`${Math.round(completion*100)}% completed; insufficient exposure reduces next-week load conservatively.`}
+   else if(completion<.85){completionDelta=-.015;completionDetail=`${Math.round(completion*100)}% completed; progression is moderated.`}
+   else if(completion<=1.05){completionDelta=0;completionDetail=`${Math.round(completion*100)}% completed; completion itself is neutral and tolerance evidence decides progression.`}
+   else{completionDelta=-.005;completionDetail=`${Math.round(completion*100)}% completed; excess load is not rewarded.`}
+ }
+ const runDelta=meanSignal>=0?meanSignal*.012:meanSignal*.025;
+ const learningDelta=clamp(completionDelta+runDelta,-.05,.015);
+ const positive=usable.filter(x=>x.decision.finalSignal>.18).length,negative=usable.filter(x=>x.decision.finalSignal<-.18).length;
+ return{week:w,planned:wd.planned,actual:wd.actual,completion,decisions,meanSignal,completionDelta,runDelta,learningDelta,positive,negative,
+   items:[
+    {name:'Weekly completion',adjustment:completionDelta,detail:completionDetail,status:finalised?'available':'pending'},
+    {name:'Run-level load tolerance',adjustment:runDelta,detail:usable.length?`${usable.length} run decision${usable.length===1?'':'s'} · integrated load-tolerance signal ${meanSignal>=0?'+':''}${meanSignal.toFixed(2)} (${positive} positive, ${negative} conservative).`:'No qualifying run-level load evidence.',status:usable.length?'available':'insufficient'}
+   ]};
+}
 function adaptiveFactorDetails(w){
  if(!state.setup.adaptive||w<=1)return{factor:1,rawFactor:1,baseFactor:1,cumulativeFactor:1,weeklyLearningDelta:0,temporaryAdjustment:0,items:[{name:'Baseline',adjustment:0,detail:w<=1?'No previous training week is available.':'Adaptive planning is disabled.'}],previousWeek:w-1,plannedKm:null,completedKm:null,status:w<=1?'baseline':'disabled'};
- let previousWeek=w-1,previousEnd=new Date(weekStart(previousWeek).getTime()+7*DAY);
- // A future factor must not interpret an unfinished future week as 0% completion.
- // It remains neutral until the complete preceding week is available.
- if(previousEnd>today()){const prior=w>1?adaptiveFactorDetails(w-1).cumulativeFactor:1;return{factor:prior,rawFactor:prior,baseFactor:prior,cumulativeFactor:prior,weeklyLearningDelta:0,temporaryAdjustment:0,items:[{name:'Pending evidence',adjustment:0,detail:`Week ${previousWeek} is not complete. The cumulative load-tolerance factor remains ${prior.toFixed(3)} until that week ends.`}],previousWeek,plannedKm:null,completedKm:null,status:'pending'};}
- let prev=weekData(previousWeek),ad=prev.planned>0?prev.actual/prev.planned:null;
- let items=[],f=1;
- const add=(name,adjustment,detail)=>{f+=adjustment;items.push({name,adjustment,detail})};
- if(!Number.isFinite(ad))add('Completed load',0,'No planned load was available; no adjustment applied.');
- else if(ad<.70)add('Completed load',-.08,`${Math.round(ad*100)}% of planned distance completed (<70%).`);
- else if(ad<.85)add('Completed load',-.04,`${Math.round(ad*100)}% of planned distance completed (70–84%).`);
- else if(ad<=1.05)add('Completed load',0,`${Math.round(ad*100)}% of planned distance completed (85–105%).`);
- else add('Completed load',-.02,`${Math.round(ad*100)}% completed; excess load is not rewarded.`);
- let aerobic=state.runs.filter(r=>['Easy','Recovery','Long run'].includes(r.type)&&Number(r.durationSec)>=2700&&dte(r.date)>=new Date(weekStart(w).getTime()-35*DAY)&&dte(r.date)<weekStart(w)&&dte(r.date)<=today());
- let byType={};aerobic.forEach(r=>(byType[r.type]??=[]).push(r));
- let effChanges=[];
- Object.values(byType).forEach(group=>{group.sort((a,b)=>a.date.localeCompare(b.date));let vals=group.map(r=>metrics(r).efficiencyJ).filter(Number.isFinite);if(vals.length>=4){let cut=Math.floor(vals.length/2),a=avg(vals.slice(0,cut)),b=avg(vals.slice(cut));if(a>0)effChanges.push((b/a-1)*100)}});
- let effChange=avg(effChanges),canReward=Number.isFinite(ad)&&ad>=.85&&ad<=1.05&&aerobic.length>=2;
- if(!Number.isFinite(effChange))add('Efficiency trend',0,'Fewer than four comparable runs of the same type; no adjustment applied.');
- else if(effChange<=-3)add('Efficiency trend',-.02,`Same-type efficiency changed ${effChange.toFixed(1)}%.`);
- else if(effChange>=2&&canReward)add('Efficiency trend',.01,`Same-type efficiency improved ${effChange.toFixed(1)}% with adequate completed load.`);
- else if(effChange>=2)add('Efficiency trend',0,`Efficiency improved ${effChange.toFixed(1)}%, but positive adjustment requires 85–105% load completion and at least two qualifying aerobic runs.`);
- else add('Efficiency trend',0,`Same-type efficiency changed ${effChange.toFixed(1)}%.`);
- let driftVals=aerobic.map(r=>Number(r.powerDrift)).filter(Number.isFinite),drift=driftVals.length?avg(driftVals):null;
- if(!Number.isFinite(drift))add('Cardiac drift',0,'No valid power-based drift data; no adjustment applied.');
- else if(drift>7)add('Cardiac drift',-.04,`Average power-based drift ${drift.toFixed(1)}%.`);
- else if(drift>5)add('Cardiac drift',-.02,`Average power-based drift ${drift.toFixed(1)}%.`);
- else if(drift<=3&&canReward)add('Cardiac drift',.01,`Average power-based drift ${drift.toFixed(1)}% with adequate completed load.`);
- else if(drift<=3)add('Cardiac drift',0,`Drift was ${drift.toFixed(1)}%, but positive adjustment requires 85–105% load completion and at least two qualifying aerobic runs.`);
- else add('Cardiac drift',0,`Average power-based drift ${drift.toFixed(1)}%.`);
- const trainingResponse=f;
- let hrv=hrvModel();
- if(!hrv.ready)add('Garmin HRV',0,hrv.detail);
- else if(hrv.factor<1)add('Garmin HRV',hrv.factor-1,`${hrv.detail} Recovery moderation is based on the rolling pattern, not one night.`);
- else add('Garmin HRV',0,`${hrv.detail} No progression penalty applied.`);
- const painAdj=painAdjustment();
- add('Pain',painAdj.adjustment,painAdj.detail);
- const previousCumulative=w>1?adaptiveFactorDetails(w-1).cumulativeFactor:1;
- const weeklyLearningDelta=trainingResponse-1;
+ const previousWeek=w-1,previousEnd=new Date(weekStart(previousWeek).getTime()+7*DAY);
+ if(previousEnd>today()){const prior=w>1?adaptiveFactorDetails(w-1).cumulativeFactor:1;return{factor:prior,rawFactor:prior,baseFactor:prior,cumulativeFactor:prior,weeklyLearningDelta:0,temporaryAdjustment:0,items:[{name:'Pending evidence',adjustment:0,detail:`Week ${previousWeek} is not complete. Distance & Load remains ${prior.toFixed(3)} until the weekly review.`}],previousWeek,plannedKm:null,completedKm:null,status:'pending'};}
+ const review=weeklyLoadEvidence(previousWeek,true),previousCumulative=w>1?adaptiveFactorDetails(w-1).cumulativeFactor:1,weeklyLearningDelta=review.learningDelta;
  const cumulativeFactor=clamp(previousCumulative*(1+weeklyLearningDelta),state.setup.minFactor,state.setup.maxFactor);
- const temporaryAdjustment=(hrv.factor-1)+painAdj.adjustment;
- const rawFactor=cumulativeFactor*(1+temporaryAdjustment),boundedFactor=clamp(rawFactor,state.setup.minFactor,state.setup.maxFactor);
- return{factor:boundedFactor,rawFactor,baseFactor:previousCumulative,cumulativeFactor,weeklyLearningDelta,temporaryAdjustment,trainingResponse,hrvFactor:hrv.factor,hrv,items,previousWeek,plannedKm:prev.planned,completedKm:prev.actual,status:'calculated'};
+ const hrv=hrvModel(),painAdj=painAdjustment(),temporaryAdjustment=(hrv.ready?hrv.factor-1:0)+painAdj.adjustment;
+ const rawFactor=cumulativeFactor*(1+temporaryAdjustment),factor=clamp(rawFactor,state.setup.minFactor,state.setup.maxFactor);
+ const items=[...review.items,{name:'Readiness overlay',adjustment:temporaryAdjustment,detail:`Temporary only: ${hrv.detail} ${painAdj.detail}`}];
+ return{factor,rawFactor,baseFactor:previousCumulative,cumulativeFactor,weeklyLearningDelta,temporaryAdjustment,trainingResponse:1+weeklyLearningDelta,hrvFactor:hrv.factor,hrv,items,previousWeek,plannedKm:review.planned,completedKm:review.actual,status:'calculated',loadReview:review};
 }
 function adaptiveFactor(w){return adaptiveFactorDetails(w).factor}
 
@@ -860,30 +994,11 @@ function pathwayHistorySvg(history){
 }
 
 function provisionalWeeklyAdjustment(w=currentWeek()){
- const current=Math.max(1,Math.min(weeks(),w)),items=[],hrv=hrvModel(),painAdj=painAdjustment();let f=1;
- const add=(name,adjustment,detail,status='available')=>{f+=adjustment;items.push({name,adjustment,detail,status})};
- add('Completed load',0,`Week ${current} is still in progress. Completion is shown but is not scored until the weekly review closes.`,'pending');
- let aerobic=state.runs.filter(r=>['Easy','Recovery','Long run'].includes(r.type)&&Number(r.durationSec)>=2700&&dte(r.date)>=new Date(weekStart(current).getTime()-28*DAY)&&dte(r.date)<=today());
- let byType={};aerobic.forEach(r=>(byType[r.type]??=[]).push(r));let effChanges=[];
- Object.values(byType).forEach(group=>{group.sort((a,b)=>a.date.localeCompare(b.date));let vals=group.map(r=>metrics(r).efficiencyJ).filter(Number.isFinite);if(vals.length>=4){let cut=Math.floor(vals.length/2),a=avg(vals.slice(0,cut)),b=avg(vals.slice(cut));if(a>0)effChanges.push((b/a-1)*100)}});
- let effChange=avg(effChanges);
- if(!Number.isFinite(effChange))add('Efficiency trend',0,'Not enough comparable same-type aerobic runs yet; provisional effect is neutral.','insufficient');
- else if(effChange<=-3)add('Efficiency trend',-.02,`Current same-type efficiency trend is ${effChange.toFixed(1)}%.`);
- else add('Efficiency trend',0,`Current same-type efficiency trend is ${effChange.toFixed(1)}%; no provisional reduction.`);
- let driftVals=aerobic.map(r=>Number(r.powerDrift)).filter(Number.isFinite),drift=driftVals.length?avg(driftVals):null;
- if(!Number.isFinite(drift))add('Cardiac drift',0,'No valid power-based drift evidence yet; provisional effect is neutral.','insufficient');
- else if(drift>7)add('Cardiac drift',-.04,`Current average power-based drift is ${drift.toFixed(1)}%.`);
- else if(drift>5)add('Cardiac drift',-.02,`Current average power-based drift is ${drift.toFixed(1)}%.`);
- else add('Cardiac drift',0,`Current average power-based drift is ${drift.toFixed(1)}%; no provisional reduction.`);
- const trainingResponse=f;
- if(!hrv.ready)add('Garmin HRV',0,hrv.detail,'insufficient');else if(hrv.factor<1)add('Garmin HRV',hrv.factor-1,hrv.detail);else add('Garmin HRV',0,`${hrv.detail} No provisional reduction.`);
- add('Pain',painAdj.adjustment,painAdj.detail);
- const baseFactor=adaptiveFactorDetails(current).cumulativeFactor;
- const weeklyLearningDelta=trainingResponse-1;
- const cumulativeFactor=clamp(baseFactor*(1+weeklyLearningDelta),state.setup.minFactor,state.setup.maxFactor);
- const temporaryAdjustment=(hrv.ready?hrv.factor-1:0)+painAdj.adjustment;
- const rawFactor=cumulativeFactor*(1+temporaryAdjustment),factor=clamp(rawFactor,state.setup.minFactor,state.setup.maxFactor);
- return{factor,rawFactor,baseFactor,cumulativeFactor,weeklyLearningDelta,temporaryAdjustment,items,status:'provisional',week:current};
+ const current=Math.max(1,Math.min(weeks(),w)),review=weeklyLoadEvidence(current,false),baseFactor=adaptiveFactorDetails(current).cumulativeFactor;
+ const cumulativeFactor=clamp(baseFactor*(1+review.runDelta),state.setup.minFactor,state.setup.maxFactor);
+ const hrv=hrvModel(),painAdj=painAdjustment(),temporaryAdjustment=(hrv.ready?hrv.factor-1:0)+painAdj.adjustment,rawFactor=cumulativeFactor*(1+temporaryAdjustment),factor=clamp(rawFactor,state.setup.minFactor,state.setup.maxFactor);
+ const items=[...review.items,{name:'Readiness overlay',adjustment:temporaryAdjustment,detail:`Temporary only and not learned: ${hrv.detail} ${painAdj.detail}`}];
+ return{factor,rawFactor,baseFactor,cumulativeFactor,weeklyLearningDelta:review.runDelta,temporaryAdjustment,items,status:'provisional',week:current,loadReview:review};
 }
 function athleteState(w=currentWeek()){
  const current=Math.max(1,Math.min(weeks(),w)),next=Math.min(weeks(),current+1),ev=trainingEvidence(),applied=adaptiveFactorDetails(current),nextAfd=adaptiveFactorDetails(next),preview=provisionalWeeklyAdjustment(current),pain=recoveryPainState(),hrv=hrvModel(),pathways=pathwayFactorSummary(current);
@@ -1776,9 +1891,8 @@ function coachReportHtml(report,compact=false){
 function progressCard(x){let pct=clamp(x.value/Math.max(.01,x.target)*100,0,100);let value=x.unit==='km'?`${x.value.toFixed(1)} / ${x.target.toFixed(1)} km`:`${Math.round(x.value)} / ${Math.round(x.target)} ${x.unit}`;return `<div class="progressCard"><div><b>${x.label}</b><span>${value}</span></div><strong>${Math.round(pct)}%</strong><div class="progressTrack"><i style="width:${pct}%"></i></div></div>`}
 function decisionHistoryHtml(){
  const rows=completedRuns().slice().sort((a,b)=>b.date.localeCompare(a.date)).slice(0,10).map(r=>{
-   const de=r.coachUpdate?.decisionEngine||decisionSignalForRun(r,r.planId?state.plan.find(p=>p.id===r.planId):null);
-   const delta=r.coachUpdate?.paceProvisionalDelta;
-   return`<div class="decisionHistoryRow"><div><b>${fmtDate(r.date)} · ${esc(r.type)}</b><small>${esc(de.interpretation)}</small></div><span class="${de.action==='Positive evidence'?'positive':de.action==='Conservative evidence'?'negative':'hold'}">${esc(de.action)}</span><em>${de.confidence} · ${Number.isFinite(delta)?signedFactorDelta(delta):'historical'}</em></div>`;
+   const two=r.coachUpdate?.twoPathway||twoPathwayDecisionForRun(r,r.planId?state.plan.find(p=>p.id===r.planId):null),pd=two.pace,ld=two.load;
+   return`<div class="decisionHistoryRow two"><div><b>${fmtDate(r.date)} · ${esc(r.type)}</b><small>${esc(pd.interpretation)} ${esc(ld.interpretation)}</small></div><span class="hold">P ${pd.finalSignal>=0?'+':''}${pd.finalSignal.toFixed(2)} · L ${ld.finalSignal>=0?'+':''}${ld.finalSignal.toFixed(2)}</span><em>${pd.confidence}/${ld.confidence} confidence</em></div>`;
  });
  return rows.length?`<details class="decisionHistoryPanel"><summary><span>Adaptation decision history</span><b>${rows.length} recent decisions</b></summary><p class="muted compact">A persistent audit trail of how uploaded runs were interpreted before pathway evidence was updated.</p><div>${rows.join('')}</div></details>`:'';
 }
@@ -2633,43 +2747,52 @@ function nextTrainingSessionAfter(date=iso(today())){
  return (state.plan||[]).filter(p=>p.date>=date&&!['Rest','Race Day'].includes(p.type)).sort((a,b)=>a.date.localeCompare(b.date))[0]||null;
 }
 function postRunCoachSnapshot(date=iso(today())){
- const paceState=trainingEvidence(date),reviewWeek=Math.min(weeks(),Math.max(1,currentWeek()+1)),load=adaptiveFactorDetails(reviewWeek);
+ const paceState=trainingEvidence(date),current=Math.max(1,currentWeek()),appliedLoad=adaptiveFactorDetails(current),loadPreview=provisionalWeeklyAdjustment(current);
  const upcoming=(state.plan||[]).filter(p=>p.date>=date&&!['Rest','Race Day'].includes(p.type)).sort((a,b)=>a.date.localeCompare(b.date)).slice(0,6).map(p=>{let z=null;try{z=zone(p.type,p.date)}catch{}return{id:p.id,date:p.date,type:p.type,distance:Number(p.distance),pace:Number(z?.pace),power:Number(z?.power),week:trainingWeekForDate(p.date)}});
- const next=upcoming[0]||null;
- const paceReview=pacePowerReviewState(date);
- return{paceFactor:Number(paceReview.applied)||1,paceProvisional:Number(paceReview.provisional)||1,paceConfidence:Number(paceState.confidence)||0,loadFactor:Number(load.cumulativeFactor)||1,loadProvisional:Number(load.cumulativeFactor)||1,readiness:Number(1+(Number(load.temporaryAdjustment)||0)),effectiveLoad:Number(load.factor)||1,predictionSec:Number(prediction())||null,reviewWeek,next,upcoming};
+ const next=upcoming[0]||null,paceReview=pacePowerReviewState(date);
+ return{paceFactor:Number(paceReview.applied)||1,paceProvisional:Number(paceReview.provisional)||1,paceConfidence:Number(paceState.confidence)||0,
+   loadFactor:Number(appliedLoad.cumulativeFactor)||1,loadProvisional:Number(loadPreview.cumulativeFactor)||Number(appliedLoad.cumulativeFactor)||1,
+   readiness:Number(1+(Number(loadPreview.temporaryAdjustment)||0)),effectiveLoad:Number(loadPreview.factor)||1,predictionSec:Number(prediction())||null,reviewWeek:current,next,upcoming};
 }
 function signedFactorDelta(v){if(!Number.isFinite(v)||Math.abs(v)<.0005)return '↔ 0.000';return `${v>0?'+':''}${v.toFixed(3)}`;}
 function postRunCoachUpdate(run,before,after){
- const plan=run.planId?state.plan.find(p=>p.id===run.planId):null,details=workoutScoreDetails(run,plan),score=details?.score??null,decisionEngine=decisionSignalForRun(run,plan);
- let reasons=[];
- decisionEngine.signals.forEach(s=>reasons.push(`${s.name}: ${s.detail}.`));
- if(decisionEngine.confidenceReasons.length)reasons.push(`Evidence confidence reduced because ${decisionEngine.confidenceReasons.join(' and ')}.`);
- if(plan)reasons.push(`${Number(run.distanceKm).toFixed(1)} of ${Number(plan.distance).toFixed(1)} planned km was recorded and contributes to weekly completion.`);
- const paceDelta=after.paceFactor-before.paceFactor,paceProvisionalDelta=(after.paceProvisional||after.paceFactor)-(before.paceProvisional||before.paceFactor),loadDelta=after.loadFactor-before.loadFactor,readyDelta=after.readiness-before.readiness,predDelta=(Number.isFinite(after.predictionSec)&&Number.isFinite(before.predictionSec))?after.predictionSec-before.predictionSec:null;
- let impact=[];
- impact.push(`Applied Pace & Power remains ${after.paceFactor.toFixed(3)} until the weekly review. Provisional next-review value ${(after.paceProvisional||after.paceFactor).toFixed(3)} (${signedFactorDelta(paceProvisionalDelta)} from the updated evidence set).`);
- impact.push(Math.abs(loadDelta)>=.0005?`Learned Distance & Load ${before.loadFactor.toFixed(3)} → ${after.loadFactor.toFixed(3)} (${signedFactorDelta(loadDelta)}).`:`Applied Distance & Load remains ${after.loadFactor.toFixed(3)}; this run contributes to the next weekly review rather than changing planned distance immediately.`);
- if(Math.abs(readyDelta)>=.0005)impact.push(`Readiness ${before.readiness.toFixed(3)} → ${after.readiness.toFixed(3)}.`);
+ const plan=run.planId?state.plan.find(p=>p.id===run.planId):null,details=workoutScoreDetails(run,plan),score=details?.score??null,two=twoPathwayDecisionForRun(run,plan),paceDecision=two.pace,loadDecision=two.load;
+ const paceProvisionalDelta=(after.paceProvisional||after.paceFactor)-(before.paceProvisional||before.paceFactor),loadProvisionalDelta=(after.loadProvisional||after.loadFactor)-(before.loadProvisional||before.loadFactor),readyDelta=after.readiness-before.readiness,predDelta=(Number.isFinite(after.predictionSec)&&Number.isFinite(before.predictionSec))?after.predictionSec-before.predictionSec:null;
+ const reasons=[
+   `Pace & Power — ${paceDecision.interpretation}`,
+   `Distance & Load — ${loadDecision.interpretation}`,
+   ...paceDecision.signals.slice(0,2).map(s=>`${s.name}: ${s.detail}.`),
+   ...loadDecision.signals.slice(0,2).map(s=>`${s.name}: ${s.detail}.`)
+ ];
+ let impact=[
+   `Pace & Power applied ${after.paceFactor.toFixed(3)} · provisional next-review ${(after.paceProvisional||after.paceFactor).toFixed(3)} (${signedFactorDelta(paceProvisionalDelta)} from the updated evidence set).`,
+   `Distance & Load applied ${after.loadFactor.toFixed(3)} · provisional next-review ${(after.loadProvisional||after.loadFactor).toFixed(3)} (${signedFactorDelta(loadProvisionalDelta)} from current run-level tolerance evidence).`
+ ];
+ if(Math.abs(readyDelta)>=.0005)impact.push(`Readiness ${before.readiness.toFixed(3)} → ${after.readiness.toFixed(3)}. This remains a temporary overlay.`);
  if(predDelta!=null&&Math.abs(predDelta)>=1)impact.push(`Central race estimate ${predDelta<0?'improved':'moved slower'} by ${fmtTime(Math.abs(predDelta))}.`);
- let nextChange='No immediate future-workout target changed.';
- const appliedPaceFactor=after.paceFactor||1,provisionalPaceFactor=after.paceProvisional||appliedPaceFactor,paceRatio=provisionalPaceFactor/appliedPaceFactor;
- const prescriptionChanges=(after.upcoming||[]).map(a=>{const hypotheticalPace=Number(a.pace)/Math.max(.8,paceRatio),hypotheticalPower=Number(a.power)*paceRatio;return{id:a.id,date:a.date,type:a.type,beforeDistance:a.distance,afterDistance:a.distance,distanceDeltaKm:0,beforePace:a.pace,afterPace:hypotheticalPace,paceDeltaSec:hypotheticalPace-Number(a.pace),beforePower:a.power,afterPower:hypotheticalPower,powerDeltaW:hypotheticalPower-Number(a.power),week:a.week}}).filter(Boolean);
- const changedPrescriptions=prescriptionChanges.filter(x=>Math.abs(x.paceDeltaSec)>=.5||Math.abs(x.powerDeltaW)>=1);
- if(changedPrescriptions.length){const c=changedPrescriptions[0],bits=[];if(Math.abs(c.paceDeltaSec)>=.5)bits.push(`pace ${pace(c.beforePace)} → ${pace(c.afterPace)}`);if(Math.abs(c.powerDeltaW)>=1)bits.push(`power ${Math.round(c.beforePower)} → ${Math.round(c.afterPower)} W`);nextChange=`If the provisional Pace & Power factor is confirmed at weekly review, ${c.type} on ${fmtDate(c.date)} would change to ${bits.join(' · ')}.`;}
- else if(after.next)nextChange=`No pace/power prescription change is currently projected for ${after.next.type} on ${fmtDate(after.next.date)}.`;
- const distancePolicyNote='Future distances do not change after an individual run. Distance & Load is committed at the weekly review; readiness can still reduce an upcoming session immediately for protection.';
- const decision=decisionEngine.action==='Positive evidence'?'This run strengthened the evidence behind the next weekly review.':decisionEngine.action==='Conservative evidence'?'This run produced evidence for a more conservative next weekly review.':'This run mainly reinforced the current calibration.';
- return{createdAt:new Date().toISOString(),score,evidenceQuality:details?.evidenceQuality||'limited',before,after,paceDelta,paceProvisionalDelta,loadDelta,readinessDelta:readyDelta,predictionDeltaSec:predDelta,reasons:reasons.slice(0,6),impact,nextChange,prescriptionChanges:prescriptionChanges.slice(0,6),distancePolicyNote,confidence:decisionEngine.confidence,decision,decisionEngine};
+
+ const paceRatio=(after.paceProvisional||after.paceFactor)/Math.max(.8,after.paceFactor||1),loadRatio=(after.loadProvisional||after.loadFactor)/Math.max(.8,after.loadFactor||1);
+ const prescriptionChanges=(after.upcoming||[]).map(a=>{
+   const hypotheticalPace=Number(a.pace)/Math.max(.8,paceRatio),hypotheticalPower=Number(a.power)*paceRatio,hypotheticalDistance=Number(a.distance)*loadRatio;
+   return{id:a.id,date:a.date,type:a.type,beforeDistance:a.distance,afterDistance:hypotheticalDistance,distanceDeltaKm:hypotheticalDistance-Number(a.distance),beforePace:a.pace,afterPace:hypotheticalPace,paceDeltaSec:hypotheticalPace-Number(a.pace),beforePower:a.power,afterPower:hypotheticalPower,powerDeltaW:hypotheticalPower-Number(a.power),week:a.week};
+ }).filter(Boolean);
+ const changed=prescriptionChanges.filter(x=>Math.abs(x.distanceDeltaKm)>=.05||Math.abs(x.paceDeltaSec)>=.5||Math.abs(x.powerDeltaW)>=1);
+ let nextChange='No immediate prescription change; both learned pathways commit at the weekly review.';
+ if(changed.length){const c=changed[0],bits=[];if(Math.abs(c.distanceDeltaKm)>=.05)bits.push(`distance ${c.beforeDistance.toFixed(1)} → ${c.afterDistance.toFixed(1)} km`);if(Math.abs(c.paceDeltaSec)>=.5)bits.push(`pace ${pace(c.beforePace)} → ${pace(c.afterPace)}`);if(Math.abs(c.powerDeltaW)>=1)bits.push(`power ${Math.round(c.beforePower)} → ${Math.round(c.afterPower)} W`);nextChange=`If the provisional pathway evidence is confirmed at weekly review, ${c.type} on ${fmtDate(c.date)} would change to ${bits.join(' · ')}.`}
+ const distancePolicyNote='Distance & Load is learned separately from Pace & Power and commits at the weekly review. Readiness can still temporarily moderate an upcoming session without changing either learned pathway.';
+ const decision=paceDecision.finalSignal>.18||loadDecision.finalSignal>.18?'This run added positive evidence to at least one pathway.':paceDecision.finalSignal<-.18||loadDecision.finalSignal<-.18?'This run added conservative evidence to at least one pathway.':'This run mainly reinforced the current two-pathway calibration.';
+ const confidence=[paceDecision.confidence,loadDecision.confidence].includes('Developing')?'Developing':[paceDecision.confidence,loadDecision.confidence].includes('Moderate')?'Moderate':'High';
+ return{createdAt:new Date().toISOString(),score,evidenceQuality:details?.evidenceQuality||'limited',before,after,paceProvisionalDelta,loadProvisionalDelta,readinessDelta:readyDelta,predictionDeltaSec:predDelta,reasons:reasons.slice(0,7),impact,nextChange,prescriptionChanges:prescriptionChanges.slice(0,6),distancePolicyNote,confidence,decision,twoPathway:two,decisionEngine:paceDecision};
 }
 function postRunCoachUpdateHtml(r){
  const u=r?.coachUpdate;if(!u)return '';
- const de=u.decisionEngine||decisionSignalForRun(r,r.planId?state.plan.find(p=>p.id===r.planId):null);
+ const plan=r.planId?state.plan.find(p=>p.id===r.planId):null,two=u.twoPathway||twoPathwayDecisionForRun(r,plan),pd=two.pace,ld=two.load;
  const future=(u.prescriptionChanges||[]).length?`<details class="postRunProjectedImpact"><summary>Projected impact at next weekly review</summary><div class="futurePrescriptionList">${u.prescriptionChanges.map(x=>{const distChanged=Math.abs(Number(x.distanceDeltaKm))>=.05,paceChanged=Math.abs(Number(x.paceDeltaSec))>=.5,powerChanged=Math.abs(Number(x.powerDeltaW))>=1;return`<div class="futurePrescriptionRow"><div><strong>${esc(fmtDate(x.date))} · ${esc(x.type)}</strong><small>${distChanged?`${Number(x.beforeDistance).toFixed(1)} → ${Number(x.afterDistance).toFixed(1)} km`:`${Number(x.afterDistance).toFixed(1)} km · held`}</small></div><div><span>${paceChanged?`${pace(x.beforePace)} → ${pace(x.afterPace)}`:`${pace(x.afterPace)} · unchanged`}</span><span>${powerChanged?`${Math.round(x.beforePower)} → ${Math.round(x.afterPower)} W`:`${Math.round(x.afterPower)} W · unchanged`}</span></div></div>`}).join('')}</div><p class="muted compact">${esc(u.distancePolicyNote||'')}</p></details>`:'';
- const signalRows=(de.signals||[]).map(s=>`<div class="decisionSignalRow"><span>${esc(s.name)}</span><b>${s.value>=0?'+':''}${Number(s.value).toFixed(2)}</b><small>${esc(s.detail)}</small></div>`).join('');
- return `<section class="postRunCoachUpdate"><div class="postRunCoachHead"><div><span>POST-RUN COACH UPDATE</span><h3>${esc(u.decision)}</h3></div><b>${esc(u.confidence)} confidence</b></div><div class="postRunFactorGrid"><div><small>Pace & Power applied</small><strong>${Number(u.after?.paceFactor||1).toFixed(3)}</strong><em>Next review ${Number(u.after?.paceProvisional||u.after?.paceFactor||1).toFixed(3)} · ${esc(signedFactorDelta(Number(u.paceProvisionalDelta)||0))}</em></div><div><small>Distance & Load applied</small><strong>${Number(u.after?.loadFactor||1).toFixed(3)}</strong><em>Weekly review only</em></div><div><small>Readiness</small><strong>${Number(u.after?.readiness||1).toFixed(3)}</strong><em>${esc(signedFactorDelta(Number(u.readinessDelta)||0))}</em></div></div>
- <section class="decisionEngineCard"><div class="decisionEngineHead"><div><small>TRAINING DECISION ENGINE</small><h4>${esc(de.action)}</h4></div><span>${de.confidencePct}% evidence confidence</span></div><div class="decisionFlow"><div><small>EVIDENCE</small><b>${de.score!=null?de.score+'/100 execution':'Limited'}</b></div><i>→</i><div><small>INTERPRETATION</small><b>${esc(de.conflict?'Mixed evidence':de.finalSignal>.25?'Positive':de.finalSignal<-.25?'Conservative':'Stable')}</b></div><i>→</i><div><small>DECISION</small><b>${esc(de.action)}</b></div><i>→</i><div><small>CONSEQUENCE</small><b>${Math.abs(Number(u.paceProvisionalDelta)||0)>=.0005?`Provisional ${signedFactorDelta(Number(u.paceProvisionalDelta)||0)}`:'Hold'}</b></div></div><p>${esc(de.interpretation)}</p>${de.personalResponse?.dimension?`<div class="decisionPersonalContext"><small>PERSONAL RESPONSE CONTEXT</small><b>${esc(de.personalResponse.dimension.name)} · ${esc(de.personalResponse.dimension.status)}</b><span>${esc(de.personalResponse.detail)}</span></div>`:''}<details><summary>Show decision calculation</summary><div class="decisionSignals">${signalRows}</div><div class="decisionFormula"><span>Integrated signal</span><b>${de.finalSignal>=0?'+':''}${Number(de.finalSignal).toFixed(2)}</b><small>Confidence weight ${Number(de.confidenceWeight).toFixed(2)} · conflict handling ${de.conflict?'applied':'not needed'}</small></div></details></section>
- <div class="postRunCoachSection"><b>Why</b>${(u.reasons||[]).map(x=>`<p>${esc(x)}</p>`).join('')}</div><div class="postRunCoachSection"><b>What changed</b>${(u.impact||[]).map(x=>`<p>${esc(x)}</p>`).join('')}</div>${future}<div class="postRunNext"><b>What this changes next</b><p>${esc(u.nextChange||'No immediate prescription change.')}</p><small>Readiness remains temporary rather than changing learned capability.</small></div></section>`;
+ const branch=(title,d,delta)=>`<div class="pathwayDecisionBranch"><small>${title}</small><strong>${esc(d.action)}</strong><span>${d.finalSignal>=0?'+':''}${d.finalSignal.toFixed(2)} integrated signal · ${d.confidence}% confidence</span><p>${esc(d.interpretation)}</p><details><summary>Evidence for this pathway</summary>${(d.signals||[]).map(s=>`<div class="decisionSignalRow"><span>${esc(s.name)}</span><b>${s.value>=0?'+':''}${Number(s.value).toFixed(2)}</b><small>${esc(s.detail)}</small></div>`).join('')}<div class="decisionFormula"><span>Provisional factor effect</span><b>${esc(signedFactorDelta(Number(delta)||0))}</b></div></details></div>`;
+ return `<section class="postRunCoachUpdate"><div class="postRunCoachHead"><div><span>POST-RUN COACH UPDATE</span><h3>${esc(u.decision)}</h3></div><b>${esc(u.confidence)} confidence</b></div>
+ <div class="postRunFactorGrid"><div><small>Pace & Power applied</small><strong>${Number(u.after?.paceFactor||1).toFixed(3)}</strong><em>Next review ${Number(u.after?.paceProvisional||u.after?.paceFactor||1).toFixed(3)} · ${esc(signedFactorDelta(Number(u.paceProvisionalDelta)||0))}</em></div><div><small>Distance & Load applied</small><strong>${Number(u.after?.loadFactor||1).toFixed(3)}</strong><em>Next review ${Number(u.after?.loadProvisional||u.after?.loadFactor||1).toFixed(3)} · ${esc(signedFactorDelta(Number(u.loadProvisionalDelta)||0))}</em></div><div><small>Readiness</small><strong>${Number(u.after?.readiness||1).toFixed(3)}</strong><em>Temporary overlay · ${esc(signedFactorDelta(Number(u.readinessDelta)||0))}</em></div></div>
+ <section class="twoPathwayDecisionEngine"><div class="decisionEngineHead"><div><small>UNIFIED TWO-PATHWAY DECISION ENGINE</small><h4>One evidence set · two independent learning decisions</h4></div></div><div class="decisionFlowCompact"><div><small>OBSERVATIONS</small><b>Workout + FIT + comparable runs + personal response</b></div><i>→</i><div><small>COACH INTERPRETATION</small><b>Capability vs load tolerance</b></div></div><div class="pathwayDecisionGrid">${branch('PACE & POWER',pd,u.paceProvisionalDelta)}${branch('DISTANCE & LOAD',ld,u.loadProvisionalDelta)}</div><div class="readinessSeparate"><small>RECOVERY OVERLAY</small><b>Readiness ${Number(u.after?.readiness||1).toFixed(3)}</b><span>Temporary only — does not alter either learned pathway.</span></div></section>
+ <div class="postRunCoachSection"><b>Why</b>${(u.reasons||[]).map(x=>`<p>${esc(x)}</p>`).join('')}</div><div class="postRunCoachSection"><b>What changed</b>${(u.impact||[]).map(x=>`<p>${esc(x)}</p>`).join('')}</div>${future}<div class="postRunNext"><b>What this changes next</b><p>${esc(u.nextChange||'No immediate prescription change.')}</p></div></section>`;
 }
 
 function intervalAnalysisHtml(r){
@@ -2818,10 +2941,10 @@ function runExecutionBreakdownHtml(r){
  const plan=r.planId?state.plan.find(p=>p.id===r.planId):null,d=workoutScoreDetails(r,plan);
  if(!d)return'<section class="runExecutionBreakdown"><h3>Execution breakdown</h3><p class="muted">Not enough distance and duration information to calculate a score.</p></section>';
  const intervalHtml=intervalAnalysisHtml(r);
- const rows=d.components.map(c=>`<div class="executionCalcRow"><span>${esc(c.name)}</span><b>${Math.round(c.score)}/100</b><small>Effective weight ${Math.round(c.effectiveWeight*100)}%${c.reliability<1?` · ${Math.round(c.reliability*100)}% metric reliability`:''} · ${esc(c.detail)}</small></div>`).join('');
+ const rows=d.components.map(c=>`<div class="executionCalcRow"><span>${esc(c.name)}</span><b>${Math.round(c.score)}/100</b><small><b>Scope: ${esc(c.scope||'whole session')}</b> · Effective weight ${Math.round(c.effectiveWeight*100)}%${c.reliability<1?` · ${Math.round(c.reliability*100)}% metric reliability`:''} · ${esc(c.detail)}</small></div>`).join('');
  const paceComp=d.components.find(c=>c.key==='pace'),powerComp=d.components.find(c=>c.key==='power');
  const conflict=paceComp&&powerComp&&Math.abs(paceComp.score-powerComp.score)>=12?`<div class="executionNotice"><b>Pace and power disagree</b><p>Terrain, wind, GPS or whole-run averaging may explain the difference. The coach treats this as mixed evidence rather than assuming either metric is correct on its own.</p></div>`:'';
- return `${workoutIntelligenceHtml(r)}${comparableRunHtml(r)}${intervalHtml}<section class="runExecutionBreakdown"><div class="executionBreakdownHead"><div><h3>Execution breakdown</h3><p class="muted compact">How this run delivered the intended physiological objective.</p></div><strong>${d.score}/100</strong></div><div class="executionObjective"><small>WORKOUT OBJECTIVE</small><b>${esc(d.objective)}</b><span>${esc(d.interpretation)} · ${esc(d.evidenceQuality)} evidence</span></div>${plan?`<p class="muted compact">Matched to ${fmtDate(plan.date)} · ${esc(plan.type)} · ${plan.distance.toFixed(1)} km.</p>`:'<p class="muted compact">Ad hoc run: only directly observable components are scored. Missing targets reduce evidence quality rather than being awarded neutral points.</p>'}${conflict}<div class="executionCalcTable">${rows}</div><div class="adjustmentCalcTotal"><span>Weighted score before pain adjustment</span><b>${Math.round(d.rawScore)}/100</b>${d.capReason?`<small>${esc(d.capReason)}</small>`:'<small>No pain-related cap applied.</small>'}</div></section>`;
+ return `${workoutIntelligenceHtml(r)}${comparableRunHtml(r)}${intervalHtml}<section class="runExecutionBreakdown"><div class="executionBreakdownHead"><div><h3>Execution breakdown</h3><p class="muted compact">How this run delivered the intended physiological objective.</p></div><strong>${d.score}/100</strong></div><div class="executionObjective"><small>WORKOUT OBJECTIVE</small><b>${esc(d.objective)}</b><span>${esc(d.interpretation)} · ${esc(d.evidenceQuality)} evidence</span></div>${plan?`<p class="muted compact">Matched to ${fmtDate(plan.date)} · ${esc(plan.type)} · ${plan.distance.toFixed(1)} km.</p>`:'<p class="muted compact">Ad hoc run: only directly observable components are scored. Missing targets reduce evidence quality rather than being awarded neutral points.</p>'}${conflict}<details class="metricScopeGuide"><summary>Why some metrics use work sections and others use the whole run</summary><div><b>Intervals / repetitions</b><p>Pace and power use detected work repetitions. HR uses later work reps only as low-weight support because HR lags short efforts. Whole-run cardiac drift is not scored. RPE remains a whole-session measure.</p><b>Threshold / tempo</b><p>Detected work sections are preferred for pace, power and HR. If unavailable, whole-run pace/power are supporting-only because warm-up and cooldown dilute the target block. Drift is supporting-only.</p><b>Easy / recovery</b><p>Distance, HR and drift use the whole run. Pace and power are treated mainly as intensity ceilings: slower/lower is not penalised simply for being easy.</p><b>Long run</b><p>Whole-run distance, HR and drift matter, with early-to-late stability handled by Workout Intelligence. Specific/race-rehearsal long runs use detected work sections where available.</p><b>RPE</b><p>RPE is always session-level because it describes the perceived effort of the workout as a whole.</p></div></details><div class="executionCalcTable">${rows}</div><div class="adjustmentCalcTotal"><span>Weighted score before pain adjustment</span><b>${Math.round(d.rawScore)}/100</b>${d.capReason?`<small>${esc(d.capReason)}</small>`:'<small>No pain-related cap applied.</small>'}</div></section>`;
 }
 function renderRuns(){$('runList').innerHTML=state.runs.slice().sort((a,b)=>b.date.localeCompare(a.date)).map(r=>{let m=metrics(r),ws=workoutScore(r),cr=comparableRunAnalysis(r),compareBadge=cr&&cr.confidence!=='Low'&&Number.isFinite(cr.efficiencyDelta)?`<span class="runCompareBadge ${cr.efficiencyDelta>=0?'better':'worse'}">${cr.efficiencyDelta>=0?'↑':'↓'} ${Math.abs(cr.efficiencyDelta).toFixed(1)}% vs similar</span>`:'';return`<div class="runCard clickable" role="button" tabindex="0" aria-label="Open ${esc(fmtDate(r.date))} ${esc(r.type)} run details" data-run="${r.id}"><div class="runSummary"><div><h3>${fmtDate(r.date)} · ${esc(r.type)}</h3><p>${r.distanceKm.toFixed(2)} km · ${fmtTime(r.durationSec)} · ${pace(m.pace)}</p><p class="muted compact"><b>Plan:</b> ${esc(matchSummary(r))}${ws!=null?` · <b>Workout score ${ws}/100</b>`:''} ${compareBadge}</p><div class="runStats"><span>HR ${r.avgHr?Math.round(r.avgHr):'—'}</span><span>${r.avgPower?Math.round(r.avgPower):'—'} W</span><span>${dec(m.efficiencyJ,1)} J/beat</span><span>${Number.isFinite(r.powerDrift)?r.powerDrift.toFixed(1)+'% drift':'— drift'}</span><span>${r.hrv!==null&&r.hrv!==undefined&&Number.isFinite(Number(r.hrv))?Math.round(Number(r.hrv))+' ms HRV':'— HRV'}</span></div></div><span aria-hidden="true">›</span></div></div>`}).join('')||'<div class="panel">No completed runs saved yet.</div>'}
 function migrateImportedPower(){
