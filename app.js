@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '13.2.0';
-  const BUILD = 30200;
+  const VERSION = '13.2.1';
+  const BUILD = 30201;
   const SCHEMA = 10330;
   const PRIMARY_STORAGE_KEY = 'arc_v10330_web';
   const MIRROR_STORAGE_KEY = 'arc_v10330_mirror';
@@ -3957,7 +3957,7 @@ function readinessHistoryHtml(rows){
 function recoveryStatusClass(text){
  const value=String(text||'').toLowerCase();
  if(/restricted|compromised|slow|cautious|developing|pressure|attention/.test(value))return 'bad';
- if(/reduced|monitor|moderate|mixed|building|emerging|provisional|early/.test(value))return 'warn';
+ if(/reduced|monitor|moderate|mixed|emerging|provisional|early/.test(value))return 'warn';
  if(/normal|recovered|good|stable|established|tolerated|supports|no significant/.test(value))return 'good';
  return 'neutral';
 }

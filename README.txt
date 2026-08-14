@@ -1,3 +1,12 @@
+AI Running Coach v13.2.1 — Recovery visual consistency refinement — build 30201
+
+v13.2.1
+-------
+- Removed the Recovery page subtitle requested after the v13.2.0 redesign.
+- Recovery section-number circles now exactly match the Progress section-number dimensions and responsive sizing.
+- Baseline-building / insufficient-evidence copy is neutral white rather than status-coloured; the word “building” is no longer classified as a warning state.
+- Today, Plan, Log and Progress remain frozen. No model or calculation logic changed.
+
 AI Running Coach v13.2.0 — Recovery serious-runner rebuild — build 30200
 
 v13.2.0
