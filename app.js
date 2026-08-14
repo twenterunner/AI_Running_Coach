@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '12.1.8';
-  const BUILD = 20108;
+  const VERSION = '12.1.9';
+  const BUILD = 20109;
   const SCHEMA = 10330;
   const PRIMARY_STORAGE_KEY = 'arc_v10330_web';
   const MIRROR_STORAGE_KEY = 'arc_v10330_mirror';
@@ -2394,7 +2394,7 @@ function todayRehabCard(active){
    <div class="rehabPrioritySummary"><strong>${esc(injuryDay.title)}</strong>${pain?`<span>${esc(pain)}</span>`:''}</div>
    ${todayBulletList(items.length?items:[injuryDay.rule],'runnerBullets rehabBullets')}
    <div class="runnerCallout"><b>Safety rule</b><span>${esc(injuryDay.rule)}</span></div>
-   <button type="button" class="runnerTextButton rehabPrimaryButton" data-go="injury">Open today’s rehab plan</button>
+   <button type="button" class="runnerTextButton rehabPrimaryButton" data-rehab-checkin="today">Open daily rehab check-in</button>
  </section>`;
 }
 function todayMiniValueClass(kind,value,context={}){
@@ -2443,14 +2443,36 @@ function todayRaceCard(engine,report){
    ${todayBulletList([gap<=0?`${fmtTime(Math.abs(gap))} inside current target estimate`:`${fmtTime(gap)} outside current target estimate`,report.race.priority],'runnerBullets compactBullets')}
  </section>`;
 }
+function todayRehabStatusSummary(active){
+ const injury=active?.injury,progress=active?.progress;
+ if(!injury||!progress)return {date:'—',delta:'No estimate yet',deltaClass:'neutral'};
+ const candidate=progress.fullRunningDate||progress.fullReturnDate||progress.returnDate||progress.predictedFullRunDate||progress.predictedDate||null;
+ const dateLabel=candidate?fmtDate(candidate):'—';
+ const nominalDate=progress.nominalFullRunningDate||progress.nominalReturnDate||progress.nominalDate||null;
+ let delta='On nominal trajectory',deltaClass='neutral';
+ if(candidate&&nominalDate){
+   const d=Math.round((new Date(candidate+'T00:00:00')-new Date(nominalDate+'T00:00:00'))/DAY);
+   if(Number.isFinite(d)){
+     if(d<0){delta=`${Math.abs(d)} day${Math.abs(d)===1?'':'s'} ahead of nominal`;deltaClass='good';}
+     else if(d>0){delta=`${d} day${d===1?'':'s'} behind nominal`;deltaClass=d<=3?'warn':'bad';}
+     else{delta='On nominal trajectory';deltaClass='good';}
+   }
+ }else if(Number.isFinite(Number(progress.daysAheadBehind))){
+   const d=Number(progress.daysAheadBehind);
+   if(d<0){delta=`${Math.abs(Math.round(d))} days ahead of nominal`;deltaClass='good';}
+   else if(d>0){delta=`${Math.round(d)} days behind nominal`;deltaClass=d<=3?'warn':'bad';}
+   else{delta='On nominal trajectory';deltaClass='good';}
+ }
+ return {date:dateLabel,delta,deltaClass};
+}
 function consolidatedTodayCoachBriefing(p){
- const engine=coachEngine(),report=evidenceBasedCoach(engine),ast=report.athleteState,ready=readinessModel(),active=todayActiveInjury(),injuryDay=active.day;
+ const engine=coachEngine(),report=evidenceBasedCoach(engine),ast=report.athleteState,ready=readinessModel(),active=todayActiveInjury(),injuryDay=active.day,rehabSummary=todayRehabStatusSummary(active);
  const evidence=Math.round(clamp(Number(report.evidenceCoverage)||0,0,100)),remaining=raceTimeRemaining(),hrv=ready.hrv,pain=ready.pain;
  const readinessDetail=hrv?.rolling!=null&&hrv?.baseline!=null?`HRV ${hrv.rolling.toFixed(0)} / ${hrv.baseline.toFixed(0)} ms`:`Load modifier ×${ready.modifier.toFixed(3)}`;
  const painValue=Number.isFinite(Number(pain.max))?`${Number(pain.max).toFixed(0)}/10`:'—';
  const painText=active.injury?`${active.injury.bodyRegion||'Active injury'} · ${pain.status}`:pain.status;
- const modeTitle=injuryDay?'Rehab first':p&&p.type!=='Rest'?p.type:'Recovery';
- const modeText=injuryDay?injuryDay.title:p&&p.type!=='Rest'?`${Number(p.distance).toFixed(1)} km scheduled`:'No run scheduled';
+ const modeTitle=injuryDay?rehabSummary.date:p&&p.type!=='Rest'?p.type:'Recovery';
+ const modeText=injuryDay?rehabSummary.delta:p&&p.type!=='Rest'?`${Number(p.distance).toFixed(1)} km scheduled`:'No run scheduled';
  let priorityTitle,priorityBullets;
  if(injuryDay){
    priorityTitle='Complete rehabilitation before considering the run plan';
@@ -2498,7 +2520,7 @@ function consolidatedTodayCoachBriefing(p){
    </div>
  </section>
  <div class="todayStatusGrid seriousStatusGrid">
-   <article class="todayStatusCard training"><h4>TODAY’S MODE</h4><div class="statusRing">${todayPictogram(injuryDay?'rehab':p&&p.type!=='Rest'?'training':'recovery')}</div><div class="statusCopy"><strong>${esc(modeTitle)}</strong><p>${esc(modeText)}</p></div></article>
+   <article class="todayStatusCard training ${injuryDay?rehabSummary.deltaClass:''}"><h4>${injuryDay?'NORMAL RUNNING':'TODAY’S MODE'}</h4><div class="statusRing">${todayPictogram(injuryDay?'rehab':p&&p.type!=='Rest'?'training':'recovery')}</div><div class="statusCopy"><strong>${esc(modeTitle)}</strong><p>${esc(modeText)}</p></div></article>
    <article class="todayStatusCard ${ready.label==='Normal'?'good':ready.label==='Restricted'?'caution':'neutral'}"><h4>READINESS</h4><div class="statusRing">${todayPictogram('readiness')}</div><div class="statusCopy"><strong>${esc(ready.label)}</strong><p>${esc(readinessDetail)}</p></div></article>
    <article class="todayStatusCard ${Number(pain.max)>=3?'caution':'good'}"><h4>PAIN / INJURY</h4><div class="statusRing">${todayPictogram('pain')}</div><div class="statusCopy"><strong>${painValue}</strong><p>${esc(painText)}</p></div></article>
  </div>
@@ -2518,6 +2540,16 @@ function renderToday(){
    if(!details)return;
    const opening=details.hidden;details.hidden=!opening;
    btn.setAttribute('aria-expanded',opening?'true':'false');
+ }));
+ document.querySelectorAll('#today [data-rehab-checkin]').forEach(btn=>btn.addEventListener('click',()=>{
+   showPage('injury');
+   requestAnimationFrame(()=>{
+     const target=document.querySelector('#injury [data-today-checkin],#injury #dailyCheckin,#injury .dailyCheckin,#injury [data-action="checkin"]');
+     if(target){
+       if(typeof target.click==='function'&&target.matches('button,[role="button"],a'))target.click();
+       else target.scrollIntoView({behavior:'smooth',block:'start'});
+     }
+   });
  }));
  document.querySelectorAll('#today [data-go]').forEach(btn=>btn.addEventListener('click',()=>showPage(btn.dataset.go)));
 }

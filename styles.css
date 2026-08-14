@@ -474,3 +474,32 @@ canvas{display:block;width:100%!important;max-width:100%;height:auto!important;m
    padding:5px 6px!important;
  }
 }
+
+/* TODAY TAB — LOCKED UI CONTRACT v12.1.9 */
+#today .briefingHeaderRow{
+  grid-template-columns:minmax(0,1fr) 78px!important;
+}
+#today .evidenceRing{
+  width:58px!important;
+  height:58px!important;
+}
+#today .evidenceRing:after{inset:6px!important}
+#today .evidenceRing strong{font-size:20px!important}
+#today .evidenceRing span{font-size:8px!important}
+#today .evidenceCompleteness>small{
+  max-width:72px!important;
+  font-size:7.5px!important;
+  line-height:1.12!important;
+}
+#today .todayStatusCard.training.good .statusRing{border-color:#8bd85e!important}
+#today .todayStatusCard.training.warn .statusRing{border-color:#f2bc63!important}
+#today .todayStatusCard.training.bad .statusRing{border-color:#ff6842!important}
+#today .todayStatusCard.training.good .statusCopy>p{color:#9ae77d!important}
+#today .todayStatusCard.training.warn .statusCopy>p{color:#ffd071!important}
+#today .todayStatusCard.training.bad .statusCopy>p{color:#ff8a72!important}
+@media(max-width:390px){
+ #today .briefingHeaderRow{grid-template-columns:minmax(0,1fr) 64px!important}
+ #today .evidenceRing{width:54px!important;height:54px!important}
+ #today .evidenceRing strong{font-size:18px!important}
+ #today .evidenceCompleteness>small{max-width:60px!important;font-size:7px!important}
+}

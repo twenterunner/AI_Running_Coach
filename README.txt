@@ -1,4 +1,4 @@
-AI Running Coach v12.1.8 — Today icon/value refinement — build 20108
+AI Running Coach v12.1.9 — Today rehab refinement — build 20109
 
 Deployment
 ----------
@@ -702,3 +702,11 @@ v12.1.8
 - Weekly completion color is evaluated against elapsed progress through the current week.
 - Race-time color reflects available preparation time relative to taper; execution score uses score bands.
 - Model/data engines unchanged.
+
+v12.1.9
+- Evidence-completeness circle reduced in size.
+- Today rehab action now opens the Injury tab and targets the daily rehab check-in.
+- Small Rehab/Training tile changes to Normal Running when rehab is active.
+- That tile now shows the model's estimated unrestricted-running date and ahead/behind-nominal status when those fields are available.
+- Ahead/behind text uses semantic good/warn/bad color.
+- No model/data-engine calculations changed.
