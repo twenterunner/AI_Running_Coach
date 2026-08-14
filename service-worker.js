@@ -4,7 +4,7 @@ const CACHE = 'arc-v1230-plan-redesign-20300';
 const CACHE_PREFIX = 'arc-v';
 const APP_SHELL = './index.html';
 const ASSETS = [
-  './', './index.html', './styles.css?v=20303', './app.js?v=20303', './manifest.webmanifest?v=20303'
+  './', './index.html', './styles.css?v=20304', './app.js?v=20304', './manifest.webmanifest?v=20304'
 ];
 
 self.addEventListener('install', event => {

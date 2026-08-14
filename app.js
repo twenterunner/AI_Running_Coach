@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '12.3.3';
-  const BUILD = 20303;
+  const VERSION = '12.3.4';
+  const BUILD = 20304;
   const SCHEMA = 10330;
   const PRIMARY_STORAGE_KEY = 'arc_v10330_web';
   const MIRROR_STORAGE_KEY = 'arc_v10330_mirror';
@@ -2655,7 +2655,7 @@ function planProgrammeHeaderHtml(){
    <div class="planRaceHead"><span class="planRaceIcon">${todayPictogram('race')}</span><div><small>RACE CONTEXT</small><h3>${esc(state.setup.raceName)}</h3><p>${Number(state.setup.raceDistance).toFixed(1)} km · ${esc(detailedPhase(w))} · ${esc(priority)}</p></div><span class="planRaceCountdown miniValue ${todayMiniValueClass('raceTime',remaining.days)}">${remaining.label}</span></div>
    <div class="planRaceMetrics"><span><small>TARGET</small><b>${fmtTime(state.setup.targetTime)}</b><em>${pace(state.setup.targetTime/state.setup.raceDistance)}</em></span><span><small>CURRENT ESTIMATE</small><b>${fmtEstimate(engine.pred,provisional)}</b><em>${paceEstimate(engine.pred,provisional)}</em></span><span><small>TARGET CHANCE</small><b>${prob===null?'Building':prob+'%'}</b><em>${provisional?'Provisional model':'Current model'}</em></span></div>
    <div class="planRaceRanges"><div><small>LIKELY 70% TIME RANGE</small><b>${timeRange}</b></div><div><small>LIKELY 70% PACE RANGE</small><b>${paceRange}</b></div></div>
-   ${todayBulletList([gap<=0?`${fmtTime(Math.abs(gap))} inside current target estimate`:`${fmtTime(gap)} outside current target estimate`],'runnerBullets compactBullets')}
+   <p class="planRaceGap">${gap<=0?`${fmtTime(Math.abs(gap))} inside current target estimate`:`${fmtTime(gap)} outside current target estimate`}</p>
  </section>`;
 }
 function planSelectedWeekHeaderHtml(w){
@@ -2722,14 +2722,26 @@ function planIntensityDistributionHtml(w){
  const tones=['easy','aerobic','long','threshold','speed'];
  return`<section class="planIntensityCard"><div class="intensityStack" aria-label="Selected week intensity distribution">${rows.map((r,i)=>`<i class="${tones[i]||'easy'}" style="width:${r.value/total*100}%" title="${esc(r.label)} ${Math.round(r.value/total*100)}%"></i>`).join('')}</div><div class="planIntensityRows">${rows.map((r,i)=>`<div><span class="intensitySwatch ${tones[i]||'easy'}"></span><b>${esc(r.label)}</b><strong>${Number(r.value).toFixed(1)} km</strong><small>${Math.round(r.value/total*100)}%</small></div>`).join('')}</div><details class="planIntensityDetail"><summary>Overall programme distribution</summary>${intensityMixHtml(state.plan.filter(p=>!['Rest','Race Day'].includes(p.type)),'distance','No programme volume')}</details></section>`;
 }
+function planProgrammeTimelineCard(w){
+ return`<section class="planProgrammeTimelineCard">
+   <div class="planSectionHead">
+     <span class="planSectionIcon">${uiIcon('calendar')}</span>
+     <div><small>PROGRAMME TIMELINE</small><h3>Road to race day</h3><p>Training blocks, current position, taper and race.</p></div>
+   </div>
+   ${planTimelineHtml(w)}
+   <details class="planIntensityFoldout">
+     <summary><span><b>Training intensity distribution</b><small>Easy, moderate and quality work across the programme</small></span></summary>
+     <div class="planIntensityFoldoutBody">${planIntensityDistributionHtml(w)}</div>
+   </details>
+ </section>`;
+}
 function renderPlan(){
  if(!state.weekView)state.weekView=currentWeek();state.weekView=clamp(state.weekView,1,weeks());const w=state.weekView,arr=state.plan.filter(p=>p.week===w);
  $('planProgrammeHeader').innerHTML=planProgrammeHeaderHtml();
- $('weekHeader').innerHTML=planSelectedWeekHeaderHtml(w);
+ $('weekHeader').innerHTML=planProgrammeHeaderHtml()+planProgrammeTimelineCard(planWeek);
  const title=$('planWeekTitle');if(title)title.textContent=`Week ${w} schedule`;
  $('planCards').innerHTML=arr.map(workoutHtml).join('')||'<div class="planEmpty"><b>No workouts generated</b><p>This week has no plan entries.</p></div>';
  $('weeklyReview').innerHTML=weeklyReviewHtml(w);
- $('raceTimeline').innerHTML=planTimelineHtml(w);
  $('planIntensity').innerHTML=planIntensityDistributionHtml(w);
  document.querySelectorAll('#plan .planWorkout').forEach(item=>item.addEventListener('toggle',()=>{if(!item.open)return;document.querySelectorAll('#plan .planWorkout[open]').forEach(other=>{if(other!==item)other.removeAttribute('open')})}));
 }

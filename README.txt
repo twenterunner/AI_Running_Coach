@@ -1,4 +1,4 @@
-AI Running Coach v12.3.3 — Serious Runner Plan — build 20303
+AI Running Coach v12.3.4 — Serious Runner Plan — build 20304
 
 Deployment
 ----------
@@ -773,4 +773,14 @@ v12.3.3 — Race Context moved to Plan
 - Race Context retains target, current estimate, target probability, countdown, likely 70% finish-time range and pace range, and adds current phase/focus appropriate to Plan.
 - Removed the Volume Around This Week graph from Week Overview; the useful weekly metrics remain.
 - All other approved Today and Plan components/interactions remain unchanged.
+- No model/data-engine calculations changed.
+
+
+v12.3.4 — Plan timeline hierarchy refinement
+--------------------------------------------
+- Programme Timeline promoted to the second Plan card, directly after Race Context.
+- Training Intensity Distribution moved into Programme Timeline as a collapsed foldout.
+- Removed the bullet before the race target-gap sentence.
+- Target-gap sentence is now smaller and visually subordinate.
+- Remaining approved Today/Plan content is unchanged.
 - No model/data-engine calculations changed.
