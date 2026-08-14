@@ -1,4 +1,4 @@
-AI Running Coach v13.5.2 — Settings and Daily Check-in redesign — build 30502
+AI Running Coach v13.6.0 — full GUI QA and reliability pass — build 30600
 
 - Removes the stale Injury-only CSS `order` rules that were overriding the visible section numbers.
 - Injury/Rehab sections are now explicitly sorted by the number displayed in each section-number circle, so the current numbering is the source of truth for tile order.
@@ -1133,3 +1133,15 @@ v13.5.2 Settings and Daily Check-in redesign
 - Settings and Daily Check-in presentation rebuilt using Today-led scoped visual hierarchy.
 - Existing settings/check-in IDs, calculations, validation, storage and rehabilitation logic preserved.
 - Approved Today, Plan, Log, Progress, Recovery, Injury & Rehab and Race Day implementations were not intentionally changed.
+
+v13.6.0 Full GUI QA and reliability pass
+-----------------------------------------
+- Fixed two Progress runtime errors that could stop dashboard rendering: removed a stale programmeBlocks/currentBlockName path and replaced a stale pred reference with the current prediction source.
+- Normalised the Progress programme timeline to the existing detailed phase model without changing training calculations.
+- Fixed narrow-phone layout pressure in the Plan adaptation header and Projected Fitness disclosure.
+- Added a root modal viewport reset whenever a dialog opens so Daily Check-in, Injury assessment, Log and other dialogs always begin at the top instead of inheriting a previous dialog scroll position.
+- Restyled the Injury assessment form hierarchy using the approved Today-led Level-2/Level-3 surfaces, spacing, section-number treatment and typography; no injury logic or fields changed.
+- Verified the fixed bottom navigation remains visible at 360, 390 and 430 px in automated browser layout checks.
+- Automated browser checks covered Today, Plan, Log, Progress, Recovery, Injury & Rehab, Race Day and Settings; no page-level horizontal overflow or JavaScript render errors remained in the tested baseline state.
+- Scenario checks covered fresh onboarding, empty run history, invalid Settings input, manual-run modal opening, active injury creation, activation of a rehab plan, Daily Check-in opening/saving and check-in history creation.
+- No calculation, prediction, adaptation, recovery, injury/rehab, import, matching or storage-schema logic changed.

@@ -3703,3 +3703,35 @@ body:has(#dashboard.progressPage.active),#mainContent:has(#dashboard.progressPag
 .dailyCheckinRunner #icConsistency b{font-size:11px;color:#fff}.dailyCheckinRunner #icConsistency p{margin:3px 0 0;font-size:10px;line-height:1.4;color:#b8ced6}
 .dailyCheckinRunner #saveCheck,.dailyCheckinRunner #deleteCheck{margin:0;min-height:48px;font-size:14px;font-weight:850}
 @media(max-width:430px){.dailyCheckinRunner .formGrid{grid-template-columns:1fr}.dailyCheckinRunner .fieldWide{grid-column:auto}.dailyCheckinRunner .injuryCheckSection{padding:12px}.dailyCheckinRunner .injuryCheckHeader h3{font-size:21px}}
+
+
+/* v13.6.0 GUI QA corrections */
+@media(max-width:380px){
+ #plan .planAdaptAmountHead{display:grid!important;grid-template-columns:minmax(0,1fr)!important;gap:5px!important;align-items:start!important}
+ #plan .planAdaptAmountHead>span{white-space:normal!important;line-height:1.35!important}
+ #dashboard.progressPage .projectedFitnessMetric>.projectedFitnessDisclosure>summary,
+ #dashboard.progressPage .outlookGain .projectedFitnessMetric>details.projectedFitnessDisclosure>summary{display:grid!important;grid-template-columns:minmax(0,1fr) auto!important;gap:7px!important;align-items:center!important}
+ #dashboard.progressPage .projectedFitnessMetric .outlookMetricSummaryCopy{min-width:0!important}
+ #dashboard.progressPage .projectedFitnessMetric .outlookMetricSummaryCopy>b{overflow-wrap:anywhere!important}
+ #dashboard.progressPage .projectedFitnessMetric>.projectedFitnessDisclosure>summary>small{max-width:76px!important;text-align:right!important;white-space:normal!important}
+}
+
+
+/* v13.6.0 modal/form hierarchy QA — scoped to Injury assessment. */
+#modal .injuryFormHeader{padding:2px 2px 12px;margin-bottom:10px;border-bottom:1px solid rgba(136,161,177,.13)}
+#modal .injuryFormHeader h3{margin:0;font-size:22px;line-height:1.12;color:#fff}
+#modal .injuryFormHeader p{margin:6px 0 0;font-size:11px;line-height:1.45;color:#c6d9df}
+#modal .injuryFormSteps{display:grid;gap:11px}
+#modal .injuryFormStep{padding:13px;background:rgba(5,18,24,.48);border:1px solid rgba(61,214,198,.15);border-radius:14px}
+#modal .injuryFormStep>header{display:grid;grid-template-columns:32px minmax(0,1fr);gap:9px;align-items:start;margin:0 0 11px}
+#modal .injuryFormStep>header>i{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;background:rgba(61,214,198,.08);border:1px solid rgba(69,224,228,.3);font-size:11px;line-height:1;font-style:normal;font-weight:900;color:#fff}
+#modal .injuryFormStep>header b{display:block;margin:0;font-size:14px;line-height:1.25;color:#fff}
+#modal .injuryFormStep>header small{display:block;margin:3px 0 0;font-size:10px;line-height:1.4;color:#a9c4ce}
+#modal .injuryFormStep .field>label{margin-bottom:5px;font-size:10px;line-height:1.3;color:#c8dce3}
+#modal .injuryFormStep .field>small{display:block;margin-top:5px;font-size:9px;line-height:1.4}
+#modal .injuryFormStep .injurySigns>label:not(:first-child){display:flex;align-items:center;gap:8px;min-height:38px;margin:0;padding:6px 0;font-size:11px;color:#d5e4e8}
+#modal .injuryFormStep .injurySigns input[type=checkbox]{width:20px;min-width:20px;height:20px;min-height:20px;margin:0;padding:0;accent-color:#45e0e4}
+#modal .injuryClinicianStep{margin-top:11px;background:#0c1923;border:1px solid rgba(136,161,177,.14);border-radius:13px;overflow:hidden}
+#modal .injuryClinicianStep>summary{padding:12px 13px;font-size:11px;line-height:1.35;color:#fff}
+#modal .injuryClinicianStep>.formGrid{padding:0 13px 13px}
+@media(max-width:390px){#modal .injuryFormStep{padding:12px}#modal .injuryFormStep .formGrid{grid-template-columns:1fr}#modal .injuryFormStep>header{grid-template-columns:30px minmax(0,1fr)}}
