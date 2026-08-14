@@ -3467,3 +3467,12 @@ body:has(#dashboard.progressPage.active),#mainContent:has(#dashboard.progressPag
 #injury .injuryTrajectory .phaseLabel{fill:#fff;font-size:8px;font-weight:800}
 #injury .injuryTrajectoryLegend .phase:before{content:"1–6";display:inline-grid;place-items:center;min-width:24px;height:16px;margin-right:5px;border-radius:8px;background:rgba(61,214,198,.1);color:var(--teal-2);font-size:8px;font-weight:900}
 #injury .exerciseImageButton img{object-fit:contain;background:#eef3f3}
+
+/* v13.3.2 Injury visual refinement — scoped to Injury only */
+#injury .injuryRunnerCard,#injury .rehabCalendarSection,#injury .injuryRunnerParallelCard,#injury .rehabTodayFocus,#injury .injuryTopicCard{background:linear-gradient(145deg,#075468 0%,#0a4351 48%,#123844 100%)!important;border-color:rgba(61,214,198,.32)!important}
+#injury .injuryRunnerTwoCol>div,#injury .injuryClinicalCompare,#injury .injuryRunnerMetricRow>div,#injury .injuryRunnerPrimaryMetrics>div,#injury .injuryRunnerAdherence>div,#injury .injuryRunnerStageOverview>div,#injury .exerciseDetail,#injury .rehabTodayFocus .todayPlanGrid>div,#injury .rehabStretchGoal{background:rgba(3,31,43,.24)!important;border-color:rgba(87,219,224,.13)!important}
+#injury .injuryTrajectory .phaseNumber{font-size:15px!important;font-weight:950!important;fill:var(--teal-2)!important}
+#injury .injuryTrajectory .phaseLabel{font-size:12px!important;font-weight:900!important;fill:#fff!important}
+#injury .exerciseImageButton img{width:88px!important;height:66px!important;object-fit:cover!important;background:#eef3f3!important;border-radius:10px}
+#injury .exerciseSummaryCopy b{font-size:14px!important;line-height:1.3!important}
+#injury .exerciseSummaryCopy small{font-size:11px!important;line-height:1.4!important}

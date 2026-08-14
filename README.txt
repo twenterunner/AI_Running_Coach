@@ -1,3 +1,9 @@
+AI Running Coach v13.3.2 — Injury visual refinement — build 30320
+
+- Injury-only visual refinement: Today-style teal surfaces, larger rehabilitation phase labels, and realistic exercise reference PNG integrated into exercise image viewing.
+- Today, Plan, Log, Progress and Recovery remain locked.
+- No calculation/data-model changes.
+
 AI Running Coach v13.3.1 — Injury refinement — build 30310
 
 v13.3.1

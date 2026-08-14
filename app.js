@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '13.3.1';
-  const BUILD = 30310;
+  const VERSION = '13.3.2';
+  const BUILD = 30320;
   const SCHEMA = 10330;
   const PRIMARY_STORAGE_KEY = 'arc_v10330_web';
   const MIRROR_STORAGE_KEY = 'arc_v10330_mirror';
@@ -4818,7 +4818,7 @@ function rehabExerciseImage(name){
   'Supported hip hinge':'12_supported_hip_hinge.png',
   'Double-leg bridge':'13_double_leg_bridge.png'
  };
- return map[name]||null;
+ return map[name]||'rehab_exercise_reference.png';
 }
 function rehabExerciseMuscles(name,family='generic'){
  const map={
