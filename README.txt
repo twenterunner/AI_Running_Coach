@@ -1,4 +1,15 @@
-AI Running Coach v13.1.10 — Progress hierarchy refinement — build 30110
+AI Running Coach v13.1.11 — Progress hierarchy refinement — build 30111
+
+v13.1.11 Progress canonical Today-style root fix
+------------------------------------------------
+- Removed the accumulated v13.1.x Progress CSS override stack and replaced it with one scoped canonical Progress design block.
+- Progress Level-1 cards now use the exact locked Today primary gradient, border and 18 px radius.
+- Progress Level-2 metric surfaces use the same compact nested treatment as Today; Level-3 disclosures use the same dark disclosure treatment.
+- Progress card heading, eyebrow, supporting-text and metric typography now mirror Today runner-card typography.
+- Chart cards no longer inherit canvas/min-height spacers: legacy canvases are removed from layout and each card height is content-driven by its title, legend and 640x226 SVG chart.
+- Horizontal overflow is constrained to the Progress page without changing Today, Plan or Log.
+- Today, Plan and Log markup and render functions are unchanged. No calculation/data-model logic changed.
+
 
 - Longitudinal Training Review now sits directly between Race Readiness and Fitness & Capability.
 - Progress chart cards shrink to their chart content and no longer show the View chart summary and data foldouts.
@@ -986,7 +997,7 @@ v13.1.8 Progress chart reliability correction
 - No training, prediction, pathway, recovery, injury, scoring, import, storage or data-model calculation was changed.
 
 
-v13.1.10 Progress hierarchy refinement
+v13.1.11 Progress hierarchy refinement
 -------------------------------------
 - Moves the Longitudinal Training Review directly below Race Readiness, before Fitness & Capability.
 - Removes the visible chart-summary/data disclosures from Progress charts while retaining accessible chart labels.

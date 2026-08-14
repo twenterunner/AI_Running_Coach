@@ -2076,33 +2076,6 @@ canvas{display:block;width:100%!important;max-width:100%;height:auto!important;m
 .logDetailModal .wiFinding i{display:block!important;width:14px!important;text-align:center!important;font-style:normal!important;line-height:1.35!important}
 .logDetailModal .wiFinding span{display:block!important;min-width:0!important}
 
-/* v13.1 Progress-only rebuild. Strictly scoped to #dashboard to protect frozen Today, Plan and Log. */
-#dashboard.progressPage{--progress-gap:14px}
-#dashboard .progressPageTitle{display:flex;align-items:center;gap:12px;margin:4px 2px 16px}
-#dashboard .progressPageTitle h2{margin:1px 0 2px;font-size:30px;line-height:1;letter-spacing:-.045em}
-#dashboard .progressPageTitle p{margin:0;font-size:12px;color:var(--muted)}
-#dashboard .progressPictogram{width:52px;height:52px;flex:0 0 52px;display:grid;place-items:center;border-radius:16px;background:linear-gradient(145deg,#12313a,#10232f);border:1px solid rgba(61,214,198,.22);color:var(--teal-2)}
-#dashboard .progressPictogram svg{width:34px;height:34px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
-#dashboard .progressHero{margin-bottom:24px}
-#dashboard .progressSection{margin:0 0 28px}
-#dashboard .progressSectionHead{display:grid;grid-template-columns:32px 1fr;gap:10px;align-items:start;margin:0 2px 11px}
-#dashboard .progressSectionHead>span{width:32px;height:32px;display:grid;place-items:center;border-radius:10px;background:rgba(61,214,198,.1);border:1px solid rgba(61,214,198,.12);color:var(--teal-2);font-size:10px;font-weight:900}
-#dashboard .progressSectionHead small{display:block;font-size:9px;letter-spacing:.11em;font-weight:900;color:var(--teal-2)}
-#dashboard .progressSectionHead h3{margin:2px 0;font-size:19px;line-height:1.16;letter-spacing:-.02em}
-#dashboard .progressSectionHead p{margin:0;font-size:10px;color:var(--muted)}
-#dashboard .progressMetricLead{display:grid;grid-template-columns:1fr 1fr;gap:9px}
-#dashboard .progressMetricLead>div{background:var(--nested);border:1px solid rgba(136,161,177,.11);border-radius:var(--r1);padding:13px}
-#dashboard .progressMetricLead small{display:block;font-size:9px;letter-spacing:.08em}
-#dashboard .progressMetricLead strong{display:block;font-size:25px;line-height:1.05;margin:5px 0 4px}
-#dashboard .progressMetricLead span{display:block;font-size:10px;color:var(--muted)}
-#dashboard .progressExecutionCard details,#dashboard .progressRecoveryCard details{margin-top:10px}
-#dashboard .progressInterruption{margin-top:10px;padding:12px;border-radius:12px;background:rgba(241,197,106,.07);border:1px solid rgba(241,197,106,.16)}
-#dashboard .progressInterruption p{margin:3px 0 0;font-size:11px;color:var(--text-2)}
-#dashboard .progressBaseline p{margin:4px 0 0;color:var(--muted)}
-#dashboard .modelValidationPanel,#dashboard .personalModelPanel{margin-top:12px}
-@media(max-width:620px){#dashboard .grid2.metricCharts{grid-template-columns:1fr}#dashboard .outlookComparison{grid-template-columns:1fr}#dashboard .outlookArrow{transform:rotate(90deg)}#dashboard .progressMetricLead{grid-template-columns:1fr 1fr}}
-@media(max-width:380px){#dashboard .progressMetricLead{grid-template-columns:1fr}#dashboard .outlookGain{grid-template-columns:1fr 1fr}}
-
 /* LOG TAB — v13.1.1 import-preview typography + post-save pathway parity.
    Intentionally scoped to Log/import and Log detail modal only. */
 #runs #importPreview .metricGrid{
@@ -2263,692 +2236,138 @@ canvas{display:block;width:100%!important;max-width:100%;height:auto!important;m
   .logDetailModal .progressiveHead.pathwayHeadline>span{max-width:100%!important;justify-self:start!important}
 }
 
-/* v13.1.2 Progress visual alignment — scoped to Progress only. */
+
+/* v13.1.11 Progress canonical design system.
+   Root-cause repair: all accumulated v13.1.x Progress override blocks were removed.
+   This single scoped block intentionally mirrors the locked Today visual language. */
 #dashboard.progressPage{
-  --progress-surface:linear-gradient(145deg,#075468 0%,#073c50 52%,#062c3d 100%);
+  --progress-card:linear-gradient(145deg,#075468 0%,#073c50 52%,#062c3d 100%);
   --progress-border:rgba(40,214,219,.42);
   --progress-nested:rgba(3,31,43,.24);
   --progress-nested-border:rgba(87,219,224,.13);
-}
-#dashboard .progressPictogram{
-  width:54px;height:54px;flex:0 0 54px;border-radius:50%;
-  background:rgba(21,184,202,.13);border:1px solid rgba(45,218,224,.35);color:#45e0e4;
-}
-#dashboard .progressPictogram svg{width:34px;height:34px;stroke-width:1.7}
-#dashboard .progressPageTitle .pageEyebrow,
-#dashboard .progressSectionHead small{font-size:9px;font-weight:900;letter-spacing:.1em;color:#45e0e4}
-#dashboard .progressPageTitle h2{font-size:28px;color:#fff}
-#dashboard .progressPageTitle p{font-size:10px;line-height:1.35;color:#c8dce3}
-#dashboard .progressSectionHead{grid-template-columns:40px minmax(0,1fr);gap:11px;align-items:start}
-#dashboard .progressSectionHead>span{width:40px;height:40px;border-radius:12px;background:rgba(21,184,202,.13);border:1px solid rgba(45,218,224,.25);color:#45e0e4;font-size:11px}
-#dashboard .progressSectionHead h3{font-size:21px;line-height:1.15;color:#fff;margin:2px 0 3px}
-#dashboard .progressSectionHead p{font-size:10px;line-height:1.35;color:#9fc1ca}
-
-/* Level-1/2 Progress surfaces now use the approved Today/Plan/Log teal card language. */
-#dashboard .progressHero,
-#dashboard .progressSection>.panel,
-#dashboard .progressSection>.grid2>.panel,
-#dashboard .progressSection .canonicalAdaptationHome,
-#dashboard .progressSection .personalModelPanel,
-#dashboard .progressSection .modelValidationPanel,
-#dashboard .progressSection .pathwayHistoryPanel,
-#dashboard .progressSection .progressExecutionCard,
-#dashboard .progressSection .progressRecoveryCard,
-#dashboard .progressSection .coachAssessmentPanel{
-  background:var(--progress-surface)!important;
-  border:1px solid var(--progress-border)!important;
-  border-radius:18px!important;
-  box-shadow:none!important;
-}
-#dashboard .progressSection>.panel,
-#dashboard .progressSection>.grid2>.panel,
-#dashboard .progressSection .canonicalAdaptationHome,
-#dashboard .progressSection .personalModelPanel,
-#dashboard .progressSection .modelValidationPanel,
-#dashboard .progressSection .pathwayHistoryPanel{padding:16px}
-
-/* Nested metric language matches the compact tiles used by Today and Plan. */
-#dashboard .progressMetricLead>div,
-#dashboard .kpis>div,#dashboard .kpis>article,#dashboard .kpi,
-#dashboard .predictionReferences>div,#dashboard .predictionCurrent,#dashboard .predictionAwaiting,
-#dashboard .predictionSummary>div,#dashboard .predictionSummary article,
-#dashboard .modelValidationGrid>article,#dashboard .scienceProvenance>div,
-#dashboard .personalModelSummary>div,#dashboard .canonicalPathMetrics>div,
-#dashboard .outlookCard,#dashboard .outlookMiniMetric,#dashboard .outlookMetricDetail,
-#dashboard .metricTypeRow,#dashboard .metricTypeHead{
-  background:var(--progress-nested)!important;
-  border:1px solid var(--progress-nested-border)!important;
-  border-radius:10px!important;
-}
-#dashboard .kpi,#dashboard .progressMetricLead>div{padding:10px!important}
-#dashboard .kpi span,#dashboard .progressMetricLead small,#dashboard .predictionReferences span,
-#dashboard .modelValidationGrid small,#dashboard .scienceProvenance small,
-#dashboard .canonicalPathMetrics small{font-size:8px!important;font-weight:850;letter-spacing:.055em;color:#9fc1ca!important;text-transform:uppercase}
-#dashboard .kpi strong,#dashboard .progressMetricLead strong,#dashboard .predictionReferences strong,
-#dashboard .canonicalPathMetrics strong{color:#fff!important}
-#dashboard .kpi small,#dashboard .progressMetricLead span,#dashboard .predictionReferences small,
-#dashboard .predictionCurrent small{font-size:9px!important;line-height:1.35;color:#bed4da!important}
-#dashboard .panelHead h3,#dashboard .progressSection .panel h3{color:#fff}
-#dashboard .panelHead p,#dashboard .panelHead span{color:#9fc1ca}
-
-/* Foldouts use the same teal nested surface and spacing as the approved tabs. */
-#dashboard details,#dashboard details.panel{border:1px solid rgba(80,210,219,.15)!important;border-radius:12px!important;background:rgba(3,31,43,.20)!important}
-#dashboard details>summary,#dashboard details.panel>summary{padding:11px 13px!important;margin:0!important;min-height:46px;background:transparent!important;color:#fff!important}
-#dashboard details[open]>summary,#dashboard details.panel[open]>summary{margin-bottom:10px!important;border-bottom:1px solid rgba(80,210,219,.12)!important}
-
-/* Prevent concatenated label/value text in Progress scientific/detail tiles. */
-#dashboard .scienceProvenance{display:grid!important;gap:8px!important}
-#dashboard .scienceProvenance>div{display:grid!important;gap:5px!important;padding:12px!important}
-#dashboard .scienceProvenance small{display:block!important}
-#dashboard .scienceProvenance b{display:block!important;font-size:12px!important;line-height:1.45!important;color:#fff!important;overflow-wrap:anywhere}
-#dashboard .modelValidationGrid{display:grid!important;gap:8px!important}
-#dashboard .modelValidationGrid>article{display:grid!important;gap:6px!important;padding:12px!important}
-#dashboard .modelValidationGrid b,#dashboard .modelValidationGrid strong{display:block!important;color:#fff!important}
-#dashboard .modelValidationGrid p,#dashboard .modelValidationGrid span{display:block!important;margin:0!important;line-height:1.4!important}
-
-/* Comparable-run metric table becomes mobile cards instead of a squeezed five-column table. */
-#dashboard .metricTypeTable{display:grid!important;gap:8px!important}
-#dashboard .metricTypeHead{display:none!important}
-#dashboard .metricTypeRow{display:grid!important;grid-template-columns:1fr 1fr!important;gap:8px 12px!important;padding:12px!important}
-#dashboard .metricTypeRow>span{display:grid!important;gap:2px!important;font-size:10px!important;line-height:1.35!important;color:#dbe9ed!important;min-width:0;overflow-wrap:anywhere}
-#dashboard .metricTypeRow>span:first-child{grid-column:1/-1!important;font-size:13px!important;font-weight:850!important;color:#fff!important;padding-bottom:5px!important;border-bottom:1px solid rgba(80,210,219,.12)}
-#dashboard .metricTypeRow>span:nth-child(2)::before{content:'EFFICIENCY AVG'}
-#dashboard .metricTypeRow>span:nth-child(3)::before{content:'EFFICIENCY BEST'}
-#dashboard .metricTypeRow>span:nth-child(4)::before{content:'DRIFT AVG'}
-#dashboard .metricTypeRow>span:nth-child(5)::before{content:'DRIFT BEST'}
-#dashboard .metricTypeRow>span:not(:first-child)::before{display:block;font-size:7px;font-weight:850;letter-spacing:.055em;color:#8fc2ce}
-
-/* Deliberate no/insufficient-data state: never leave a large blank or single-point trend graph. */
-#dashboard canvas.progressChartHidden{display:none!important}
-#dashboard .progressChartState{display:grid;grid-template-columns:46px minmax(0,1fr);gap:11px;align-items:center;padding:14px;margin:6px 0 0;border-radius:12px;background:var(--progress-nested);border:1px solid var(--progress-nested-border)}
-#dashboard .progressChartState.hidden{display:none!important}
-#dashboard .progressStateIcon{width:46px;height:46px;display:grid;place-items:center;border-radius:50%;background:rgba(21,184,202,.13);border:1px solid rgba(45,218,224,.25);color:#45e0e4}
-#dashboard .progressStateIcon svg{width:27px;height:27px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
-#dashboard .progressChartState b{display:block;font-size:13px;color:#fff}
-#dashboard .progressChartState p{margin:3px 0 0;font-size:10px;line-height:1.4;color:#bed4da}
-
-@media(max-width:390px){
- #dashboard .progressPageTitle{gap:9px}
- #dashboard .progressPictogram{width:46px;height:46px;flex-basis:46px}
- #dashboard .progressPictogram svg{width:29px;height:29px}
- #dashboard .progressSectionHead h3{font-size:19px}
- #dashboard .outlookGain{grid-template-columns:1fr 1fr!important}
- #dashboard .metricTypeRow{grid-template-columns:1fr 1fr!important}
-}
-
-/* v13.1.3 Progress mobile polish — Progress only; frozen Today/Plan/Log unaffected. */
-#dashboard.progressPage .progressSection{display:grid;gap:12px;margin:0 0 30px}
-#dashboard.progressPage .progressSectionHead{margin:0 2px}
-#dashboard.progressPage .progressSection>.panel,
-#dashboard.progressPage .progressSection>.grid2,
-#dashboard.progressPage .progressSection>#progressExecution,
-#dashboard.progressPage .progressSection>#progressAdaptationHome,
-#dashboard.progressPage .progressSection>#personalResponseModel,
-#dashboard.progressPage .progressSection>#modelValidation,
-#dashboard.progressPage .progressSection>#decisionHistory,
-#dashboard.progressPage .progressSection>#progressRecovery{margin:0!important}
-#dashboard.progressPage .grid2,#dashboard.progressPage .kpis,#dashboard.progressPage .canonicalPathwayGrid,#dashboard.progressPage .canonicalPathMetrics{gap:10px!important}
-#dashboard.progressPage .kpis{margin-bottom:0!important}
-#dashboard.progressPage .panel{margin-bottom:0!important}
-
-/* Compact metric tiles: force label/value/explanation onto separate lines. */
-#dashboard.progressPage .kpi{display:flex!important;flex-direction:column!important;align-items:flex-start!important;gap:5px!important;min-height:0!important}
-#dashboard.progressPage .kpi>label{display:block!important;width:100%;font-size:10px!important;line-height:1.3!important;color:#bed4da!important;font-weight:500!important;text-transform:none!important;letter-spacing:0!important}
-#dashboard.progressPage .kpi>strong{display:block!important;width:100%;font-size:18px!important;line-height:1.18!important;color:#fff!important;overflow-wrap:anywhere}
-#dashboard.progressPage .kpi>small{display:block!important;width:100%;font-size:9px!important;line-height:1.45!important;color:#9fc1ca!important;text-transform:none!important;letter-spacing:0!important}
-
-/* Hero metric grid and projected-fitness disclosure. */
-#dashboard.progressPage .outlookGain{gap:10px!important;align-items:stretch}
-#dashboard.progressPage .outlookMiniMetric,#dashboard.progressPage .outlookMetricDetail{min-height:108px;padding:12px!important}
-#dashboard.progressPage .outlookMiniMetric{display:flex;flex-direction:column;justify-content:flex-start;gap:5px}
-#dashboard.progressPage .outlookMiniMetric>span{font-size:9px!important;line-height:1.3;color:#bed4da!important}
-#dashboard.progressPage .outlookMiniMetric>b{font-size:17px!important;line-height:1.15;margin:1px 0 2px!important}
-#dashboard.progressPage .outlookMetricDetail>summary{display:grid!important;grid-template-columns:minmax(0,1fr) auto!important;grid-template-rows:auto auto!important;column-gap:8px!important;row-gap:4px!important;align-content:center!important;align-items:center!important;min-height:82px!important;padding:0!important}
-#dashboard.progressPage .outlookMetricDetail>summary .outlookMetricLabel{grid-column:1;grid-row:1;display:block;font-size:14px!important;line-height:1.2;font-weight:800;color:#fff!important}
-#dashboard.progressPage .outlookMetricDetail>summary>b{grid-column:2;grid-row:1;display:block;font-size:18px!important;line-height:1.15;color:#fff!important;white-space:nowrap}
-#dashboard.progressPage .outlookMetricDetail>summary>small{grid-column:1/-1;grid-row:2;display:block;font-size:9px!important;line-height:1.3;color:#9fc1ca!important}
-#dashboard.progressPage .outlookMetricDetail>summary:after{grid-column:2;grid-row:2;justify-self:end;margin:0 2px 2px 0!important}
-#dashboard.progressPage .outlookMetricDetail[open]>summary{padding-bottom:10px!important}
-#dashboard.progressPage .outlookMetricCalc{display:grid;gap:10px;padding:0 2px 2px}
-#dashboard.progressPage .outlookMetricCalc p{margin:0;font-size:10px;line-height:1.5;color:#d3e4e9}
-#dashboard.progressPage .outlookMetricCalc .calcTable{display:grid;gap:0;border:1px solid rgba(80,210,219,.13);border-radius:10px;overflow:hidden}
-#dashboard.progressPage .outlookMetricCalc .calcRow{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr) auto;gap:8px;align-items:center;padding:9px 10px;border-bottom:1px solid rgba(80,210,219,.10);font-size:9px;line-height:1.35}
-#dashboard.progressPage .outlookMetricCalc .calcRow:last-child{border-bottom:0}
-#dashboard.progressPage .outlookMetricCalc .calcRow span{min-width:0;overflow-wrap:anywhere}
-
-/* Target margin: centred zero; faster is negative/left/green, slower is positive/right/red. */
-#dashboard.progressPage .targetMarginRail{position:relative;height:8px;margin-top:auto;border-radius:999px;background:#071923;overflow:hidden}
-#dashboard.progressPage .targetMarginRail .zero{position:absolute;left:50%;top:-2px;bottom:-2px;width:2px;z-index:3;background:#d7e7eb;border-radius:2px;opacity:.9}
-#dashboard.progressPage .targetMarginRail .aheadZone,#dashboard.progressPage .targetMarginRail .behindZone{position:absolute;top:0;bottom:0;width:50%;opacity:.16}
-#dashboard.progressPage .targetMarginRail .aheadZone{left:0;background:var(--green)}
-#dashboard.progressPage .targetMarginRail .behindZone{right:0;background:var(--red)}
-#dashboard.progressPage .targetMarginRail .marginBar{position:absolute;top:0;bottom:0;width:var(--margin);border-radius:999px}
-#dashboard.progressPage .targetMarginMetric.ahead .marginBar{right:50%;background:var(--green)}
-#dashboard.progressPage .targetMarginMetric.behind .marginBar{left:50%;background:var(--red)}
-#dashboard.progressPage .targetMarginMetric.on-target .marginBar{left:calc(50% - 3px);width:6px;background:var(--teal)}
-#dashboard.progressPage .targetMarginMetric.ahead>b{color:var(--green)!important}
-#dashboard.progressPage .targetMarginMetric.behind>b{color:var(--red)!important}
-#dashboard.progressPage .targetMarginMetric.on-target>b{color:var(--teal-2)!important}
-#dashboard.progressPage .marginScale{display:grid!important;grid-template-columns:1fr 1fr 1fr;width:100%;margin-top:1px;font-size:7px!important;color:#7f9ca8!important}
-#dashboard.progressPage .marginScale span:nth-child(2){text-align:center}
-#dashboard.progressPage .marginScale span:last-child{text-align:right}
-
-/* Charts: no artificial tall empty cards; one valid observation remains visible as a dot. */
-#dashboard.progressPage canvas{min-height:0!important;margin-top:2px}
-#dashboard.progressPage canvas.progressChartHidden{display:none!important}
-#dashboard.progressPage .progressChartState{margin:0!important;min-height:78px}
-#dashboard.progressPage .progressChartPanel:has(canvas.progressChartHidden),
-#dashboard.progressPage .metricCharts>.panel:has(canvas.progressChartHidden){min-height:0!important}
-#dashboard.progressPage .chartDataTable{margin-top:8px!important}
-
-/* Evidence/interpretation cards: mobile-safe hierarchy instead of concatenated text. */
-#dashboard.progressPage .coachEvidenceGrid{display:grid!important;grid-template-columns:1fr!important;gap:12px!important}
-#dashboard.progressPage .coachEvidenceGrid>section{display:grid;gap:8px;min-width:0}
-#dashboard.progressPage .coachEvidenceGrid>section>h4{margin:0;font-size:14px;line-height:1.25}
-#dashboard.progressPage .evidenceFinding{margin:0!important;border:1px solid rgba(80,210,219,.15)!important;border-radius:12px!important;background:rgba(3,31,43,.20)!important}
-#dashboard.progressPage .evidenceFinding>summary{display:grid!important;grid-template-columns:26px minmax(0,1fr)!important;gap:8px 10px!important;align-items:start!important;padding:12px!important}
-#dashboard.progressPage .evidenceFindingIcon{grid-column:1;grid-row:1/3;width:26px;height:26px;display:grid!important;place-items:center;color:#b8d9e0!important}
-#dashboard.progressPage .evidenceFindingIcon svg{width:22px;height:22px}
-#dashboard.progressPage .evidenceFindingCopy{grid-column:2;display:grid!important;gap:4px!important;min-width:0}
-#dashboard.progressPage .evidenceFindingCopy>b{display:block!important;font-size:13px!important;line-height:1.25!important;color:#fff!important;overflow-wrap:anywhere}
-#dashboard.progressPage .evidenceFindingCopy>small{display:block!important;font-size:9px!important;line-height:1.45!important;color:#a9c2ca!important;overflow-wrap:anywhere}
-#dashboard.progressPage .evidenceFindingCopy .findingScoreBar{width:100%;margin-top:3px!important}
-#dashboard.progressPage .evidenceTags{grid-column:2;display:flex!important;flex-wrap:wrap!important;gap:5px!important;min-width:0}
-#dashboard.progressPage .evidenceTags i{display:inline-flex!important;width:auto!important;padding:4px 7px;border-radius:999px;background:rgba(7,25,35,.55);font-size:8px!important;line-height:1.2!important;font-style:normal!important;color:#cde0e5!important;white-space:nowrap}
-#dashboard.progressPage .evidenceFinding>summary:after{grid-column:2;grid-row:3;justify-self:end;margin-top:-18px!important}
-#dashboard.progressPage .evidenceDetail{display:grid;gap:10px;padding:0 12px 12px}
-#dashboard.progressPage .evidenceFacts{display:grid;gap:5px}
-#dashboard.progressPage .evidenceFacts p{margin:0;font-size:10px;line-height:1.45}
-#dashboard.progressPage .evidenceMeta{display:grid!important;grid-template-columns:1fr!important;gap:6px!important}
-#dashboard.progressPage .evidenceMeta>span{display:flex!important;justify-content:space-between;gap:10px;padding:8px 9px;border-radius:9px;background:rgba(3,31,43,.30);font-size:9px;line-height:1.35}
-
-/* Pathway history and validation text spacing. */
-#dashboard.progressPage .canonicalHistory>p{margin-top:10px!important}
-#dashboard.progressPage .canonicalHistory svg{display:block;width:100%;max-width:100%;height:auto;margin:8px 0}
-#dashboard.progressPage .canonicalHistory .chartLegend,#dashboard.progressPage .pathwayLegend{display:flex!important;flex-wrap:wrap!important;gap:7px 12px!important}
-#dashboard.progressPage .modelValidationGrid>article{gap:8px!important}
-#dashboard.progressPage .metricHeadLine{display:flex!important;align-items:flex-end!important;justify-content:space-between!important;gap:10px!important}
-#dashboard.progressPage .metricHeadLine small,#dashboard.progressPage .metricHeadLine strong{display:block!important}
-
-@media(max-width:430px){
- #dashboard.progressPage .outlookGain{grid-template-columns:1fr 1fr!important}
- #dashboard.progressPage .outlookMiniMetric,#dashboard.progressPage .outlookMetricDetail{min-height:112px}
- #dashboard.progressPage .outlookMetricCalc .calcRow{grid-template-columns:1fr auto!important}
- #dashboard.progressPage .outlookMetricCalc .calcRow span:nth-child(2){grid-column:1/-1;color:#9fc1ca}
-}
-#dashboard.progressPage canvas.progressCanvasRendered{display:none!important}
-#dashboard.progressPage .progressSvgChart{display:block;width:100%;height:auto;min-height:0;margin:2px 0 0;overflow:visible}
-#dashboard.progressPage .progressSvgChart text{font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;fill:#d7e7eb}
-#dashboard.progressPage .progressSvgChart .legend{font-size:21px;font-weight:700}
-#dashboard.progressPage .progressSvgChart .axis{font-size:18px;font-weight:500;fill:#c7d9df}
-#dashboard.progressPage .progressSvgChart .axis.x{font-size:17px}
-#dashboard.progressPage .progressSvgChart .grid{stroke:rgba(91,154,180,.42);stroke-width:1}
-#dashboard.progressPage .progressSvgChart .grid.base{stroke:#c7d9df;stroke-width:2}
-#dashboard.progressPage .pathwayHistoryChart{display:grid;gap:10px}
-#dashboard.progressPage .pathwayLegend{display:grid!important;grid-template-columns:1fr 1fr!important;gap:7px 10px!important;padding:0 2px}
-#dashboard.progressPage .pathwayLegend>span{display:flex!important;align-items:center!important;gap:6px!important;font-size:9px!important;line-height:1.3!important;color:#bed4da!important;min-width:0}
-#dashboard.progressPage .pathwayLegend>span:before{content:"";width:16px;height:3px;flex:0 0 16px;border-radius:999px;background:var(--teal)}
-#dashboard.progressPage .pathwayLegend .loadLegend:before{background:#d7e7eb}
-#dashboard.progressPage .pathwayLegend .baselineLegend{grid-column:1/-1}
-#dashboard.progressPage .pathwayLegend .baselineLegend:before{background:#8faab5}
-
-
-/* v13.1.4 Progress chart + mobile-navigation repair. */
-:root{--mobile-nav-bottom:0px}
-@media(max-width:759px){
- #nav{bottom:var(--mobile-nav-bottom)!important;min-height:72px;transform:none!important;contain:layout paint;}
- .moreNav{bottom:calc(var(--mobile-nav-bottom) + 78px)!important}
- #mainContent{padding-bottom:calc(112px + var(--mobile-nav-bottom))!important}
-}
-/* v13.1.4 uses the established canvas renderer again; never hide a successfully-rendered chart. */
-#dashboard.progressPage canvas.progressCanvasRendered{display:block!important}
-#dashboard.progressPage .progressSvgChart{display:none!important}
-#dashboard.progressPage canvas:not(.progressChartHidden){display:block!important;min-height:190px!important}
-#dashboard.progressPage .predictionPanel canvas:not(.progressChartHidden),
-#dashboard.progressPage .progressChartPanel canvas:not(.progressChartHidden){min-height:190px!important}
-/* The four capability metrics belong inside one level-2 teal surface, matching Today/Plan hierarchy. */
-#dashboard.progressPage .fitnessMetricGroup{padding:12px!important;background:var(--progress-surface)!important;border:1px solid var(--progress-border)!important;border-radius:18px!important}
-#dashboard.progressPage .fitnessMetricGroup .kpis{margin:0!important;gap:10px!important}
-/* Keep section/card rhythm identical after the restored charts. */
-#dashboard.progressPage .progressSection{row-gap:12px!important}
-#dashboard.progressPage .metricCharts{margin:0!important}
-
-/* v13.1.5 Progress-only chart visibility + hierarchy consistency */
-#dashboard.progressPage canvas{display:none!important}
-#dashboard.progressPage .progressSvgChart{display:block!important;width:100%;height:auto;min-height:0;margin:8px 0 0;overflow:visible}
-#dashboard.progressPage .progressSvgChart .grid{stroke:rgba(102,167,255,.34);stroke-width:1}
-#dashboard.progressPage .progressSvgChart .grid.base{stroke:rgba(215,231,235,.7);stroke-width:1.5}
-#dashboard.progressPage .progressSvgChart .axis{font-size:16px;font-weight:500;fill:#b9cdd5}
-#dashboard.progressPage .progressSvgChart .axis.x{font-size:15px}
-#dashboard.progressPage .progressSvgChart .legend{font-size:17px;font-weight:750;fill:#dcecf1}
-#dashboard.progressPage .predictionPanel,
-#dashboard.progressPage .progressChartPanel,
-#dashboard.progressPage .metricCharts>.panel{min-height:0!important}
-#dashboard.progressPage .progressChartState{margin-top:8px!important}
-
-/* Keep all major Progress level-2 modules on the same Today/Plan/Log hierarchy. */
-#dashboard.progressPage .personalModelPanel,
-#dashboard.progressPage .modelValidationPanel,
-#dashboard.progressPage .coachAssessmentPanel,
-#dashboard.progressPage .canonicalAdaptationHome,
-#dashboard.progressPage .coachReport{padding:18px!important;border-radius:18px!important;background:linear-gradient(145deg,#0c6975,#084958 72%)!important;border:1px solid rgba(61,214,198,.32)!important;color:var(--text)!important}
-#dashboard.progressPage .personalModelHead,
-#dashboard.progressPage .modelValidationHead,
-#dashboard.progressPage .coachVerdict{display:grid!important;gap:4px!important;margin:0 0 12px!important;padding:0!important}
-#dashboard.progressPage .personalModelHead>div,
-#dashboard.progressPage .modelValidationHead>div{display:grid!important;gap:3px!important}
-#dashboard.progressPage .personalModelHead small,
-#dashboard.progressPage .modelValidationHead small,
-#dashboard.progressPage .coachVerdict>span{font-size:10px!important;line-height:1.2!important;font-weight:850!important;letter-spacing:.11em!important;color:var(--teal-2)!important}
-#dashboard.progressPage .personalModelHead h3,
-#dashboard.progressPage .modelValidationHead h3{margin:0!important;font-size:22px!important;line-height:1.15!important;letter-spacing:-.025em!important;color:#fff!important}
-#dashboard.progressPage .personalModelHead>span,
-#dashboard.progressPage .modelValidationHead>span{justify-self:start!important;margin-top:4px!important;font-size:9px!important;line-height:1.25!important;padding:5px 8px!important;border-radius:999px!important;background:rgba(4,26,34,.38)!important;border:1px solid rgba(61,214,198,.2)!important;color:var(--teal-2)!important}
-#dashboard.progressPage .coachVerdict .coachConclusion{font-size:18px!important;line-height:1.35!important;font-weight:800!important;margin:2px 0 0!important;color:#fff!important}
-#dashboard.progressPage .coachVerdict .coachProjection{font-size:12px!important;line-height:1.5!important;margin:0!important;color:#d0e1e6!important}
-
-/* Normalize adaptive pathway card inset and keep text away from edges. */
-#dashboard.progressPage .canonicalPathway,
-#dashboard.progressPage .canonicalPathwayCard,
-#dashboard.progressPage .adaptationVisualCard{padding:16px!important;margin:0!important}
-#dashboard.progressPage .canonicalPathwayGrid{gap:12px!important}
-#dashboard.progressPage .canonicalPathMetrics{margin-top:12px!important;gap:10px!important}
-#dashboard.progressPage .canonicalPathMetrics>div{padding:12px!important}
-#dashboard.progressPage .canonicalPathway>h3,
-#dashboard.progressPage .canonicalPathwayCard>h3{margin-left:0!important}
-
-/* Equal vertical rhythm throughout Progress. */
-#dashboard.progressPage .progressSection{gap:14px!important;margin-bottom:32px!important}
-#dashboard.progressPage .progressSection>.panel,
-#dashboard.progressPage .progressSection>.grid2,
-#dashboard.progressPage .progressSection>#progressExecution,
-#dashboard.progressPage .progressSection>#progressAdaptationHome,
-#dashboard.progressPage .progressSection>#personalResponseModel,
-#dashboard.progressPage .progressSection>#modelValidation,
-#dashboard.progressPage .progressSection>#decisionHistory,
-#dashboard.progressPage .progressSection>#progressRecovery{margin:0!important}
-#dashboard.progressPage #personalResponseModel,
-#dashboard.progressPage #modelValidation,
-#dashboard.progressPage #decisionHistory{display:grid;gap:14px}
-
-/* v13.1.6 Progress verification repair: deterministic charts, spacing and hierarchy. */
-#dashboard.progressPage canvas{display:none!important;height:0!important;min-height:0!important;margin:0!important;padding:0!important}
-#dashboard.progressPage .progressChartMount{display:block!important;width:100%;min-width:0;margin-top:10px}
-#dashboard.progressPage .progressChartMount[aria-hidden="true"]{display:none!important}
-#dashboard.progressPage .progressInlineChart{display:block;width:100%;height:auto;aspect-ratio:680/300;overflow:visible}
-#dashboard.progressPage .progressInlineChart .grid{stroke:rgba(109,181,210,.30);stroke-width:1}
-#dashboard.progressPage .progressInlineChart .grid.base{stroke:rgba(224,242,247,.72);stroke-width:1.5}
-#dashboard.progressPage .progressInlineChart .axis{font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;font-size:16px;font-weight:600;fill:#c2d6dd}
-#dashboard.progressPage .progressInlineChart .axis.x{font-size:15px}
-#dashboard.progressPage .progressChartLegend{display:flex;flex-wrap:wrap;align-items:center;gap:7px 14px;margin:0 0 2px;padding:0 2px;font-size:10px;font-weight:800;color:#d9e9ed}
-#dashboard.progressPage .progressChartLegend>span{display:inline-flex;align-items:center;gap:6px;color:#d9e9ed}
-#dashboard.progressPage .progressChartLegend i{display:inline-block;width:20px;height:3px;border-radius:999px;background:var(--series,#4CC9F0)}
-#dashboard.progressPage .progressChartState{margin:0!important;min-height:0!important}
-
-/* Three-level surface system: primary teal -> dark secondary -> darker disclosure. */
-#dashboard.progressPage .progressHero,
-#dashboard.progressPage .progressSection>.panel,
-#dashboard.progressPage .progressExecutionCard,
-#dashboard.progressPage .progressRecoveryCard,
-#dashboard.progressPage .canonicalAdaptationHome,
-#dashboard.progressPage .personalModelPanel,
-#dashboard.progressPage .modelValidationPanel,
-#dashboard.progressPage .coachAssessmentPanel{
- background:linear-gradient(145deg,#0b6b78 0%,#075264 58%,#073949 100%)!important;
- border:1px solid rgba(61,214,198,.38)!important;
- border-radius:18px!important;
-}
-#dashboard.progressPage :is(.fitnessMetricGroup .kpi,.progressMetricLead>div,.canonicalPathwayGrid>.adaptationVisualCard,.personalDimension,.modelValidationGrid>article,.scienceProvenance>div,.coachVerdict,.coachEvidenceGrid>section,.coachAction,.evidenceFinding,.executionAssessment,.progressInterruption){
- background:#102331!important;
- border:1px solid rgba(130,180,197,.16)!important;
- border-radius:13px!important;
-}
-#dashboard.progressPage :is(.canonicalPathwayGrid>.adaptationVisualCard,.personalDimension,.modelValidationGrid>article,.scienceProvenance>div,.coachVerdict,.coachEvidenceGrid>section,.coachAction,.executionAssessment){padding:14px!important}
-#dashboard.progressPage :is(details,.evidenceDetail,.canonicalContribution,.executionRow){--progress-level3:#0b1b26}
-#dashboard.progressPage details:not(.modelDetails)>summary,
-#dashboard.progressPage .evidenceDetail,
-#dashboard.progressPage .executionRow{background:var(--progress-level3)!important}
-
-/* Identical vertical rhythm between Progress tiles/modules. */
-#dashboard.progressPage .progressSection{display:grid!important;gap:14px!important;margin-bottom:32px!important}
-#dashboard.progressPage .grid2,#dashboard.progressPage .kpis,#dashboard.progressPage .progressMetricLead,#dashboard.progressPage .canonicalPathwayGrid,#dashboard.progressPage .modelValidationGrid,#dashboard.progressPage .scienceProvenance,#dashboard.progressPage .coachEvidenceGrid{gap:10px!important}
-#dashboard.progressPage .progressSection>*{margin-top:0!important;margin-bottom:0!important}
-#dashboard.progressPage .panelHead{margin-bottom:10px!important}
-
-/* Prevent adjacent labels/values from visually concatenating on narrow phones. */
-#dashboard.progressPage .executionRow{display:grid!important;grid-template-columns:minmax(0,1fr) auto!important;column-gap:12px!important;row-gap:5px!important;padding:11px 12px!important}
-#dashboard.progressPage .executionRow>span{min-width:0;overflow-wrap:anywhere}
-#dashboard.progressPage .executionRow>b{justify-self:end;white-space:nowrap}
-#dashboard.progressPage .executionRow>small{grid-column:1/-1!important;display:block!important;line-height:1.45!important}
-#dashboard.progressPage .coachRecoverySummary>div{display:grid!important;gap:4px!important}
-#dashboard.progressPage .coachRecoverySummary>div>*{display:block!important;margin:0!important}
-#dashboard.progressPage .evidenceMeta>span{display:grid!important;grid-template-columns:minmax(0,1fr) auto!important;align-items:center!important;gap:8px!important}
-#dashboard.progressPage .evidenceMeta>span>b{justify-self:end!important;margin:0!important;white-space:normal!important;text-align:right}
-#dashboard.progressPage .scienceProvenance>div{display:grid!important;gap:6px!important;line-height:1.45!important}
-#dashboard.progressPage .scienceProvenance>div>small,#dashboard.progressPage .scienceProvenance>div>b{display:block!important;margin:0!important}
-#dashboard.progressPage .modelValidationGrid>article{display:grid!important;gap:8px!important;align-content:start}
-#dashboard.progressPage .modelValidationGrid>article>span,#dashboard.progressPage .modelValidationGrid>article>p{display:block!important;margin:0!important}
-#dashboard.progressPage .canonicalPathHead{padding:0 2px!important}
-#dashboard.progressPage .adaptationVisualCard{padding:16px!important}
-#dashboard.progressPage .canonicalPathMetrics{gap:8px!important}
-#dashboard.progressPage .canonicalPathMetrics>div{padding:11px!important}
-
-/* Longitudinal review: concise bullets rather than one dense paragraph. */
-#dashboard.progressPage #assessmentText>.coachReport.progressCoachReport{background:transparent!important;border:0!important;border-radius:0!important;padding:0!important;margin:0!important}
-#dashboard.progressPage .progressCoachReport{display:grid!important;gap:12px!important}
-#dashboard.progressPage .progressCoachReport .coachVerdict{display:grid!important;gap:10px!important;margin:0!important}
-#dashboard.progressPage .progressCoachReport .coachVerdict>span{font-size:10px!important;font-weight:900!important;letter-spacing:.11em!important;color:var(--teal-2)!important}
-#dashboard.progressPage .progressReviewBullets{display:grid;gap:7px;margin:0;padding-left:20px}
-#dashboard.progressPage .progressReviewBullets li{margin:0;color:#f3f8fa;font-size:13px;line-height:1.5;font-weight:650}
-#dashboard.progressPage .progressCoachReport .coachVerdict>small{display:block!important;font-size:10px!important;line-height:1.45!important;color:#9fb8c2!important}
-#dashboard.progressPage .progressCoachReport h4{font-size:16px!important;line-height:1.25!important;margin:0 0 8px!important}
-#dashboard.progressPage .progressCoachReport .coachAction{display:grid!important;grid-template-columns:28px minmax(0,1fr)!important;gap:10px!important}
-#dashboard.progressPage .progressCoachReport .coachAction>div{display:grid!important;gap:4px!important}
-#dashboard.progressPage .progressCoachReport .coachAction p,#dashboard.progressPage .progressCoachReport .coachAction small{margin:0!important}
-
-/* Major model modules use the same heading hierarchy as the other Progress tiles. */
-#dashboard.progressPage .personalModelHead small,
-#dashboard.progressPage .modelValidationHead small,
-#dashboard.progressPage .canonicalAdaptationHead small{font-size:10px!important;font-weight:900!important;letter-spacing:.11em!important;color:var(--teal-2)!important}
-#dashboard.progressPage .personalModelHead h3,
-#dashboard.progressPage .modelValidationHead h3,
-#dashboard.progressPage .canonicalAdaptationHead h3{font-size:20px!important;line-height:1.2!important;letter-spacing:-.02em!important;margin:2px 0 0!important;color:#fff!important}
-#dashboard.progressPage .personalModelHead,
-#dashboard.progressPage .modelValidationHead,
-#dashboard.progressPage .canonicalAdaptationHead{margin-bottom:12px!important}
-
-@media(max-width:430px){
- #dashboard.progressPage .progressInlineChart .axis{font-size:14px}
- #dashboard.progressPage .progressInlineChart .axis.x{font-size:13px}
- #dashboard.progressPage .progressChartLegend{font-size:9px;gap:6px 10px}
- #dashboard.progressPage .progressReviewBullets li{font-size:12px}
-}
-
-/* v13.1.8 — Progress-only verified surface + viewport + chart fixes. */
-#dashboard.progressPage{
- width:100%!important;
- max-width:100%!important;
- min-width:0!important;
- overflow-x:clip!important;
- touch-action:pan-y!important;
- overscroll-behavior-x:none!important;
-}
-#dashboard.progressPage *,#dashboard.progressPage *::before,#dashboard.progressPage *::after{max-width:100%;min-width:0}
-#dashboard.progressPage .progressSection,
-#dashboard.progressPage .progressHero,
-#dashboard.progressPage .panel,
-#dashboard.progressPage .grid2,
-#dashboard.progressPage .kpis{width:100%!important;max-width:100%!important}
-
-/* Use the same surface hierarchy as the approved Today tab. */
-#dashboard.progressPage .progressHero,
-#dashboard.progressPage .progressSection>.panel,
-#dashboard.progressPage .progressExecutionCard,
-#dashboard.progressPage .progressRecoveryCard,
-#dashboard.progressPage .canonicalAdaptationHome,
-#dashboard.progressPage .personalModelPanel,
-#dashboard.progressPage .modelValidationPanel,
-#dashboard.progressPage .coachAssessmentPanel{
- background:linear-gradient(145deg,#12313a,#10232f 62%)!important;
- border:1px solid rgba(61,214,198,.25)!important;
- border-radius:18px!important;
-}
-#dashboard.progressPage :is(.fitnessMetricGroup .kpi,.progressMetricLead>div,.canonicalPathwayGrid>.adaptationVisualCard,.personalDimension,.modelValidationGrid>article,.scienceProvenance>div,.coachVerdict,.coachEvidenceGrid>section,.coachAction,.evidenceFinding,.executionAssessment,.progressInterruption){
- background:var(--nested)!important;
- border:1px solid rgba(136,161,177,.11)!important;
-}
-#dashboard.progressPage details:not(.modelDetails)>summary,
-#dashboard.progressPage .evidenceDetail,
-#dashboard.progressPage .executionRow{background:#0c1923!important}
-
-/* Permanent chart mounts: no canvas/display-state dependency. */
-#dashboard.progressPage .progressChartMount{
- display:block!important;
- width:100%!important;
- max-width:100%!important;
- min-width:0!important;
- min-height:0!important;
- margin:10px 0 0!important;
- overflow:hidden!important;
- contain:layout paint!important;
-}
-#dashboard.progressPage .progressChartMount[aria-hidden="true"]{display:block!important}
-#dashboard.progressPage .progressInlineChart{
- display:block!important;
- width:100%!important;
- max-width:100%!important;
- height:auto!important;
- aspect-ratio:640/286!important;
- overflow:hidden!important;
-}
-#dashboard.progressPage .progressInlineChart .grid{stroke:rgba(136,161,177,.22)!important;stroke-width:1!important}
-#dashboard.progressPage .progressInlineChart .grid.base{stroke:rgba(196,213,223,.55)!important;stroke-width:1.25!important}
-#dashboard.progressPage .progressInlineChart .axis{font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;font-size:13px!important;font-weight:600!important;fill:#c4d5df!important}
-#dashboard.progressPage .progressInlineChart .axis.x{font-size:12px!important}
-#dashboard.progressPage .progressChartLegend{display:flex!important;flex-wrap:wrap!important;gap:7px 14px!important;margin:0 0 4px!important;padding:0!important;font-size:10px!important;line-height:1.3!important}
-#dashboard.progressPage .progressChartLegend>span{display:inline-flex!important;align-items:center!important;gap:6px!important;white-space:nowrap!important}
-#dashboard.progressPage .progressChartLegend i{width:20px!important;height:3px!important;flex:0 0 20px!important;border-radius:999px!important;background:var(--series,#3dd6c6)!important}
-#dashboard.progressPage .progressChartState{display:grid!important;place-items:center!important;min-height:92px!important;padding:14px!important;margin:0!important;text-align:center!important;background:rgba(3,31,43,.22)!important;border:1px solid rgba(61,214,198,.10)!important;border-radius:12px!important}
-#dashboard.progressPage .progressChartState b{display:block;font-size:14px;line-height:1.25}
-#dashboard.progressPage .progressChartState p{margin:5px 0 0;font-size:10px;line-height:1.45;color:var(--muted)}
-
-@media(max-width:430px){
- #dashboard.progressPage .progressInlineChart .axis{font-size:12px!important}
- #dashboard.progressPage .progressInlineChart .axis.x{font-size:11px!important}
- #dashboard.progressPage .progressChartLegend{font-size:9px!important;gap:6px 10px!important}
-}
-
-
-/* v13.1.9 Progress-only hierarchy + chart-card sizing.
-   Exact primary surface copied from the locked Today visual contract. */
-#dashboard.progressPage{
- --progress-l1:linear-gradient(145deg,#075468 0%,#073c50 52%,#062c3d 100%);
- --progress-l1-border:rgba(40,214,219,.42);
- --progress-l2:rgba(3,31,43,.28);
- --progress-l2-border:rgba(87,219,224,.16);
- --progress-l3:rgba(2,27,37,.50);
- --progress-l3-border:rgba(87,219,224,.13);
- overflow-x:clip!important;
- overscroll-behavior-x:none;
- touch-action:pan-y;
-}
-body:has(#dashboard.progressPage.active),
-#mainContent:has(#dashboard.progressPage.active){overflow-x:hidden!important;max-width:100vw!important}
-#dashboard.progressPage .progressHero,
-#dashboard.progressPage .progressSection>.panel,
-#dashboard.progressPage .progressSection>.grid2>.panel,
-#dashboard.progressPage .progressReviewSlot>.panel,
-#dashboard.progressPage .progressExecutionCard,
-#dashboard.progressPage .progressRecoveryCard,
-#dashboard.progressPage .canonicalAdaptationHome,
-#dashboard.progressPage .personalModelPanel,
-#dashboard.progressPage .modelValidationPanel,
-#dashboard.progressPage .coachAssessmentPanel{
- background:var(--progress-l1)!important;
- border:1px solid var(--progress-l1-border)!important;
- border-radius:18px!important;
- box-shadow:none!important;
-}
-#dashboard.progressPage :is(.outlookCard,.outlookMiniMetric,.outlookMetricDetail,.fitnessMetricGroup .kpi,.progressMetricLead>div,.predictionReferences>div,.predictionCurrent,.predictionAwaiting,.canonicalPathwayGrid>.adaptationVisualCard,.canonicalPathMetrics>div,.personalDimension,.personalModelSummary>div,.modelValidationGrid>article,.scienceProvenance>div,.coachVerdict,.coachEvidenceGrid>section,.coachAction,.evidenceFinding,.executionAssessment,.progressInterruption,.recoveryQuickGrid>div){
- background:var(--progress-l2)!important;
- border:1px solid var(--progress-l2-border)!important;
-}
-#dashboard.progressPage details:not(.modelDetails)>summary,
-#dashboard.progressPage .evidenceDetail,
-#dashboard.progressPage .executionRow,
-#dashboard.progressPage .chartDataTable{background:var(--progress-l3)!important;border-color:var(--progress-l3-border)!important}
-
-/* The chart itself defines the card height. No hidden summary/fallback occupies space. */
-#dashboard.progressPage .predictionPanel,
-#dashboard.progressPage .progressChartPanel,
-#dashboard.progressPage .metricCharts>.panel{
- min-height:0!important;
- height:auto!important;
- padding:14px!important;
- align-self:start!important;
- overflow:hidden!important;
-}
-#dashboard.progressPage #predictionSummary{display:none!important}
-#dashboard.progressPage .chartDataTable{display:none!important}
-#dashboard.progressPage .progressChartPanel .panelHead,
-#dashboard.progressPage .metricCharts>.panel .panelHead{margin-bottom:6px!important}
-#dashboard.progressPage .progressChartMount{
- margin:6px 0 0!important;
- padding:0!important;
- min-height:0!important;
- height:auto!important;
- overflow:hidden!important;
- contain:content!important;
-}
-#dashboard.progressPage .progressInlineChart{
- display:block!important;
- width:100%!important;
- height:auto!important;
- max-width:100%!important;
- aspect-ratio:640/286!important;
- margin:0!important;
-}
-#dashboard.progressPage .progressChartLegend{margin:0 0 2px!important;padding:0!important}
-#dashboard.progressPage .progressReviewSlot{display:grid;gap:0;margin:0 0 30px;width:100%;max-width:100%}
-#dashboard.progressPage .progressReviewSlot>.panel{margin:0!important;padding:16px!important}
-#dashboard.progressPage .progressReviewSlot .coachVerdict{margin-bottom:10px!important}
-#dashboard.progressPage .progressReviewSlot .progressReviewBullets{padding-left:18px!important}
-#dashboard.progressPage .progressReviewSlot .progressReviewBullets li{margin:0 0 5px!important}
-
-/* Never allow a Progress child to widen the viewport. */
-#dashboard.progressPage,
-#dashboard.progressPage *,
-#dashboard.progressPage *::before,
-#dashboard.progressPage *::after{max-inline-size:100%;min-inline-size:0}
-#dashboard.progressPage svg,#dashboard.progressPage canvas,#dashboard.progressPage table{max-width:100%!important}
-#dashboard.progressPage .tableScroll{overflow-x:auto!important;max-width:100%!important}
-
-
-/* v13.1.10 Progress contract — mirrors the locked Today visual language. */
-#dashboard.progressPage{
-  overflow-x:hidden!important;
+  --progress-disclosure:#0c1923;
+  width:100%;
+  max-width:100%;
+  overflow-x:clip;
   overscroll-behavior-x:none;
   touch-action:pan-y;
 }
-#dashboard.progressPage,
-#dashboard.progressPage *{box-sizing:border-box;min-width:0;max-width:100%}
-#dashboard.progressPage svg,#dashboard.progressPage canvas{display:block;max-width:100%!important}
+#dashboard.progressPage,#dashboard.progressPage *{box-sizing:border-box;min-width:0}
+#dashboard.progressPage img,#dashboard.progressPage svg,#dashboard.progressPage canvas{max-width:100%}
 
-/* Level 1 / hero: exact Today briefing treatment. */
-#dashboard.progressPage .progressHero{
-  background:linear-gradient(145deg,#12313a,#10232f 62%)!important;
-  border:1px solid rgba(61,214,198,.25)!important;
-  border-radius:var(--r2)!important;
+/* Page title: same small eyebrow / strong white heading hierarchy as Today. */
+#dashboard .progressPageTitle{display:flex;align-items:center;gap:12px;margin:4px 2px 18px}
+#dashboard .progressPictogram{width:54px;height:54px;flex:0 0 54px;display:grid;place-items:center;border-radius:50%;background:rgba(21,184,202,.13);border:1px solid rgba(45,218,224,.35);color:#45e0e4}
+#dashboard .progressPictogram svg{width:37px;height:37px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+#dashboard .progressPageTitle .pageEyebrow{display:block;font-size:9px;font-weight:900;letter-spacing:.1em;color:#45e0e4}
+#dashboard .progressPageTitle h2{font-size:24px;line-height:1.08;margin:1px 0 0;color:#fff;letter-spacing:-.03em}
+#dashboard .progressPageTitle p{font-size:11px;line-height:1.4;margin:4px 0 0;color:#c8dce3}
+
+/* Section titles mirror Today runner-card typography. */
+#dashboard .progressSection{margin:0 0 24px;width:100%}
+#dashboard .progressSectionHead{display:grid;grid-template-columns:54px minmax(0,1fr);gap:13px;align-items:start;margin:0 2px 11px}
+#dashboard .progressSectionHead>span{width:54px;height:54px;border-radius:50%;display:grid;place-items:center;background:rgba(21,184,202,.13);border:1px solid rgba(45,218,224,.35);color:#45e0e4;font-size:12px;font-weight:900}
+#dashboard .progressSectionHead small{display:block;font-size:9px;font-weight:900;letter-spacing:.1em;color:#45e0e4}
+#dashboard .progressSectionHead h3{font-size:20px;line-height:1.15;margin:2px 0 0;color:#fff;letter-spacing:-.02em}
+#dashboard .progressSectionHead p{font-size:10px;line-height:1.4;margin:4px 0 0;color:#c6d9df}
+
+/* LEVEL 1: exact Today primary tile treatment. */
+#dashboard.progressPage :is(
+ .progressHero,.predictionPanel,.fitnessMetricGroup,.metricCharts>.panel,
+ .progressChartPanel,.progressExecutionCard,.progressRecoveryCard,
+ .canonicalAdaptationHome,.personalModelPanel,.modelValidationPanel,
+ .coachAssessmentPanel,.pathwayHistoryPanel
+){
+  background:var(--progress-card)!important;
+  border:1px solid var(--progress-border)!important;
+  border-radius:18px!important;
+  box-shadow:none!important;
+  color:#fff!important;
+}
+#dashboard .progressHero{padding:18px!important;margin:0 0 24px!important}
+#dashboard.progressPage :is(.predictionPanel,.fitnessMetricGroup,.metricCharts>.panel,.progressChartPanel,.progressExecutionCard,.progressRecoveryCard,.canonicalAdaptationHome,.personalModelPanel,.modelValidationPanel,.coachAssessmentPanel,.pathwayHistoryPanel){padding:16px!important;margin:0 0 12px!important}
+
+/* LEVEL 2: exact Today compact nested metric treatment. */
+#dashboard.progressPage :is(
+ .outlookCard,.outlookMiniMetric,.outlookMetricDetail,
+ .fitnessMetricGroup .kpi,.progressMetricLead>div,.predictionReferences>div,
+ .predictionCurrent,.predictionAwaiting,.canonicalPathwayGrid>.adaptationVisualCard,
+ .canonicalPathMetrics>div,.personalDimension,.personalModelSummary>div,
+ .modelValidationGrid>article,.scienceProvenance>div,.coachVerdict,
+ .coachEvidenceGrid>section,.coachAction,.evidenceFinding,.executionAssessment,
+ .progressInterruption,.recoveryQuickGrid>div,.executionKpis>span,.metricTypeRow
+){
+  background:var(--progress-nested)!important;
+  border:1px solid var(--progress-nested-border)!important;
+  border-radius:11px!important;
   box-shadow:none!important;
 }
 
-/* Level 1 content cards: exact Today support-card surface. */
-#dashboard.progressPage :is(
-  .predictionPanel,.progressChartPanel,.metricCharts>.panel,.fitnessMetricGroup,
-  .progressExecutionCard,.progressRecoveryCard,.canonicalAdaptationHome,
-  .personalModelPanel,.modelValidationPanel,.coachAssessmentPanel,
-  .progressReviewSlot>.panel
-){
-  background:var(--card)!important;
-  border:1px solid rgba(136,161,177,.13)!important;
-  border-radius:var(--r2)!important;
-  box-shadow:none!important;
-  color:var(--text)!important;
-}
-
-/* Level 2: exact nested surface used throughout Today. */
-#dashboard.progressPage :is(
-  .outlookCard,.outlookMiniMetric,.outlookMetricDetail,.fitnessMetricGroup .kpi,
-  .progressMetricLead>div,.predictionReferences>div,.predictionCurrent,
-  .predictionAwaiting,.canonicalPathwayGrid>.adaptationVisualCard,
-  .canonicalPathMetrics>div,.personalDimension,.personalModelSummary>div,
-  .modelValidationGrid>article,.scienceProvenance>div,.coachVerdict,
-  .coachEvidenceGrid>section,.coachAction,.evidenceFinding,.executionAssessment,
-  .progressInterruption,.recoveryQuickGrid>div,.executionKpis>span
-){
-  background:var(--nested)!important;
-  border:1px solid rgba(136,161,177,.11)!important;
-  border-radius:var(--r1)!important;
-}
-
-/* Level 3 / disclosure: same disclosure surface as Today. */
+/* LEVEL 3: same disclosure treatment as Today. */
 #dashboard.progressPage details:not(.panel):not(.workout),
 #dashboard.progressPage .evidenceDetail,
 #dashboard.progressPage .executionRow{
-  background:#0c1923!important;
+  background:var(--progress-disclosure)!important;
   border:1px solid rgba(136,161,177,.12)!important;
   border-radius:13px!important;
 }
-#dashboard.progressPage details:not(.panel):not(.workout)>summary{
-  background:rgba(61,214,198,.035)!important;
-}
+#dashboard.progressPage details:not(.panel):not(.workout)>summary{background:rgba(61,214,198,.035)!important}
 
-/* Today-equivalent typography inside cards. */
+/* Card typography copied from Today runner cards. */
+#dashboard.progressPage .panelHead{margin:0 0 11px!important}
 #dashboard.progressPage .panelHead h3,
-#dashboard.progressPage .progressChartPanel h3,
-#dashboard.progressPage .metricCharts>.panel h3{
-  margin:0 0 3px!important;
-  font-size:18px!important;
-  line-height:1.2!important;
-  letter-spacing:-.015em!important;
-  font-weight:850!important;
-}
+#dashboard.progressPage .progressChartPanel h3{font-size:20px!important;line-height:1.15!important;margin:0!important;color:#fff!important;letter-spacing:-.015em!important}
 #dashboard.progressPage .panelHead p,
-#dashboard.progressPage .progressChartPanel .muted,
-#dashboard.progressPage .metricCharts>.panel .muted{
-  margin:0!important;
-  font-size:12px!important;
-  line-height:1.4!important;
-  color:var(--muted)!important;
-}
+#dashboard.progressPage .panelHead .muted,
+#dashboard.progressPage .progressChartPanel .muted{font-size:10px!important;line-height:1.4!important;margin:4px 0 0!important;color:#c6d9df!important}
+#dashboard.progressPage .kpi span,#dashboard.progressPage .kpi small,
+#dashboard.progressPage .canonicalPathMetrics small,#dashboard.progressPage .executionKpis small{font-size:8px!important;font-weight:850!important;letter-spacing:.055em!important;color:#8fc2ce!important}
+#dashboard.progressPage .kpi strong,#dashboard.progressPage .canonicalPathMetrics strong,#dashboard.progressPage .executionKpis strong{font-size:17px!important;line-height:1.1!important;color:#fff!important}
 
-/* Chart cards must hug their chart — no inherited minimum heights or aspect-ratio spacers. */
-#dashboard.progressPage :is(.predictionPanel,.progressChartPanel,.metricCharts>.panel){
-  display:block!important;
-  min-height:0!important;
-  height:auto!important;
-  padding:16px!important;
-  margin-bottom:12px!important;
-  overflow:hidden!important;
-}
-#dashboard.progressPage :is(.predictionPanel,.progressChartPanel,.metricCharts>.panel) .panelHead{
-  margin:0 0 10px!important;
-}
+/* Consistent nested layout and spacing. */
+#dashboard.progressPage .kpis{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:0}
+#dashboard.progressPage .fitnessMetricGroup .kpis{gap:10px}
+#dashboard.progressPage .grid2.metricCharts{display:grid;grid-template-columns:1fr;gap:12px;margin-top:12px}
+#dashboard.progressPage :is(.canonicalPathwayGrid,.modelValidationGrid,.scienceProvenance,.personalModelGrid,.coachEvidenceGrid){gap:10px!important}
+#dashboard.progressPage .progressReviewSlot{margin:0 0 24px;width:100%}
+#dashboard.progressPage .progressReviewSlot>.panel{margin:0!important}
+#dashboard.progressPage .progressReviewBullets{margin:8px 0 0;padding-left:20px}
+#dashboard.progressPage .progressReviewBullets li{font-size:12px;line-height:1.45;color:#edf6f8;margin:0 0 7px}
+
+/* ROOT chart sizing repair: no canvas participates in layout and no inherited chart/card minimum height remains. */
+#dashboard.progressPage :is(#predictionChart,#efficiencyChart,#driftChart,#longRunChart,#volumeChart){display:none!important;width:0!important;height:0!important;min-height:0!important;margin:0!important;padding:0!important}
+#dashboard.progressPage :is(.predictionPanel,.metricCharts>.panel,.progressChartPanel){display:block!important;height:auto!important;min-height:0!important;overflow:hidden!important}
 #dashboard.progressPage .progressChartMount,
-#dashboard.progressPage .progressChartMount[aria-hidden="true"]{
-  display:block!important;
-  width:100%!important;
-  min-height:0!important;
-  height:auto!important;
-  margin:0!important;
-  padding:0!important;
-  overflow:hidden!important;
-  contain:none!important;
-}
-#dashboard.progressPage .progressChartLegend{
-  display:flex!important;
-  flex-wrap:wrap!important;
-  gap:6px 14px!important;
-  margin:0 0 6px!important;
-  padding:0!important;
-  font-size:10px!important;
-  line-height:1.25!important;
-}
-#dashboard.progressPage .progressInlineChart{
-  display:block!important;
-  width:100%!important;
-  height:auto!important;
-  max-width:100%!important;
-  aspect-ratio:auto!important;
-  margin:0!important;
-  overflow:hidden!important;
-}
-#dashboard.progressPage .progressInlineChart .axis{font-size:12px!important;font-weight:600!important;fill:var(--text-2)!important}
+#dashboard.progressPage .progressChartMount[aria-hidden="true"]{display:block!important;width:100%!important;height:auto!important;min-height:0!important;margin:0!important;padding:0!important;overflow:hidden!important}
+#dashboard.progressPage .progressChartLegend{display:flex;flex-wrap:wrap;align-items:center;gap:7px 14px;margin:0 0 7px;padding:0;font-size:10px;line-height:1.25;color:#c8dce3}
+#dashboard.progressPage .progressChartLegend>span{display:inline-flex;align-items:center;gap:6px;color:#c8dce3}
+#dashboard.progressPage .progressChartLegend i{display:block;width:22px;height:4px;flex:0 0 22px;border-radius:999px;background:var(--series,#3dd6c6)}
+#dashboard.progressPage .progressInlineChart{display:block!important;width:100%!important;height:auto!important;aspect-ratio:640/226!important;margin:0!important;padding:0!important;overflow:visible!important}
+#dashboard.progressPage .progressInlineChart .grid{stroke:rgba(143,214,223,.16)!important;stroke-width:1}
+#dashboard.progressPage .progressInlineChart .grid.base{stroke:rgba(200,220,227,.45)!important}
+#dashboard.progressPage .progressInlineChart .axis{font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;font-size:12px!important;font-weight:600!important;fill:#c8dce3!important}
 #dashboard.progressPage .progressInlineChart .axis.x{font-size:11px!important}
-#dashboard.progressPage .progressInlineChart .grid{stroke:rgba(136,161,177,.18)!important}
-#dashboard.progressPage .progressInlineChart .grid.base{stroke:rgba(196,213,223,.45)!important}
+#dashboard.progressPage .progressChartState{display:grid;place-items:center;min-height:92px;padding:14px;background:var(--progress-nested);border:1px solid var(--progress-nested-border);border-radius:11px;text-align:center}
+#dashboard.progressPage .progressChartState b{font-size:14px;color:#fff}
+#dashboard.progressPage .progressChartState p{font-size:10px;line-height:1.4;margin:4px 0 0;color:#c6d9df}
 
-/* Keep the page fixed to the phone viewport width. */
-body:has(#dashboard.progressPage.active),
-#mainContent:has(#dashboard.progressPage.active){overflow-x:hidden!important;max-width:100vw!important}
-#dashboard.progressPage .tableScroll{overflow-x:auto!important;max-width:100%!important}
+/* Eliminate hidden legacy elements that previously created unexplained vertical space. */
+#dashboard.progressPage #predictionSummary,
+#dashboard.progressPage .chartMetric:empty,
+#dashboard.progressPage .chartDataTable{display:none!important}
+
+/* Prevent horizontal page scrolling without affecting internal tables/foldouts. */
+body:has(#dashboard.progressPage.active),#mainContent:has(#dashboard.progressPage.active){overflow-x:clip!important;max-width:100vw!important}
+#dashboard.progressPage>*{max-width:100%;width:100%}
+#dashboard.progressPage .tableScroll{max-width:100%;overflow-x:auto}
+
+@media(max-width:390px){
+ #dashboard .progressPageTitle{gap:10px}
+ #dashboard .progressPictogram{width:48px;height:48px;flex-basis:48px}
+ #dashboard .progressPictogram svg{width:31px;height:31px}
+ #dashboard .progressPageTitle h2{font-size:21px}
+ #dashboard .progressSectionHead{grid-template-columns:46px minmax(0,1fr);gap:10px}
+ #dashboard .progressSectionHead>span{width:46px;height:46px}
+ #dashboard .progressSectionHead h3{font-size:18px}
+ #dashboard.progressPage :is(.predictionPanel,.fitnessMetricGroup,.metricCharts>.panel,.progressChartPanel,.progressExecutionCard,.progressRecoveryCard,.canonicalAdaptationHome,.personalModelPanel,.modelValidationPanel,.coachAssessmentPanel,.pathwayHistoryPanel){padding:14px!important}
+}
