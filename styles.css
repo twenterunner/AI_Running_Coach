@@ -2334,6 +2334,306 @@ canvas{display:block;width:100%!important;max-width:100%;height:auto!important;m
 #dashboard.progressPage .progressReviewBullets{margin:8px 0 0;padding-left:20px}
 #dashboard.progressPage .progressReviewBullets li{font-size:12px;line-height:1.45;color:#edf6f8;margin:0 0 7px}
 
+
+/* TEXT ROOT FIX — Progress uses the same typography and spacing primitives as Today.
+   These rules replace browser-default inline flow for Progress-only composite cards. */
+#dashboard.progressPage :is(.modelValidationPanel,.personalModelPanel,.coachAssessmentPanel,.canonicalAdaptationHome) > p{
+  margin:0 0 12px;
+  font-size:13px;
+  line-height:1.5;
+  color:var(--text-2);
+}
+#dashboard.progressPage :is(.modelValidationHead,.personalModelHead,.canonicalAdaptationHead){
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:10px;
+  margin:0 0 11px;
+}
+#dashboard.progressPage :is(.modelValidationHead,.personalModelHead,.canonicalAdaptationHead) > div{min-width:0}
+#dashboard.progressPage :is(.modelValidationHead,.personalModelHead,.canonicalAdaptationHead) small,
+#dashboard.progressPage .coachVerdict > span,
+#dashboard.progressPage .scienceProvenance small,
+#dashboard.progressPage .personalModelSummary small,
+#dashboard.progressPage .personalDimHead small{
+  display:block;
+  margin:0;
+  font-size:9px;
+  line-height:1.3;
+  font-weight:850;
+  letter-spacing:.08em;
+  color:var(--teal-2);
+}
+#dashboard.progressPage :is(.modelValidationHead,.personalModelHead,.canonicalAdaptationHead) h3{
+  margin:2px 0 0;
+  font-size:17px;
+  line-height:1.2;
+  font-weight:800;
+  letter-spacing:-.015em;
+  color:var(--text);
+}
+#dashboard.progressPage :is(.modelValidationHead,.personalModelHead) > span{
+  flex:0 0 auto;
+  display:inline-flex;
+  align-items:center;
+  min-height:28px;
+  padding:5px 8px;
+  border-radius:999px;
+  background:rgba(61,214,198,.08);
+  border:1px solid rgba(61,214,198,.16);
+  color:var(--teal-2);
+  font-size:9px;
+  line-height:1.2;
+  font-weight:850;
+  white-space:nowrap;
+}
+#dashboard.progressPage .modelValidationGrid{
+  display:grid;
+  grid-template-columns:1fr;
+  gap:10px;
+  margin:0 0 10px;
+}
+#dashboard.progressPage .modelValidationGrid > article{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  padding:12px;
+}
+#dashboard.progressPage .metricHeadLine{
+  display:flex;
+  align-items:baseline;
+  justify-content:space-between;
+  gap:12px;
+}
+#dashboard.progressPage .metricHeadLine small{
+  display:block;
+  margin:0;
+  font-size:9px;
+  line-height:1.3;
+  font-weight:850;
+  letter-spacing:.055em;
+  color:var(--muted);
+}
+#dashboard.progressPage .metricHeadLine strong{
+  display:block;
+  margin:0;
+  font-size:17px;
+  line-height:1.1;
+  color:var(--text);
+}
+#dashboard.progressPage .modelValidationGrid > article > span{
+  display:block;
+  margin:0;
+  font-size:13px;
+  line-height:1.35;
+  color:var(--text-2);
+}
+#dashboard.progressPage .modelValidationGrid > article > p{
+  margin:0;
+  font-size:13px;
+  line-height:1.45;
+  color:var(--text-2);
+}
+#dashboard.progressPage .brandProgress.slim{margin:2px 0 0}
+#dashboard.progressPage .scienceProvenance{
+  display:grid;
+  grid-template-columns:1fr;
+  gap:10px;
+  margin:0 0 12px;
+}
+#dashboard.progressPage .scienceProvenance > div{
+  display:flex;
+  flex-direction:column;
+  align-items:flex-start;
+  gap:4px;
+  padding:12px;
+}
+#dashboard.progressPage .scienceProvenance b{
+  display:block;
+  margin:0;
+  font-size:14px;
+  line-height:1.4;
+  font-weight:750;
+  color:var(--text);
+  overflow-wrap:anywhere;
+}
+#dashboard.progressPage .validationCaution{
+  display:flex;
+  flex-direction:column;
+  gap:7px;
+  margin:0 0 12px;
+}
+#dashboard.progressPage .validationCaution > b{
+  display:block;
+  margin:0;
+  font-size:14px;
+  line-height:1.3;
+  color:var(--text);
+}
+#dashboard.progressPage .validationCaution > p{
+  margin:0;
+  font-size:13px;
+  line-height:1.5;
+  color:var(--text-2);
+}
+#dashboard.progressPage .personalModelSummary{
+  display:grid;
+  grid-template-columns:1fr;
+  gap:10px;
+  margin:0 0 10px;
+}
+#dashboard.progressPage .personalModelSummary > div{
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+  padding:12px;
+}
+#dashboard.progressPage .personalModelSummary b{
+  display:block;
+  margin:0;
+  font-size:14px;
+  line-height:1.35;
+  color:var(--text);
+}
+#dashboard.progressPage .personalDimensionGrid{
+  display:grid;
+  grid-template-columns:1fr;
+  gap:10px;
+  margin:0 0 10px;
+}
+#dashboard.progressPage .personalDimension{
+  padding:12px;
+}
+#dashboard.progressPage .personalDimHead{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:10px;
+  margin:0 0 8px;
+}
+#dashboard.progressPage .personalDimHead h4{
+  margin:2px 0 0;
+  font-size:17px;
+  line-height:1.2;
+  color:var(--text);
+}
+#dashboard.progressPage .personalDimHead > span{
+  font-size:9px;
+  line-height:1.2;
+  font-weight:850;
+  color:var(--teal-2);
+  white-space:nowrap;
+}
+#dashboard.progressPage .personalDimension > p,
+#dashboard.progressPage .personalModelNote > p{
+  margin:0 0 8px;
+  font-size:13px;
+  line-height:1.5;
+  color:var(--text-2);
+}
+#dashboard.progressPage .personalEvidenceCount{
+  margin:0 0 8px;
+  font-size:10px;
+  line-height:1.35;
+  color:var(--muted);
+}
+#dashboard.progressPage .personalModelNote{
+  padding-top:2px;
+}
+#dashboard.progressPage .personalModelNote > b{
+  display:block;
+  margin:0 0 5px;
+  font-size:14px;
+  line-height:1.3;
+  color:var(--text);
+}
+#dashboard.progressPage .coachVerdict{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  padding:12px;
+}
+#dashboard.progressPage .coachVerdict .progressReviewBullets{
+  margin:0;
+  padding-left:19px;
+}
+#dashboard.progressPage .coachVerdict .progressReviewBullets li{
+  margin:0 0 7px;
+  font-size:13px;
+  line-height:1.5;
+  color:var(--text-2);
+}
+#dashboard.progressPage .coachVerdict .progressReviewBullets li:last-child{margin-bottom:0}
+#dashboard.progressPage .coachVerdict > small{
+  display:block;
+  margin:0;
+  font-size:10px;
+  line-height:1.4;
+  color:var(--muted);
+}
+#dashboard.progressPage .coachEvidenceGrid{
+  display:grid;
+  grid-template-columns:1fr;
+  gap:10px;
+  margin:10px 0 0;
+}
+#dashboard.progressPage .coachEvidenceGrid > section{padding:12px}
+#dashboard.progressPage .coachEvidenceGrid h4,
+#dashboard.progressPage .coachActions > h4{
+  margin:0 0 9px;
+  font-size:17px;
+  line-height:1.2;
+  color:var(--text);
+}
+#dashboard.progressPage .evidenceFinding{margin:0 0 8px}
+#dashboard.progressPage .evidenceFinding:last-child{margin-bottom:0}
+#dashboard.progressPage .evidenceFinding > summary{
+  display:grid;
+  grid-template-columns:32px minmax(0,1fr) auto;
+  align-items:start;
+  gap:10px;
+  padding:11px 12px;
+}
+#dashboard.progressPage .evidenceFindingIcon{width:32px;height:32px;display:grid;place-items:center;color:var(--teal-2)}
+#dashboard.progressPage .evidenceFindingCopy{display:flex;flex-direction:column;gap:3px;min-width:0}
+#dashboard.progressPage .evidenceFindingCopy > b{font-size:14px;line-height:1.3;color:var(--text)}
+#dashboard.progressPage .evidenceFindingCopy > small{font-size:10px;line-height:1.4;color:var(--muted)}
+#dashboard.progressPage .evidenceTags{display:flex;flex-direction:column;align-items:flex-end;gap:4px}
+#dashboard.progressPage .evidenceTags i{font-size:9px;line-height:1.2;font-style:normal;font-weight:800;color:var(--text-2);white-space:nowrap}
+#dashboard.progressPage .evidenceMeta{
+  display:flex;
+  flex-wrap:wrap;
+  gap:7px 12px;
+  margin:8px 0 0;
+}
+#dashboard.progressPage .evidenceMeta > span{
+  display:inline-flex;
+  align-items:baseline;
+  gap:4px;
+  font-size:10px;
+  line-height:1.35;
+  color:var(--muted);
+}
+#dashboard.progressPage .evidenceMeta b{font-size:11px;line-height:1.3;color:var(--text)}
+#dashboard.progressPage .coachActions{margin-top:10px}
+#dashboard.progressPage .coachAction{
+  display:grid;
+  grid-template-columns:26px minmax(0,1fr);
+  gap:9px;
+  padding:12px;
+  margin:0 0 8px;
+}
+#dashboard.progressPage .coachAction > strong{font-size:14px;line-height:1.3;color:var(--teal-2)}
+#dashboard.progressPage .coachAction > div{display:flex;flex-direction:column;gap:3px}
+#dashboard.progressPage .coachAction b{font-size:14px;line-height:1.3;color:var(--text)}
+#dashboard.progressPage .coachAction p{margin:0;font-size:13px;line-height:1.45;color:var(--text-2)}
+#dashboard.progressPage .coachAction small{font-size:10px;line-height:1.35;color:var(--muted)}
+
+@media(max-width:390px){
+ #dashboard.progressPage .evidenceFinding > summary{grid-template-columns:30px minmax(0,1fr)}
+ #dashboard.progressPage .evidenceTags{grid-column:2;flex-direction:row;align-items:center;flex-wrap:wrap}
+}
+
 /* ROOT chart sizing repair: no canvas participates in layout and no inherited chart/card minimum height remains. */
 #dashboard.progressPage :is(#predictionChart,#efficiencyChart,#driftChart,#longRunChart,#volumeChart){display:none!important;width:0!important;height:0!important;min-height:0!important;margin:0!important;padding:0!important}
 #dashboard.progressPage :is(.predictionPanel,.metricCharts>.panel,.progressChartPanel){display:block!important;height:auto!important;min-height:0!important;overflow:hidden!important}
