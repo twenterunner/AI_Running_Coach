@@ -1133,3 +1133,67 @@ canvas{display:block;width:100%!important;max-width:100%;height:auto!important;m
  #plan .proportionalPhaseRail .phaseSegment b{font-size:9.5px!important}
  #plan .proportionalPhaseRail .phaseSegment small{font-size:6.5px!important}
 }
+
+
+/* PLAN TAB — v12.4.1 vertical phase name + week range */
+#plan .proportionalPhaseRail .phaseSegment{
+  position:relative!important;
+  overflow:hidden!important;
+  justify-content:center!important;
+  padding:2px!important;
+}
+#plan .proportionalPhaseRail .phaseVerticalLabel{
+  position:absolute!important;
+  left:50%!important;
+  top:50%!important;
+  display:flex!important;
+  align-items:center!important;
+  gap:5px!important;
+  width:max-content!important;
+  max-width:none!important;
+  transform:translate(-50%,-50%) rotate(-90deg)!important;
+  transform-origin:center center!important;
+  white-space:nowrap!important;
+}
+#plan .proportionalPhaseRail .phaseVerticalLabel b,
+#plan .proportionalPhaseRail .phaseVerticalLabel small{
+  position:static!important;
+  display:inline!important;
+  width:auto!important;
+  max-width:none!important;
+  margin:0!important;
+  padding:0!important;
+  transform:none!important;
+  white-space:nowrap!important;
+  overflow:visible!important;
+  text-overflow:clip!important;
+  line-height:1!important;
+  text-align:left!important;
+}
+#plan .proportionalPhaseRail .phaseVerticalLabel b{
+  font-size:10px!important;
+  font-weight:800!important;
+  color:#f7fcfd!important;
+}
+#plan .proportionalPhaseRail .phaseVerticalLabel small{
+  font-size:7px!important;
+  font-weight:700!important;
+  color:rgba(244,252,253,.82)!important;
+}
+/* Taper is only two weeks wide: use slightly tighter but still readable typography. */
+#plan .proportionalPhaseRail .phaseSegment[title^="Taper"] .phaseVerticalLabel{
+  gap:3px!important;
+}
+#plan .proportionalPhaseRail .phaseSegment[title^="Taper"] .phaseVerticalLabel b{
+  font-size:9px!important;
+}
+#plan .proportionalPhaseRail .phaseSegment[title^="Taper"] .phaseVerticalLabel small{
+  font-size:6.5px!important;
+}
+@media(max-width:390px){
+ #plan .proportionalPhaseRail .phaseVerticalLabel{gap:4px!important}
+ #plan .proportionalPhaseRail .phaseVerticalLabel b{font-size:9px!important}
+ #plan .proportionalPhaseRail .phaseVerticalLabel small{font-size:6.5px!important}
+ #plan .proportionalPhaseRail .phaseSegment[title^="Taper"] .phaseVerticalLabel b{font-size:8.5px!important}
+ #plan .proportionalPhaseRail .phaseSegment[title^="Taper"] .phaseVerticalLabel small{font-size:6px!important}
+}

@@ -1,4 +1,4 @@
-AI Running Coach v12.4.0 — Serious Runner Plan — build 20400
+AI Running Coach v12.4.1 — Serious Runner Plan — build 20401
 
 Deployment
 ----------
@@ -832,3 +832,11 @@ v12.4.0 — Programme Timeline readability
 - Current programme position is now shown as a vertical line directly through the phase graph, with the current week label.
 - Phase duration proportions and data-driven demand colours remain unchanged.
 - No model/data-engine calculations changed.
+
+
+v12.4.1 — Programme Timeline vertical labels
+- Phase name and week range now rotate together as one vertical label.
+- Taper uses a slightly tighter but still readable vertical label treatment for its two-week proportional block.
+- Current-week vertical marker remains inside the graph.
+- Proportional phase widths and demand colours unchanged.
+- No model/data-engine changes.

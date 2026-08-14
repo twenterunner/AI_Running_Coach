@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '12.4.0';
-  const BUILD = 20400;
+  const VERSION = '12.4.1';
+  const BUILD = 20401;
   const SCHEMA = 10330;
   const PRIMARY_STORAGE_KEY = 'arc_v10330_web';
   const MIRROR_STORAGE_KEY = 'arc_v10330_mirror';
@@ -2721,7 +2721,7 @@ function planTimelineHtml(viewWeek=currentWeek()){
  return`<section class="planTimelineCard">
    <div class="phaseGraphWrap">
      <div class="phaseRail proportionalPhaseRail" role="img" aria-label="Programme phases sized by duration and coloured by planned training demand">
-       ${phaseStats.map(g=>`<div class="phaseSegment demand-${g.tone} ${current>=g.start&&current<=g.end?'active':''} ${viewWeek>=g.start&&viewWeek<=g.end&&viewWeek!==current?'viewed':''}" style="flex:${g.duration} 1 0" title="${esc(g.name)} · ${g.duration} week${g.duration===1?'':'s'} · ${g.avgKm.toFixed(1)} km/week average"><b>${esc(g.name)}</b><small>W${g.start}${g.end!==g.start?`–${g.end}`:''}</small></div>`).join('')}
+       ${phaseStats.map(g=>`<div class="phaseSegment demand-${g.tone} ${current>=g.start&&current<=g.end?'active':''} ${viewWeek>=g.start&&viewWeek<=g.end&&viewWeek!==current?'viewed':''}" style="flex:${g.duration} 1 0" title="${esc(g.name)} · ${g.duration} week${g.duration===1?'':'s'} · ${g.avgKm.toFixed(1)} km/week average"><div class="phaseVerticalLabel"><b>${esc(g.name)}</b><small>W${g.start}${g.end!==g.start?`–${g.end}`:''}</small></div></div>`).join('')}
      </div>
      <div class="currentWeekMarker" style="left:${programmePct}%" aria-label="Current programme position, week ${current}"><span>W${current}</span></div>
    </div>
