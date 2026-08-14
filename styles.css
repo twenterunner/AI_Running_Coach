@@ -3545,3 +3545,84 @@ body:has(#dashboard.progressPage.active),#mainContent:has(#dashboard.progressPag
 #injury .exerciseDetail.textExercise .exerciseInstructionBlock ol{margin:0;padding-left:20px}
 #injury .exerciseDetail.textExercise .exerciseInstructionBlock li{margin:0 0 7px;font-size:12px;line-height:1.5}
 @media(max-width:430px){#injury .exerciseDetail.textExercise>summary{grid-template-columns:1fr!important}#injury .exerciseDetail.textExercise .exerciseChevron{justify-self:start!important}}
+
+
+/* v13.4.0 Race Day redesign — strictly scoped to #race */
+#race{overflow-x:hidden;padding-bottom:calc(94px + env(safe-area-inset-bottom))}
+#race .raceDayPageTitle{display:grid;grid-template-columns:62px minmax(0,1fr);gap:13px;align-items:center;margin:0 0 14px}
+#race .raceDayPictogram{width:62px;height:62px;display:grid;place-items:center;color:#fff}
+#race .raceDayPictogram .todayPic{width:58px;height:58px}
+#race .raceDayPageTitle .pageEyebrow{font-size:9px;font-weight:900;letter-spacing:.1em;color:#45e0e4}
+#race .raceDayPageTitle h2{margin:1px 0 0;font-size:27px;line-height:1.08;color:#fff}
+#race .raceDayPageTitle p{margin:4px 0 0;font-size:11px;line-height:1.35;color:#c8dce3}
+#race .raceDaySection{margin:0 0 12px;padding:16px;background:linear-gradient(145deg,#075468 0%,#073c50 52%,#062c3d 100%);border:1px solid rgba(40,214,219,.42);border-radius:18px;box-shadow:none;overflow:hidden}
+#race .raceDaySectionHead{display:grid;grid-template-columns:42px minmax(0,1fr);gap:11px;align-items:start;margin-bottom:13px}
+#race .raceDaySectionHead>span{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;border:1px solid rgba(69,224,228,.45);background:rgba(4,34,46,.28);font-size:13px;font-weight:900;color:#fff}
+#race .raceDaySectionHead small{display:block;font-size:9px;font-weight:900;letter-spacing:.1em;color:#45e0e4}
+#race .raceDaySectionHead h3{margin:2px 0 0;font-size:20px;line-height:1.15;color:#fff}
+#race .raceDaySectionHead p{margin:4px 0 0;font-size:10px;line-height:1.35;color:#c6d9df}
+#race .raceDayHero,#race .raceDayPrimaryCard,#race .raceDayCard,#race .raceDayConstraintCard{background:rgba(5,18,24,.48);border:1px solid rgba(61,214,198,.15);border-radius:14px;padding:13px;min-width:0}
+#race .raceDayHeroHead{display:grid;grid-template-columns:54px minmax(0,1fr) auto;gap:11px;align-items:center}
+#race .raceDayHeroIcon{width:54px;height:54px;border-radius:50%;display:grid;place-items:center;background:rgba(21,184,202,.13);border:1px solid rgba(45,218,224,.35)}
+#race .raceDayHeroIcon .todayPic{width:39px;height:39px}
+#race .raceDayHeroHead small{display:block;font-size:9px;font-weight:900;letter-spacing:.09em;color:#45e0e4}
+#race .raceDayHeroHead h3{margin:2px 0 0;font-size:25px;line-height:1.05;color:#fff}
+#race .raceDayHeroHead p{margin:4px 0 0;font-size:10px;line-height:1.3;color:#c8dce3}
+#race .raceDayReadiness{font-size:10px;font-weight:850;padding:6px 8px;border-radius:9px;background:rgba(2,32,43,.28);border:1px solid rgba(69,224,228,.2);color:#fff;white-space:nowrap}
+#race .raceDayReadiness.good{color:#8bd85e;border-color:rgba(139,216,94,.35)}
+#race .raceDayReadiness.warn{color:#ffc078;border-color:rgba(255,192,120,.35)}
+#race .raceDayReadiness.bad{color:#ff8b78;border-color:rgba(255,139,120,.35)}
+#race .raceDayHeroMetrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:13px}
+#race .raceDayHeroMetrics>div,#race .raceMetricPair>div,#race .raceTargetGrid>div,#race .raceFuelGrid>div,#race .raceEvidenceGrid>article,#race .raceLearningGrid>div,#race .raceCheckpointGrid>div{padding:10px 8px;border-radius:11px;background:rgba(3,31,43,.25);border:1px solid rgba(87,219,224,.16);min-width:0}
+#race .raceDayHeroMetrics small,#race .raceMetricPair small,#race .raceTargetGrid small,#race .raceFuelGrid small,#race .raceEvidenceGrid small,#race .raceLearningGrid small,#race .raceCheckpointGrid small{display:block;font-size:8px;font-weight:850;letter-spacing:.08em;color:#45dce0}
+#race .raceDayHeroMetrics strong,#race .raceMetricPair strong,#race .raceTargetGrid strong,#race .raceFuelGrid strong,#race .raceEvidenceGrid strong,#race .raceLearningGrid strong,#race .raceCheckpointGrid strong{display:block;font-size:17px;line-height:1.15;margin:3px 0;color:#fff;overflow-wrap:anywhere}
+#race .raceDayHeroMetrics span,#race .raceMetricPair span,#race .raceTargetGrid span,#race .raceFuelGrid span,#race .raceEvidenceGrid span,#race .raceLearningGrid span,#race .raceCheckpointGrid span{display:block;font-size:9px;line-height:1.3;color:#a9c4ce;overflow-wrap:anywhere}
+#race .raceDayRange{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin-top:10px;padding-top:10px;border-top:1px solid rgba(143,214,223,.14)}
+#race .raceDayRange small{display:block;font-size:8px;font-weight:850;letter-spacing:.08em;color:#45dce0}
+#race .raceDayRange b{display:block;font-size:14px;color:#fff;margin-top:2px}
+#race .raceDayRange span{display:block;font-size:9px;color:#a9c4ce;margin-top:2px}
+#race .raceDayRange>strong{font-size:10px;text-align:right;max-width:42%;color:#fff}
+#race .raceDayRange>strong.good{color:#8bd85e}#race .raceDayRange>strong.warn{color:#ffc078}#race .raceDayRange>strong.neutral{color:#fff}
+#race .raceDayActionList{list-style:none;margin:0;padding:0;display:grid;gap:9px}
+#race .raceDayActionList li{position:relative;padding-left:16px;display:grid;gap:2px}
+#race .raceDayActionList li:before{content:"";position:absolute;left:1px;top:.52em;width:6px;height:6px;border-radius:50%;background:#42dce0}
+#race .raceDayActionList b{font-size:12px;line-height:1.3;color:#fff}
+#race .raceDayActionList span{font-size:11px;line-height:1.4;color:#d9e7eb}
+#race .raceMetricPair{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+#race .racePhaseBar{display:flex;gap:4px;margin-top:12px;min-height:86px}
+#race .racePhaseBar>div{min-width:0;padding:9px 7px;border-radius:10px;background:rgba(3,31,43,.28);border:1px solid rgba(87,219,224,.18);display:grid;align-content:center;text-align:center}
+#race .racePhaseBar small{font-size:7px;font-weight:900;letter-spacing:.07em;color:#45dce0}
+#race .racePhaseBar b{font-size:10px;line-height:1.2;color:#fff;margin-top:2px}
+#race .racePhaseBar span{font-size:8px;line-height:1.2;color:#c9dce2;margin-top:3px}
+#race .raceTargetGrid,#race .raceFuelGrid,#race .raceEvidenceGrid,#race .raceLearningGrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+#race .raceEffortGrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+#race .raceEffortGrid .raceDayCard{padding:11px}
+#race .raceEffortGrid small{font-size:8px;font-weight:900;letter-spacing:.08em;color:#45e0e4}
+#race .raceEffortGrid b{display:block;font-size:14px;line-height:1.2;color:#fff;margin:3px 0 5px}
+#race .raceEffortGrid p{font-size:10px;line-height:1.35;color:#cfe0e5;margin:0}
+#race .raceDaySupporting{font-size:10px;line-height:1.4;color:#c5d9df;margin:10px 0 0;padding-top:9px;border-top:1px solid rgba(143,214,223,.12)}
+#race .raceEnduranceRows{display:grid;gap:0}
+#race .raceEnduranceRows>div{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:center;padding:9px 0;border-bottom:1px solid rgba(143,214,223,.11)}
+#race .raceEnduranceRows>div:last-child{border-bottom:0}
+#race .raceEnduranceRows span{font-size:10px;color:#c9dce2}
+#race .raceEnduranceRows b{font-size:12px;color:#fff;text-align:right}
+#race .raceDayConstraintCard{border-color:rgba(255,164,76,.28);background:rgba(57,31,18,.25)}
+#race .raceDayConstraintCard .raceDayActionList li:before{background:#ffad68}
+#race .raceCheckpointGrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+#race .raceCheckpointGrid>div{text-align:center;padding:9px 5px}
+#race .raceCheckpointGrid strong{font-size:14px}
+#race .raceDayDisclosure{margin-top:9px;border:1px solid rgba(87,219,224,.16);border-radius:11px;background:rgba(2,28,39,.26);overflow:hidden}
+#race .raceDayDisclosure:first-child{margin-top:0}
+#race .raceDayDisclosure summary{padding:11px 12px;font-size:11px;font-weight:800;color:#fff;cursor:pointer}
+#race .raceDayDisclosure>p,#race .raceDayDisclosure>ul,#race .raceDetailRows{padding:0 12px 12px;margin:0;font-size:10px;line-height:1.45;color:#d1e1e6}
+#race .raceDayDisclosure ul{padding-left:28px}
+#race .raceDetailRows p{margin:7px 0}
+@media(max-width:390px){
+ #race .raceDayPageTitle{grid-template-columns:52px minmax(0,1fr);gap:10px}#race .raceDayPictogram{width:52px;height:52px}#race .raceDayPictogram .todayPic{width:49px;height:49px}
+ #race .raceDaySection{padding:14px;margin-bottom:10px}#race .raceDaySectionHead{grid-template-columns:38px minmax(0,1fr);gap:9px}#race .raceDaySectionHead>span{width:34px;height:34px;font-size:12px}#race .raceDaySectionHead h3{font-size:18px}
+ #race .raceDayHeroHead{grid-template-columns:46px minmax(0,1fr);gap:9px}#race .raceDayHeroIcon{width:46px;height:46px}#race .raceDayHeroIcon .todayPic{width:34px;height:34px}#race .raceDayReadiness{grid-column:1/-1;justify-self:start;margin-left:55px}
+ #race .raceDayHeroMetrics,#race .raceTargetGrid,#race .raceFuelGrid,#race .raceEvidenceGrid,#race .raceLearningGrid{gap:5px}#race .raceDayHeroMetrics strong,#race .raceMetricPair strong,#race .raceTargetGrid strong,#race .raceFuelGrid strong,#race .raceEvidenceGrid strong,#race .raceLearningGrid strong{font-size:14px}
+ #race .raceDayRange{display:grid;gap:7px}#race .raceDayRange>strong{max-width:none;text-align:left}
+ #race .raceEffortGrid{grid-template-columns:1fr}#race .raceCheckpointGrid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:360px){#race .raceDayHeroMetrics,#race .raceTargetGrid,#race .raceFuelGrid,#race .raceEvidenceGrid,#race .raceLearningGrid,#race .raceMetricPair{grid-template-columns:1fr}#race .racePhaseBar{display:grid;grid-template-columns:1fr;min-height:0}#race .racePhaseBar>div{min-height:64px}}

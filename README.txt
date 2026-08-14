@@ -1,4 +1,4 @@
-AI Running Coach v13.3.8 — Injury numeric-order root fix + revision consistency — build 30370
+AI Running Coach v13.4.0 — Race Day execution redesign — build 30400
 
 - Removes the stale Injury-only CSS `order` rules that were overriding the visible section numbers.
 - Injury/Rehab sections are now explicitly sorted by the number displayed in each section-number circle, so the current numbering is the source of truth for tile order.
@@ -1119,3 +1119,11 @@ v13.1.13 Progress typography root fix
 - Model Validation, Personal Response Model, Longitudinal Training Review, evidence cards and metadata use block/grid structures with Today-equivalent label, heading, body and supporting-text sizes.
 - Fixes concatenated labels/values such as Evidence-backed conceptsIndividualised progression and Score/Window/Verification.
 - No calculation/data-model logic changed; Today, Plan and Log implementations remain frozen.
+
+v13.4.0 Race Day execution redesign
+----------------------------------
+- Rebuilds only the Race Day UI around current race outcome, execution, pace/power, effort, fuelling, evidence, endurance, constraints, adaptive confidence, target checkpoints and detailed model context.
+- Uses only existing race calculations and stored app outputs; no prediction, pathway, recovery, injury, training-plan, scoring, storage or model logic is changed.
+- Race Day styling is scoped under #race and follows the approved Today-led teal Level-1/2/3 visual language.
+- Removes unsupported standalone race-day claims and clearly distinguishes target, prediction, uncertainty range, learned factors and temporary recovery context.
+- Keeps Today, Plan, Log, Progress, Recovery and Injury & Rehab implementations frozen except for the required global version/build display update.

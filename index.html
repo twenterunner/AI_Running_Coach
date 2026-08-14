@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#07111D"><title>AI Running Coach</title>
-<link rel="manifest" href="manifest.webmanifest?v=30370"><link rel="stylesheet" href="styles.css?v=30370-injury">
+<link rel="manifest" href="manifest.webmanifest?v=30400"><link rel="stylesheet" href="styles.css?v=30400-raceday">
 <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png?v=10320">
 <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png?v=10320">
 <link rel="icon" href="favicon.ico?v=10320">
@@ -15,7 +15,7 @@
 <body>
 <a class="skipLink" href="#mainContent">Skip to main content</a>
 <header class="topbar">
-  <div class="brand"><img class="logo" src="icon-192.png?v=10320" alt="AI Running Coach logo"><div class="brand-copy"><h1>AI Running Coach</h1><p>Race-specific adaptive planning · v13.3.8 · build 30370</p></div></div>
+  <div class="brand"><img class="logo" src="icon-192.png?v=10320" alt="AI Running Coach logo"><div class="brand-copy"><h1>AI Running Coach</h1><p>Race-specific adaptive planning · v13.4.0 · build 30400</p></div></div>
   <button id="installBtn" class="install hidden">Install</button>
 </header>
 <nav id="nav" aria-label="Primary navigation"></nav>
@@ -183,11 +183,68 @@
     <div id="recoveryHistory"></div>
   </section>
 </section>
-<section id="race" class="page">
-  <div class="sectionTitle"><div><h2>Race day</h2><p>Execution plan based on the current target and readiness.</p></div></div>
-  <div id="raceKpis" class="kpis"></div>
-  <article class="panel"><h3>Pacing strategy</h3><div id="racePacing"></div></article>
-  <div class="grid2"><article class="panel"><h3>Fuel and fluids</h3><div id="raceFuel"></div></article><article class="panel"><h3>Decision rules</h3><div id="raceRules"></div></article></div>
+<section id="race" class="page raceDayPage">
+  <div class="raceDayPageTitle"><div class="raceDayPictogram" aria-hidden="true"></div><div><span class="pageEyebrow">RACE EXECUTION</span><h2>Race day</h2><p>Turn the programme's existing race model into a clear execution plan.</p></div></div>
+
+  <section class="raceDaySection raceDayLevel1" aria-labelledby="raceStatusTitle">
+    <div class="raceDaySectionHead"><span>01</span><div><small>RACE STATUS</small><h3 id="raceStatusTitle">What performance are you prepared for?</h3><p>Current estimate, target relationship and readiness in one view.</p></div></div>
+    <div id="raceStatus"></div>
+  </section>
+
+  <section class="raceDaySection raceDayLevel1" aria-labelledby="raceExecutionTitle">
+    <div class="raceDaySectionHead"><span>02</span><div><small>EXECUTION SUMMARY</small><h3 id="raceExecutionTitle">How should you run this race?</h3><p>The race plan translated into a few actions you can use at the start line.</p></div></div>
+    <div id="raceExecution"></div>
+  </section>
+
+  <section class="raceDaySection" aria-labelledby="racePacingTitle">
+    <div class="raceDaySectionHead"><span>03</span><div><small>PACING STRATEGY</small><h3 id="racePacingTitle">What pace should you actually run?</h3><p>Target, current estimate and the existing three-part race execution pattern.</p></div></div>
+    <div id="racePacing"></div>
+  </section>
+
+  <section id="racePowerSection" class="raceDaySection" aria-labelledby="racePowerTitle">
+    <div class="raceDaySectionHead"><span>04</span><div><small>POWER & HEART RATE</small><h3 id="racePowerTitle">What physiological targets are already available?</h3><p>Only the race targets already present in the app are shown.</p></div></div>
+    <div id="racePower"></div>
+  </section>
+
+  <section class="raceDaySection" aria-labelledby="raceEffortTitle">
+    <div class="raceDaySectionHead"><span>05</span><div><small>EFFORT THROUGH THE RACE</small><h3 id="raceEffortTitle">How should the race feel as it progresses?</h3><p>Use effort as context when instantaneous pace becomes noisy.</p></div></div>
+    <div id="raceEffort"></div>
+  </section>
+
+  <section class="raceDaySection" aria-labelledby="raceFuelTitle">
+    <div class="raceDaySectionHead"><span>06</span><div><small>FUEL & HYDRATION</small><h3 id="raceFuelTitle">Use the strategy already practised in training</h3><p>Existing race-day fuelling and fluid guidance from the app.</p></div></div>
+    <div id="raceFuel"></div>
+  </section>
+
+  <section class="raceDaySection" aria-labelledby="raceEvidenceTitle">
+    <div class="raceDaySectionHead"><span>07</span><div><small>WHY THIS STRATEGY</small><h3 id="raceEvidenceTitle">What supports the recommendation?</h3><p>The most relevant athlete-specific evidence, without recreating Progress.</p></div></div>
+    <div id="raceEvidence"></div>
+  </section>
+
+  <section class="raceDaySection" aria-labelledby="raceEnduranceTitle">
+    <div class="raceDaySectionHead"><span>08</span><div><small>ENDURANCE CONTEXT</small><h3 id="raceEnduranceTitle">How well supported is the final part of the race?</h3><p>Long-run and durability evidence already calculated elsewhere in the app.</p></div></div>
+    <div id="raceEndurance"></div>
+  </section>
+
+  <section id="raceConstraintSection" class="raceDaySection hidden" aria-labelledby="raceConstraintTitle">
+    <div class="raceDaySectionHead"><span>09</span><div><small>CURRENT CONSTRAINTS</small><h3 id="raceConstraintTitle">Is anything changing how you should approach the race?</h3><p>Temporary recovery or rehabilitation context only when it is relevant.</p></div></div>
+    <div id="raceConstraints"></div>
+  </section>
+
+  <section class="raceDaySection" aria-labelledby="raceLearningTitle">
+    <div class="raceDaySectionHead"><span>10</span><div><small>ADAPTIVE MODEL CONFIDENCE</small><h3 id="raceLearningTitle">How much has the app learned about you?</h3><p>Current pathway factors and evidence coverage behind the race estimate.</p></div></div>
+    <div id="raceLearning"></div>
+  </section>
+
+  <section class="raceDaySection" aria-labelledby="raceCheckpointTitle">
+    <div class="raceDaySectionHead"><span>11</span><div><small>RACE CHECKPOINTS</small><h3 id="raceCheckpointTitle">Where should target time place you?</h3><p>Simple cumulative checkpoints derived from the existing constant target pace.</p></div></div>
+    <div id="raceCheckpoints"></div>
+  </section>
+
+  <section class="raceDaySection" aria-labelledby="raceDetailTitle">
+    <div class="raceDaySectionHead"><span>12</span><div><small>MODEL DETAIL</small><h3 id="raceDetailTitle">Detailed race model</h3><p>Prediction confidence and model context behind the visible strategy.</p></div></div>
+    <div id="raceModelDetail"></div>
+  </section>
 </section>
 
 <section id="settings" class="page">
@@ -198,7 +255,7 @@
   <article class="panel"><h3>Data</h3><div class="buttonRow"><button id="backupBtn">Download backup</button><label for="restoreFile" class="buttonLike">Restore backup</label><input id="restoreFile" type="file" accept=".json"><button id="undoRestoreBtn" type="button" class="secondary hidden">Undo last restore</button><button id="exportBtn">Export runs CSV</button><button id="resetBtn" class="danger">Reset app</button></div></article>
 </section>
 </main>
-<footer class="appFooter"><span>AI Running Coach</span><small>v13.3.8 · build 30370</small></footer>
+<footer class="appFooter"><span>AI Running Coach</span><small>v13.4.0 · build 30400</small></footer>
 
 <div id="modal" class="modal hidden" role="dialog" aria-modal="true" aria-label="AI Running Coach dialog" tabindex="-1"><div class="modalCard"><button id="closeModal" class="close" type="button" aria-label="Close dialog">×</button><div id="modalContent"></div></div></div>
 
@@ -227,5 +284,5 @@
     <button class="primary full" type="submit">Review and create my plan</button>
   </form>
 </div>
-<script src="app.js?v=30370-injury"></script>
+<script src="app.js?v=30400-raceday"></script>
 </body></html>
