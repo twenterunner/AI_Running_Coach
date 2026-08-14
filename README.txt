@@ -1,3 +1,10 @@
+AI Running Coach v13.3.8 — Injury numeric-order root fix + revision consistency — build 30370
+
+- Removes the stale Injury-only CSS `order` rules that were overriding the visible section numbers.
+- Injury/Rehab sections are now explicitly sorted by the number displayed in each section-number circle, so the current numbering is the source of truth for tile order.
+- Aligns the visible header/footer revision, app VERSION/BUILD constants, manifest, cache-busters and service-worker cache to v13.3.8 build 30370.
+- No rehabilitation calculations, progression logic, storage schema, or locked Today/Plan/Log/Progress/Recovery content changed.
+
 AI Running Coach v13.3.7 — Injury section order follows section numbers — build 30361
 
 - Injury & Rehab sections are displayed strictly in their existing numeric order.

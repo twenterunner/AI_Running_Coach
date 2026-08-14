@@ -3441,18 +3441,6 @@ body:has(#dashboard.progressPage.active),#mainContent:has(#dashboard.progressPag
 
 /* v13.3.1 Injury refinement — scoped to Injury only. */
 #injury .injuryRunnerDashboard{display:flex;flex-direction:column;gap:12px}
-#injury .injuryRunnerDashboard>.injuryAssessmentSection{order:1}
-#injury .injuryRunnerDashboard>.injuryProgrammeSection{order:2}
-#injury .injuryRunnerDashboard>.injuryRunnerSection:nth-of-type(1){order:3}
-#injury .injuryRunnerDashboard>.injuryRunnerSection:nth-of-type(2){order:4}
-#injury .injuryRunnerDashboard>.injuryRunnerSection:nth-of-type(3){order:5}
-#injury .injuryRunnerDashboard>.injuryRunnerSection:nth-of-type(4){order:6}
-#injury .injuryRunnerDashboard>.injuryRunnerSection:nth-of-type(6){order:7}
-#injury .injuryRunnerDashboard>.injuryRunnerSection:nth-of-type(7){order:8}
-#injury .injuryRunnerDashboard>.injuryRunnerSection:nth-of-type(8){order:9}
-#injury .injuryRunnerDashboard>.injuryRunnerSection:nth-of-type(9){order:10}
-#injury .injuryRunnerDashboard>.injuryRunnerSection:nth-of-type(11){order:11}
-#injury .injuryRunnerDashboard>.injuryRunnerSection:nth-of-type(12){order:12}
 #injury .injuryRunnerCard,#injury .rehabCalendarSection,#injury .injuryRunnerParallelCard{background:linear-gradient(145deg,#12313a,#10232f 62%);border-color:rgba(61,214,198,.25)}
 #injury .injuryRunnerTwoCol>div,#injury .injuryClinicalCompare,#injury .injuryRunnerMetricRow>div,#injury .injuryRunnerPrimaryMetrics>div,#injury .injuryRunnerAdherence>div,#injury .injuryRunnerStageOverview>div{background:rgba(5,18,24,.48);border-color:rgba(61,214,198,.15)}
 #injury .injuryRunnerTwoCol small{display:block;margin:0 0 6px;font-size:9px;line-height:1.25;font-weight:850;letter-spacing:.09em;color:var(--teal-2)}

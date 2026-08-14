@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '13.3.4';
-  const BUILD = 30361;
+  const VERSION = '13.3.8';
+  const BUILD = 30370;
   const SCHEMA = 10330;
   const PRIMARY_STORAGE_KEY = 'arc_v10330_web';
   const MIRROR_STORAGE_KEY = 'arc_v10330_mirror';
@@ -4894,6 +4894,17 @@ function injuryRunnerInterpretation(i,p,criteria,scoreInfo,adherenceOverall,mile
  return `<ul class="injuryMeaningBullets">${bullets.slice(0,4).join('')}</ul>`;
 }
 
+function sortInjurySectionsByDisplayedNumber(){
+ const dashboard=document.querySelector('#injury .injuryRunnerDashboard');
+ if(!dashboard)return;
+ const sections=[...dashboard.children].filter(el=>el.classList?.contains('injuryRunnerSection'));
+ sections.sort((a,b)=>{
+  const read=el=>{const badge=el.querySelector('.injuryRunnerSectionHead>span');const n=Number.parseInt((badge?.textContent||'').trim(),10);return Number.isFinite(n)?n:Number.MAX_SAFE_INTEGER};
+  return read(a)-read(b);
+ });
+ sections.forEach(section=>dashboard.appendChild(section));
+}
+
 function renderInjury(){
  const box=$('injuryList');if(!box)return;
  const injuries=state.injuries||[],add=$('addInjuryBtn'),intro=$('injuryIntro');intro.innerHTML='';
@@ -5027,6 +5038,7 @@ function renderInjury(){
    </article>
   </section>  ${parallel.length?`<section class="injuryRunnerSection injuryRunnerOtherAssessments">${injuryRunnerSectionHead(11,'OTHER ASSESSED INJURIES','Parallel assessments','These remain separate from the active rehabilitation plan.')}<div class="injuryRunnerParallelList">${parallel.map(other=>{const op=injuryPrediction(other),od=op.diag;return `<article class="injuryRunnerParallelCard"><div><small>PARALLEL ASSESSMENT</small><h3>${esc(other.location||other.bodyRegion||'Injury')}</h3><p>${esc(od.name)} · ${fmtDate(other.date)}</p></div><div class="injuryRunnerParallelMetrics"><span><small>Stage</small><b>${esc(INJURY_STAGES[op.stage].name)}</b></span><span><small>Central estimate</small><b>${op.safetyHold?'On hold':fmtDate(op.fullDate)}</b></span></div><button class="secondary full" data-activate-injury-plan="${other.id}">Switch to this recovery plan</button><details class="injuryRunnerDisclosure"><summary>Assessment actions</summary><div class="buttonRow"><button data-injury-edit="${other.id}">Edit assessment</button><button data-injury-delete="${other.id}" class="danger">Delete</button></div></details></article>`}).join('')}</div></section>`:''}
  </div>`;
+ sortInjurySectionsByDisplayedNumber();
 }
 function injuryForm(i={}){const regions=['','Hip / pelvis','Groin / inner thigh','Front thigh','Back of thigh / hamstring','Knee','Shin / lower leg','Calf','Achilles / back of ankle','Ankle','Heel / arch','Forefoot / toes'];return`<div class="injuryFormHeader"><h3>${i.id?'Edit':'Record'} injury</h3><p>Start with where the pain is. The app only compares patterns compatible with the selected body region.</p></div>
 <div class="injuryFormSteps">
