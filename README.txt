@@ -1,4 +1,4 @@
-AI Running Coach v12.3.2 — Serious Runner Plan — build 20302
+AI Running Coach v12.3.3 — Serious Runner Plan — build 20303
 
 Deployment
 ----------
@@ -764,3 +764,13 @@ v12.3.2 — Quantified Plan adaptation
 - Recovery is shown separately as a temporary overlay because it is not a learned weekly adaptation.
 - Existing adaptation/pathway calculations are unchanged; the UI exposes intermediate values already calculated by weeklyReviewData.
 - Today remains unchanged from v12.3.1.
+
+
+v12.3.3 — Race Context moved to Plan
+--------------------------------------
+- Removed Race Context card from Today at the user's request.
+- Race Context is now the first Plan card, replacing the previous Current Programme Position hero.
+- Race Context retains target, current estimate, target probability, countdown, likely 70% finish-time range and pace range, and adds current phase/focus appropriate to Plan.
+- Removed the Volume Around This Week graph from Week Overview; the useful weekly metrics remain.
+- All other approved Today and Plan components/interactions remain unchanged.
+- No model/data-engine calculations changed.

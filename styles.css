@@ -751,3 +751,39 @@ canvas{display:block;width:100%!important;max-width:100%;height:auto!important;m
  #plan .adaptAmountCompare{grid-template-columns:1fr 12px 1fr}
  #plan .adaptAmountCompare strong{font-size:13px}
 }
+
+
+/* PLAN TAB — v12.3.3 Race Context moved from Today */
+#plan .planRaceContextCard{
+  width:100%;
+  padding:17px;
+  margin-bottom:12px;
+  background:linear-gradient(145deg,#075468 0%,#073c50 52%,#062c3d 100%);
+  border:1px solid rgba(40,214,219,.42);
+  border-radius:18px;
+}
+#plan .planRaceHead{display:grid;grid-template-columns:54px minmax(0,1fr) auto;gap:12px;align-items:start}
+#plan .planRaceIcon{width:54px;height:54px;border-radius:50%;display:grid;place-items:center;background:rgba(21,184,202,.13);border:1px solid rgba(45,218,224,.35)}
+#plan .planRaceIcon .todayPic{width:38px;height:38px}
+#plan .planRaceHead small{font-size:9px;font-weight:900;letter-spacing:.1em;color:#45e0e4}
+#plan .planRaceHead h3{font-size:21px;line-height:1.15;margin:2px 0 0;color:#fff}
+#plan .planRaceHead p{font-size:10px;line-height:1.35;margin:4px 0 0;color:#c8dce3}
+#plan .planRaceCountdown{align-self:start}
+#plan .planRaceMetrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin-top:13px}
+#plan .planRaceMetrics>span,#plan .planRaceRanges>div{min-width:0;padding:9px 8px;border-radius:10px;background:rgba(3,31,43,.22);border:1px solid rgba(80,210,219,.11)}
+#plan .planRaceMetrics small,#plan .planRaceRanges small{display:block;font-size:7px;font-weight:850;letter-spacing:.05em;color:#9fc1ca}
+#plan .planRaceMetrics b,#plan .planRaceRanges b{display:block;margin-top:3px;font-size:14px;line-height:1.18;color:#fff;overflow-wrap:anywhere}
+#plan .planRaceMetrics em{display:block;margin-top:3px;font-size:8px;font-style:normal;color:#bed4da}
+#plan .planRaceRanges{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:7px}
+#plan .planRaceRanges b{font-size:11px}
+#plan .planRaceContextCard .runnerBullets{margin-top:9px}
+#plan .planWeekOverview .surroundingWeeks{display:none!important}
+@media(max-width:390px){
+ #plan .planRaceContextCard{padding:14px}
+ #plan .planRaceHead{grid-template-columns:46px minmax(0,1fr) auto;gap:9px}
+ #plan .planRaceIcon{width:46px;height:46px}.planRaceIcon .todayPic{width:33px;height:33px}
+ #plan .planRaceHead h3{font-size:18px}
+ #plan .planRaceMetrics{grid-template-columns:1fr 1fr}
+ #plan .planRaceMetrics>span:last-child{grid-column:1/-1}
+ #plan .planRaceRanges{grid-template-columns:1fr}
+}
