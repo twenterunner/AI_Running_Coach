@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '13.1.18';
-  const BUILD = 30118;
+  const VERSION = '13.2.0';
+  const BUILD = 30200;
   const SCHEMA = 10330;
   const PRIMARY_STORAGE_KEY = 'arc_v10330_web';
   const MIRROR_STORAGE_KEY = 'arc_v10330_mirror';
@@ -3954,30 +3954,97 @@ function readinessHistoryHtml(rows){
  return`<svg class="readinessSvg" viewBox="0 0 ${W} ${H}" role="img" aria-label="Recent readiness modifier history"><line x1="${pad.l}" y1="${py(1)}" x2="${W-pad.r}" y2="${py(1)}" class="readinessBaseline"/><polyline points="${points}" class="readinessLine"/>${rows.map((r,i)=>`<circle cx="${px(i)}" cy="${py(r.modifier)}" r="4" class="readinessPoint"><title>${fmtDate(r.date)} · ${r.modifier.toFixed(3)}</title></circle>`).join('')}<g class="readinessAxis"><text x="${pad.l-8}" y="${py(1)+5}" text-anchor="end">1.000</text><text x="${pad.l-8}" y="${py(.9)+5}" text-anchor="end">0.900</text>${labels}</g></svg>`;
 }
 
+function recoveryStatusClass(text){
+ const value=String(text||'').toLowerCase();
+ if(/restricted|compromised|slow|cautious|developing|pressure|attention/.test(value))return 'bad';
+ if(/reduced|monitor|moderate|mixed|building|emerging|provisional|early/.test(value))return 'warn';
+ if(/normal|recovered|good|stable|established|tolerated|supports|no significant/.test(value))return 'good';
+ return 'neutral';
+}
+function recoveryEmptyState(title,detail){
+ return `<div class="recoveryEmpty"><span>${uiIcon('recovery')}</span><div><b>${esc(title)}</b><p>${esc(detail)}</p></div></div>`;
+}
+function recoveryHrvSvg(hist,model){
+ const shown=(hist||[]).slice(-28);
+ if(shown.length<2)return recoveryEmptyState(
+   shown.length===1?'Building your HRV baseline — 1 observation recorded.':'Building your HRV baseline',
+   shown.length===1?'The first value is visible to the model, but a trend needs at least two recorded nights.':'Log previous-night Garmin HRV with completed runs to establish your personal recovery context.'
+ );
+ const vals=shown.map(x=>Number(x.value)).filter(Number.isFinite),baseline=Number(model?.baseline);
+ const refs=Number.isFinite(baseline)?[baseline]:[],all=vals.concat(refs),rawMin=Math.min(...all),rawMax=Math.max(...all),span=Math.max(6,rawMax-rawMin),pad=Math.max(3,span*.14),min=Math.max(0,rawMin-pad),max=rawMax+pad;
+ const W=720,H=235,p={l:48,r:18,t:18,b:38},cw=W-p.l-p.r,ch=H-p.t-p.b;
+ const px=i=>p.l+i*cw/(shown.length-1),py=v=>p.t+(max-v)/(max-min)*ch;
+ const tickVals=Array.from({length:4},(_,i)=>min+(max-min)*i/3);
+ const grid=tickVals.map(v=>`<g><line x1="${p.l}" y1="${py(v).toFixed(1)}" x2="${W-p.r}" y2="${py(v).toFixed(1)}"/><text x="${p.l-8}" y="${(py(v)+4).toFixed(1)}" text-anchor="end">${Math.round(v)}</text></g>`).join('');
+ const points=shown.map((x,i)=>`${px(i).toFixed(1)},${py(Number(x.value)).toFixed(1)}`).join(' ');
+ const dots=shown.map((x,i)=>`<circle cx="${px(i).toFixed(1)}" cy="${py(Number(x.value)).toFixed(1)}" r="4"><title>${fmtDate(x.date)} · ${Math.round(Number(x.value))} ms</title></circle>`).join('');
+ const labels=shown.map((x,i)=>({x,i})).filter(o=>o.i===0||o.i===shown.length-1||o.i%Math.max(1,Math.ceil(shown.length/5))===0).map(o=>`<text x="${px(o.i).toFixed(1)}" y="${H-12}" text-anchor="middle">${fmtDate(o.x.date).replace(/ .*$/,'')}</text>`).join('');
+ const baseLine=Number.isFinite(baseline)?`<line class="recoveryChartBaseline" x1="${p.l}" y1="${py(baseline).toFixed(1)}" x2="${W-p.r}" y2="${py(baseline).toFixed(1)}"><title>Personal baseline ${Math.round(baseline)} ms</title></line>`:'';
+ return `<div class="recoveryChartWrap"><svg class="recoveryChart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Garmin HRV relative to personal baseline"><g class="recoveryChartGrid">${grid}</g>${baseLine}<polyline class="recoveryChartLine" points="${points}"/>${dots}<g class="recoveryChartAxis">${labels}<text class="recoveryChartUnit" x="12" y="18">ms</text></g></svg><div class="recoveryChartLegend"><span><i class="actual"></i>Nightly HRV</span>${Number.isFinite(baseline)?'<span><i class="baseline"></i>Personal baseline</span>':''}</div></div>`;
+}
+function recoveryReadinessSvg(rows){
+ const shown=(rows||[]).filter(r=>Number.isFinite(Number(r.modifier)));
+ if(!shown.length)return recoveryEmptyState('Building your recovery history','There are not yet enough stored observations to show readiness over time.');
+ const vals=shown.map(r=>Number(r.modifier)),all=vals.concat([1]),rawMin=Math.min(...all),rawMax=Math.max(...all),span=Math.max(.025,rawMax-rawMin),pad=Math.max(.008,span*.22),min=Math.max(.78,rawMin-pad),max=Math.min(1.02,Math.max(1.005,rawMax+pad));
+ const W=720,H=225,p={l:56,r:18,t:18,b:38},cw=W-p.l-p.r,ch=H-p.t-p.b,px=i=>shown.length===1?p.l+cw/2:p.l+i*cw/(shown.length-1),py=v=>p.t+(max-v)/(max-min)*ch;
+ const ticks=Array.from({length:4},(_,i)=>min+(max-min)*i/3),grid=ticks.map(v=>`<g><line x1="${p.l}" y1="${py(v).toFixed(1)}" x2="${W-p.r}" y2="${py(v).toFixed(1)}"/><text x="${p.l-8}" y="${(py(v)+4).toFixed(1)}" text-anchor="end">${v.toFixed(3)}</text></g>`).join('');
+ const path=shown.map((r,i)=>`${px(i).toFixed(1)},${py(Number(r.modifier)).toFixed(1)}`).join(' '),dots=shown.map((r,i)=>`<circle class="${Number(r.modifier)<.995?'restricted':'normal'}" cx="${px(i).toFixed(1)}" cy="${py(Number(r.modifier)).toFixed(1)}" r="4"><title>${fmtDate(r.date)} · ${Number(r.modifier).toFixed(3)}</title></circle>`).join('');
+ const labels=shown.map((r,i)=>({r,i})).filter(o=>o.i===0||o.i===shown.length-1||o.i%4===0).map(o=>`<text x="${px(o.i).toFixed(1)}" y="${H-12}" text-anchor="middle">${fmtDate(o.r.date).replace(/ .*$/,'')}</text>`).join('');
+ return `<div class="recoveryChartWrap"><svg class="recoveryChart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Recent readiness modifier history"><g class="recoveryChartGrid">${grid}</g><line class="recoveryChartBaseline" x1="${p.l}" y1="${py(1).toFixed(1)}" x2="${W-p.r}" y2="${py(1).toFixed(1)}"/><polyline class="recoveryReadinessLine" points="${path}"/>${dots}<g class="recoveryChartAxis">${labels}</g></svg><div class="recoveryChartLegend"><span><i class="actual"></i>Readiness modifier</span><span><i class="baseline"></i>Neutral 1.000</span></div></div>`;
+}
+function recoveryActiveInjurySummary(){
+ const injury=(state.injuries||[]).find(x=>x.id===state.activeInjuryPlanId);
+ if(!injury)return null;
+ let stage=null;
+ try{const prediction=injuryPrediction(injury);stage=INJURY_STAGES[prediction.stage]?.name||null}catch(_){stage=null}
+ return{injury,stage,label:injury.bodyRegion||injury.location||'Active rehabilitation'};
+}
+function recoveryLoadRows(){
+ const cw=currentWeek(),from=Math.max(1,cw-3),history=readinessHistoryData(35);
+ const rows=[];
+ for(let w=from;w<=cw;w++){
+   const data=weekData(w),start=weekStart(w),end=new Date(start.getTime()+7*DAY),mod=history.filter(r=>{const d=dte(r.date);return d>=start&&d<end}).map(r=>Number(r.modifier)).filter(Number.isFinite);
+   rows.push({week:w,distance:data.actual,planned:data.planned,readiness:avg(mod)});
+ }
+ return rows;
+}
 function renderRecovery(){
  const statusBox=$('recoveryStatus');if(!statusBox)return;
- const hrv=hrvModel(),pain=recoveryPainState(),hist=hrvHistory(),dir=hrvDirection(hist),conclusion=recoveryConclusion(hrv,pain);
- const afd=adaptiveFactorDetails(Math.max(1,currentWeek()));
- const maturity=hrv.count===0?'No profile':hrv.count===1?'Provisional':hrv.count<=6?'Early':hrv.count<=20?'Developing':'Established';
- const confidence=hrv.count===0?'No HRV evidence':`${maturity} · ${hrv.count} value${hrv.count===1?'':'s'}`;
- const ready=readinessModel();
- statusBox.innerHTML=`<article class="panel recoveryConclusion ${conclusion.cls} visualRecovery uiLevel1"><div class="recoveryMain"><span>${uiIcon('recovery')}</span><div><small>RECOVERY</small><strong>${conclusion.label}</strong></div><span class="recoveryConfidence">${confidence}</span></div><div class="recoveryQuickGrid"><div><small>HRV</small><b>${Number.isFinite(hrv.rolling)?Math.round(hrv.rolling)+' ms':'—'}</b><span>${dir.symbol} ${dir.label}</span></div><div><small>Baseline</small><b>${Number.isFinite(hrv.baseline)?Math.round(hrv.baseline)+' ms':'—'}</b><span>${hrv.count?`${hrv.deviation>=0?'+':''}${Math.round(hrv.deviation*100)}%`:'Building'}</span></div><div><small>Pain</small><b>${pain.count?pain.average.toFixed(1)+'/10':'—'}</b><span>${pain.status}</span></div></div><p class="recoveryRecommendation">${conclusion.recommendation}</p></article>`;
- $('readinessBadge').textContent=`${ready.label} · temporary ${ready.modifier.toFixed(3)}`;
- const nextImpact=ready.next&&Number.isFinite(ready.nominalDistance)?(Math.abs(ready.modifier-1)<.005
-   ?`No temporary moderation is indicated. ${ready.next.type} remains ${ready.nominalDistance.toFixed(1)} km.`
-   :`If applied to load, ${ready.next.type} ${ready.nominalDistance.toFixed(1)} km corresponds to ${ready.moderatedDistance.toFixed(1)} km at the current readiness modifier.`)
-   :'No upcoming running session is available for an impact example.';
- $('readinessDetail').innerHTML=`<div class="readinessHero ${ready.cls} uiLevel2"><div><small>CURRENT READINESS</small><strong>${ready.label}</strong><span>Temporary modifier ${ready.modifier.toFixed(3)}</span></div><div class="readinessFormula"><div><span>HRV contribution</span><b>${ready.hrvAdj?`${ready.hrvAdj>0?'+':''}${(ready.hrvAdj*100).toFixed(0)}%`:'0%'}</b></div><div><span>Pain contribution</span><b>${ready.painAdj.adjustment?`${(ready.painAdj.adjustment*100).toFixed(0)}%`:'0%'}</b></div><div class="total"><span>Temporary readiness</span><b>${ready.modifier.toFixed(3)}</b></div></div></div>
- <details class="readinessCalc"><summary>How readiness is calculated</summary><div class="readinessEvidenceRow"><b>Garmin HRV</b><span>${ready.hrvAdj?`${(ready.hrvAdj*100).toFixed(0)}%`:'0%'}</span><p>${esc(ready.hrv.detail)}</p></div><div class="readinessEvidenceRow"><b>Recent pain</b><span>${ready.painAdj.adjustment?`${(ready.painAdj.adjustment*100).toFixed(0)}%`:'0%'}</span><p>${esc(ready.painAdj.detail)}</p></div><div class="readinessRule"><b>Combination</b><p>Readiness = 1.000 + HRV adjustment + pain adjustment. Favorable recovery does not create a bonus above 1.000.</p></div><div class="readinessRule"><b>Separation from adaptation</b><p>Readiness is temporary recovery context. Numeric Pace & Power and Distance & Load calibration factors are shown only in Progress.</p></div></details>
- <div class="readinessImpact"><small>CURRENT PRESCRIPTION IMPACT</small><b>${esc(nextImpact)}</b><p>Readiness primarily moderates exposure. It does not automatically multiply Pace & Power targets.</p></div>`;
- $('readinessHistory').innerHTML=readinessHistoryHtml(readinessHistoryData(14));
- $('hrvTrendBadge').textContent=confidence;
- $('hrvLegend').innerHTML='<span><i class="legendNightly"></i>Nightly HRV</span><span><i class="legendAverage"></i>Recent average</span><span><i class="legendBaseline"></i>Personal baseline</span>';
- const painAdj=painAdjustment(pain),recoveryChange=Math.round(((hrv.factor-1)+painAdj.adjustment)*100);
- $('recoveryAdaptive').innerHTML=`<div class="recoveryContribution"><span>Current recovery modifier contribution</span><strong class="${recoveryChange<0?'negative':''}">${recoveryChange?`${recoveryChange}%`:'0%'}</strong><p>${esc(hrv.detail)} ${esc(painAdj.detail)}</p><small>Numeric learned calibration lives in Progress; this tab only explains temporary recovery state.</small></div>`;
- $('hrvExplanation').innerHTML=`<div><b>Starts on day 1</b><p>The first Garmin value creates a provisional baseline. It is shown immediately, but one value cannot reduce the plan.</p></div><div><b>Influence grows with evidence</b><p>2–3 values can reduce future load by at most 1%; 4–6 by 3%; 7–20 by 6%; and 21+ by 10%.</p></div><div><b>Trend, not one night</b><p>The model compares a recent average with your personal median baseline. Wider bands prevent normal nightly variation from causing unnecessary changes.</p></div><div><b>One recovery location</b><p>This tab is the primary home for Readiness. Progress is the single home for the two learned calibration pathways.</p></div>`;
- drawHrvChart();
+ const hrv=hrvModel(),pain=recoveryPainState(),hist=hrvHistory(),dir=hrvDirection(hist),conclusion=recoveryConclusion(hrv,pain),ready=readinessModel(),active=recoveryActiveInjurySummary(),response=personalResponseModel();
+ const maturity=hrv.count===0?'No HRV profile':hrv.count===1?'Provisional HRV profile':hrv.count<=6?'Early HRV profile':hrv.count<=20?'Developing HRV profile':'Established HRV profile';
+ const heroCls=recoveryStatusClass(conclusion.label),restriction=ready.modifier<.995?'Temporary moderation active':'No temporary moderation';
+ statusBox.innerHTML=`<article class="recoveryHero ${heroCls}"><div class="recoveryHeroHead"><span class="recoveryHeroIcon">${todayPictogram('readiness')}</span><div><small>01 · RECOVERY STATUS</small><h3>${esc(conclusion.label)}</h3><p>${esc(conclusion.recommendation)}</p></div><span class="recoveryHeroChip">${esc(maturity)}</span></div><div class="recoveryHeroMetrics"><div><small>READINESS</small><strong>${ready.modifier.toFixed(3)}</strong><span>${esc(restriction)}</span></div><div><small>HRV</small><strong>${Number.isFinite(hrv.rolling)?Math.round(hrv.rolling)+' ms':'—'}</strong><span>${hrv.count?`${dir.symbol} ${dir.label}`:'No data'}</span></div><div><small>PAIN</small><strong>${pain.count?pain.average.toFixed(1)+'/10':'—'}</strong><span>${esc(pain.status)}</span></div></div><div class="recoveryHeroCall"><span>${uiIcon('recovery')}</span><div><small>WHAT THIS MEANS NOW</small><b>${esc(ready.modifier<.995?'Recovery is temporarily moderating training exposure.':'Recovery evidence does not currently reduce planned training exposure.')}</b></div></div></article>`;
+
+ const hrvDriverCls=recoveryStatusClass(hrv.status),painDriverCls=recoveryStatusClass(pain.status),injuryDriverCls=active?'warn':'good';
+ $('recoveryDrivers').innerHTML=`<div class="recoveryDriverGrid"><article class="recoveryNested ${hrvDriverCls}"><small>HRV</small><strong>${Number.isFinite(hrv.rolling)?Math.round(hrv.rolling)+' ms':'Not available'}</strong><p>${esc(hrv.detail)}</p><span>${ready.hrvAdj?`${(ready.hrvAdj*100).toFixed(0)}% readiness contribution`:'No readiness reduction'}</span></article><article class="recoveryNested ${painDriverCls}"><small>PAIN</small><strong>${pain.count?`Max ${pain.max}/10`:'Not reported'}</strong><p>${esc(ready.painAdj.detail)}</p><span>${ready.painAdj.adjustment?`${(ready.painAdj.adjustment*100).toFixed(0)}% readiness contribution`:'No readiness reduction'}</span></article><article class="recoveryNested ${injuryDriverCls}"><small>INJURY / REHAB</small><strong>${active?esc(active.label):'No active rehab constraint'}</strong><p>${active?`Active rehabilitation${active.stage?` · ${esc(active.stage)}`:''}. Detailed return-to-run criteria remain in Injury & Rehab.`:'No active injury plan is currently adding a rehabilitation constraint.'}</p><span>${active?'Relevant to training exposure':'No active constraint'}</span></article></div>`;
+
+ const hrvDelta=Number.isFinite(hrv.deviation)?`${hrv.deviation>=0?'+':''}${Math.round(hrv.deviation*100)}%`:'—';
+ $('recoveryHrv').innerHTML=`<article class="recoveryCard"><div class="recoveryCardHead"><div><small>PERSONAL HRV CONTEXT</small><h4>${hrv.count?esc(hrv.status):'Baseline not established'}</h4><p>Measured HRV is compared with your own evolving median baseline; no population target is used.</p></div><span class="recoveryStatusPill ${hrvDriverCls}">${hrv.count?esc(hrv.confidence):'No evidence'}</span></div><div class="recoveryMetricGrid"><div><small>LATEST / RECENT</small><strong>${Number.isFinite(hrv.rolling)?Math.round(hrv.rolling)+' ms':'—'}</strong></div><div><small>PERSONAL BASELINE</small><strong>${Number.isFinite(hrv.baseline)?Math.round(hrv.baseline)+' ms':'—'}</strong></div><div><small>VS BASELINE</small><strong>${hrvDelta}</strong></div></div>${recoveryHrvSvg(hist,hrv)}<details class="recoveryFoldout"><summary>How HRV is interpreted</summary><div class="recoveryFoldoutBody"><p>${esc(hrv.detail)}</p><p>Influence grows only as personal evidence accumulates. A single value creates a provisional baseline but cannot reduce the plan.</p></div></details></article>`;
+
+ const recentPainRuns=completedRuns().filter(r=>Number.isFinite(Number(r.pain))).sort((a,b)=>b.date.localeCompare(a.date)).slice(0,5);
+ const painRows=recentPainRuns.length?recentPainRuns.map(r=>`<div class="recoveryEvidenceRow"><span>${fmtDate(r.date)} · ${esc(effectiveRunType(r))}</span><strong>${Number(r.pain)}/10</strong></div>`).join(''):'';
+ $('recoveryPain').innerHTML=`<article class="recoveryCard"><div class="recoveryCardHead"><div><small>RECENT PAIN EVIDENCE</small><h4>${esc(pain.status)}</h4><p>Pain affects temporary readiness according to the existing model; this screen does not diagnose the cause.</p></div><span class="recoveryStatusPill ${painDriverCls}">${pain.count?`${pain.count} report${pain.count===1?'':'s'}`:'No data'}</span></div><div class="recoveryMetricGrid two"><div><small>RECENT AVERAGE</small><strong>${pain.count?pain.average.toFixed(1)+'/10':'—'}</strong></div><div><small>RECENT MAXIMUM</small><strong>${pain.count?pain.max+'/10':'—'}</strong></div></div>${active?`<div class="recoveryConstraint"><span>${todayPictogram('rehab')}</span><div><small>ACTIVE REHABILITATION</small><b>${esc(active.label)}</b><p>${active.stage?`Current rehab stage: ${esc(active.stage)}. `:''}Return-to-run progression and criteria remain in Injury & Rehab.</p></div></div>`:''}${painRows?`<details class="recoveryFoldout"><summary>Recent pain observations</summary><div class="recoveryFoldoutBody">${painRows}</div></details>`:recoveryEmptyState('No recent pain ratings','Missing pain is treated as missing, not as zero pain.')}</article>`;
+
+ const recoveryDim=response.dimensions.find(x=>x.key==='recovery'),volumeDim=response.dimensions.find(x=>x.key==='volume'),intensityDim=response.dimensions.find(x=>x.key==='intensity'),longDim=response.dimensions.find(x=>x.key==='long');
+ const dimCard=d=>d?`<article class="recoveryNested ${recoveryStatusClass(d.status)}"><small>${esc(d.name.toUpperCase())}</small><strong>${esc(d.status)}</strong><p>${esc(d.summary)}</p><span>${d.count} observation${d.count===1?'':'s'} · ${esc(d.confidence.label)} confidence</span></article>`:'';
+ $('recoveryAbsorption').innerHTML=`<article class="recoveryCard"><div class="recoveryCardHead"><div><small>ATHLETE-SPECIFIC RESPONSE</small><h4>${recoveryDim?esc(recoveryDim.status):'Building evidence'}</h4><p>These are observational relationships already learned by the Personal Response Model, not proof that one training input caused the next response.</p></div></div><div class="recoveryDriverGrid">${dimCard(recoveryDim)}${dimCard(volumeDim)}${dimCard(intensityDim)}${dimCard(longDim)}</div>${recoveryDim?.evidence?.length?`<details class="recoveryFoldout"><summary>Recovery-speed observations</summary><div class="recoveryFoldoutBody"><ul>${recoveryDim.evidence.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div></details>`:''}</article>`;
+
+ const loadRows=recoveryLoadRows();
+ $('recoveryLoad').innerHTML=`<article class="recoveryCard"><div class="recoveryCardHead"><div><small>RECENT WEEKS</small><h4>Training exposure alongside readiness</h4><p>Distance and readiness are shown together chronologically. The display does not claim that one caused the other.</p></div></div><div class="recoveryLoadTable"><div class="recoveryLoadHeader"><span>Week</span><span>Completed / planned</span><span>Avg readiness</span></div>${loadRows.map(r=>`<div class="recoveryLoadRow"><strong>W${r.week}</strong><span>${r.distance.toFixed(1)} / ${r.planned.toFixed(1)} km</span><b>${Number.isFinite(r.readiness)?r.readiness.toFixed(3):'—'}</b></div>`).join('')}</div></article>`;
+
+ $('recoveryCapability').innerHTML=`<article class="recoveryCard"><div class="recoveryCapabilityFlow"><div><small>LEARNED DISTANCE &amp; LOAD</small><strong>${ready.learned.toFixed(3)}</strong><span>Longer-term learned capability</span></div><span class="recoveryMultiply">×</span><div><small>TEMPORARY READINESS</small><strong>${ready.modifier.toFixed(3)}</strong><span>Short-term recovery context</span></div><span class="recoveryMultiply">=</span><div><small>EFFECTIVE LOAD CONTEXT</small><strong>${ready.effective.toFixed(3)}</strong><span>Current combined context</span></div></div><div class="recoveryCapabilityNote"><b>Recovery does not erase learned capability.</b><p>A temporary reduction moderates exposure without resetting what the model has learned about Distance &amp; Load. Pace &amp; Power is not directly multiplied by readiness.</p></div><details class="recoveryFoldout"><summary>How the temporary modifier is calculated</summary><div class="recoveryFoldoutBody"><div class="recoveryEvidenceRow"><span>HRV contribution</span><strong>${ready.hrvAdj?`${(ready.hrvAdj*100).toFixed(0)}%`:'0%'}</strong></div><div class="recoveryEvidenceRow"><span>Pain contribution</span><strong>${ready.painAdj.adjustment?`${(ready.painAdj.adjustment*100).toFixed(0)}%`:'0%'}</strong></div><div class="recoveryEvidenceRow"><span>Temporary readiness</span><strong>${ready.modifier.toFixed(3)}</strong></div><p>Readiness = 1.000 + HRV adjustment + pain adjustment. Favorable recovery does not create a bonus above 1.000.</p></div></details></article>`;
+
+ $('recoveryHistory').innerHTML=`<article class="recoveryCard"><div class="recoveryCardHead"><div><small>RECENT READINESS</small><h4>${ready.label}</h4><p>Short-term recovery context is expected to move around 1.000 rather than accumulate like a learned pathway.</p></div><span class="recoveryStatusPill ${recoveryStatusClass(ready.label)}">Current ${ready.modifier.toFixed(3)}</span></div>${recoveryReadinessSvg(readinessHistoryData(14))}</article>`;
+
+ const meaning=[];
+ meaning.push(conclusion.recommendation);
+ if(hrv.count)meaning.push(`HRV is ${hrv.status}: ${Math.round(hrv.rolling)} ms versus your ${Math.round(hrv.baseline)} ms personal baseline (${hrvDelta}).`);else meaning.push('HRV evidence is not yet available, so HRV is not reducing readiness.');
+ meaning.push(pain.count?ready.painAdj.detail:'No recent pain ratings are available; missing pain is not treated as zero.');
+ if(recoveryDim&&recoveryDim.count)meaning.push(`Recovery-speed evidence: ${recoveryDim.status}. ${recoveryDim.summary}`);
+ if(active)meaning.push(`Active rehabilitation remains relevant to training exposure: ${active.label}${active.stage?` · ${active.stage}`:''}.`);
+ $('recoveryMeaning').innerHTML=`<article class="recoveryMeaningCard"><ul>${meaning.slice(0,4).map(x=>`<li>${esc(x)}</li>`).join('')}</ul></article>`;
 }
+
 function drawHrvChart(){
  const canvas=$('hrvChart');if(!canvas)return;const ctx=canvas.getContext('2d'),W=canvas.width,H=canvas.height,hist=hrvHistory(),model=hrvModel();ctx.clearRect(0,0,W,H);updateChartTable(canvas,'View HRV chart data',['Date','Previous-night HRV'],hist.map(item=>[fmtDate(item.date),`${Math.round(item.value)} ms`]));
  if(!hist.length){ctx.fillStyle='#DDF6FF';ctx.font='600 27px system-ui';ctx.textAlign='center';ctx.fillText('Log previous-night Garmin HRV to start the trend',W/2,H/2);return}

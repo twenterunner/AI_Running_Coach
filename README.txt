@@ -1,3 +1,16 @@
+AI Running Coach v13.2.0 — Recovery serious-runner rebuild — build 30200
+
+v13.2.0
+-------
+- Today, Plan, Log and Progress are frozen against v13.1.18 build 30118. Their page markup and render functions are unchanged.
+- Recovery rebuilt from scratch using the approved Today visual hierarchy and only existing recovery/readiness data.
+- New Recovery hierarchy: current status; recovery drivers; HRV vs personal baseline; pain/physical restriction; training absorption; load vs recovery; temporary readiness vs learned Distance & Load; recovery history; concise interpretation.
+- Recovery surfaces reuse Today primary teal gradient, nested dark surfaces, typography, spacing, foldout and semantic status language.
+- HRV and readiness charts are Recovery-scoped, mobile SVGs with data-driven Y-axis scaling and explicit baseline/reference lines.
+- Personal Response Model recovery speed, volume tolerance, intensity tolerance and long-run tolerance are surfaced as observational evidence only.
+- Missing HRV/pain/history are shown as missing/baseline-building states rather than zero.
+- No race, plan, pathway, readiness, HRV, pain, injury, import, scoring, storage or other calculation/data-model logic changed.
+
 AI Running Coach v13.1.18 — Progress section 7 removed — build 30118
 
 v13.1.18
