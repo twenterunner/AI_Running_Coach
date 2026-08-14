@@ -2980,3 +2980,23 @@ body:has(#dashboard.progressPage.active),#mainContent:has(#dashboard.progressPag
   #dashboard.progressPage .progressMetricTile{padding:10px!important}
   #dashboard.progressPage .progressMetricTile>strong{font-size:16px!important}
 }
+
+/* v13.1.15 — Progress outlook visual parity.
+   Projected fitness is a disclosure, but its closed/open surface must remain identical to Plan health.
+   Target-margin status belongs to the bar only; the numeric time remains normal text. */
+#dashboard.progressPage .outlookMetricDetail,
+#dashboard.progressPage .outlookMetricDetail[open]{
+  background:var(--progress-nested)!important;
+  border:1px solid var(--progress-nested-border)!important;
+  color:inherit!important;
+  box-shadow:none!important;
+}
+#dashboard.progressPage .outlookMetricDetail>summary,
+#dashboard.progressPage .outlookMetricDetail[open]>summary{
+  background:transparent!important;
+  border:0!important;
+  box-shadow:none!important;
+}
+#dashboard.progressPage .targetMarginMetric>b{
+  color:#fff!important;
+}

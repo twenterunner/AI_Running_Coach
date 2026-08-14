@@ -1,4 +1,4 @@
-AI Running Coach v13.1.14 — Progress hierarchy refinement — build 30114
+AI Running Coach v13.1.15 — Progress outlook visual parity — build 30115
 
 v13.1.13 Progress canonical Today-style root fix
 ------------------------------------------------
