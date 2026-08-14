@@ -251,3 +251,111 @@ canvas{display:block;width:100%!important;max-width:100%;height:auto!important;m
     font-size:17px!important;
   }
 }
+
+
+/* TODAY TAB — LOCKED UI CONTRACT v12.1.5
+   Structural fix: header row only is two-column; priority is a separate full-width row. */
+#today .seriousBriefing{
+  display:flex!important;
+  flex-direction:column!important;
+  width:100%!important;
+  padding:18px!important;
+  gap:0!important;
+}
+#today .briefingHeaderRow{
+  display:grid!important;
+  grid-template-columns:minmax(0,1fr) 92px!important;
+  width:100%!important;
+  gap:14px!important;
+  align-items:center!important;
+}
+#today .briefingHeaderRow>.briefingTitle{
+  grid-column:1!important;
+  min-width:0!important;
+  display:grid!important;
+  grid-template-columns:58px minmax(0,1fr)!important;
+  gap:13px!important;
+  align-items:center!important;
+}
+#today .briefingHeaderRow>.briefingGauges{
+  grid-column:2!important;
+  display:grid!important;
+  justify-items:center!important;
+  align-items:center!important;
+  min-width:0!important;
+}
+#today .briefingHeaderRow .evidenceCompleteness{
+  display:grid!important;
+  justify-items:center!important;
+  gap:4px!important;
+}
+#today .seriousBriefing>.briefingDecision{
+  display:block!important;
+  flex:0 0 auto!important;
+  width:100%!important;
+  max-width:100%!important;
+  min-width:0!important;
+  margin:15px 0 0!important;
+  padding:13px 0 0!important;
+  border-top:1px solid rgba(153,224,232,.22)!important;
+}
+#today .seriousBriefing>.briefingDecision>small,
+#today .seriousBriefing>.briefingDecision>strong,
+#today .seriousBriefing>.briefingDecision>.runnerBullets{
+  display:block!important;
+  width:100%!important;
+  max-width:100%!important;
+  min-width:0!important;
+}
+#today .seriousBriefing>.briefingDecision>strong{
+  margin-top:3px!important;
+  font-size:18px!important;
+  line-height:1.28!important;
+  overflow-wrap:normal!important;
+  word-break:normal!important;
+  white-space:normal!important;
+}
+#today .seriousBriefing>.briefingDecision>.runnerBullets{
+  display:grid!important;
+  grid-template-columns:1fr!important;
+}
+#today .todayStatusCard .statusRing .todayPic{
+  width:54px!important;
+  height:54px!important;
+}
+#today .todayStatusCard .statusRing .picWarn{
+  stroke:#ff6842!important;
+  stroke-width:3.5!important;
+}
+#today .todayStatusCard .statusRing .picWarm{
+  stroke:#f4b258!important;
+  stroke-width:3.2!important;
+}
+#today .todayStatusCard .statusRing .picGood{
+  stroke:#8bdd69!important;
+  stroke-width:3.1!important;
+}
+@media(max-width:390px){
+  #today .seriousBriefing{padding:15px!important}
+  #today .briefingHeaderRow{
+    grid-template-columns:minmax(0,1fr) 70px!important;
+    gap:8px!important;
+  }
+  #today .briefingHeaderRow>.briefingTitle{
+    grid-template-columns:48px minmax(0,1fr)!important;
+    gap:9px!important;
+  }
+  #today .briefingHeaderRow .evidenceRing{
+    width:66px!important;
+    height:66px!important;
+  }
+  #today .briefingHeaderRow .evidenceCompleteness>small{
+    max-width:68px!important;
+    font-size:7.5px!important;
+    line-height:1.15!important;
+    text-align:center!important;
+  }
+  #today .seriousBriefing>.briefingDecision>strong{
+    font-size:17px!important;
+  }
+}

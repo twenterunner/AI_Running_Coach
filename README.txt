@@ -1,4 +1,4 @@
-AI Running Coach v12.1.4 — Today briefing layout fix — build 20104
+AI Running Coach v12.1.5 — Today structural fix — build 20105
 
 Deployment
 ----------
@@ -667,3 +667,13 @@ v12.1.4 — Today briefing layout fix
 - Pain pictogram redesigned as an injured leg/knee with a clearly highlighted pain point and pain rays.
 - Remaining Today content and interactions preserved.
 - Model/data engines unchanged.
+
+
+v12.1.5 — Today structural fix
+------------------------------
+- Fixed malformed Coach Briefing HTML that caused Today's Priority to be nested inside the Evidence column.
+- Only Coach Briefing heading and Evidence completeness now share the top row.
+- Today's Priority is a separate DOM sibling below the header and therefore always spans the full card width.
+- Rehab pictogram changed to a controlled physiotherapy leg exercise with resistance band and medical cross.
+- Pain pictogram changed to a bent leg/knee with a prominent pain bolt and radiating pain marks.
+- No model/data-engine calculations changed.
