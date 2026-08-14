@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#07111D"><title>AI Running Coach</title>
-<link rel="manifest" href="manifest.webmanifest?v=30201"><link rel="stylesheet" href="styles.css?v=30201-visual">
+<link rel="manifest" href="manifest.webmanifest?v=30202"><link rel="stylesheet" href="styles.css?v=30202-visual">
 <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png?v=10320">
 <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png?v=10320">
 <link rel="icon" href="favicon.ico?v=10320">
@@ -15,7 +15,7 @@
 <body>
 <a class="skipLink" href="#mainContent">Skip to main content</a>
 <header class="topbar">
-  <div class="brand"><img class="logo" src="icon-192.png?v=10320" alt="AI Running Coach logo"><div class="brand-copy"><h1>AI Running Coach</h1><p>Race-specific adaptive planning · v13.2.1 · build 30201</p></div></div>
+  <div class="brand"><img class="logo" src="icon-192.png?v=10320" alt="AI Running Coach logo"><div class="brand-copy"><h1>AI Running Coach</h1><p>Race-specific adaptive planning · v13.2.2 · build 30202</p></div></div>
   <button id="installBtn" class="install hidden">Install</button>
 </header>
 <nav id="nav" aria-label="Primary navigation"></nav>
@@ -139,46 +139,49 @@
 <section id="recovery" class="page recoveryPage">
   <div class="sectionTitle recoveryPageTitle"><div><span class="pageEyebrow">RECOVERY</span><h2>Recovery</h2></div></div>
 
-  <div id="recoveryStatus"></div>
+  <section class="recoverySection" aria-labelledby="recoveryStatusTitle">
+    <div class="recoverySectionHead"><span>01</span><div><small>RECOVERY STATUS</small><h3 id="recoveryStatusTitle">Current recovery status</h3><p>Your present readiness and whether recovery is temporarily moderating training.</p></div></div>
+    <div id="recoveryStatus"></div>
+  </section>
+
+  <section class="recoverySection recoveryMeaningSection" aria-labelledby="recoveryMeaningTitle">
+    <div class="recoverySectionHead"><span>02</span><div><small>WHAT THIS MEANS</small><h3 id="recoveryMeaningTitle">Recovery interpretation</h3><p>The most important evidence-backed conclusions for your training.</p></div></div>
+    <div id="recoveryMeaning"></div>
+  </section>
 
   <section class="recoverySection" aria-labelledby="recoveryDriversTitle">
-    <div class="recoverySectionHead"><span>02</span><div><small>WHAT IS DRIVING RECOVERY?</small><h3 id="recoveryDriversTitle">Current recovery evidence</h3><p>The inputs currently influencing readiness, interpreted against your own data.</p></div></div>
+    <div class="recoverySectionHead"><span>03</span><div><small>WHAT IS DRIVING RECOVERY?</small><h3 id="recoveryDriversTitle">Current recovery evidence</h3><p>The inputs currently influencing readiness, interpreted against your own data.</p></div></div>
     <div id="recoveryDrivers"></div>
   </section>
 
   <section class="recoverySection" aria-labelledby="recoveryHrvTitle">
-    <div class="recoverySectionHead"><span>03</span><div><small>HRV VS YOUR BASELINE</small><h3 id="recoveryHrvTitle">Personal recovery signal</h3><p>Previous-night Garmin HRV compared with your own evolving baseline.</p></div></div>
+    <div class="recoverySectionHead"><span>04</span><div><small>HRV VS YOUR BASELINE</small><h3 id="recoveryHrvTitle">Personal recovery signal</h3><p>Previous-night Garmin HRV compared with your own evolving baseline.</p></div></div>
     <div id="recoveryHrv"></div>
   </section>
 
   <section class="recoverySection" aria-labelledby="recoveryPainTitle">
-    <div class="recoverySectionHead"><span>04</span><div><small>PAIN &amp; PHYSICAL RESTRICTION</small><h3 id="recoveryPainTitle">Is pain limiting training?</h3><p>Recent pain evidence and any active rehabilitation constraint.</p></div></div>
+    <div class="recoverySectionHead"><span>05</span><div><small>PAIN &amp; PHYSICAL RESTRICTION</small><h3 id="recoveryPainTitle">Is pain limiting training?</h3><p>Recent pain evidence and any active rehabilitation constraint.</p></div></div>
     <div id="recoveryPain"></div>
   </section>
 
   <section class="recoverySection" aria-labelledby="recoveryAbsorptionTitle">
-    <div class="recoverySectionHead"><span>05</span><div><small>TRAINING ABSORPTION</small><h3 id="recoveryAbsorptionTitle">Are you handling the work?</h3><p>Existing athlete-specific observations after demanding sessions and rising training exposure.</p></div></div>
+    <div class="recoverySectionHead"><span>06</span><div><small>TRAINING ABSORPTION</small><h3 id="recoveryAbsorptionTitle">Are you handling the work?</h3><p>Existing athlete-specific observations after demanding sessions and rising training exposure.</p></div></div>
     <div id="recoveryAbsorption"></div>
   </section>
 
   <section class="recoverySection" aria-labelledby="recoveryLoadTitle">
-    <div class="recoverySectionHead"><span>06</span><div><small>LOAD VS RECOVERY</small><h3 id="recoveryLoadTitle">Training exposure in recovery context</h3><p>Training and recovery observations aligned in time without implying causation.</p></div></div>
+    <div class="recoverySectionHead"><span>07</span><div><small>LOAD VS RECOVERY</small><h3 id="recoveryLoadTitle">Training exposure in recovery context</h3><p>Training and recovery observations aligned in time without implying causation.</p></div></div>
     <div id="recoveryLoad"></div>
   </section>
 
   <section class="recoverySection" aria-labelledby="recoveryCapabilityTitle">
-    <div class="recoverySectionHead"><span>07</span><div><small>TEMPORARY VS LEARNED</small><h3 id="recoveryCapabilityTitle">Recovery modifier and learned capability</h3><p>Separate what you have learned to tolerate from temporary recovery context.</p></div></div>
+    <div class="recoverySectionHead"><span>08</span><div><small>TEMPORARY VS LEARNED</small><h3 id="recoveryCapabilityTitle">Recovery modifier and learned capability</h3><p>Separate what you have learned to tolerate from temporary recovery context.</p></div></div>
     <div id="recoveryCapability"></div>
   </section>
 
   <section class="recoverySection" aria-labelledby="recoveryHistoryTitle">
-    <div class="recoverySectionHead"><span>08</span><div><small>RECOVERY HISTORY</small><h3 id="recoveryHistoryTitle">Has recovery been stable?</h3><p>Recent readiness relative to the neutral 1.000 reference.</p></div></div>
+    <div class="recoverySectionHead"><span>09</span><div><small>RECOVERY HISTORY</small><h3 id="recoveryHistoryTitle">Has recovery been stable?</h3><p>Recent readiness relative to the neutral 1.000 reference.</p></div></div>
     <div id="recoveryHistory"></div>
-  </section>
-
-  <section class="recoverySection recoveryMeaningSection" aria-labelledby="recoveryMeaningTitle">
-    <div class="recoverySectionHead"><span>09</span><div><small>WHAT THIS MEANS</small><h3 id="recoveryMeaningTitle">Recovery interpretation</h3><p>The most important evidence-backed conclusions for your training.</p></div></div>
-    <div id="recoveryMeaning"></div>
   </section>
 </section>
 <section id="race" class="page">
@@ -196,7 +199,7 @@
   <article class="panel"><h3>Data</h3><div class="buttonRow"><button id="backupBtn">Download backup</button><label for="restoreFile" class="buttonLike">Restore backup</label><input id="restoreFile" type="file" accept=".json"><button id="undoRestoreBtn" type="button" class="secondary hidden">Undo last restore</button><button id="exportBtn">Export runs CSV</button><button id="resetBtn" class="danger">Reset app</button></div></article>
 </section>
 </main>
-<footer class="appFooter"><span>AI Running Coach</span><small>v13.2.1 · build 30201</small></footer>
+<footer class="appFooter"><span>AI Running Coach</span><small>v13.2.2 · build 30202</small></footer>
 
 <div id="modal" class="modal hidden" role="dialog" aria-modal="true" aria-label="AI Running Coach dialog" tabindex="-1"><div class="modalCard"><button id="closeModal" class="close" type="button" aria-label="Close dialog">×</button><div id="modalContent"></div></div></div>
 
@@ -225,5 +228,5 @@
     <button class="primary full" type="submit">Review and create my plan</button>
   </form>
 </div>
-<script src="app.js?v=30201-visual"></script>
+<script src="app.js?v=30202-visual"></script>
 </body></html>

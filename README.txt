@@ -1,6 +1,6 @@
-AI Running Coach v13.2.1 — Recovery visual consistency refinement — build 30201
+AI Running Coach v13.2.2 — Recovery visual consistency refinement — build 30202
 
-v13.2.1
+v13.2.2
 -------
 - Removed the Recovery page subtitle requested after the v13.2.0 redesign.
 - Recovery section-number circles now exactly match the Progress section-number dimensions and responsive sizing.
