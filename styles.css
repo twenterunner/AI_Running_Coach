@@ -798,3 +798,73 @@ canvas{display:block;width:100%!important;max-width:100%;height:auto!important;m
 #plan .planIntensityFoldout>summary small{font-size:8px;color:#9dbbc4}
 #plan .planIntensityFoldoutBody{padding:0 12px 12px}
 @media(max-width:390px){#plan .planRaceGap{font-size:8.5px!important}}
+
+
+/* PLAN TAB — v12.3.5 rhythm, week navigation, proportional programme phases */
+#plan{
+  --plan-gap:12px;
+}
+#plan .planSection,
+#plan .panel,
+#plan .planRaceContextCard,
+#plan .promotedTimelinePanel{
+  margin-top:0;
+  margin-bottom:var(--plan-gap);
+}
+#plan .planSection + .planSection,
+#plan .panel + .panel{
+  margin-top:0;
+}
+#plan .weekNav,
+#plan .planWeekNav,
+#plan .weekSwitcher{
+  display:grid!important;
+  grid-template-columns:52px minmax(0,1fr) 52px!important;
+  gap:10px!important;
+  align-items:stretch!important;
+  width:100%!important;
+  margin:0 0 var(--plan-gap)!important;
+}
+#plan .weekNav>button,
+#plan .planWeekNav>button,
+#plan .weekSwitcher>button{
+  min-width:0!important;
+  width:100%!important;
+  margin:0!important;
+}
+#plan .weekNav>button:nth-child(2),
+#plan .planWeekNav>button:nth-child(2),
+#plan .weekSwitcher>button:nth-child(2){
+  justify-self:stretch!important;
+  text-align:center!important;
+}
+#plan #raceTimeline .phaseRow,
+#plan #raceTimeline .phaseTrack,
+#plan #raceTimeline .programmePhases,
+#plan #raceTimeline .timelinePhases{
+  display:flex!important;
+  width:100%!important;
+  gap:3px!important;
+  align-items:stretch!important;
+}
+#plan #raceTimeline .phaseSeg,
+#plan #raceTimeline .phaseBlock,
+#plan #raceTimeline .programmePhase,
+#plan #raceTimeline .timelinePhase,
+#plan #raceTimeline .planPhase{
+  flex:var(--phase-weeks,1) 1 0!important;
+  min-width:0!important;
+  width:auto!important;
+}
+/* Phase colour communicates planned training demand: cooler = lower/base load,
+   stronger teal/blue = building/specific work, amber = peak, softened = taper, bright = race. */
+#plan #raceTimeline [data-phase-tone="base"]{background:rgba(52,151,166,.38)!important;border-color:rgba(78,190,202,.45)!important}
+#plan #raceTimeline [data-phase-tone="build"]{background:rgba(31,177,181,.48)!important;border-color:rgba(65,215,211,.55)!important}
+#plan #raceTimeline [data-phase-tone="specific"]{background:rgba(28,141,181,.58)!important;border-color:rgba(69,189,226,.62)!important}
+#plan #raceTimeline [data-phase-tone="peak"]{background:rgba(214,151,52,.56)!important;border-color:rgba(244,183,74,.68)!important}
+#plan #raceTimeline [data-phase-tone="taper"]{background:rgba(93,176,145,.38)!important;border-color:rgba(123,207,174,.52)!important}
+#plan #raceTimeline [data-phase-tone="race"]{background:rgba(61,214,198,.72)!important;border-color:rgba(102,240,221,.82)!important}
+@media(max-width:390px){
+ #plan{--plan-gap:10px}
+ #plan .weekNav,#plan .planWeekNav,#plan .weekSwitcher{grid-template-columns:48px minmax(0,1fr) 48px!important;gap:8px!important}
+}

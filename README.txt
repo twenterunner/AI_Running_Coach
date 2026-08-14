@@ -1,4 +1,4 @@
-AI Running Coach v12.3.4 — Serious Runner Plan — build 20304
+AI Running Coach v12.3.5 — Serious Runner Plan — build 20305
 
 Deployment
 ----------
@@ -783,3 +783,13 @@ v12.3.4 corrected
 - Existing Plan renderer and target IDs preserved.
 - Race target-gap bullet removed and text reduced.
 - No model/data-engine changes.
+
+
+v12.3.5 — Plan spacing and timeline refinement
+-----------------------------------------------
+- Standardized vertical spacing between Plan cards and sections.
+- Week navigator uses symmetric arrow columns with the week control centered between them.
+- Opening Plan resets the viewed week to the actual current programme week.
+- Programme phase widths are proportional to their week duration.
+- Programme phase colours now communicate training demand/phase character: base, build, specific, peak, taper and race.
+- Existing model/data calculations remain unchanged.
