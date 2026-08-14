@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '13.1.6';
-  const BUILD = 30106;
+  const VERSION = '13.1.7';
+  const BUILD = 30107;
   const SCHEMA = 10330;
   const PRIMARY_STORAGE_KEY = 'arc_v10330_web';
   const MIRROR_STORAGE_KEY = 'arc_v10330_mirror';
@@ -2085,7 +2085,9 @@ function renderDashboard(){
  $('predictionSummary').innerHTML=`<div class="predictionReferences"><div><span>Target time</span><strong>${fmtTime(targetTime)}</strong><small>Fixed race goal</small></div><div><span>Predicted at programme start</span><strong>${fmtTime(startPrediction)}</strong><small>Fixed baseline from the plan-start inputs</small></div></div>${eventCount?`<div class="predictionCurrent" data-update-mode="${esc(currentSaved.updateMode||'maintained')}"><span>Current prediction after ${eventCount} uploaded update${eventCount===1?'':'s'}</span><strong>${fmtTime(currentEstimate)}</strong><div class="predictionDeltas"><span><b>${deltaText(vsStart)}</b><small>versus programme start</small></span><span><b>${deltaText(vsTarget,'inside target','outside target')}</b><small>versus target</small></span></div><small>Latest update: ${esc(currentSaved.source||'Run update')} · ${fmtDate(currentSaved.date)}</small>${currentSaved.evidenceReason?`<div class="predictionUpdateEvidence"><b>${esc(currentSaved.evidenceQuality||'Low')} evidence · ${Math.round((Number(currentSaved.evidenceWeight)||0)*100)}% update weight</b><span>${esc(currentSaved.evidenceReason)}</span><small>${Number(currentSaved.updateDelta)<-.5?`Earned improvement ${fmtTime(Math.abs(Number(currentSaved.updateDelta)||0))}`:'Prediction maintained'}${Number.isFinite(Number(currentSaved.completionRatio))?` · ${Math.round(Number(currentSaved.completionRatio)*100)}% of expected stimulus`:''}. Negative training evidence affects confidence and recovery before established capability.</small></div>`:''}</div>`:`<div class="predictionAwaiting"><strong>No run-based prediction updates yet</strong><p>Upload or log a run, or save a valid assessment, to add the first progression point. The two horizontal lines below are the fixed programme-start prediction and target.</p></div>`}`;
  if($('componentGuide'))$('componentGuide').innerHTML=c.components.map(x=>`<div><b>${x.name}</b><p>${componentDefinitions[x.name]}</p><small class="${x.hasEvidence?'muted':'metricMissing'}">${x.hasEvidence?`Current score: ${Math.round(x.displayScore)} / 100 · evidence ${Math.round((x.evidenceFraction??1)*100)}%`:'No evidence yet'} · within-component weight ${Math.round(x.weight*100)}%</small></div>`).join('');
  let missing=uniqueComponents(c.components.filter(x=>!x.hasEvidence));
- $('dataNeeded').innerHTML=missing.length?missing.map(x=>`<div class="note"><b>${x.name}</b><br>${componentDefinitions[x.name]}</div>`).join(''):'<p class="muted">All preparation-model components currently have evidence.</p>';
+ const dataNeededEl=$('dataNeeded');
+ if(dataNeededEl)dataNeededEl.innerHTML=missing.length?missing.map(x=>`<div class="note"><b>${x.name}</b><br>${componentDefinitions[x.name]}</div>`).join(''):'<p class="muted">All preparation-model components currently have evidence.</p>';
+ // Progress charts must render even when legacy Progress-only explanatory mounts are absent.
  drawDashboardCharts();
 }
 function updateChartTable(canvas,summary,headers,rows){if(!canvas)return;const id=`${canvas.id}-data`;let details=canvas.parentElement?.querySelector(`:scope > #${id}`);if(!details){details=document.createElement('details');details.id=id;details.className='chartDataTable';canvas.insertAdjacentElement('afterend',details)}details.innerHTML=`<summary>${esc(summary)}</summary><div class="tableScroll"><table><caption>${esc(canvas.getAttribute('aria-label')||summary)}</caption><thead><tr>${headers.map(header=>`<th scope="col">${esc(header)}</th>`).join('')}</tr></thead><tbody>${rows.length?rows.map(row=>`<tr>${row.map((cell,index)=>index===0?`<th scope="row">${esc(cell)}</th>`:`<td>${esc(cell)}</td>`).join('')}</tr>`).join(''):`<tr><td colspan="${headers.length}">No completed data yet.</td></tr>`}</tbody></table></div>`;canvas.setAttribute('aria-describedby',id)}
@@ -2203,7 +2205,7 @@ function renderProgressSvgChart(canvas,series,options={}){
  }
  const plot=[];
  series.forEach(s=>{
-   const vals=(s.data||[]).map((v,i)=>({v:Number(v),i})).filter(o=>Number.isFinite(o.v));
+   const vals=(s.data||[]).map((v,i)=>({v:v==null?NaN:Number(v),i})).filter(o=>Number.isFinite(o.v));
    if(!vals.length)return;
    if(s.horizontal){const y=py(vals[0].v);plot.push(`<line x1="${left}" y1="${y.toFixed(2)}" x2="${W-right}" y2="${y.toFixed(2)}" stroke="${s.color||'#4CC9F0'}" stroke-width="3" ${s.dashed?'stroke-dasharray="10 7"':''}/>`);return;}
    const pts=vals.map(o=>`${px(o.i).toFixed(2)},${py(o.v).toFixed(2)}`).join(' ');
@@ -2272,11 +2274,13 @@ function intensityMixHtml(items,distanceKey,emptyText='No training volume'){
 function roundRect(ctx,x,y,w,h,r){w=Math.max(0,w);r=Math.min(r,w/2,h/2);ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath()}
 function drawDashboardCharts(){
  let c=confidence(),arr=completedWeekSeries(),weekLabels=arr.map((x,i)=>x.isRaceWeek?'Race':('W'+(i+1)));
+ const currentProgressWeek=currentWeek();
+ const completedWeekDistance=arr.map((x,i)=>(i+1)<=currentProgressWeek?x.actual:null);
  drawProgressLine($('volumeChart'),[
    {label:'Planned km',data:arr.map(x=>x.plannedForChart),color:'#4CC9F0',dashed:true,points:false},
-   {label:'Completed km',data:arr.map(x=>x.actual),color:'#4CC9F0'}
+   {label:'Completed km',data:completedWeekDistance,color:'#79D69B'}
  ],{empty:'No weekly distance data yet',labels:weekLabels,area:false});
- renderProgressSvgChart($('volumeChart'),[{label:'Planned km',data:arr.map(x=>x.plannedForChart),color:'#4CC9F0',dashed:true,points:false},{label:'Completed km',data:arr.map(x=>x.actual),color:'#79D69B'}],{min:0,labels:weekLabels});
+ renderProgressSvgChart($('volumeChart'),[{label:'Planned km',data:arr.map(x=>x.plannedForChart),color:'#4CC9F0',dashed:true,points:false},{label:'Completed km',data:completedWeekDistance,color:'#79D69B'}],{min:0,labels:weekLabels});
  let plannedLong=Array.from({length:weeks()},(_,i)=>state.plan.find(x=>x.week===i+1&&['Long run','Specific long run','Race rehearsal','Progression'].includes(x.type))?.distance??null);
  let completedLong=Array.from({length:weeks()},(_,i)=>{
    let st=weekStart(i+1),en=new Date(st.getTime()+7*DAY);

@@ -1,4 +1,4 @@
-AI Running Coach v13.1.6 — Progress chart and mobile-navigation repair — build 30106
+AI Running Coach v13.1.7 — Progress chart and mobile-navigation repair — build 30107
 
 - Restored all Progress charts to the proven canvas renderer; race-readiness, weekly-distance and long-run charts no longer disappear behind an empty teal surface.
 - Aerobic durability and efficiency charts again render one valid observation as a real point; zero observations use the explicit baseline-building state.
@@ -950,14 +950,14 @@ v13.0.6
 - Today and Plan unchanged; no model/data-engine calculations changed.
 
 
-v13.1.6 Progress chart and hierarchy repair
+v13.1.7 Progress chart and hierarchy repair
 --------------------------------------------
 - Progress charts now use a dedicated inline SVG renderer after each model render, avoiding browser canvas blanking on mobile.
 - Race readiness, weekly distance, long-run progression, efficiency and aerobic durability charts render whenever genuine data exists.
 - Progress-only card typography, padding and spacing are normalised for Personal Response Model, Model Validation, Longitudinal Training Review and adaptive pathway cards.
 - No calculation, prediction, pathway, recovery, injury, import, matching, storage or data-model logic changed.
 
-v13.1.6 Verified Progress rendering repair
+v13.1.7 Verified Progress rendering repair
 -------------------------------------------
 - Replaces the repeatedly unreliable Progress canvas/dynamically-inserted-SVG presentation with dedicated persistent chart mounts in the Progress markup. Race readiness, efficiency, aerobic durability, long-run progression and weekly distance render into those mounts from existing data only.
 - Empty-state handling is retained only when a chart has no valid underlying observations; single observations render as points.
@@ -967,3 +967,12 @@ v13.1.6 Verified Progress rendering repair
 - Normalises inter-card spacing throughout Progress.
 - Removes an accidental duplicate Fitness Assessments heading in markup; the assessment engine/data remain unchanged.
 - Today, Plan and Log markup and logic are unchanged. No prediction, pathway, scoring, recovery, injury, import, storage or plan calculations are modified.
+
+v13.1.7 Progress chart reliability correction
+---------------------------------------------
+- Fixed a Progress render exception caused by a removed legacy `dataNeeded` mount. That exception occurred before Race Readiness, Long-run Progression and Weekly Distance chart rendering, leaving their Level-2 cards blank.
+- Progress chart rendering now continues when legacy explanatory mounts are absent.
+- Fixed SVG metric plotting so `null` observations remain missing instead of being converted to numeric zero. This removes false efficiency-factor lines dropping to zero between unrelated workout types.
+- Comparable metric series remain separated by workout type; isolated observations render as points and only same-type observations can form a trend line.
+- Future weeks are no longer plotted as zero completed distance. Planned future volume remains a reference, while completed distance stops at the current week.
+- No training, prediction, pathway, recovery, injury, scoring, import, storage or data-model calculation was changed.
