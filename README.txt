@@ -1,4 +1,4 @@
-AI Running Coach v12.1.7 — Today pictogram refinement — build 20107
+AI Running Coach v12.1.8 — Today icon/value refinement — build 20108
 
 Deployment
 ----------
@@ -692,4 +692,13 @@ v12.1.7
 - Removed 'Priority 1' and 'secondary' wording from Today.
 - Rehab icon: exactly two arms/two legs, rehab table, medical cross.
 - Pain/Injury icon: exactly two arms/two legs, localized pain bolt.
+- Model/data engines unchanged.
+
+v12.1.8
+- Rehab pictogram simplified to a centered medical/rehabilitation cross based on the supplied reference.
+- All Today pictograms are explicitly centered in circular holders.
+- Weekly completion %, race-weeks remaining and latest execution score use the same mini-value typography.
+- Mini-value colors now communicate status: green favourable, amber caution, red poor, teal neutral.
+- Weekly completion color is evaluated against elapsed progress through the current week.
+- Race-time color reflects available preparation time relative to taper; execution score uses score bands.
 - Model/data engines unchanged.

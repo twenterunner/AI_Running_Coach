@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '12.1.7';
-  const BUILD = 20107;
+  const VERSION = '12.1.8';
+  const BUILD = 20108;
   const SCHEMA = 10330;
   const PRIMARY_STORAGE_KEY = 'arc_v10330_web';
   const MIRROR_STORAGE_KEY = 'arc_v10330_mirror';
@@ -2326,7 +2326,10 @@ function todayPictogram(kind){
   week:`<svg class="todayPic" viewBox="0 0 64 64" aria-hidden="true"><rect class="picBase" x="10" y="14" width="44" height="38" rx="5"/><path class="picAccent" d="M10 24h44M20 9v10M44 9v10"/><path class="picGood" d="M18 35h8M30 35h8M42 35h5M18 43h8M30 43h8"/></svg>`,
   signal:`<svg class="todayPic" viewBox="0 0 64 64" aria-hidden="true"><path class="picBase" d="M9 48h46M13 44l10-10 9 6 17-22"/><path class="picAccent" d="M43 18h8v8"/><circle class="picGood" cx="23" cy="34" r="3"/><circle class="picGood" cx="32" cy="40" r="3"/></svg>`,
   race:`<svg class="todayPic" viewBox="0 0 64 64" aria-hidden="true"><path class="picBase" d="M17 55V9M18 12h28l-7 9 7 9H18"/><path class="picAccent" d="M20 14h8v8h-8zM28 22h8v8h-8zM36 14h8v8h-8z"/></svg>`,
-  rehab:`<svg class="todayPic" viewBox="0 0 64 64" aria-hidden="true"><circle class="picSkin" cx="18" cy="10" r="5"/><path class="picBase" d="M19 16l9 10 10 3M19 18l-5 13"/><path class="picBase" d="M28 26l-4 13-8 14M24 39l10 14"/><path class="picAccent" d="M9 34h38M12 34v19M44 34v19"/><path class="picGood" d="M49 11h10M54 6v10"/></svg>`,
+  rehab:`<svg class="todayPic rehabCrossPic" viewBox="0 0 64 64" aria-hidden="true">
+    <path class="picGood rehabCross" d="M27 14h10v13h13v10H37v13H27V37H14V27h13z"/>
+    <path class="picAccent rehabArc" d="M14 18a24 24 0 0 1 33-3M50 46a24 24 0 0 1-34 2"/>
+  </svg>`,
   recovery:`<svg class="todayPic" viewBox="0 0 64 64" aria-hidden="true"><path class="picBase" d="M43 45A20 20 0 1 1 31 9a17 17 0 0 0 12 36z"/><path class="picAccent" d="M45 12v8M41 16h8M52 26v6M49 29h6"/></svg>`,
   action:`<svg class="todayPic" viewBox="0 0 64 64" aria-hidden="true"><rect class="picBase" x="17" y="10" width="30" height="44" rx="4"/><path class="picGood" d="M25 23l3 3 6-7M25 35l3 3 6-7M25 47l3 3 6-7"/><path class="picBase" d="M37 24h5M37 36h5M37 48h5M26 10V7h12v3"/></svg>`
  };
@@ -2394,12 +2397,29 @@ function todayRehabCard(active){
    <button type="button" class="runnerTextButton rehabPrimaryButton" data-go="injury">Open today’s rehab plan</button>
  </section>`;
 }
+function todayMiniValueClass(kind,value,context={}){
+ if(kind==='score'){
+   const n=Number(value); return !Number.isFinite(n)?'neutral':n>=80?'good':n>=65?'warn':'bad';
+ }
+ if(kind==='week'){
+   const n=Number(value), expected=Number(context.expected);
+   if(!Number.isFinite(n)||!Number.isFinite(expected))return'neutral';
+   return n>=expected-5?'good':n>=expected-20?'warn':'bad';
+ }
+ if(kind==='raceTime'){
+   const days=Number(value),taper=Number(state.setup.taperDays)||14;
+   if(!Number.isFinite(days))return'neutral';
+   return days>=taper+56?'good':days>=taper+21?'warn':'bad';
+ }
+ return'neutral';
+}
 function todayWeekCard(ast){
  const w=currentWeek(),wd=weekData(w),planned=Number(wd.planned)||0,actual=Number(wd.actual)||0,pct=planned>0?clamp(actual/planned*100,0,130):0;
  const sessions=wd.plan.filter(p=>p.type!=='Rest').length,completed=wd.plan.filter(p=>p.type!=='Rest'&&matchingRun(p)).length;
  const pathways=ast.pathways||pathwayFactorSummary(w);
+ const elapsedDays=clamp(Math.floor((today()-weekStart(w))/DAY)+1,1,7),expectedPct=elapsedDays/7*100,weekClass=todayMiniValueClass('week',pct,{expected:expectedPct});
  return`<section class="todayRunnerCard todayWeekCard">
-   <div class="runnerSectionHead"><span class="runnerCardIcon">${todayPictogram('week')}</span><div><small>THIS TRAINING WEEK</small><h3>Week ${w} · ${esc(detailedPhase(w))}</h3></div><span class="runnerStatus">${Math.round(pct)}%</span></div>
+   <div class="runnerSectionHead"><span class="runnerCardIcon">${todayPictogram('week')}</span><div><small>THIS TRAINING WEEK</small><h3>Week ${w} · ${esc(detailedPhase(w))}</h3></div><span class="runnerStatus miniValue ${weekClass}">${Math.round(pct)}%</span></div>
    <div class="weekDistanceLine"><strong>${actual.toFixed(1)} km</strong><span>of ${planned.toFixed(1)} km planned</span></div>
    <div class="weekProgress"><i style="width:${Math.min(100,pct)}%"></i></div>
    <div class="weekMetrics"><span><b>${completed}/${sessions}</b><small>sessions completed</small></span><span><b>${pathways.pace.current.toFixed(3)}</b><small>Pace & Power</small></span><span><b>${pathways.load.current.toFixed(3)}</b><small>Distance & Load</small></span></div>
@@ -2411,14 +2431,14 @@ function todayLatestSignalCard(){
  const trend=Number.isFinite(ex.trend)?`${ex.trend>=0?'↑':'↓'} ${Math.abs(ex.trend).toFixed(0)} pts`:'Building';
  const m=metrics(latest.run),eff=Number.isFinite(m.efficiencyJ)?`${m.efficiencyJ.toFixed(1)} J/beat`:'—',drift=Number.isFinite(latest.drift)?`${latest.drift.toFixed(1)}%`:'—';
  return`<section class="todayRunnerCard todaySignalCard">
-   <div class="runnerSectionHead"><span class="runnerCardIcon">${todayPictogram('signal')}</span><div><small>LATEST TRAINING SIGNAL</small><h3>${esc(latest.type)}</h3><p>${fmtDate(latest.date)}</p></div><span class="scoreBadge">${Math.round(latest.score)}/100</span></div>
+   <div class="runnerSectionHead"><span class="runnerCardIcon">${todayPictogram('signal')}</span><div><small>LATEST TRAINING SIGNAL</small><h3>${esc(latest.type)}</h3><p>${fmtDate(latest.date)}</p></div><span class="scoreBadge miniValue ${todayMiniValueClass('score',latest.score)}">${Math.round(latest.score)}/100</span></div>
    <div class="signalMetrics"><span><small>EXECUTION TREND</small><b>${trend}</b></span><span><small>EFFICIENCY</small><b>${eff}</b></span><span><small>CARDIAC DRIFT</small><b>${drift}</b></span></div>
  </section>`;
 }
 function todayRaceCard(engine,report){
  const remaining=raceTimeRemaining(),prob=engine.currentModel.provisional?null:Math.round(engine.currentModel.probability),gap=engine.pred-state.setup.targetTime;
  return`<section class="todayRunnerCard todayRaceCard">
-   <div class="runnerSectionHead"><span class="runnerCardIcon">${todayPictogram('race')}</span><div><small>RACE CONTEXT</small><h3>${esc(state.setup.raceName)}</h3><p>${Number(state.setup.raceDistance).toFixed(1)} km · ${esc(report.race.phase)} phase</p></div><span class="runnerStatus">${remaining.label}</span></div>
+   <div class="runnerSectionHead"><span class="runnerCardIcon">${todayPictogram('race')}</span><div><small>RACE CONTEXT</small><h3>${esc(state.setup.raceName)}</h3><p>${Number(state.setup.raceDistance).toFixed(1)} km · ${esc(report.race.phase)} phase</p></div><span class="runnerStatus miniValue ${todayMiniValueClass('raceTime',remaining.days)}">${remaining.label}</span></div>
    <div class="raceMetrics"><span><small>TARGET</small><b>${fmtTime(state.setup.targetTime)}</b></span><span><small>CURRENT ESTIMATE</small><b>${fmtEstimate(engine.pred,engine.currentModel.provisional)}</b></span><span><small>TARGET CHANCE</small><b>${prob===null?'Building':prob+'%'}</b></span></div>
    ${todayBulletList([gap<=0?`${fmtTime(Math.abs(gap))} inside current target estimate`:`${fmtTime(gap)} outside current target estimate`,report.race.priority],'runnerBullets compactBullets')}
  </section>`;

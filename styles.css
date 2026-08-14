@@ -398,3 +398,79 @@ canvas{display:block;width:100%!important;max-width:100%;height:auto!important;m
 #today .todayStatusCard .statusRing .picBase,#today .rehabPriorityHero .runnerCardIcon .picBase{stroke-width:3.2!important}
 #today .todayStatusCard .statusRing .picWarn{stroke:#ff6842!important;stroke-width:3.6!important}
 #today .todayStatusCard .statusRing .picGood,#today .rehabPriorityHero .runnerCardIcon .picGood{stroke:#8bdd69!important;stroke-width:3.4!important}
+
+/* TODAY TAB — LOCKED UI CONTRACT v12.1.8
+   Centered pictograms + standardized semantic mini-values. */
+#today .statusRing,
+#today .runnerCardIcon{
+  display:grid!important;
+  place-items:center!important;
+}
+#today .statusRing .todayPic,
+#today .runnerCardIcon .todayPic{
+  display:block!important;
+  width:54px!important;
+  height:54px!important;
+  margin:0!important;
+  transform:none!important;
+  overflow:visible!important;
+}
+#today .rehabCrossPic{
+  width:52px!important;
+  height:52px!important;
+}
+#today .rehabCrossPic .rehabCross{
+  fill:none!important;
+  stroke:#8bdd69!important;
+  stroke-width:4!important;
+  stroke-linejoin:round!important;
+}
+#today .rehabCrossPic .rehabArc{
+  stroke:#38ddd7!important;
+  stroke-width:2.4!important;
+  opacity:.9;
+}
+
+#today .miniValue,
+#today .runnerStatus.miniValue,
+#today .scoreBadge.miniValue{
+  min-width:58px!important;
+  min-height:30px!important;
+  display:inline-flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  padding:5px 8px!important;
+  border-radius:9px!important;
+  font-size:11px!important;
+  font-weight:850!important;
+  line-height:1!important;
+  letter-spacing:0!important;
+  white-space:nowrap!important;
+}
+#today .miniValue.good{
+  color:#9ae77d!important;
+  background:rgba(92,194,103,.11)!important;
+  border-color:rgba(129,222,108,.32)!important;
+}
+#today .miniValue.warn{
+  color:#ffd071!important;
+  background:rgba(225,167,61,.11)!important;
+  border-color:rgba(242,190,80,.32)!important;
+}
+#today .miniValue.bad{
+  color:#ff8a72!important;
+  background:rgba(229,91,66,.11)!important;
+  border-color:rgba(244,112,88,.34)!important;
+}
+#today .miniValue.neutral{
+  color:#8ee9ec!important;
+  background:rgba(45,190,199,.10)!important;
+  border-color:rgba(72,210,216,.25)!important;
+}
+@media(max-width:390px){
+ #today .miniValue,#today .runnerStatus.miniValue,#today .scoreBadge.miniValue{
+   min-width:54px!important;
+   font-size:10px!important;
+   padding:5px 6px!important;
+ }
+}
