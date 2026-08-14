@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '13.1.5';
-  const BUILD = 30105;
+  const VERSION = '13.1.6';
+  const BUILD = 30106;
   const SCHEMA = 10330;
   const PRIMARY_STORAGE_KEY = 'arc_v10330_web';
   const MIRROR_STORAGE_KEY = 'arc_v10330_mirror';
@@ -1944,6 +1944,15 @@ function coachReportHtml(report,compact=false){
  const executionHtml=ex&&ex.count?`<section class="executionAssessment"><div class="executionHead"><div><h4>Workout execution</h4><p class="muted compact">How well recent completed sessions delivered their intended stimulus.</p></div><strong>${Number.isFinite(ex.average)?Math.round(ex.average):'—'}/100</strong></div><div class="executionKpis"><span>Recent average <b>${Number.isFinite(ex.average)?Math.round(ex.average):'—'}</b>${Number.isFinite(ex.average)?`<i><em style="width:${clamp(ex.average,0,100)}%"></em></i>`:''}</span><span>Key sessions <b>${Number.isFinite(ex.keyAverage)?Math.round(ex.keyAverage):'—'}</b>${Number.isFinite(ex.keyAverage)?`<i><em style="width:${clamp(ex.keyAverage,0,100)}%"></em></i>`:''}</span><span>Trend <b>${Number.isFinite(ex.trend)?`${ex.trend>=0?'+':''}${ex.trend.toFixed(0)} pts`:'Insufficient data'}</b></span></div><details class="executionDetails"><summary>Session-by-session evidence</summary>${ex.recent.map(x=>`<div class="executionRow"><span>${fmtDate(x.date)} · ${esc(x.type)}</span><b>${x.score}/100</b><small>${x.plan?`Planned ${x.plan.distance.toFixed(1)} km · actual ${Number(x.run.distanceKm).toFixed(1)} km`:'Ad hoc run'}${Number.isFinite(x.pain)?` · pain ${x.pain}/10`:''}${Number.isFinite(x.drift)?` · drift ${x.drift.toFixed(1)}%`:''}</small></div>`).join('')}</details></section>`:'<section class="executionAssessment"><h4>Workout execution</h4><p class="muted">No completed run has enough information for an execution score yet.</p></section>';
  return `<div class="coachReport ${compact?'compactReport':''}"><div class="coachVerdict"><span>LONGITUDINAL TRAINING REVIEW</span><p class="coachConclusion">${esc(report.conclusion)}</p><p class="coachProjection">${esc(report.projected)}</p><small>Evidence coverage ${report.evidenceCoverage}% · Coaching uses logged, configured, plan-linked and execution-score evidence.</small></div><div class="coachAdaptationReference"><b>Adaptation status</b><p>Numeric Pace & Power and Distance & Load factors are shown once in the Adaptation section above. This longitudinal review focuses on the coaching interpretation, strengths, limiters and next actions.</p></div><div class="coachRecoverySummary"><div><span>Recovery</span><b>${esc(ast.readiness)}</b><small>${esc(recoverySummary)}</small></div><div><span>Pain</span><b>${ast.pain.count?`${ast.pain.max}/10`:'No data'}</b><small>${esc(painSummary)}</small></div></div>${executionHtml}<div class="coachEvidenceGrid"><section><h4>Verified strengths</h4>${strengths}</section><section><h4>Priority opportunities</h4>${opportunities}</section></div><section class="coachActions"><h4>Next actions</h4>${report.actions.map((a,i)=>`<div class="coachAction"><strong>${i+1}</strong><div><b>${esc(a.title)}</b><p>${esc(a.text)}</p><small>Based on: ${esc(a.source)}</small></div></div>`).join('')}</section></div>`;
 }
+function progressCoachReportHtml(report){
+ const sentences=String(report.conclusion||'').split(/(?<=[.!?])\s+/).map(x=>x.trim()).filter(Boolean);
+ const chunks=[sentences.slice(0,2).join(' '),sentences.slice(2,4).join(' '),sentences.slice(4).join(' '),String(report.projected||'')].filter(Boolean);
+ const bullets=chunks.map(x=>`<li>${esc(x)}</li>`).join('');
+ const strengths=report.strengths.length?report.strengths.map(x=>evidenceFindingHtml(x,true)).join(''):'<p class="muted">No strength is labelled yet because the available evidence does not reach the required threshold.</p>';
+ const opportunities=report.opportunities.length?report.opportunities.map(x=>evidenceFindingHtml(x,false)).join(''):'<p class="muted">No material evidence-backed opportunity is currently identified.</p>';
+ return `<div class="coachReport compactReport progressCoachReport"><div class="coachVerdict"><span>LONGITUDINAL TRAINING REVIEW</span><ul class="progressReviewBullets">${bullets}</ul><small>Evidence coverage ${report.evidenceCoverage}% · Coaching uses logged, configured, plan-linked and execution-score evidence.</small></div><div class="coachEvidenceGrid"><section><h4>Verified strengths</h4>${strengths}</section><section><h4>Priority opportunities</h4>${opportunities}</section></div><section class="coachActions"><h4>Next actions</h4>${report.actions.map((a,i)=>`<div class="coachAction"><strong>${i+1}</strong><div><b>${esc(a.title)}</b><p>${esc(a.text)}</p><small>Based on: ${esc(a.source)}</small></div></div>`).join('')}</section></div>`;
+}
+
 function progressCard(x){let pct=clamp(x.value/Math.max(.01,x.target)*100,0,100);let value=x.unit==='km'?`${x.value.toFixed(1)} / ${x.target.toFixed(1)} km`:`${Math.round(x.value)} / ${Math.round(x.target)} ${x.unit}`;return `<div class="progressCard"><div><b>${x.label}</b><span>${value}</span></div><strong>${Math.round(pct)}%</strong><div class="progressTrack"><i style="width:${pct}%"></i></div></div>`}
 function decisionHistoryHtml(){
  const rows=completedRuns().slice().sort((a,b)=>b.date.localeCompare(a.date)).slice(0,10).map(r=>{
@@ -2017,7 +2026,7 @@ function renderDashboard(){
  if(currentCard)currentCard.classList.add(engine.currentModel.probability>=70?'metric-good':engine.currentModel.probability>=45?'metric-watch':'metric-action');
  if(projectedCard)projectedCard.classList.add(engine.projectedModel.probability>=70?'metric-good':engine.projectedModel.probability>=45?'metric-watch':'metric-action');
  const coachReport=evidenceBasedCoach(engine);
- $('assessmentText').innerHTML=coachReportHtml(coachReport,true);
+ $('assessmentText').innerHTML=progressCoachReportHtml(coachReport);
  const progressExecution=$('progressExecution');if(progressExecution){const ex=executionScoreSummary();progressExecution.innerHTML=ex.count?`<article class="panel progressExecutionCard"><div class="progressMetricLead"><div><small>RECENT EXECUTION</small><strong>${Math.round(ex.average)}/100</strong><span>${scoreBand(Math.round(ex.average))}</span></div><div><small>KEY SESSIONS</small><strong>${Number.isFinite(ex.keyAverage)?Math.round(ex.keyAverage)+'/100':'—'}</strong><span>${Number.isFinite(ex.trend)?`${ex.trend>=0?'+':''}${ex.trend.toFixed(0)} pts recent trend`:'Building trend evidence'}</span></div></div><details><summary>Session-by-session evidence</summary>${ex.recent.map(x=>`<div class="executionRow"><span>${fmtDate(x.date)} · ${esc(x.type)}</span><b>${x.score}/100</b></div>`).join('')}</details></article>`:`<article class="panel progressBaseline"><b>Building your execution baseline</b><p>No completed run has enough information for an execution score yet.</p></article>`;}
  const progressRecovery=$('progressRecovery');if(progressRecovery){const h=hrvModel(),ast=athleteState(cw),active=(state.injuries||[]).find(x=>x.id===state.activeInjuryPlanId);progressRecovery.innerHTML=`<article class="panel progressRecoveryCard"><div class="progressMetricLead"><div><small>RECOVERY CONTEXT</small><strong>${esc(ast.readiness||'—')}</strong><span>Temporary overlay, not learned capability</span></div><div><small>HRV EVIDENCE</small><strong>${h.count||0}</strong><span>${h.rolling!=null?`Recent ${h.rolling.toFixed(0)} ms${h.baseline!=null?` · baseline ${h.baseline.toFixed(0)} ms`:''}`:'Building personal baseline'}</span></div></div>${active?`<div class="progressInterruption"><b>Active rehabilitation affects training exposure</b><p>Progress charts preserve the interruption rather than treating missing or reduced running as zero fitness.</p></div>`:''}</article>`;}
  const adaptationHome=$('progressAdaptationHome');if(adaptationHome)adaptationHome.innerHTML=progressAdaptationHomeHtml();
@@ -2167,28 +2176,47 @@ function drawProgressLine(canvas,series,options={}){
 
 function renderProgressSvgChart(canvas,series,options={}){
  if(!canvas)return;
- const parent=canvas.parentElement;if(!parent)return;
- parent.querySelector(`:scope > svg.progressSvgChart[data-for="${canvas.id}"]`)?.remove();
+ const mount=$(canvas.id+'Mount')||canvas.parentElement?.querySelector('.progressChartMount');
+ if(!mount)return;
  const labels=options.labels||[];
  const numeric=series.flatMap(s=>s.data||[]).filter(Number.isFinite);
- if(!numeric.length){canvas.classList.add('progressChartHidden');return;}
+ mount.setAttribute('aria-hidden','false');
+ canvas.style.display='none';
  canvas.classList.add('progressChartHidden');
- const W=680,H=280,left=72,right=24,top=52,bottom=48,chartW=W-left-right,chartH=H-top-bottom;
- let min=Number.isFinite(options.min)?options.min:(options.zero===false?Math.min(...numeric):0);
- let max=Number.isFinite(options.max)?options.max:Math.max(...numeric);
+ if(!numeric.length){
+   mount.innerHTML=`<div class="progressChartState"><span class="progressStateIcon">${navIcon('dashboard')}</span><div><b>Building your baseline</b><p>No valid observations are available for this chart yet.</p></div></div>`;
+   return;
+ }
+ const W=680,H=300,left=76,right=24,top=58,bottom=54,chartW=W-left-right,chartH=H-top-bottom;
+ let min=Number.isFinite(options.min)?Number(options.min):(options.zero===false?Math.min(...numeric):0);
+ let max=Number.isFinite(options.max)?Number(options.max):Math.max(...numeric);
  if(max<=min)max=min+1;
  if(!Number.isFinite(options.min)&&!Number.isFinite(options.max)){const pad=(max-min)*.1||1;max+=pad;if(options.zero===false)min-=pad;}
  const n=Math.max(1,labels.length,...series.filter(s=>!s.horizontal).map(s=>(s.data||[]).length));
- const px=i=>n===1?left+chartW/2:left+i*chartW/(n-1);
+ const px=i=>n<=1?left+chartW/2:left+i*chartW/(n-1);
  const py=v=>top+(max-v)/(max-min)*chartH;
- const escXml=v=>String(v??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
- const ticks=options.ticks||5;let out=[];
- for(let i=0;i<ticks;i++){const f=i/(ticks-1),v=min+(max-min)*f,y=top+chartH-chartH*f,label=options.formatY?options.formatY(v):v.toFixed(Math.abs(v)<10?1:0);out.push(`<line class="grid ${i===0?'base':''}" x1="${left}" y1="${y}" x2="${W-right}" y2="${y}"/><text class="axis" x="${left-10}" y="${y+5}" text-anchor="end">${escXml(label)}</text>`)}
- const legend=[];let lx=left;series.forEach(s=>{if(!s.label)return;legend.push(`<line x1="${lx}" y1="25" x2="${lx+22}" y2="25" stroke="${s.color||'#4CC9F0'}" stroke-width="4" stroke-linecap="round" ${s.dashed?'stroke-dasharray="9 6"':''}/><text class="legend" x="${lx+30}" y="30">${escXml(s.label)}</text>`);lx+=44+Math.min(210,String(s.label).length*11)});
- series.forEach(s=>{const vals=(s.data||[]).map((v,i)=>({v,i})).filter(o=>Number.isFinite(o.v));if(!vals.length)return;if(s.horizontal){const y=py(vals[0].v);out.push(`<line x1="${left}" y1="${y}" x2="${W-right}" y2="${y}" stroke="${s.color||'#4CC9F0'}" stroke-width="3" ${s.dashed?'stroke-dasharray="10 7"':''}/>`);return;}const pts=vals.map(o=>`${px(o.i)},${py(o.v)}`).join(' ');if(vals.length>1)out.push(`<polyline fill="none" stroke="${s.color||'#4CC9F0'}" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" points="${pts}" ${s.dashed?'stroke-dasharray="10 7"':''}/>`);if(s.points!==false)vals.forEach(o=>out.push(`<circle cx="${px(o.i)}" cy="${py(o.v)}" r="5" fill="#fff" stroke="${s.color||'#4CC9F0'}" stroke-width="3"/>`));});
- const positions=options.allLabels?labels.map((_,i)=>i):[0,Math.floor((labels.length-1)/2),labels.length-1].filter((v,i,a)=>v>=0&&a.indexOf(v)===i);positions.forEach(i=>{if(labels[i]!=null)out.push(`<text class="axis x" x="${px(i)}" y="${H-14}" text-anchor="middle">${escXml(labels[i])}</text>`)});
- const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');svg.setAttribute('viewBox',`0 0 ${W} ${H}`);svg.setAttribute('class','progressSvgChart');svg.dataset.for=canvas.id;svg.setAttribute('role','img');svg.setAttribute('aria-label',canvas.getAttribute('aria-label')||'Progress chart');svg.innerHTML=legend.join('')+out.join('');canvas.insertAdjacentElement('afterend',svg);
+ const xml=v=>String(v??'').replace(/[&<>\"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[c]||c));
+ const ticks=Math.max(2,Number(options.ticks)||5),grid=[];
+ for(let i=0;i<ticks;i++){
+   const f=i/(ticks-1),v=min+(max-min)*f,y=top+chartH-chartH*f,label=options.formatY?options.formatY(v):v.toFixed(Math.abs(v)<10?1:0);
+   grid.push(`<line class="grid ${i===0?'base':''}" x1="${left}" y1="${y.toFixed(2)}" x2="${W-right}" y2="${y.toFixed(2)}"/><text class="axis" x="${left-10}" y="${(y+5).toFixed(2)}" text-anchor="end">${xml(label)}</text>`);
+ }
+ const plot=[];
+ series.forEach(s=>{
+   const vals=(s.data||[]).map((v,i)=>({v:Number(v),i})).filter(o=>Number.isFinite(o.v));
+   if(!vals.length)return;
+   if(s.horizontal){const y=py(vals[0].v);plot.push(`<line x1="${left}" y1="${y.toFixed(2)}" x2="${W-right}" y2="${y.toFixed(2)}" stroke="${s.color||'#4CC9F0'}" stroke-width="3" ${s.dashed?'stroke-dasharray="10 7"':''}/>`);return;}
+   const pts=vals.map(o=>`${px(o.i).toFixed(2)},${py(o.v).toFixed(2)}`).join(' ');
+   if(vals.length>1)plot.push(`<polyline fill="none" stroke="${s.color||'#4CC9F0'}" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" points="${pts}" ${s.dashed?'stroke-dasharray="10 7"':''}/>`);
+   if(s.points!==false)vals.forEach(o=>plot.push(`<circle cx="${px(o.i).toFixed(2)}" cy="${py(o.v).toFixed(2)}" r="5" fill="#f5fbff" stroke="${s.color||'#4CC9F0'}" stroke-width="3"/>`));
+ });
+ const xlabels=[];
+ const positions=options.allLabels?labels.map((_,i)=>i):[0,Math.floor((labels.length-1)/2),labels.length-1].filter((v,i,a)=>v>=0&&a.indexOf(v)===i);
+ positions.forEach(i=>{if(labels[i]!=null)xlabels.push(`<text class="axis x" x="${px(i).toFixed(2)}" y="${H-16}" text-anchor="middle">${xml(labels[i])}</text>`)});
+ const legend=series.filter(s=>s.label).map(s=>`<span><i style="--series:${s.color||'#4CC9F0'};${s.dashed?'--dash:1':''}"></i>${xml(s.label)}</span>`).join('');
+ mount.innerHTML=`<div class="progressChartLegend">${legend}</div><svg class="progressInlineChart" viewBox="0 0 ${W} ${H}" role="img" aria-label="${xml(canvas.getAttribute('aria-label')||'Progress chart')}">${grid.join('')}${plot.join('')}${xlabels.join('')}</svg>`;
 }
+
 
 
 function completedWeekSeries(){
@@ -3754,12 +3782,11 @@ function refreshSavedStreamMetrics(){
 
 function progressTrendState(canvas,count,singular,plural){
  if(!canvas)return false;
- let stateEl=canvas.parentElement?.querySelector(':scope > .progressChartState');
- if(!stateEl){stateEl=document.createElement('div');stateEl.className='progressChartState';canvas.insertAdjacentElement('beforebegin',stateEl)}
+ const mount=$(canvas.id+'Mount')||canvas.parentElement?.querySelector('.progressChartMount');
  const hasAny=count>=1;
- canvas.classList.toggle('progressChartHidden',!hasAny);
- stateEl.classList.toggle('hidden',hasAny);
- if(!hasAny){canvas.parentElement?.querySelector(`:scope > svg.progressSvgChart[data-for="${canvas.id}"]`)?.remove();canvas.classList.remove('progressCanvasRendered');stateEl.innerHTML=`<span class="progressStateIcon">${navIcon('dashboard')}</span><div><b>Building your baseline</b><p>No ${esc(plural)} recorded yet. This chart will appear as soon as the first valid observation is available.</p></div>`;}
+ canvas.style.display='none';
+ canvas.classList.add('progressChartHidden');
+ if(mount&&!hasAny){mount.setAttribute('aria-hidden','false');mount.innerHTML=`<div class="progressChartState"><span class="progressStateIcon">${navIcon('dashboard')}</span><div><b>Building your baseline</b><p>No ${esc(plural)} recorded yet. This chart will appear as soon as the first valid observation is available.</p></div></div>`;}
  return hasAny;
 }
 

@@ -2570,3 +2570,96 @@ canvas{display:block;width:100%!important;max-width:100%;height:auto!important;m
 #dashboard.progressPage #personalResponseModel,
 #dashboard.progressPage #modelValidation,
 #dashboard.progressPage #decisionHistory{display:grid;gap:14px}
+
+/* v13.1.6 Progress verification repair: deterministic charts, spacing and hierarchy. */
+#dashboard.progressPage canvas{display:none!important;height:0!important;min-height:0!important;margin:0!important;padding:0!important}
+#dashboard.progressPage .progressChartMount{display:block!important;width:100%;min-width:0;margin-top:10px}
+#dashboard.progressPage .progressChartMount[aria-hidden="true"]{display:none!important}
+#dashboard.progressPage .progressInlineChart{display:block;width:100%;height:auto;aspect-ratio:680/300;overflow:visible}
+#dashboard.progressPage .progressInlineChart .grid{stroke:rgba(109,181,210,.30);stroke-width:1}
+#dashboard.progressPage .progressInlineChart .grid.base{stroke:rgba(224,242,247,.72);stroke-width:1.5}
+#dashboard.progressPage .progressInlineChart .axis{font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;font-size:16px;font-weight:600;fill:#c2d6dd}
+#dashboard.progressPage .progressInlineChart .axis.x{font-size:15px}
+#dashboard.progressPage .progressChartLegend{display:flex;flex-wrap:wrap;align-items:center;gap:7px 14px;margin:0 0 2px;padding:0 2px;font-size:10px;font-weight:800;color:#d9e9ed}
+#dashboard.progressPage .progressChartLegend>span{display:inline-flex;align-items:center;gap:6px;color:#d9e9ed}
+#dashboard.progressPage .progressChartLegend i{display:inline-block;width:20px;height:3px;border-radius:999px;background:var(--series,#4CC9F0)}
+#dashboard.progressPage .progressChartState{margin:0!important;min-height:0!important}
+
+/* Three-level surface system: primary teal -> dark secondary -> darker disclosure. */
+#dashboard.progressPage .progressHero,
+#dashboard.progressPage .progressSection>.panel,
+#dashboard.progressPage .progressExecutionCard,
+#dashboard.progressPage .progressRecoveryCard,
+#dashboard.progressPage .canonicalAdaptationHome,
+#dashboard.progressPage .personalModelPanel,
+#dashboard.progressPage .modelValidationPanel,
+#dashboard.progressPage .coachAssessmentPanel{
+ background:linear-gradient(145deg,#0b6b78 0%,#075264 58%,#073949 100%)!important;
+ border:1px solid rgba(61,214,198,.38)!important;
+ border-radius:18px!important;
+}
+#dashboard.progressPage :is(.fitnessMetricGroup .kpi,.progressMetricLead>div,.canonicalPathwayGrid>.adaptationVisualCard,.personalDimension,.modelValidationGrid>article,.scienceProvenance>div,.coachVerdict,.coachEvidenceGrid>section,.coachAction,.evidenceFinding,.executionAssessment,.progressInterruption){
+ background:#102331!important;
+ border:1px solid rgba(130,180,197,.16)!important;
+ border-radius:13px!important;
+}
+#dashboard.progressPage :is(.canonicalPathwayGrid>.adaptationVisualCard,.personalDimension,.modelValidationGrid>article,.scienceProvenance>div,.coachVerdict,.coachEvidenceGrid>section,.coachAction,.executionAssessment){padding:14px!important}
+#dashboard.progressPage :is(details,.evidenceDetail,.canonicalContribution,.executionRow){--progress-level3:#0b1b26}
+#dashboard.progressPage details:not(.modelDetails)>summary,
+#dashboard.progressPage .evidenceDetail,
+#dashboard.progressPage .executionRow{background:var(--progress-level3)!important}
+
+/* Identical vertical rhythm between Progress tiles/modules. */
+#dashboard.progressPage .progressSection{display:grid!important;gap:14px!important;margin-bottom:32px!important}
+#dashboard.progressPage .grid2,#dashboard.progressPage .kpis,#dashboard.progressPage .progressMetricLead,#dashboard.progressPage .canonicalPathwayGrid,#dashboard.progressPage .modelValidationGrid,#dashboard.progressPage .scienceProvenance,#dashboard.progressPage .coachEvidenceGrid{gap:10px!important}
+#dashboard.progressPage .progressSection>*{margin-top:0!important;margin-bottom:0!important}
+#dashboard.progressPage .panelHead{margin-bottom:10px!important}
+
+/* Prevent adjacent labels/values from visually concatenating on narrow phones. */
+#dashboard.progressPage .executionRow{display:grid!important;grid-template-columns:minmax(0,1fr) auto!important;column-gap:12px!important;row-gap:5px!important;padding:11px 12px!important}
+#dashboard.progressPage .executionRow>span{min-width:0;overflow-wrap:anywhere}
+#dashboard.progressPage .executionRow>b{justify-self:end;white-space:nowrap}
+#dashboard.progressPage .executionRow>small{grid-column:1/-1!important;display:block!important;line-height:1.45!important}
+#dashboard.progressPage .coachRecoverySummary>div{display:grid!important;gap:4px!important}
+#dashboard.progressPage .coachRecoverySummary>div>*{display:block!important;margin:0!important}
+#dashboard.progressPage .evidenceMeta>span{display:grid!important;grid-template-columns:minmax(0,1fr) auto!important;align-items:center!important;gap:8px!important}
+#dashboard.progressPage .evidenceMeta>span>b{justify-self:end!important;margin:0!important;white-space:normal!important;text-align:right}
+#dashboard.progressPage .scienceProvenance>div{display:grid!important;gap:6px!important;line-height:1.45!important}
+#dashboard.progressPage .scienceProvenance>div>small,#dashboard.progressPage .scienceProvenance>div>b{display:block!important;margin:0!important}
+#dashboard.progressPage .modelValidationGrid>article{display:grid!important;gap:8px!important;align-content:start}
+#dashboard.progressPage .modelValidationGrid>article>span,#dashboard.progressPage .modelValidationGrid>article>p{display:block!important;margin:0!important}
+#dashboard.progressPage .canonicalPathHead{padding:0 2px!important}
+#dashboard.progressPage .adaptationVisualCard{padding:16px!important}
+#dashboard.progressPage .canonicalPathMetrics{gap:8px!important}
+#dashboard.progressPage .canonicalPathMetrics>div{padding:11px!important}
+
+/* Longitudinal review: concise bullets rather than one dense paragraph. */
+#dashboard.progressPage #assessmentText>.coachReport.progressCoachReport{background:transparent!important;border:0!important;border-radius:0!important;padding:0!important;margin:0!important}
+#dashboard.progressPage .progressCoachReport{display:grid!important;gap:12px!important}
+#dashboard.progressPage .progressCoachReport .coachVerdict{display:grid!important;gap:10px!important;margin:0!important}
+#dashboard.progressPage .progressCoachReport .coachVerdict>span{font-size:10px!important;font-weight:900!important;letter-spacing:.11em!important;color:var(--teal-2)!important}
+#dashboard.progressPage .progressReviewBullets{display:grid;gap:7px;margin:0;padding-left:20px}
+#dashboard.progressPage .progressReviewBullets li{margin:0;color:#f3f8fa;font-size:13px;line-height:1.5;font-weight:650}
+#dashboard.progressPage .progressCoachReport .coachVerdict>small{display:block!important;font-size:10px!important;line-height:1.45!important;color:#9fb8c2!important}
+#dashboard.progressPage .progressCoachReport h4{font-size:16px!important;line-height:1.25!important;margin:0 0 8px!important}
+#dashboard.progressPage .progressCoachReport .coachAction{display:grid!important;grid-template-columns:28px minmax(0,1fr)!important;gap:10px!important}
+#dashboard.progressPage .progressCoachReport .coachAction>div{display:grid!important;gap:4px!important}
+#dashboard.progressPage .progressCoachReport .coachAction p,#dashboard.progressPage .progressCoachReport .coachAction small{margin:0!important}
+
+/* Major model modules use the same heading hierarchy as the other Progress tiles. */
+#dashboard.progressPage .personalModelHead small,
+#dashboard.progressPage .modelValidationHead small,
+#dashboard.progressPage .canonicalAdaptationHead small{font-size:10px!important;font-weight:900!important;letter-spacing:.11em!important;color:var(--teal-2)!important}
+#dashboard.progressPage .personalModelHead h3,
+#dashboard.progressPage .modelValidationHead h3,
+#dashboard.progressPage .canonicalAdaptationHead h3{font-size:20px!important;line-height:1.2!important;letter-spacing:-.02em!important;margin:2px 0 0!important;color:#fff!important}
+#dashboard.progressPage .personalModelHead,
+#dashboard.progressPage .modelValidationHead,
+#dashboard.progressPage .canonicalAdaptationHead{margin-bottom:12px!important}
+
+@media(max-width:430px){
+ #dashboard.progressPage .progressInlineChart .axis{font-size:14px}
+ #dashboard.progressPage .progressInlineChart .axis.x{font-size:13px}
+ #dashboard.progressPage .progressChartLegend{font-size:9px;gap:6px 10px}
+ #dashboard.progressPage .progressReviewBullets li{font-size:12px}
+}
