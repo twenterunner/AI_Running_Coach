@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '13.0.3';
-  const BUILD = 30003;
+  const VERSION = '13.0.4';
+  const BUILD = 30004;
   const SCHEMA = 10330;
   const PRIMARY_STORAGE_KEY = 'arc_v10330_web';
   const MIRROR_STORAGE_KEY = 'arc_v10330_mirror';
@@ -3613,16 +3613,7 @@ function trainingConsequenceHtml(r){
    :hasProjection
      ?'Pathway evidence is provisional for the next weekly review; no future workout-specific consequence is currently available.'
      :'No future workout change is currently projected from this run.';
- return`<section class="logTrainingConsequence"><div class="logDetailSectionHead"><span>${logPictogram('consequence')}</span><div><small>TRAINING CONSEQUENCE</small><h3>What this means for your plan</h3><p>${esc(decision)}</p></div></div>
-   <div class="pathwayKey"><b>Adaptive pathways</b><span><strong>Pace &amp; Power</strong> learns capability/target calibration.</span><span><strong>Distance &amp; Load</strong> learns training-volume tolerance.</span></div>
-   <div class="consequenceStages">
-     <div><small>EVIDENCE FROM THIS RUN</small><div class="pathwayStageValue"><b>${signedFactorDelta(pt.acceptedContribution)}</b><span>Pace &amp; Power</span></div><div class="pathwayStageValue"><b>${signedFactorDelta(lt.acceptedContribution)}</b><span>Distance &amp; Load</span></div></div><i>→</i>
-     <div><small>APPLIED TO PLAN NOW</small><div class="pathwayStageValue"><b>${pt.applied.toFixed(3)}</b><span>Pace &amp; Power</span></div><div class="pathwayStageValue"><b>${lt.applied.toFixed(3)}</b><span>Distance &amp; Load</span></div></div><i>→</i>
-     <div><small>PROJECTED NEXT REVIEW</small><div class="pathwayStageValue"><b>${pt.projected.toFixed(3)}</b><span>Pace &amp; Power</span></div><div class="pathwayStageValue"><b>${lt.projected.toFixed(3)}</b><span>Distance &amp; Load</span></div></div>
-   </div>
-   <div class="consequenceCallout"><b>${esc(next)}</b><span>Learned pathway changes commit at weekly review. Temporary readiness can still modify an upcoming session independently.</span></div>
-   ${futureChanges.length?`<details class="logConsequenceDetails"><summary>Future projected workout consequences</summary><div class="projectedChangeRows">${futureChanges.map(c=>{const bits=[];if(Math.abs(c.distanceDeltaKm)>=.05)bits.push(`${c.beforeDistance.toFixed(1)} → ${c.afterDistance.toFixed(1)} km`);if(Math.abs(c.paceDeltaSec)>=.5)bits.push(`${pace(c.beforePace)} → ${pace(c.afterPace)}`);if(Math.abs(c.powerDeltaW)>=1)bits.push(`${Math.round(c.beforePower)} → ${Math.round(c.afterPower)} W`);return`<div><span>${fmtDate(c.date)} · ${esc(c.type)}</span><b>${bits.join(' · ')}</b></div>`}).join('')}</div></details>`:''}
- </section>`;
+ return``;
 }
 function workoutIntelligenceHtml(run){
  const w=workoutIntelligence(run),familyIcon=w.family==='long'?'long':w.family==='interval'?'quality':w.family==='recovery'?'recovery':w.family==='threshold'?'threshold':'easy';

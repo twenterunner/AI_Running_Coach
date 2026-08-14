@@ -1,4 +1,4 @@
-AI Running Coach v13.0.3 — Serious Runner Plan — build 30003
+AI Running Coach v13.0.4 — Serious Runner Plan — build 30004
 
 Deployment
 ----------
@@ -893,3 +893,9 @@ v13.0.3 — Pathway evidence typography and semantic alignment
 - Pace & Power and Distance & Load pathway presentation remains explicit and consistent.
 - Deeper calculation foldouts now use one unified font scale and weight hierarchy.
 - No calculation, scoring, pathway, prediction, adaptation, import, matching, storage or data-model equations changed.
+
+v13.0.4
+-------
+- Removed the Training Consequence / "What this means for your plan" tile from Log run detail.
+- Today and Plan remain unchanged.
+- No calculation or data-model logic changed.
