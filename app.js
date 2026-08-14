@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '12.1.1';
-  const BUILD = 20101;
+  const VERSION = '12.1.2';
+  const BUILD = 20102;
   const SCHEMA = 10330;
   const PRIMARY_STORAGE_KEY = 'arc_v10330_web';
   const MIRROR_STORAGE_KEY = 'arc_v10330_mirror';
@@ -2321,7 +2321,7 @@ function todayPictogram(kind){
  const svg={
   training:`<svg class="todayPic" viewBox="0 0 64 64" aria-hidden="true"><circle class="picSkin" cx="38" cy="10" r="6"/><path class="picBase" d="M31 19l-8 13 8 5 7-10 6 8 10-4"/><path class="picBase" d="M30 36l-7 14H11M32 37l11 10 10-2"/><path class="picAccent" d="M19 31l7-11 11-2"/><path class="picWarm" d="M16 48h12"/></svg>`,
   readiness:`<svg class="todayPic" viewBox="0 0 64 64" aria-hidden="true"><path class="picBase" d="M32 53S11 40 11 23c0-8 6-13 13-13 4 0 7 2 8 5 2-3 5-5 9-5 7 0 13 5 13 13 0 17-22 30-22 30z"/><path class="picGood" d="M8 34h13l5-10 7 20 6-13 4 3h13"/></svg>`,
-  pain:`<svg class="todayPic" viewBox="0 0 64 64" aria-hidden="true"><path class="picBase" d="M27 8c6 5 8 11 7 19l-1 8c-1 6 1 11 7 16"/><path class="picBase" d="M39 8c-3 7-3 14-1 21l2 7c2 6 1 12-4 19"/><path class="picWarm" d="M30 33c3-3 7-3 10 0"/><circle class="picWarn" cx="35" cy="35" r="6"/><path class="picWarn" d="M35 26v-4M35 48v-4M26 35h-4M48 35h-4"/></svg>`,
+  pain:`<svg class="todayPic" viewBox="0 0 64 64" aria-hidden="true"><path class="picBase" d="M25 7c5 5 7 11 6 18l-2 9c-1 5 0 10 3 14l5 8"/><path class="picBase" d="M38 8c-3 6-4 12-3 18l2 8c1 5 0 10-3 14l-5 8"/><path class="picBase" d="M25 22c4 2 8 2 12 0"/><path class="picWarm" d="M27 34c3-3 7-3 10 0M27 39c3 3 7 3 10 0"/><path class="picWarn" d="M24 36h-5M40 36h5"/><circle class="picWarn" cx="32" cy="36" r="5"/></svg>`,
   shoe:`<svg class="todayPic" viewBox="0 0 64 64" aria-hidden="true"><path class="picBase" d="M10 41c8-2 13-9 17-20l8 4c2 7 7 11 17 13 4 1 6 4 5 8-1 4-4 6-9 6H18c-7 0-11-4-8-11z"/><path class="picAccent" d="M27 25l8 5M23 31l9 5M18 37l9 5"/><path class="picWarm" d="M12 46h43"/></svg>`,
   week:`<svg class="todayPic" viewBox="0 0 64 64" aria-hidden="true"><rect class="picBase" x="10" y="14" width="44" height="38" rx="5"/><path class="picAccent" d="M10 24h44M20 9v10M44 9v10"/><path class="picGood" d="M18 35h8M30 35h8M42 35h5M18 43h8M30 43h8"/></svg>`,
   signal:`<svg class="todayPic" viewBox="0 0 64 64" aria-hidden="true"><path class="picBase" d="M9 48h46M13 44l10-10 9 6 17-22"/><path class="picAccent" d="M43 18h8v8"/><circle class="picGood" cx="23" cy="34" r="3"/><circle class="picGood" cx="32" cy="40" r="3"/></svg>`,
@@ -2367,13 +2367,17 @@ function todayWorkoutCard(p,injuryDay){
  const z=p.zone||{},targetScope=esc(p.targetScope||'main set');
  const caution=injuryDay?['Active rehabilitation takes priority over this running prescription.','Only run if today’s rehabilitation criteria and safety rule allow it.']:null;
  return`<section class="todayRunnerCard todayWorkoutCard">
-   <div class="runnerSectionHead"><span class="runnerCardIcon">${todayPictogram('shoe')}</span><div><small>${injuryDay?'RUNNING PLAN — SECONDARY':'TODAY’S RUNNING PLAN'}</small><h3>${esc(p.type)}</h3><p>${esc(p.phase||phase(currentWeek()))} · ${Number(p.distance).toFixed(1)} km</p></div><span class="runnerStatus ${injuryDay?'warn':''}">${injuryDay?'Rehab first':'Scheduled'}</span></div>
+   <div class="runnerSectionHead"><span class="runnerCardIcon">${todayPictogram('shoe')}</span><div><small>${injuryDay?'RUNNING PLAN — SECONDARY':'TODAY’S RUNNING PLAN'}</small><h3>${esc(p.type)}</h3><p>${esc(p.phase||phase(currentWeek()))} · ${Number(p.distance).toFixed(1)} km</p></div></div>
    ${caution?todayBulletList(caution,'runnerBullets cautionBullets'):''}
    <div class="todayTargetGrid"><div><small>PACE</small><strong>${pace(z.pace)}</strong><span>${targetScope}</span></div><div><small>POWER</small><strong>${Number.isFinite(Number(z.power))?Math.round(z.power)+' W':'—'}</strong><span>${targetScope}</span></div><div><small>HEART RATE</small><strong>${Number.isFinite(Number(z.hr))?Math.round(z.hr)+' bpm':'—'}</strong><span>${targetScope}</span></div></div>
-   ${todayWorkoutStructure(p)}
-   <div class="todayPrescription"><div><small>WARM-UP</small><p>${esc(p.warmup||'—')}</p></div><div class="main"><small>MAIN SET</small><p>${esc(p.main||'—')}</p></div><div><small>COOLDOWN</small><p>${esc(p.cooldown||'—')}</p></div></div>
-   <div class="todayWorkoutNotes">${todayBulletList([p.purpose?`Why today: ${p.purpose}`:null,p.fuel?`Fuel / hydration: ${p.fuel}`:null],'runnerBullets compactBullets')}</div>
-   <button type="button" class="todayWorkoutButton" data-today-workout-date="${esc(p.date)}">View full prescription <span>›</span></button>
+   <button type="button" class="workoutVizDisclosure" data-workout-toggle="${esc(p.date)}" aria-expanded="false" aria-controls="workout-details-${esc(p.date)}">
+     ${todayWorkoutStructure(p)}
+     <span class="workoutVizTapHint">Tap workout structure for full details <b>⌄</b></span>
+   </button>
+   <div class="todayWorkoutDetails" id="workout-details-${esc(p.date)}" hidden>
+     <div class="todayPrescription"><div><small>WARM-UP</small><p>${esc(p.warmup||'—')}</p></div><div class="main"><small>MAIN SET / INTERVALS</small><p>${esc(p.main||'—')}</p></div><div><small>COOLDOWN</small><p>${esc(p.cooldown||'—')}</p></div></div>
+     <div class="todayWorkoutNotes">${todayBulletList([p.purpose?`Why today: ${p.purpose}`:null,p.fuel?`Fuel / hydration: ${p.fuel}`:null],'runnerBullets compactBullets')}</div>
+   </div>
  </section>`;
 }
 function todayRehabCard(active){
@@ -2383,7 +2387,7 @@ function todayRehabCard(active){
  const items=(injuryDay.items||[]).slice(0,4);
  const pain=Number.isFinite(Number(progress?.currentPain))?`${Number(progress.currentPain).toFixed(0)}/10 pain`:null;
  return`<section class="todayRunnerCard todayRehabCard rehabPriorityHero">
-   <div class="runnerSectionHead"><span class="runnerCardIcon">${todayPictogram('rehab')}</span><div><small>ACTIVE REHABILITATION · PRIORITY 1</small><h3>Rehab comes first today</h3><p>${esc(injury.bodyRegion||'Injury')} · ${esc(stage)}</p></div><span class="runnerStatus warn">Priority</span></div>
+   <div class="runnerSectionHead"><span class="runnerCardIcon">${todayPictogram('rehab')}</span><div><small>ACTIVE REHABILITATION · PRIORITY 1</small><h3>Rehab comes first today</h3><p>${esc(injury.bodyRegion||'Injury')} · ${esc(stage)}</p></div></div>
    <div class="rehabPrioritySummary"><strong>${esc(injuryDay.title)}</strong>${pain?`<span>${esc(pain)}</span>`:''}</div>
    ${todayBulletList(items.length?items:[injuryDay.rule],'runnerBullets rehabBullets')}
    <div class="runnerCallout"><b>Safety rule</b><span>${esc(injuryDay.rule)}</span></div>
@@ -2452,8 +2456,7 @@ function consolidatedTodayCoachBriefing(p){
      'Protect the next scheduled training exposure.'
    ];
  }
- return`${todayRehabCard(active)}
- <section class="todayBriefingCard seriousBriefing runnerFullWidth">
+ return`<section class="todayBriefingCard seriousBriefing runnerFullWidth">
    <div class="briefingCopy"><div class="briefingTitle"><span class="briefingIcon">${coachVisualIcon('briefing')}</span><div><small>DAILY DECISION</small><h3>Coach Briefing</h3><p>${esc(report.race.phase)} phase · ${remaining.label} to ${esc(state.setup.raceName)}</p></div></div>
    <div class="briefingDecision"><small>TODAY'S PRIORITY</small><strong>${esc(priorityTitle)}</strong>${todayBulletList(priorityBullets,'runnerBullets priorityBullets')}</div></div>
    <div class="briefingGauges"><div class="evidenceCompleteness" style="--evidence:${evidence}"><div class="evidenceRing"><strong>${evidence}</strong><span>%</span></div><small>Evidence completeness</small></div></div>
@@ -2463,6 +2466,7 @@ function consolidatedTodayCoachBriefing(p){
    <article class="todayStatusCard ${ready.label==='Normal'?'good':ready.label==='Restricted'?'caution':'neutral'}"><h4>READINESS</h4><div class="statusRing">${todayPictogram('readiness')}</div><div class="statusCopy"><strong>${esc(ready.label)}</strong><p>${esc(readinessDetail)}</p></div></article>
    <article class="todayStatusCard ${Number(pain.max)>=3?'caution':'good'}"><h4>PAIN / INJURY</h4><div class="statusRing">${todayPictogram('pain')}</div><div class="statusCopy"><strong>${painValue}</strong><p>${esc(painText)}</p></div></article>
  </div>
+ ${todayRehabCard(active)}
  ${todayWorkoutCard(p,injuryDay)}
  ${todayWeekCard(ast)}
  ${todayLatestSignalCard()}
@@ -2473,9 +2477,12 @@ function renderToday(){
  const p=state.plan.find(x=>x.date===iso(today()));
  $('todayDate').textContent=today().toLocaleDateString(undefined,{weekday:'long',day:'numeric',month:'long',year:'numeric'});
  $('todayCard').innerHTML=consolidatedTodayCoachBriefing(p);$('todayCoach').innerHTML='';
- document.querySelectorAll('#today [data-today-workout-date]').forEach(btn=>btn.addEventListener('click',()=>{
-   const target=state.plan.find(x=>x.date===btn.dataset.todayWorkoutDate);
-   if(target)openModal(`<div class="todayWorkoutModal">${workoutHtml(target)}</div>`);
+ document.querySelectorAll('#today [data-workout-toggle]').forEach(btn=>btn.addEventListener('click',()=>{
+   const details=document.getElementById(`workout-details-${btn.dataset.workoutToggle}`);
+   if(!details)return;
+   const opening=details.hidden;details.hidden=!opening;
+   btn.setAttribute('aria-expanded',opening?'true':'false');
+   const hint=btn.querySelector('.workoutVizTapHint b');if(hint)hint.textContent=opening?'⌃':'⌄';
  }));
  document.querySelectorAll('#today [data-go]').forEach(btn=>btn.addEventListener('click',()=>showPage(btn.dataset.go)));
 }

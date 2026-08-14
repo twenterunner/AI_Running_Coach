@@ -1,4 +1,4 @@
-AI Running Coach v12.1.1 — Runner-first Today — build 20101
+AI Running Coach v12.1.2 — Today interaction refinement — build 20102
 
 Deployment
 ----------
@@ -640,3 +640,12 @@ v12.1.1 — Runner-first Today refinement
 - Pain pictogram changed to an anatomical lower-limb/joint cue.
 - View full prescription now resolves the workout by date instead of relying on an internal workout ID.
 - No calculation, prediction, plan-generation, pathway, readiness, injury, scoring, import, storage or data-model equations changed.
+
+
+v12.1.2 — Today interaction refinement
+- Order: Coach Briefing → three status cards → active rehab → workout → remaining context.
+- Evidence circle fixed beside Coach Briefing.
+- Removed redundant Priority and Rehab first pills.
+- Removed full-description button; tapping workout structure now expands/collapses prescription and intervals.
+- Pain pictogram revised to a more anatomical lower-limb/joint representation.
+- Model/data engines unchanged.

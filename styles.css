@@ -109,3 +109,23 @@ canvas{display:block;width:100%!important;max-width:100%;height:auto!important;m
  #today .rehabPrioritySummary{align-items:flex-start;flex-direction:column;gap:4px}
  #today .runnerBullets li{font-size:10px}
 }
+
+/* TODAY TAB — LOCKED UI CONTRACT v12.1.2 */
+#today .seriousBriefing{display:grid!important;grid-template-columns:minmax(0,1fr) 104px!important;align-items:center!important}
+#today .briefingCopy{grid-column:1!important;grid-row:1!important}
+#today .briefingGauges{grid-column:2!important;grid-row:1!important;align-self:center!important}
+#today .rehabPriorityHero .runnerSectionHead,#today .todayWorkoutCard .runnerSectionHead{grid-template-columns:54px minmax(0,1fr)!important}
+#today .rehabPriorityHero .runnerStatus,#today .todayWorkoutCard .runnerStatus{display:none!important}
+#today .workoutVizDisclosure{display:block!important;width:100%!important;margin:12px 0 0!important;padding:10px 8px 7px!important;text-align:initial!important;background:rgba(2,31,43,.18)!important;border:1px solid rgba(65,218,224,.2)!important;border-radius:12px!important;min-height:0!important}
+#today .workoutVizDisclosure .todayWorkoutViz{margin:0!important}
+#today .workoutVizTapHint{display:flex;align-items:center;justify-content:center;gap:6px;margin-top:3px;font-size:9px;font-weight:750;color:#61e2e4}
+#today .workoutVizTapHint b{font-size:15px;line-height:1}
+#today .todayWorkoutDetails{margin-top:9px;padding-top:7px;border-top:1px solid rgba(111,213,222,.14)}
+#today .todayWorkoutDetails[hidden]{display:none!important}
+#today .todayWorkoutButton{display:none!important}
+@media(max-width:390px){
+ #today .seriousBriefing{grid-template-columns:minmax(0,1fr) 78px!important}
+ #today .evidenceRing{width:68px!important;height:68px!important}
+ #today .evidenceCompleteness>small{max-width:74px!important;font-size:8px!important}
+ #today .rehabPriorityHero .runnerSectionHead,#today .todayWorkoutCard .runnerSectionHead{grid-template-columns:46px minmax(0,1fr)!important}
+}
