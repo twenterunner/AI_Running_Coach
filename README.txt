@@ -1,9 +1,17 @@
-AI Running Coach v13.1.0 — Progress Redesign — build 30100
+AI Running Coach v13.1.1 — Log presentation correction — build 30101
 
 Progress-only GUI release. Today, Plan and Log remain frozen to approved v13.0.6 build 30006. Calculation/data-model logic unchanged.
 Repository remains completely flat.
 
 AI Running Coach v13.0.6 — Serious Runner Plan — build 30006
+
+
+v13.1.1 Log presentation correction
+------------------------------------
+- Corrected FIT import-preview metric typography and spacing so labels, values and supporting notes cannot concatenate on narrow mobile screens.
+- Added explicit scoped styling for the post-save “What this run changes” view so both pathway blocks use the same visual hierarchy and spacing.
+- “Supports current level” now always uses the same neutral headline colour in both Pace & Power and Distance & Load. Card/badge semantic colour still reflects the accepted learning contribution where applicable.
+- Changes are limited to Log presentation plus version/cache identifiers; Today, Plan, Progress and all calculation/data-model logic are unchanged.
 
 Deployment
 ----------

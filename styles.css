@@ -2102,3 +2102,163 @@ canvas{display:block;width:100%!important;max-width:100%;height:auto!important;m
 #dashboard .modelValidationPanel,#dashboard .personalModelPanel{margin-top:12px}
 @media(max-width:620px){#dashboard .grid2.metricCharts{grid-template-columns:1fr}#dashboard .outlookComparison{grid-template-columns:1fr}#dashboard .outlookArrow{transform:rotate(90deg)}#dashboard .progressMetricLead{grid-template-columns:1fr 1fr}}
 @media(max-width:380px){#dashboard .progressMetricLead{grid-template-columns:1fr}#dashboard .outlookGain{grid-template-columns:1fr 1fr}}
+
+/* LOG TAB — v13.1.1 import-preview typography + post-save pathway parity.
+   Intentionally scoped to Log/import and Log detail modal only. */
+#runs #importPreview .metricGrid{
+  display:grid!important;
+  grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  gap:8px!important;
+  margin:12px 0!important;
+}
+#runs #importPreview .metricGrid>.kpi{
+  display:grid!important;
+  grid-template-columns:1fr!important;
+  gap:3px!important;
+  align-content:start!important;
+  padding:11px 12px!important;
+  min-height:76px!important;
+  background:rgba(3,31,43,.40)!important;
+  border:1px solid rgba(80,210,219,.14)!important;
+  border-radius:12px!important;
+}
+#runs #importPreview .metricGrid>.kpi label{
+  display:block!important;
+  margin:0!important;
+  font-size:9px!important;
+  line-height:1.25!important;
+  font-weight:800!important;
+  color:#a8c4cd!important;
+}
+#runs #importPreview .metricGrid>.kpi strong{
+  display:block!important;
+  margin:0!important;
+  font-size:16px!important;
+  line-height:1.2!important;
+  font-weight:800!important;
+  color:#fff!important;
+  overflow-wrap:anywhere!important;
+}
+#runs #importPreview .metricGrid>.kpi small{
+  display:block!important;
+  margin:1px 0 0!important;
+  font-size:8px!important;
+  line-height:1.35!important;
+  color:#9fbac4!important;
+  overflow-wrap:anywhere!important;
+}
+#runs #importPreview .note{
+  margin:8px 0 12px!important;
+  padding:11px 12px!important;
+  border-radius:12px!important;
+  background:rgba(3,31,43,.40)!important;
+  border:1px solid rgba(80,210,219,.14)!important;
+}
+#runs #importPreview .note>b{display:block!important;margin-bottom:3px!important;font-size:10px!important}
+#runs #importPreview .note p{font-size:8.5px!important;line-height:1.4!important}
+
+/* The post-save coach update previously relied on generic styles. Give it the
+   same deliberate Log hierarchy as the full evidence view. */
+.logDetailModal .progressiveCoachUpdate{
+  padding:15px!important;
+  background:linear-gradient(145deg,#075468 0%,#073c50 52%,#062c3d 100%)!important;
+  border:1px solid rgba(40,214,219,.42)!important;
+  border-radius:18px!important;
+}
+.logDetailModal .postRunCoachHead{margin-bottom:11px!important}
+.logDetailModal .postRunCoachHead span{
+  display:block!important;
+  font-size:8px!important;
+  line-height:1.2!important;
+  font-weight:900!important;
+  letter-spacing:.08em!important;
+  color:#50e0e2!important;
+}
+.logDetailModal .postRunCoachHead h3{
+  margin:4px 0 0!important;
+  font-size:18px!important;
+  line-height:1.25!important;
+  color:#fff!important;
+}
+.logDetailModal .pathwayDecisionGrid{display:grid!important;grid-template-columns:1fr!important;gap:10px!important}
+.logDetailModal .pathwayDecisionBranch{
+  padding:12px!important;
+  margin:0!important;
+  background:rgba(3,31,43,.34)!important;
+  border:1px solid rgba(80,210,219,.14)!important;
+  border-radius:13px!important;
+}
+.logDetailModal .progressiveHead.pathwayHeadline{
+  display:flex!important;
+  align-items:flex-start!important;
+  justify-content:space-between!important;
+  gap:10px!important;
+}
+.logDetailModal .progressiveHead.pathwayHeadline small{
+  display:block!important;
+  font-size:7.5px!important;
+  line-height:1.2!important;
+  font-weight:900!important;
+  letter-spacing:.06em!important;
+  color:#55dfe1!important;
+}
+.logDetailModal .progressiveHead.pathwayHeadline h4{
+  margin:3px 0 0!important;
+  font-size:14px!important;
+  line-height:1.25!important;
+  color:#fff!important;
+}
+.logDetailModal .progressiveHead.pathwayHeadline>span{
+  flex:0 0 auto!important;
+  max-width:44%!important;
+  padding:5px 7px!important;
+  border-radius:8px!important;
+  border:1px solid rgba(101,222,222,.28)!important;
+  background:rgba(101,222,222,.08)!important;
+  font-size:7px!important;
+  line-height:1.2!important;
+  font-weight:800!important;
+  color:#bdebed!important;
+  text-align:center!important;
+}
+.logDetailModal .coachDecisionSummary.singleContribution{margin-top:10px!important}
+.logDetailModal .coachDecisionSummary.singleContribution>div{
+  display:grid!important;
+  grid-template-columns:minmax(0,1fr) auto!important;
+  gap:8px!important;
+  align-items:center!important;
+  padding:9px 10px!important;
+  border-radius:10px!important;
+  background:rgba(3,25,35,.30)!important;
+  border:1px solid rgba(80,210,219,.10)!important;
+}
+.logDetailModal .coachDecisionSummary small{font-size:7px!important;line-height:1.25!important;color:#98b6bf!important;letter-spacing:.04em!important}
+.logDetailModal .coachDecisionSummary strong{font-size:14px!important;line-height:1.1!important;color:#fff!important;font-variant-numeric:tabular-nums!important}
+.logDetailModal .coachPlainLanguage{display:grid!important;gap:7px!important;margin-top:10px!important}
+.logDetailModal .coachPlainLanguage p{margin:0!important;font-size:9px!important;line-height:1.45!important;color:#cfe0e5!important}
+.logDetailModal .coachPlainLanguage p b{color:#fff!important}
+.logDetailModal .coachDecisionSafeguard{
+  margin-top:9px!important;
+  padding:9px 10px!important;
+  border-left:3px solid #f3bd62!important;
+  background:rgba(239,180,75,.07)!important;
+  font-size:9px!important;
+  line-height:1.4!important;
+  color:#e9edf0!important;
+}
+.logDetailModal .whyDecision{
+  margin-top:10px!important;
+  border:1px solid rgba(80,210,219,.14)!important;
+  border-radius:11px!important;
+  background:rgba(3,25,35,.24)!important;
+}
+.logDetailModal .whyDecision>summary{min-height:46px!important;padding:10px 11px!important;font-size:10px!important}
+.logDetailModal .whyDecision[open]>*:not(summary){margin-left:10px!important;margin-right:10px!important}
+.logDetailModal .logProgressLink{width:100%!important;margin-top:12px!important}
+
+@media(max-width:370px){
+  #runs #importPreview .metricGrid{grid-template-columns:1fr!important}
+  #runs #importPreview .metricGrid>.kpi{min-height:0!important}
+  .logDetailModal .progressiveHead.pathwayHeadline{display:grid!important;grid-template-columns:1fr!important}
+  .logDetailModal .progressiveHead.pathwayHeadline>span{max-width:100%!important;justify-self:start!important}
+}

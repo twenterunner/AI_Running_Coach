@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '13.1.0';
-  const BUILD = 30100;
+  const VERSION = '13.1.1';
+  const BUILD = 30101;
   const SCHEMA = 10330;
   const PRIMARY_STORAGE_KEY = 'arc_v10330_web';
   const MIRROR_STORAGE_KEY = 'arc_v10330_mirror';
@@ -3591,9 +3591,13 @@ function pathwayStatusClass(d,t){
 }
 function pathwayEvidenceCardHtml(title,d,t){
  const accepted=Math.abs(t.acceptedContribution)>=.00005,lang=pathwayCoachLanguage(d,t),weight=Math.round(clamp(t.confidenceWeight*100,0,100)),status=pathwayStatusClass(d,t);
+ // The headline describes the raw run signal, while the card/badge can describe the
+ // accepted learning contribution. Keep a neutral headline visually neutral even
+ // when a small accepted contribution is negative or positive.
+ const headlineStatus=t.rawSignal>=.12?'good':t.rawSignal<=-.12?(t.rawSignal<=-.35?'bad':'warn'):'neutral';
  const projectedChange=t.projected-t.applied;
  return`<article class="logEvidencePath ${status}">
-   <div class="logEvidenceHead"><div><small>${title}</small><h4 class="pathwayStatusText ${status}">${esc(lang.q)}</h4></div><span class="pathwayStatusBadge ${status}">${accepted?'Evidence accepted':status==='warn'?'Caution signal':status==='bad'?'Negative signal held':'No learned change'}</span></div>
+   <div class="logEvidenceHead"><div><small>${title}</small><h4 class="pathwayStatusText ${headlineStatus}">${esc(lang.q)}</h4></div><span class="pathwayStatusBadge ${status}">${accepted?'Evidence accepted':status==='warn'?'Caution signal':status==='bad'?'Negative signal held':'No learned change'}</span></div>
    <div class="logEvidenceGaugeRow"><div class="evidenceMiniGauge ${status}" style="--e:${weight}"><strong>${weight}%</strong><small>evidence weight</small></div><div class="logEvidenceMetrics"><span><small>RUN SIGNAL</small><b>${t.rawSignal>=0?'+':''}${t.rawSignal.toFixed(2)}</b></span><span><small>ACCEPTED CONTRIBUTION</small><b>${accepted?signedFactorDelta(t.acceptedContribution):'0.000'}</b></span><span><small>THIS WEEK</small><b>${signedFactorDelta(t.weeklyBucket)}</b></span></div></div>
    <div class="logFactorFlow"><div class="factorTile"><small>APPLIED</small><b>${t.applied.toFixed(3)}</b><span>Current committed factor</span></div><i>→</i><div class="factorTile"><small>PROJECTED NEXT REVIEW</small><b>${t.projected.toFixed(3)}</b><span>${signedFactorDelta(projectedChange)} vs applied</span></div></div>
    <p class="logEvidenceMeaning">${esc(lang.runMeaning)} ${esc(lang.response)}</p>
