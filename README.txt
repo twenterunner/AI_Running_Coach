@@ -1,4 +1,4 @@
-AI Running Coach v12.4.1 — Serious Runner Plan — build 20401
+AI Running Coach v13.0.0 — Serious Runner Plan — build 30000
 
 Deployment
 ----------
@@ -840,3 +840,18 @@ v12.4.1 — Programme Timeline vertical labels
 - Current-week vertical marker remains inside the graph.
 - Proportional phase widths and demand colours unchanged.
 - No model/data-engine changes.
+
+
+v13.0.0 — Runner-first Log redesign
+-----------------------------------
+- Today and Plan remain regression-locked to the approved v12.4.1 implementation.
+- Log main screen rebuilt around Run History, compact import/manual actions, and runner-focused recent-run cards.
+- Added a new multi-colour completed-run analysis pictogram and Log navigation icon.
+- Run detail hierarchy is now: Run summary → Workout execution → Execution breakdown → Interval-level fit → Personal comparison → Training evidence → Training consequence.
+- Execution score is a prominent circular gauge; the detailed calculation remains a foldout.
+- Interval repetitions are visualized as compact rep cards using the existing interval detector and pace/power rep scores. Full rep table remains expandable.
+- Pace & Power and Distance & Load use identical Training Evidence cards with evidence weight, run signal, accepted contribution, weekly bucket, applied factor and projected next-review factor.
+- Full pathway calculation remains available in How was this calculated? foldouts.
+- Training consequence explicitly separates this-run evidence, adaptation applied now, and projected next-review adaptation.
+- Import preview, manual/edit form and run-detail modal receive Log-specific mobile styling.
+- No calculation, scoring, pathway, prediction, adaptation, import parsing, matching, storage or data-model equations changed.

@@ -1197,3 +1197,144 @@ canvas{display:block;width:100%!important;max-width:100%;height:auto!important;m
  #plan .proportionalPhaseRail .phaseSegment[title^="Taper"] .phaseVerticalLabel b{font-size:8.5px!important}
  #plan .proportionalPhaseRail .phaseSegment[title^="Taper"] .phaseVerticalLabel small{font-size:6px!important}
 }
+
+
+/* LOG TAB — LOCKED DESIGN BASELINE v13.0.0
+   Runner-first completed-workout analysis. Today and Plan rules are untouched. */
+#runs{--log-gap:12px}
+#runs>*{box-sizing:border-box}
+#runs .logHeroCard,#runs .logActionCard,#runs .logRunCard,#runs .logTrainingEvidence,#runs .logTrainingConsequence,
+.logDetailModal .runSummaryHero,.logDetailModal .logWorkoutIntelligence,.logDetailModal .logIntervalAnalysis,.logDetailModal .visualComparable{
+  background:linear-gradient(145deg,#075468 0%,#073c50 52%,#062c3d 100%);
+  border:1px solid rgba(40,214,219,.42);
+  border-radius:18px;
+}
+#runs .logHeroCard{padding:17px;margin-bottom:var(--log-gap)}
+#runs .logHeroMain{display:grid;grid-template-columns:58px minmax(0,1fr);gap:13px;align-items:center}
+#runs .logHeroIcon,#runs .logActionIcon,.logDetailModal .logDetailSectionHead>span,.logDetailModal .runSummaryIcon{
+  width:54px;height:54px;border-radius:50%;display:grid;place-items:center;background:rgba(21,184,202,.13);border:1px solid rgba(45,218,224,.35)
+}
+.logPic{width:46px;height:46px;fill:none;stroke-linecap:round;stroke-linejoin:round}
+.logPic .logBase{stroke:#f5fbfd;stroke-width:2.5}.logPic .logAccent{stroke:#38ddd7;stroke-width:2.6}.logPic .logGood{stroke:#8bdd69;stroke-width:2.8}.logPic .logSkin{stroke:#f7f7f7;stroke-width:2.3}
+#runs .logHeroMain small,#runs .logActionIntro small,#runs .logSectionHead small,.logDetailModal .logDetailSectionHead small,.logDetailModal .runSummaryHead small{
+  font-size:9px;font-weight:900;letter-spacing:.09em;color:#45e0e4
+}
+#runs .logHeroMain h2{font-size:24px;line-height:1.1;margin:2px 0 0;color:#fff}
+#runs .logHeroMain p,#runs .logActionIntro p,#runs .logSectionHead p{font-size:10px;line-height:1.4;margin:5px 0 0;color:#c8dce3}
+#runs .logHeroStats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin-top:14px}
+#runs .logHeroStats>div{padding:9px 8px;border-radius:10px;background:rgba(3,31,43,.22);border:1px solid rgba(80,210,219,.11)}
+#runs .logHeroStats small{display:block;font-size:7px;color:#9dbcc6;font-weight:800;letter-spacing:.05em}
+#runs .logHeroStats strong{display:block;margin-top:3px;font-size:14px;color:#fff;overflow-wrap:anywhere}
+
+#runs .logActionCard{padding:15px;margin-bottom:var(--log-gap)}
+#runs .logActionIntro{display:grid;grid-template-columns:54px minmax(0,1fr);gap:12px;align-items:center}
+#runs .logActionIcon:before{content:"+";font-size:30px;font-weight:300;color:#48dfe1}
+#runs .logActionIntro h3,#runs .logSectionHead h3{font-size:19px;line-height:1.15;margin:2px 0 0;color:#fff}
+#runs .logActionButtons{display:grid;grid-template-columns:1.25fr 1fr;gap:8px;margin-top:13px}
+#runs .logActionButtons>*{min-height:44px!important;margin:0!important;display:flex!important;align-items:center!important;justify-content:center!important}
+#runs #activityFile{position:absolute!important;width:1px!important;height:1px!important;opacity:0!important;pointer-events:none!important}
+#runs .logSectionHead{margin:17px 2px 9px}
+#runs .logRunCard{padding:14px;margin-bottom:var(--log-gap);cursor:pointer}
+#runs .logRunTop{display:grid;grid-template-columns:46px minmax(0,1fr) auto;gap:10px;align-items:center}
+#runs .logRunType{width:46px;height:46px;border-radius:50%;display:grid;place-items:center;background:rgba(21,184,202,.12);border:1px solid rgba(45,218,224,.28);color:#fff}
+#runs .logRunType .uiIcon{width:27px;height:27px}
+#runs .logRunIdentity{min-width:0}
+#runs .logRunIdentity small{font-size:8px;font-weight:850;color:#58dfe1;text-transform:uppercase;letter-spacing:.05em}
+#runs .logRunIdentity h3{font-size:17px;line-height:1.12;margin:2px 0 0;color:#fff}
+#runs .logRunIdentity p{font-size:9px;line-height:1.3;margin:3px 0 0;color:#bcd2d9;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#runs .logRunScore{width:50px;height:50px;border-radius:50%;display:grid;place-content:center;text-align:center;border:3px solid #6fa9b5}
+#runs .logRunScore.good{border-color:#8bdd69}.logRunScore.warn{border-color:#f3bd62}.logRunScore.bad{border-color:#ff6f54}
+#runs .logRunScore strong{font-size:17px;line-height:.9;color:#fff}.logRunScore span{font-size:7px;color:#bed1d8}
+#runs .logRunArrow{font-size:25px;color:#fff}
+#runs .logRunPrimary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-top:11px}
+#runs .logRunPrimary>span{padding:8px 6px;border-radius:9px;background:rgba(3,31,43,.20);border:1px solid rgba(80,210,219,.10)}
+#runs .logRunPrimary small{display:block;font-size:7px;color:#94b5bf;font-weight:800}
+#runs .logRunPrimary b{display:block;margin-top:3px;font-size:12px;color:#fff;white-space:nowrap}
+#runs .logRunSecondary{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+#runs .logRunSecondary span{font-size:8px;padding:4px 7px;border-radius:999px;background:rgba(3,31,43,.22);color:#bfd4da}
+#runs .logRunSecondary span.good{color:#9ae77d}.logRunSecondary span.warn{color:#ffd071}
+#runs .logRunWarning{display:flex;align-items:center;gap:6px;margin-top:8px;padding-top:8px;border-top:1px solid rgba(120,207,216,.12);font-size:8px;color:#ffc07c}
+#runs .logRunWarning .uiIcon{width:14px;height:14px}
+#runs .logEmptyState{text-align:center;padding:28px 16px;border:1px dashed rgba(80,210,219,.25);border-radius:18px}
+#runs .logEmptyState>span{display:grid;place-items:center;margin:auto;width:68px;height:68px}
+#runs .logEmptyState h3{font-size:19px;margin:7px 0 4px}.logEmptyState p{font-size:10px;color:#abc6cf;line-height:1.4;margin:0 0 12px}
+#runs .logDataGuide{margin-top:var(--log-gap);border:1px solid rgba(80,210,219,.15);border-radius:14px;background:rgba(3,31,43,.18)}
+#runs .logDataGuide>summary{min-height:48px;padding:10px 13px}#runs .logDataGuide>summary span{display:grid;gap:2px}#runs .logDataGuide>summary b{font-size:11px;color:#fff}#runs .logDataGuide>summary small{font-size:8px;color:#99b9c3}
+
+#runs #importPreview{margin-bottom:var(--log-gap)!important;border-radius:18px!important;background:linear-gradient(145deg,#075468 0%,#073c50 52%,#062c3d 100%)!important;border-color:rgba(40,214,219,.42)!important}
+#runs .logImportPreviewHead{display:grid;grid-template-columns:54px minmax(0,1fr);gap:11px;align-items:center;margin-bottom:12px}
+#runs .logImportPreviewHead>span{width:54px;height:54px;display:grid;place-items:center}
+#runs .logImportPreviewHead small{font-size:8px;font-weight:900;letter-spacing:.08em;color:#45e0e4}
+#runs .logImportPreviewHead h3{margin:2px 0 0;font-size:18px;color:#fff}.logImportPreviewHead p{margin:3px 0 0;font-size:9px;color:#b8ced6}
+
+.logDetailModal .modalCard{max-width:760px!important;width:min(760px,calc(100vw - 18px))!important;padding:14px!important;background:#041f2b!important}
+.logDetailModal #modalContent{display:grid;gap:12px}
+.logDetailModal .runSummaryHero{padding:16px}
+.logDetailModal .runSummaryHead{display:grid;grid-template-columns:54px minmax(0,1fr) 62px;gap:11px;align-items:center}
+.logDetailModal .runSummaryHead h2{font-size:22px;line-height:1.1;margin:2px 0 0;color:#fff}
+.logDetailModal .runSummaryHead p{font-size:9px;line-height:1.3;margin:4px 0 0;color:#bfd3da}
+.logDetailModal .runSummaryScore{width:58px;height:58px;border-radius:50%;display:grid;place-content:center;text-align:center;border:4px solid #729da9}
+.logDetailModal .runSummaryScore.good{border-color:#8bdd69}.logDetailModal .runSummaryScore.warn{border-color:#f3bd62}.logDetailModal .runSummaryScore.bad{border-color:#ff6f54}
+.logDetailModal .runSummaryScore strong{font-size:22px;line-height:.9;color:#fff}.logDetailModal .runSummaryScore span{font-size:8px;color:#bdd0d7}.logDetailModal .runSummaryScore small{font-size:6px;color:#a7c0c9;text-transform:uppercase}
+.logDetailModal .runSummaryMetrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin-top:13px}
+.logDetailModal .runSummaryMetrics>div{padding:9px 8px;border-radius:10px;background:rgba(3,31,43,.22);border:1px solid rgba(80,210,219,.11)}
+.logDetailModal .runSummaryMetrics small{display:block;font-size:7px;font-weight:800;color:#93b5bf}.logDetailModal .runSummaryMetrics b{display:block;margin-top:3px;font-size:12px;line-height:1.2;color:#fff}.logDetailModal .runSummaryMetrics span{display:block;margin-top:3px;font-size:7px;color:#9fc0c9}
+.logDetailModal .runPlanCompare{margin-top:10px}.logDetailModal .runPlanCompare>div{display:flex;justify-content:space-between;gap:8px;font-size:9px;color:#bed4db}.logDetailModal .runPlanCompare>div b{color:#fff}.logDetailModal .runPlanCompare>i{height:7px;display:block;margin-top:5px;border-radius:999px;background:rgba(3,25,35,.38);overflow:hidden}.logDetailModal .runPlanCompare em{display:block;height:100%;background:#38d7d2;border-radius:inherit}
+.logDetailModal .runDataQuality{display:grid;gap:2px;margin-top:10px;padding:8px 9px;border-radius:9px;background:rgba(3,31,43,.20);border-left:3px solid #8bdd69}.logDetailModal .runDataQuality.partial{border-left-color:#f3bd62}.logDetailModal .runDataQuality b{font-size:9px;color:#fff}.logDetailModal .runDataQuality span{font-size:8px;color:#a9c4cd}
+
+.logDetailModal .logWorkoutIntelligence{padding:16px}.logDetailModal .wiHead.visual{display:grid;grid-template-columns:48px minmax(0,1fr) 64px;gap:10px;align-items:center}.logDetailModal .wiHead p{font-size:8px!important;margin:3px 0 0!important;color:#a9c3cc!important}.logDetailModal .logExecGauge{width:60px;height:60px;border-radius:50%;display:grid;place-content:center;text-align:center;background:conic-gradient(#38d7d2 calc(var(--score)*1%),rgba(112,172,181,.2) 0);position:relative}.logDetailModal .logExecGauge:before{content:"";position:absolute;inset:7px;border-radius:50%;background:#07384a}.logDetailModal .logExecGauge>*{position:relative;z-index:1}.logDetailModal .logExecGauge strong{font-size:21px;line-height:.9}.logDetailModal .logExecGauge span{font-size:7px;color:#b9ccd3}.logDetailModal .logExecGauge.good{color:#9ae77d}.logDetailModal .logExecGauge.warn{color:#ffd071}.logDetailModal .logExecGauge.bad{color:#ff8a72}
+.logDetailModal .wiInterpretation{font-size:10px!important;line-height:1.4!important;margin:11px 0!important}.logDetailModal .wiFindings{display:grid;gap:6px}.logDetailModal .wiFinding{font-size:9px!important;line-height:1.35!important;padding:7px 8px!important}
+
+.logDetailModal .runExecutionBreakdown{margin:0!important;border-radius:14px!important;background:rgba(3,31,43,.20)!important;border:1px solid rgba(80,210,219,.15)!important}
+.logDetailModal .runExecutionBreakdown>summary{min-height:48px;padding:10px 12px!important}
+.logDetailModal .executionCalcRow{display:grid!important;grid-template-columns:minmax(0,1fr) auto!important;gap:3px 8px!important}.logDetailModal .executionCalcRow small{grid-column:1/-1!important}
+
+.logDetailModal .logDetailSectionHead{display:grid;grid-template-columns:48px minmax(0,1fr) auto;gap:10px;align-items:center}.logDetailModal .logDetailSectionHead.compact>span{width:46px;height:46px;background:rgba(21,184,202,.13);border:1px solid rgba(45,218,224,.28)}.logDetailModal .logDetailSectionHead>span .uiIcon{width:27px;height:27px}.logDetailModal .logDetailSectionHead h3{font-size:18px;line-height:1.15;margin:2px 0 0;color:#fff}.logDetailModal .logDetailSectionHead p{font-size:8px;line-height:1.35;margin:3px 0 0;color:#abc6ce}.logDetailModal .logDetailSectionHead>b{font-size:10px;color:#dff8fa;white-space:nowrap}
+.logDetailModal .logIntervalAnalysis{padding:15px}.logDetailModal .logIntervalSummary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin-top:12px}.logDetailModal .logIntervalSummary>div{padding:8px 7px;border-radius:9px;background:rgba(3,31,43,.22);border:1px solid rgba(80,210,219,.1)}.logDetailModal .logIntervalSummary small{display:block;font-size:7px;color:#92b4be}.logDetailModal .logIntervalSummary strong{display:block;margin-top:3px;font-size:11px;color:#fff}
+.logDetailModal .logRepScroller{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;margin-top:9px}.logDetailModal .logRepCard{padding:9px;border-radius:10px;background:rgba(3,31,43,.22);border-left:3px solid #779ba7;display:grid;grid-template-columns:1.05fr repeat(3,.8fr);gap:6px;align-items:end}.logDetailModal .logRepCard.good{border-left-color:#8bdd69}.logDetailModal .logRepCard.warn{border-left-color:#f3bd62}.logDetailModal .logRepCard.bad{border-left-color:#ff6f54}.logDetailModal .logRepCard.extra{border-left-color:#8f8cba}.logDetailModal .logRepCard>div small,.logDetailModal .logRepCard>span small{display:block;font-size:6px;color:#91b1bb}.logDetailModal .logRepCard>div strong{font-size:11px;color:#fff}.logDetailModal .logRepCard>span b{display:block;font-size:8px;color:#e9f5f7;white-space:nowrap}
+.logDetailModal .intervalRepDetails,.logDetailModal .intervalScoreCalc{margin-top:8px;border-radius:10px!important;background:rgba(3,31,43,.18)!important}
+
+.logDetailModal .visualComparable{padding:15px!important}.logDetailModal .comparableMetrics.visual{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+.logDetailModal .comparisonMetric{background:rgba(3,31,43,.18)!important;border-radius:10px!important;padding:9px!important}
+
+.logDetailModal .logTrainingEvidence,.logDetailModal .logTrainingConsequence{padding:15px}
+.logDetailModal .logEvidenceGrid{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:12px}
+.logDetailModal .logEvidencePath{min-width:0;padding:12px;border-radius:13px;background:rgba(3,31,43,.22);border:1px solid rgba(80,210,219,.13)}
+.logDetailModal .logEvidenceHead{display:flex;justify-content:space-between;align-items:flex-start;gap:7px}.logDetailModal .logEvidenceHead small{font-size:7px;font-weight:900;letter-spacing:.07em;color:#47dfe1}.logDetailModal .logEvidenceHead h4{font-size:13px;line-height:1.2;margin:2px 0 0;color:#fff}.logDetailModal .logEvidenceHead>span{font-size:7px;padding:4px 6px;border-radius:7px;white-space:nowrap}.logDetailModal .logEvidenceHead>span.accepted{color:#9ae77d;background:rgba(91,190,101,.1)}.logDetailModal .logEvidenceHead>span.held{color:#bdd1d7;background:rgba(120,160,171,.09)}
+.logDetailModal .logEvidenceGaugeRow{display:grid;grid-template-columns:70px minmax(0,1fr);gap:8px;align-items:center;margin-top:10px}.logDetailModal .evidenceMiniGauge{width:66px;height:66px;border-radius:50%;display:grid;place-content:center;text-align:center;background:conic-gradient(#38d7d2 calc(var(--e)*1%),rgba(104,171,181,.2) 0);position:relative}.logDetailModal .evidenceMiniGauge:before{content:"";position:absolute;inset:7px;border-radius:50%;background:#07384a}.logDetailModal .evidenceMiniGauge>*{position:relative;z-index:1}.logDetailModal .evidenceMiniGauge strong{font-size:14px}.logDetailModal .evidenceMiniGauge small{font-size:5.5px;color:#9fbcc5}
+.logDetailModal .logEvidenceMetrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px}.logDetailModal .logEvidenceMetrics span{min-width:0}.logDetailModal .logEvidenceMetrics small{display:block;font-size:5.5px;color:#8faeb8}.logDetailModal .logEvidenceMetrics b{display:block;margin-top:2px;font-size:9px;color:#fff;overflow-wrap:anywhere}
+.logDetailModal .logFactorFlow{display:grid;grid-template-columns:1fr 14px 1fr;gap:5px;align-items:center;margin-top:10px;padding-top:9px;border-top:1px solid rgba(106,196,205,.12)}.logDetailModal .logFactorFlow>div{padding:7px;border-radius:8px;background:rgba(3,25,35,.25)}.logDetailModal .logFactorFlow small{display:block;font-size:6px;color:#91b0ba}.logDetailModal .logFactorFlow b{display:block;margin-top:2px;font-size:11px;color:#fff}.logDetailModal .logFactorFlow span{display:block;margin-top:2px;font-size:7px;color:#83deda}.logDetailModal .logFactorFlow>i{font-style:normal;text-align:center;color:#46dce0}
+.logDetailModal .logEvidenceMeaning{font-size:8.5px;line-height:1.4;color:#dcebed;margin:9px 0 0}.logDetailModal .logEvidenceSafeguard{font-size:8px;line-height:1.35;margin-top:7px;padding:7px;border-left:3px solid #f3bd62;background:rgba(239,180,75,.06)}.logDetailModal .logEvidenceCalc{margin-top:8px;border-radius:9px!important;background:rgba(2,27,38,.25)!important}.logDetailModal .logEvidenceCalc>summary{font-size:9px!important}
+.logDetailModal .logEvidenceDrivers{padding:8px}.logDetailModal .logEvidenceDrivers h5{margin:0 0 5px;font-size:9px}
+
+.logDetailModal .consequenceStages{display:grid;grid-template-columns:1fr 14px 1fr 14px 1fr;gap:5px;align-items:center;margin-top:12px}.logDetailModal .consequenceStages>div{padding:9px 7px;border-radius:10px;background:rgba(3,31,43,.22);border:1px solid rgba(80,210,219,.10)}.logDetailModal .consequenceStages small{display:block;font-size:6px;color:#91b1bb}.logDetailModal .consequenceStages b{display:block;margin-top:3px;font-size:10px;color:#fff}.logDetailModal .consequenceStages span{display:block;margin-top:2px;font-size:8px;color:#aed0d7}.logDetailModal .consequenceStages>i{font-style:normal;text-align:center;color:#48dfe1}
+.logDetailModal .consequenceCallout{display:grid;gap:3px;margin-top:9px;padding:9px 10px;border-radius:10px;background:rgba(21,184,202,.08);border-left:3px solid #38d7d2}.logDetailModal .consequenceCallout b{font-size:9px;line-height:1.35;color:#fff}.logDetailModal .consequenceCallout span{font-size:7.5px;line-height:1.35;color:#a9c5ce}
+.logDetailModal .logConsequenceDetails{margin-top:8px}.logDetailModal .projectedChangeRows{display:grid;gap:6px;padding:8px}.logDetailModal .projectedChangeRows>div{display:grid;gap:2px}.logDetailModal .projectedChangeRows span{font-size:7px;color:#98b6bf}.logDetailModal .projectedChangeRows b{font-size:9px;color:#fff}
+
+.logDetailModal .logEditFoldout{border-radius:14px!important;background:rgba(3,31,43,.18)!important;border:1px solid rgba(80,210,219,.14)!important}.logDetailModal .logEditFoldout>summary{min-height:46px;padding:10px 12px}.logDetailModal .logEditFoldout>div{padding:0 12px 12px}
+.logEditorHead{display:grid;grid-template-columns:50px minmax(0,1fr);gap:10px;align-items:center;margin:5px 0 12px}.logEditorHead>span{width:50px;height:50px;display:grid;place-items:center}.logEditorHead small{font-size:8px;font-weight:900;color:#45e0e4;letter-spacing:.08em}.logEditorHead h2{font-size:19px;margin:2px 0 0}.logEditorHead p{font-size:8px;line-height:1.35;margin:3px 0 0;color:#a8c3cc}
+.logNavPic{fill:none;stroke-linecap:round;stroke-linejoin:round}.logNavPic .logNavBase{stroke:currentColor;stroke-width:1.8}.logNavPic .logNavAccent{stroke:#38ddd7;stroke-width:1.8}.logNavPic .logNavGood{stroke:#8bdd69;stroke-width:1.9}.logNavPic .logNavSkin{stroke:currentColor;stroke-width:1.7}
+
+@media(max-width:430px){
+ #runs{--log-gap:10px}
+ #runs .logHeroCard{padding:15px}
+ #runs .logHeroMain{grid-template-columns:50px minmax(0,1fr);gap:10px}.logHeroIcon{width:50px!important;height:50px!important}.logPic{width:42px;height:42px}
+ #runs .logHeroMain h2{font-size:21px}
+ #runs .logHeroStats{gap:5px}.logHeroStats strong{font-size:12px!important}
+ #runs .logActionCard{padding:13px}.logActionIntro{grid-template-columns:46px minmax(0,1fr);gap:9px}.logActionIcon{width:46px!important;height:46px!important}
+ #runs .logActionButtons{grid-template-columns:1fr 1fr;gap:7px}
+ #runs .logRunCard{padding:12px}.logRunTop{grid-template-columns:42px minmax(0,1fr) auto;gap:8px}.logRunType{width:42px;height:42px}.logRunIdentity h3{font-size:15px}
+ #runs .logRunPrimary{gap:4px}.logRunPrimary b{font-size:10.5px!important}
+ .logDetailModal .modalCard{width:calc(100vw - 10px)!important;padding:10px!important;border-radius:17px!important}
+ .logDetailModal #modalContent{gap:10px}
+ .logDetailModal .runSummaryHero,.logDetailModal .logWorkoutIntelligence,.logDetailModal .logIntervalAnalysis,.logDetailModal .visualComparable,.logDetailModal .logTrainingEvidence,.logDetailModal .logTrainingConsequence{padding:13px!important}
+ .logDetailModal .runSummaryHead{grid-template-columns:46px minmax(0,1fr) 54px;gap:8px}.logDetailModal .runSummaryIcon{width:46px;height:46px}.logDetailModal .runSummaryHead h2{font-size:19px}.logDetailModal .runSummaryScore{width:52px;height:52px}
+ .logDetailModal .runSummaryMetrics{grid-template-columns:repeat(2,minmax(0,1fr));gap:5px}
+ .logDetailModal .wiHead.visual{grid-template-columns:42px minmax(0,1fr) 54px}.logDetailModal .wiIcon{width:42px!important;height:42px!important}.logDetailModal .logExecGauge{width:52px;height:52px}
+ .logDetailModal .logDetailSectionHead{grid-template-columns:42px minmax(0,1fr) auto;gap:8px}.logDetailModal .logDetailSectionHead>span{width:42px!important;height:42px!important}.logDetailModal .logDetailSectionHead h3{font-size:16px}
+ .logDetailModal .logIntervalSummary{grid-template-columns:1fr 1fr}.logDetailModal .logIntervalSummary>div:last-child{grid-column:1/-1}
+ .logDetailModal .logRepScroller{grid-template-columns:1fr}
+ .logDetailModal .logEvidenceGrid{grid-template-columns:1fr}
+ .logDetailModal .consequenceStages{grid-template-columns:1fr}.logDetailModal .consequenceStages>i{transform:rotate(90deg)}
+ .logDetailModal .comparableMetrics.visual{grid-template-columns:1fr 1fr!important}
+}

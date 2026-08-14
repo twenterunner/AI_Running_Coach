@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#07111D"><title>AI Running Coach</title>
-<link rel="manifest" href="manifest.webmanifest?v=20401"><link rel="stylesheet" href="styles.css?v=20401-visual">
+<link rel="manifest" href="manifest.webmanifest?v=30000"><link rel="stylesheet" href="styles.css?v=30000-visual">
 <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png?v=10320">
 <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png?v=10320">
 <link rel="icon" href="favicon.ico?v=10320">
@@ -15,7 +15,7 @@
 <body>
 <a class="skipLink" href="#mainContent">Skip to main content</a>
 <header class="topbar">
-  <div class="brand"><img class="logo" src="icon-192.png?v=10320" alt="AI Running Coach logo"><div class="brand-copy"><h1>AI Running Coach</h1><p>Race-specific adaptive planning · v12.4.1 · build 20401</p></div></div>
+  <div class="brand"><img class="logo" src="icon-192.png?v=10320" alt="AI Running Coach logo"><div class="brand-copy"><h1>AI Running Coach</h1><p>Race-specific adaptive planning · v13.0.0 · build 30000</p></div></div>
   <button id="installBtn" class="install hidden">Install</button>
 </header>
 <nav id="nav" aria-label="Primary navigation"></nav>
@@ -131,24 +131,35 @@
 </section>
 
 <section id="runs" class="page">
-  <div class="sectionTitle"><div><span class="pageEyebrow">TRAINING HISTORY</span><h2>Run log</h2><p>Import, review and understand what each run changes.</p></div><button id="manualRunBtn" class="primary small">+ Manual</button></div>
-  <article class="panel importBox">
-    <div><h3>Import run file</h3><p class="muted">Select a Garmin or Stryd FIT activity, or a detailed Stryd CSV. The run is analysed before saving.</p></div>
-    <label class="filePick" for="activityFile">Choose FIT or CSV</label>
-<input id="activityFile" type="file" accept=".fit,.csv,application/octet-stream,application/vnd.ant.fit,text/csv">
-<p class="muted">Garmin FIT, Stryd FIT and detailed Stryd CSV files are supported. FIT imports inspect native and developer power fields. Power-based cardiac drift is calculated when sufficient timestamped heart-rate and power data are present.</p>
-  </article>
+  <div id="logHero"></div>
+
+  <section class="logActionCard">
+    <div class="logActionIntro">
+      <span class="logActionIcon" aria-hidden="true"></span>
+      <div><small>ADD TRAINING</small><h3>Import or add a run</h3><p>FIT/CSV gives the richest analysis. Manual entry remains available when a file is not.</p></div>
+    </div>
+    <div class="logActionButtons">
+      <label class="primary filePick logImportButton" for="activityFile">Import FIT / CSV</label>
+      <button id="manualRunBtn" class="secondary logManualButton" type="button">Add manually</button>
+    </div>
+    <input id="activityFile" type="file" accept=".fit,.csv,application/octet-stream,application/vnd.ant.fit,text/csv">
+  </section>
+
   <div id="importPreview" class="hidden"></div>
   <div id="manualRun" class="hidden"></div>
-  <div class="logPrimaryHead"><span>RECENT RUNS</span><p>Open a run for Workout Intelligence, interval analysis, adaptation evidence and execution details.</p></div>
+
+  <div class="logSectionHead">
+    <div><small>RECENT RUNS</small><h3>Training history</h3><p>Open a session to see execution, interval fit, personal comparison and what the model learned.</p></div>
+  </div>
   <div id="runList"></div>
-  <details class="panel importGuide">
-    <summary>Data-entry guide &amp; calculated metrics</summary>
+
+  <details class="logDataGuide">
+    <summary><span><b>Data quality & manual fields</b><small>RPE, pain, HRV and calculated metrics</small></span></summary>
     <div class="guideGrid">
       <div><b>RPE 1–10</b><p><strong>1–2:</strong> very easy · <strong>3–4:</strong> easy/conversational · <strong>5–6:</strong> moderate · <strong>7:</strong> marathon effort · <strong>8:</strong> threshold · <strong>9:</strong> very hard · <strong>10:</strong> maximal.</p></div>
       <div><b>Pain 0–10</b><p><strong>0:</strong> none · <strong>1–2:</strong> awareness only · <strong>3–4:</strong> mild discomfort · <strong>5–6:</strong> affects mechanics · <strong>7–10:</strong> stop or seek assessment.</p></div>
-      <div><b>Garmin HRV</b><p>Enter the previous night’s Garmin HRV in milliseconds. The app builds a personal baseline and uses the recent trend as temporary recovery context.</p></div>
-      <div><b>Calculated automatically</b><p>Pace, average HR, watts, W/kg, W/bpm, running effectiveness, distance per heartbeat and—on Long runs—cardiac drift.</p></div>
+      <div><b>Garmin HRV</b><p>Previous-night Overnight Average in milliseconds. It contributes to temporary recovery context, not directly to learned Pace & Power.</p></div>
+      <div><b>Calculated automatically</b><p>Pace, efficiency, W/kg and—when the data supports it—power-based cardiac drift and interval-level execution.</p></div>
     </div>
   </details>
 </section>
@@ -209,7 +220,7 @@
   <article class="panel"><h3>Data</h3><div class="buttonRow"><button id="backupBtn">Download backup</button><label for="restoreFile" class="buttonLike">Restore backup</label><input id="restoreFile" type="file" accept=".json"><button id="undoRestoreBtn" type="button" class="secondary hidden">Undo last restore</button><button id="exportBtn">Export runs CSV</button><button id="resetBtn" class="danger">Reset app</button></div></article>
 </section>
 </main>
-<footer class="appFooter"><span>AI Running Coach</span><small>v12.4.1 · build 20401</small></footer>
+<footer class="appFooter"><span>AI Running Coach</span><small>v13.0.0 · build 30000</small></footer>
 
 <div id="modal" class="modal hidden" role="dialog" aria-modal="true" aria-label="AI Running Coach dialog" tabindex="-1"><div class="modalCard"><button id="closeModal" class="close" type="button" aria-label="Close dialog">×</button><div id="modalContent"></div></div></div>
 
@@ -238,5 +249,5 @@
     <button class="primary full" type="submit">Review and create my plan</button>
   </form>
 </div>
-<script src="app.js?v=20401-visual"></script>
+<script src="app.js?v=30000-visual"></script>
 </body></html>

@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '12.4.1';
-  const BUILD = 20401;
+  const VERSION = '13.0.0';
+  const BUILD = 30000;
   const SCHEMA = 10330;
   const PRIMARY_STORAGE_KEY = 'arc_v10330_web';
   const MIRROR_STORAGE_KEY = 'arc_v10330_mirror';
@@ -3411,21 +3411,24 @@ function postRunCoachUpdateHtml(r){
 
 function intervalAnalysisHtml(r){
  const a=r?.intervalAnalysis;if(!a?.structured)return'';
- if(!a.work?.length)return`<section class="intervalAnalysisCard uiLevel2"><div class="intervalAnalysisHead"><div><span>INTERVAL ANALYSIS</span><h3>Detection confidence too low</h3></div><b>Not scored</b></div><p>${esc(a.reason)}</p><p class="muted compact">Uncertain interval detection cannot change the execution score.</p></section>`;
- const rows=a.work.map(x=>{const extra=a.expectedReps>0&&x.rep>a.expectedReps;return`<div class="intervalRepRow ${extra?'extraRep':''}"><strong>Rep ${x.rep}${extra?' · extra':''}</strong><span>${Number.isFinite(x.distanceKm)?x.distanceKm.toFixed(2)+' km':'—'}</span><span>${Number.isFinite(x.paceSecPerKm)?pace(x.paceSecPerKm):'—'}</span><span>${Number.isFinite(x.avgPower)?Math.round(x.avgPower)+' W':'—'}</span><span>${Number.isFinite(x.avgHr)?Math.round(x.avgHr)+' bpm':'—'}</span></div>`}).join('');
+ if(!a.work?.length)return`<section class="logIntervalAnalysis"><div class="logDetailSectionHead compact"><span>${uiIcon('quality')}</span><div><small>INTERVAL-LEVEL FIT</small><h3>Not enough reliable interval structure</h3><p>${esc(a.reason)}</p></div><b>Not scored</b></div></section>`;
+ const prescribed=Math.max(0,Number(a.expectedReps)||0),detected=Math.max(0,Number(a.detectedReps)||0);
  const paceChange=Number.isFinite(a.fadePace)?`${Math.abs(a.fadePace).toFixed(1)}% ${a.fadePace<0?'faster':'slower'}`:null,powerChange=Number.isFinite(a.fadePower)?`${Math.abs(a.fadePower).toFixed(1)}% ${a.fadePower>=0?'higher':'lower'}`:null;
- const late=powerChange?`Power ${powerChange}`:paceChange?`Pace ${paceChange}`:'—';
- const countText=a.expectedReps?`${a.detectedReps} detected / ${a.expectedReps} prescribed`:`${a.detectedReps} detected`;
- const prescribed=Math.max(0,Number(a.expectedReps)||0),detected=Math.max(0,Number(a.detectedReps)||0),shown=Math.min(Math.max(prescribed,detected),20);
- const repDots=shown?Array.from({length:shown},(_,i)=>`<i class="${i<prescribed?'prescribed':''} ${i>=prescribed&&i<detected?'extra':''} ${i>=detected?'missing':''}"></i>`).join(''):'';
+ const late=powerChange?`Power ${powerChange}`:paceChange?`Pace ${paceChange}`:'Not available';
  const cv=Number(a.consistencyCv),consistencyScore=Number.isFinite(cv)?clamp(100-cv*8,0,100):null;
- const fade=Number.isFinite(a.fadePower)?a.fadePower:Number.isFinite(a.fadePace)?-a.fadePace:null;
- const fadeScore=Number.isFinite(fade)?clamp(100-Math.abs(Math.min(0,fade))*8,0,100):null;
- const pd=r.powerDiagnostics,powerDiag=pd?`<div class="powerCoverage ${pd.coverage>=.8?'good':pd.coverage>0?'partial':'missing'}"><b>Power stream</b><span>${Math.round(pd.coverage*100)}% FIT coverage</span><small>${esc(pd.rawSource||pd.mapping||'No record-level running power recovered')}</small></div>`:'';
- const calc=`<details class="intervalScoreCalc"><summary>Score calculation</summary><div class="intervalCalcRows">${Number.isFinite(a.paceComponent)?`<div><span>Prescribed-rep pace</span><b>${Math.round(a.paceComponent)}/100</b></div>`:''}${Number.isFinite(a.powerComponent)?`<div><span>Prescribed-rep power</span><b>${Math.round(a.powerComponent)}/100</b></div>`:''}<div><span>Base rep execution</span><b>${Number.isFinite(a.baseRepScore)?Math.round(a.baseRepScore)+'/100':'—'}</b></div>${a.extraPenalty?`<div class="penalty"><span>${a.extraReps} extra rep${a.extraReps===1?'':'s'}</span><b>−${a.extraPenalty.toFixed(0)}</b></div>`:''}${a.missingPenalty?`<div class="penalty"><span>${a.missingReps} missing rep${a.missingReps===1?'':'s'}</span><b>−${a.missingPenalty.toFixed(0)}</b></div>`:''}<div class="total"><span>Interval execution</span><b>${Number.isFinite(a.repScore)?a.repScore+'/100':'Not scored'}</b></div></div></details>`;
- return`<section class="intervalAnalysisCard visualInterval uiLevel2"><div class="intervalAnalysisHead"><div><span>INTERVAL ANALYSIS</span><h3>${countText}</h3></div><b>${a.usableForScore&&Number.isFinite(a.repScore)?a.repScore+'/100':esc(a.quality)}</b></div>${repDots?`<div class="repDotBlock"><div class="repDots">${repDots}</div><div><span><i class="legendDot prescribed"></i>${prescribed} prescribed</span>${detected>prescribed?`<span><i class="legendDot extra"></i>${detected-prescribed} extra</span>`:''}${detected<prescribed?`<span><i class="legendDot missing"></i>${prescribed-detected} missing</span>`:''}</div></div>`:''}<div class="intervalVisualMetrics"><div><small>Execution</small>${Number.isFinite(a.repScore)?`<b>${Math.round(a.repScore)}</b><i><em style="width:${clamp(a.repScore,0,100)}%"></em></i>`:'<b>—</b>'}</div><div><small>Consistency</small><b>${Number.isFinite(cv)?cv.toFixed(1)+'%':'—'}</b>${Number.isFinite(consistencyScore)?`<i><em style="width:${consistencyScore}%"></em></i>`:''}</div><div><small>Late change</small><b>${late}</b>${Number.isFinite(fadeScore)?`<i><em style="width:${fadeScore}%"></em></i>`:''}</div></div>${powerDiag}${calc}<details class="intervalRepDetails"><summary>Repetition details · ${a.detectedReps} detected</summary><div class="intervalRepTable"><div class="intervalRepHeader"><b>Rep</b><b>Distance</b><b>Pace</b><b>Power</b><b>HR</b></div>${rows}</div></details><p class="muted compact">${a.usableForScore?'Prescribed work repetitions drive interval pace/power scoring; extra repetitions add load but cannot improve execution.':'Detection is shown for inspection only.'}</p></section>`;
+ const repCards=a.work.map(x=>{
+   const extra=prescribed>0&&x.rep>prescribed,scoreVals=[x.paceScore,x.powerScore].filter(Number.isFinite),repScore=scoreVals.length?avg(scoreVals):null,cls=extra?'extra':logStatusClass(repScore);
+   return`<div class="logRepCard ${cls}"><div><small>REP ${x.rep}${extra?' · EXTRA':''}</small><strong>${Number.isFinite(repScore)?Math.round(repScore)+'/100':'Detected'}</strong></div><span><b>${Number.isFinite(x.paceSecPerKm)?pace(x.paceSecPerKm):'—'}</b><small>pace</small></span><span><b>${Number.isFinite(x.avgPower)?Math.round(x.avgPower)+' W':'—'}</b><small>power</small></span><span><b>${Number.isFinite(x.avgHr)?Math.round(x.avgHr)+' bpm':'—'}</b><small>HR</small></span></div>`;
+ }).join('');
+ const rows=a.work.map(x=>{const extra=prescribed>0&&x.rep>prescribed;return`<div class="intervalRepRow ${extra?'extraRep':''}"><strong>Rep ${x.rep}${extra?' · extra':''}</strong><span>${Number.isFinite(x.distanceKm)?x.distanceKm.toFixed(2)+' km':'—'}</span><span>${Number.isFinite(x.paceSecPerKm)?pace(x.paceSecPerKm):'—'}</span><span>${Number.isFinite(x.avgPower)?Math.round(x.avgPower)+' W':'—'}</span><span>${Number.isFinite(x.avgHr)?Math.round(x.avgHr)+' bpm':'—'}</span></div>`}).join('');
+ const pd=r.powerDiagnostics,powerDiag=pd?`<div class="powerCoverage ${pd.coverage>=.8?'good':pd.coverage>0?'partial':'missing'}"><b>Running power stream</b><span>${Math.round(pd.coverage*100)}% coverage</span><small>${esc(pd.rawSource||pd.mapping||'No record-level running power recovered')}</small></div>`:'';
+ return`<section class="logIntervalAnalysis"><div class="logDetailSectionHead compact"><span>${uiIcon('quality')}</span><div><small>INTERVAL-LEVEL FIT</small><h3>${detected}${prescribed?` detected / ${prescribed} prescribed`: ' repetitions detected'}</h3><p>Each repetition is shown from the existing interval detector and target-scoring data.</p></div><b>${a.usableForScore&&Number.isFinite(a.repScore)?a.repScore+'/100':esc(a.quality)}</b></div>
+   <div class="logIntervalSummary"><div><small>EXECUTION</small><strong>${Number.isFinite(a.repScore)?Math.round(a.repScore)+'/100':'Not scored'}</strong></div><div><small>CONSISTENCY</small><strong>${Number.isFinite(cv)?cv.toFixed(1)+'% variation':'—'}</strong></div><div><small>LATE CHANGE</small><strong>${late}</strong></div></div>
+   <div class="logRepScroller">${repCards}</div>${powerDiag}
+   <details class="intervalRepDetails"><summary>Rep details · ${detected} detected</summary><div class="intervalRepTable"><div class="intervalRepHeader"><b>Rep</b><b>Distance</b><b>Pace</b><b>Power</b><b>HR</b></div>${rows}</div></details>
+   <details class="intervalScoreCalc"><summary>How interval execution is scored</summary><div class="intervalCalcRows">${Number.isFinite(a.paceComponent)?`<div><span>Prescribed-rep pace</span><b>${Math.round(a.paceComponent)}/100</b></div>`:''}${Number.isFinite(a.powerComponent)?`<div><span>Prescribed-rep power</span><b>${Math.round(a.powerComponent)}/100</b></div>`:''}<div><span>Base rep execution</span><b>${Number.isFinite(a.baseRepScore)?Math.round(a.baseRepScore)+'/100':'—'}</b></div>${a.extraPenalty?`<div class="penalty"><span>${a.extraReps} extra rep${a.extraReps===1?'':'s'}</span><b>−${a.extraPenalty.toFixed(0)}</b></div>`:''}${a.missingPenalty?`<div class="penalty"><span>${a.missingReps} missing rep${a.missingReps===1?'':'s'}</span><b>−${a.missingPenalty.toFixed(0)}</b></div>`:''}<div class="total"><span>Interval execution</span><b>${Number.isFinite(a.repScore)?a.repScore+'/100':'Not scored'}</b></div></div></details>
+ </section>`;
 }
-
 function workoutFamily(type){
  const t=String(type||'').toLowerCase();
  if(/recovery|shakeout/.test(t))return'recovery';
@@ -3538,11 +3541,74 @@ function workoutIntelligence(run){
  else interpretation='This session provides useful benchmark evidence.';
  return{family,verdict,interpretation,findings,details,comp,thirds};
 }
+function logPictogram(kind='log'){
+ const icons={
+  log:`<svg class="logPic" viewBox="0 0 72 72" aria-hidden="true"><circle class="logSkin" cx="24" cy="13" r="5"/><path class="logBase" d="M25 20l8 11 12 3M32 31l-10 10-11 3M22 41l-7 16M22 41l13 10 9 9"/><path class="logAccent" d="M47 18h14v24H47zM51 34l3-5 3 2 4-7"/><path class="logGood" d="M49 48l5 5 10-12"/></svg>`,
+  evidence:`<svg class="logPic" viewBox="0 0 72 72" aria-hidden="true"><path class="logBase" d="M12 54V34M26 54V22M40 54V30M54 54V15"/><path class="logAccent" d="M9 17l13 7 13-8 18 6"/><path class="logGood" d="M49 43l5 5 10-12"/></svg>`,
+  consequence:`<svg class="logPic" viewBox="0 0 72 72" aria-hidden="true"><path class="logBase" d="M11 51h19l7-15 8 8 16-23"/><path class="logAccent" d="M51 21h10v10"/><circle class="logGood" cx="18" cy="51" r="5"/></svg>`
+ };
+ return icons[kind]||icons.log;
+}
+function logStatusClass(score){
+ const n=Number(score);return !Number.isFinite(n)?'neutral':n>=85?'good':n>=70?'warn':'bad';
+}
+function logDataQuality(run){
+ const missing=[];
+ if(!Number.isFinite(Number(run.avgHr)))missing.push('HR');
+ if(!Number.isFinite(Number(run.avgPower)))missing.push('power');
+ const stream=Array.isArray(run.fitRecords)&&run.fitRecords.length>0;
+ const interval=run.intervalAnalysis?.structured;
+ return{missing,stream,interval,complete:missing.length===0};
+}
+function logHeroHtml(){
+ const runs=(state.runs||[]).slice().sort((a,b)=>b.date.localeCompare(a.date)),latest=runs[0],matched=runs.filter(r=>r.planId).length;
+ return`<section class="logHeroCard">
+   <div class="logHeroMain"><span class="logHeroIcon">${logPictogram('log')}</span><div><small>RUN HISTORY</small><h2>Training Log</h2><p>Review completed sessions from a runner’s perspective: what you did, how well you executed it, and what the model learned.</p></div></div>
+   <div class="logHeroStats"><div><small>RUNS LOGGED</small><strong>${runs.length}</strong></div><div><small>MATCHED TO PLAN</small><strong>${matched}</strong></div><div><small>LATEST</small><strong>${latest?fmtDate(latest.date):'—'}</strong></div></div>
+ </section>`;
+}
+function runSummaryHtml(r){
+ const m=metrics(r),plan=r.planId?state.plan.find(p=>p.id===r.planId):null,score=workoutScore(r),q=logDataQuality(r);
+ const completion=plan&&Number(plan.distance)>0?Number(r.distanceKm)/Number(plan.distance):null;
+ const quality=q.missing.length?`Missing ${q.missing.join(' + ')}`:q.stream?'Detailed stream available':'Summary data complete';
+ return`<section class="runSummaryHero">
+   <div class="runSummaryHead"><span class="runSummaryIcon">${logPictogram('log')}</span><div><small>${fmtDate(r.date)} · ${esc(matchSummary(r))}</small><h2>${esc(r.type)}</h2><p>${plan?`Matched to ${esc(plan.type)} · ${Number(plan.distance).toFixed(1)} km planned`:'Ad hoc / unmatched session'}</p></div>${Number.isFinite(score)?`<div class="runSummaryScore ${logStatusClass(score)}"><strong>${Math.round(score)}</strong><span>/100</span><small>execution</small></div>`:''}</div>
+   <div class="runSummaryMetrics"><div><small>DISTANCE</small><b>${Number(r.distanceKm).toFixed(2)} km</b>${plan?`<span>plan ${Number(plan.distance).toFixed(1)} km</span>`:''}</div><div><small>DURATION</small><b>${fmtTime(r.durationSec)}</b><span>${pace(m.pace)}</span></div><div><small>HEART RATE</small><b>${Number.isFinite(Number(r.avgHr))?Math.round(r.avgHr)+' bpm':'Not available'}</b></div><div><small>POWER</small><b>${Number.isFinite(Number(r.avgPower))?Math.round(r.avgPower)+' W':'Not available'}</b></div><div><small>RPE</small><b>${Number.isFinite(Number(r.rpe))?Number(r.rpe).toFixed(0)+'/10':'Not entered'}</b></div><div><small>PAIN</small><b>${Number.isFinite(Number(r.pain))?Number(r.pain).toFixed(0)+'/10':'Not entered'}</b></div></div>
+   ${Number.isFinite(completion)?`<div class="runPlanCompare"><div><span>Planned distance completion</span><b>${Math.round(completion*100)}%</b></div><i><em style="width:${clamp(completion*100,0,120)}%"></em></i></div>`:''}
+   <div class="runDataQuality ${q.missing.length?'partial':'good'}"><b>${quality}</b><span>${q.stream?'FIT/CSV record stream can support deeper analysis where relevant.':'No detailed record stream is stored for this session.'}</span></div>
+ </section>`;
+}
+function pathwayEvidenceCardHtml(title,d,t){
+ const accepted=Math.abs(t.acceptedContribution)>=.00005,lang=pathwayCoachLanguage(d,t),weight=Math.round(clamp(t.confidenceWeight*100,0,100));
+ const projectedChange=t.projected-t.applied;
+ return`<article class="logEvidencePath">
+   <div class="logEvidenceHead"><div><small>${title}</small><h4>${esc(lang.q)}</h4></div><span class="${accepted?'accepted':'held'}">${accepted?'Evidence accepted':'No learned change'}</span></div>
+   <div class="logEvidenceGaugeRow"><div class="evidenceMiniGauge" style="--e:${weight}"><strong>${weight}%</strong><small>evidence weight</small></div><div class="logEvidenceMetrics"><span><small>RUN SIGNAL</small><b>${t.rawSignal>=0?'+':''}${t.rawSignal.toFixed(2)}</b></span><span><small>THIS RUN</small><b>${accepted?signedFactorDelta(t.acceptedContribution):'0.000'}</b></span><span><small>THIS WEEK</small><b>${signedFactorDelta(t.weeklyBucket)}</b></span></div></div>
+   <div class="logFactorFlow"><div><small>APPLIED</small><b>${t.applied.toFixed(3)}</b></div><i>→</i><div><small>PROJECTED NEXT REVIEW</small><b>${t.projected.toFixed(3)}</b><span>${signedFactorDelta(projectedChange)}</span></div></div>
+   <p class="logEvidenceMeaning">${esc(lang.runMeaning)} ${esc(lang.response)}</p>
+   ${!accepted&&t.safeguard?`<div class="logEvidenceSafeguard">${esc(t.safeguard)}</div>`:''}
+   <details class="logEvidenceCalc"><summary>How was this calculated?</summary><div class="logEvidenceDrivers"><h5>Evidence used</h5><div class="evidenceDriverList">${pathwayEvidenceSummaryHtml(d,t)}</div></div>${pathwayCalculationDetailsHtml(d,t)}</details>
+ </article>`;
+}
+function trainingEvidenceHtml(r){
+ const plan=r.planId?state.plan.find(p=>p.id===r.planId):null,two=twoPathwayDecisionForRun(r,plan),pt=pathwayEvidenceTrace(r,'pace'),lt=pathwayEvidenceTrace(r,'load');
+ return`<section class="logTrainingEvidence"><div class="logDetailSectionHead"><span>${logPictogram('evidence')}</span><div><small>TRAINING EVIDENCE</small><h3>What the model learned from this run</h3><p>Run evidence is shown separately from adaptation already applied to the plan.</p></div></div><div class="logEvidenceGrid">${pathwayEvidenceCardHtml('PACE & POWER',two.pace,pt)}${pathwayEvidenceCardHtml('DISTANCE & LOAD',two.load,lt)}</div></section>`;
+}
+function trainingConsequenceHtml(r){
+ const u=r?.coachUpdate,pt=pathwayEvidenceTrace(r,'pace'),lt=pathwayEvidenceTrace(r,'load');
+ const next=u?.nextChange||((Math.abs(pt.projected-pt.applied)>=.0005||Math.abs(lt.projected-lt.applied)>=.0005)?'Accepted evidence is accumulating for the next weekly review.':'No plan change is currently projected from this run.');
+ const decision=u?.decision||'Current evidence has been re-evaluated for both adaptive pathways.';
+ return`<section class="logTrainingConsequence"><div class="logDetailSectionHead"><span>${logPictogram('consequence')}</span><div><small>TRAINING CONSEQUENCE</small><h3>What this means for your plan</h3><p>${esc(decision)}</p></div></div>
+   <div class="consequenceStages"><div><small>THIS RUN</small><b>${signedFactorDelta(pt.acceptedContribution)} P&amp;P</b><span>${signedFactorDelta(lt.acceptedContribution)} D&amp;L</span></div><i>→</i><div><small>APPLIED NOW</small><b>${pt.applied.toFixed(3)} P&amp;P</b><span>${lt.applied.toFixed(3)} D&amp;L</span></div><i>→</i><div><small>NEXT REVIEW</small><b>${pt.projected.toFixed(3)} P&amp;P</b><span>${lt.projected.toFixed(3)} D&amp;L</span></div></div>
+   <div class="consequenceCallout"><b>${esc(next)}</b><span>Learned pathway changes commit at weekly review; temporary readiness can still modify an upcoming session independently.</span></div>
+   ${u?.prescriptionChanges?.length?`<details class="logConsequenceDetails"><summary>Projected workout consequences</summary><div class="projectedChangeRows">${u.prescriptionChanges.map(c=>{const bits=[];if(Math.abs(c.distanceDeltaKm)>=.05)bits.push(`${c.beforeDistance.toFixed(1)} → ${c.afterDistance.toFixed(1)} km`);if(Math.abs(c.paceDeltaSec)>=.5)bits.push(`${pace(c.beforePace)} → ${pace(c.afterPace)}`);if(Math.abs(c.powerDeltaW)>=1)bits.push(`${Math.round(c.beforePower)} → ${Math.round(c.afterPower)} W`);return bits.length?`<div><span>${fmtDate(c.date)} · ${esc(c.type)}</span><b>${bits.join(' · ')}</b></div>`:''}).join('')}</div></details>`:''}
+ </section>`;
+}
 function workoutIntelligenceHtml(run){
  const w=workoutIntelligence(run),familyIcon=w.family==='long'?'long':w.family==='interval'?'quality':w.family==='recovery'?'recovery':w.family==='threshold'?'threshold':'easy';
  const findings=w.findings.slice(0,5).map(f=>`<div class="wiFinding ${f.kind}"><i>${visualStatusIcon(f.kind)}</i><span>${esc(f.text)}</span></div>`).join('');
  const score=w.details?.score;
- return`<section class="workoutIntelligence uiLevel1"><div class="wiHead visual"><span class="wiIcon">${uiIcon(familyIcon)}</span><div><small>WORKOUT INTELLIGENCE</small><h3>${esc(w.verdict)}</h3></div><a class="wiGaugeLink" href="#executionBreakdownFoldout" aria-label="Open execution breakdown">${Number.isFinite(score)?circularGauge(score,'execution'):'<span class="analysedBadge">Analysed</span>'}</a></div><p class="wiInterpretation">${esc(w.interpretation)}</p><div class="wiFindings">${findings||'<p class="muted">Not enough detailed evidence for session-specific findings.</p>'}</div></section>`;
+ return`<section class="workoutIntelligence logWorkoutIntelligence"><div class="wiHead visual"><span class="wiIcon">${uiIcon(familyIcon)}</span><div><small>WORKOUT EXECUTION</small><h3>${esc(w.verdict)}</h3><p>How well the completed session matched its purpose and prescription.</p></div>${Number.isFinite(score)?`<div class="logExecGauge ${logStatusClass(score)}" style="--score:${score}"><strong>${Math.round(score)}</strong><span>/100</span></div>`:'<span class="analysedBadge">Analysed</span>'}</div><p class="wiInterpretation">${esc(w.interpretation)}</p><div class="wiFindings">${findings||'<p class="muted">Not enough detailed evidence for session-specific findings.</p>'}</div></section>`;
 }
 function comparableRunHtml(run){
  const c=comparableRunAnalysis(run);if(!c)return'';
@@ -3567,7 +3633,21 @@ function runExecutionBreakdownHtml(r){
  const plan=r.planId?state.plan.find(p=>p.id===r.planId):null,d=workoutScoreDetails(r,plan),score=d?.score;
  return`<details id="executionBreakdownFoldout" class="runExecutionBreakdown executionFoldout uiLevel3"><summary><span>Execution breakdown</span><b>${Number.isFinite(score)?score+'/100':'Not scored'}</b></summary><div class="executionFoldoutBody">${runExecutionBreakdownBodyHtml(r)}</div></details>`;
 }
-function renderRuns(){$('runList').innerHTML=state.runs.slice().sort((a,b)=>b.date.localeCompare(a.date)).map(r=>{let m=metrics(r),ws=workoutScore(r),cr=comparableRunAnalysis(r),typeCls=workoutTypeClass(r.type),compareBadge=cr&&cr.confidence!=='Low'&&Number.isFinite(cr.efficiencyDelta)?`<span class="runCompareBadge ${cr.efficiencyDelta>=0?'better':'worse'}">${cr.efficiencyDelta>=0?'↑':'↓'} ${Math.abs(cr.efficiencyDelta).toFixed(1)}% vs similar</span>`:'';return`<article class="runCard clickable" role="button" tabindex="0" aria-label="Open ${esc(fmtDate(r.date))} ${esc(r.type)} run details" data-run="${r.id}"><div class="runCardTop"><span class="workoutTypeIcon ${typeCls}">${uiIcon(typeCls==='quality'?'quality':typeCls)}</span><div class="runIdentity"><small>${fmtDate(r.date)}</small><h3>${esc(r.type)}</h3><p>${r.distanceKm.toFixed(2)} km · ${fmtTime(r.durationSec)} · ${pace(m.pace)}</p></div>${ws!=null?circularGauge(ws,'score'):'<span class="runOpen">›</span>'}</div><div class="runMetricStrip"><span><small>Heart rate</small><b>${r.avgHr?Math.round(r.avgHr)+' bpm':'—'}</b></span><span><small>Power</small><b>${r.avgPower?Math.round(r.avgPower)+' W':'—'}</b></span><span><small>Efficiency</small><b>${dec(m.efficiencyJ,1)} J/beat</b></span></div><div class="runCardFoot"><span>${esc(matchSummary(r))}</span>${compareBadge}<span class="runOpen">Open intelligence ›</span></div></article>`}).join('')||`<div class="emptyState">${uiIcon('easy')}<h3>No runs yet</h3><p>Import a FIT/CSV file or add a manual run to start Workout Intelligence.</p></div>`}
+function renderRuns(){
+ if($('logHero'))$('logHero').innerHTML=logHeroHtml();
+ const runs=state.runs.slice().sort((a,b)=>b.date.localeCompare(a.date));
+ $('runList').innerHTML=runs.map(r=>{
+   const m=metrics(r),ws=workoutScore(r),plan=r.planId?state.plan.find(p=>p.id===r.planId):null,q=logDataQuality(r),typeCls=workoutTypeClass(r.type),cr=comparableRunAnalysis(r);
+   const day=dte(r.date).toLocaleDateString(undefined,{weekday:'short'}),date=dte(r.date).toLocaleDateString(undefined,{day:'numeric',month:'short'});
+   const compare=cr&&cr.confidence!=='Low'&&Number.isFinite(cr.efficiencyDelta)?`${cr.efficiencyDelta>=0?'↑':'↓'} ${Math.abs(cr.efficiencyDelta).toFixed(1)}% efficiency vs similar`:null;
+   return`<article class="logRunCard clickable" role="button" tabindex="0" data-run="${r.id}" aria-label="Open ${esc(fmtDate(r.date))} ${esc(r.type)} run details">
+     <div class="logRunTop"><span class="logRunType ${typeCls}">${uiIcon(typeCls==='quality'?'quality':typeCls)}</span><div class="logRunIdentity"><small>${day} · ${date}</small><h3>${esc(r.type)}</h3><p>${plan?`Matched: ${esc(plan.type)}`:esc(matchSummary(r))}</p></div>${Number.isFinite(ws)?`<div class="logRunScore ${logStatusClass(ws)}"><strong>${Math.round(ws)}</strong><span>/100</span></div>`:'<span class="logRunArrow">›</span>'}</div>
+     <div class="logRunPrimary"><span><small>DISTANCE</small><b>${Number(r.distanceKm).toFixed(2)} km</b></span><span><small>DURATION</small><b>${fmtTime(r.durationSec)}</b></span><span><small>PACE</small><b>${pace(m.pace)}</b></span></div>
+     <div class="logRunSecondary"><span>${Number.isFinite(Number(r.avgHr))?Math.round(r.avgHr)+' bpm':'HR unavailable'}</span><span>${Number.isFinite(Number(r.avgPower))?Math.round(r.avgPower)+' W':'Power unavailable'}</span>${compare?`<span class="${cr.efficiencyDelta>=0?'good':'warn'}">${compare}</span>`:''}</div>
+     ${q.missing.length?`<div class="logRunWarning">${uiIcon('warning')}<span>Partial data: ${q.missing.join(' and ')} not available</span></div>`:''}
+   </article>`;
+ }).join('')||`<div class="logEmptyState"><span>${logPictogram('log')}</span><h3>No runs logged yet</h3><p>Import a FIT/CSV activity for the richest analysis, or add a run manually.</p><label for="activityFile" class="primary">Import your first run</label></div>`;
+}
 function migrateImportedPower(){
  let changed=false,weight=Number(state.setup.bodyWeight)||0;
  if(!weight)return;
@@ -4798,7 +4878,7 @@ function navIcon(page){
  const icons={
   today:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 13h4l2-6 4 12 2-6h4"/><path d="M5 4h14v16H5z" opacity=".15"/></svg>',
   plan:'<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M7 3v4M17 3v4M4 9h16M8 13h3M13 13h3M8 16h3"/></svg>',
-  runs:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 4l-2 4 3 2 2-3 3 2"/><path d="M10 10l-3 4-3 1M14 11l-1 5 4 4M9 4.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3z"/></svg>',
+  runs:'<svg class="logNavPic" viewBox="0 0 24 24" aria-hidden="true"><circle class="logNavSkin" cx="7.2" cy="4.4" r="1.6"/><path class="logNavBase" d="M7.8 7l2.8 3.5 4.2 1M10.6 10.5l-3.4 3.1-3.4.8M7.2 13.6L5 19M7.2 13.6l4 3.6 2.4 2.1"/><path class="logNavAccent" d="M15 5.5h6v8h-6zM16.2 11l1.2-1.8 1.1.8 1.4-2.5"/><path class="logNavGood" d="M15.5 16.8l1.8 1.8 3.4-4"/></svg>',
   dashboard:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19V10M10 19V5M16 19v-7M22 19H2"/><path d="M4 8l6-4 6 6 5-5"/></svg>',
   more:'<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg>',
   assessments:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h14v16H5zM8 8h8M8 12h5M8 16h7"/></svg>',
@@ -4834,7 +4914,7 @@ function runEditorHtml(r){
  if((r.sourceFormat==='csv-timeseries'||String(r.id||'').startsWith('stryd-'))&&Number(r.avgPower)>0&&Number(r.avgPower)<20){
    r.avgPower=Math.round(Number(r.avgPower)*(Number(state.setup.bodyWeight)||1));
  }
- return `<h2>Edit run</h2><form id="runEditorForm" novalidate><div class="formGrid">
+ return `<div class="logEditorHead"><span>${logPictogram('log')}</span><div><small>RUN DATA</small><h2>Edit run</h2><p>Correct summary fields or change the planned-workout link. Analysis recalculates after saving.</p></div></div><form id="runEditorForm" novalidate><div class="formGrid">
   <div class="field"><label>Date</label><input id="erDate" type="date" max="${iso(today())}" required value="${r.date}"></div>
   <div class="field"><label>Run type</label><select id="erType">${['Easy','Easy + strides','Recovery','Shakeout','Steady aerobic','Medium-long','Progression','Long run','Specific long run','Race rehearsal','Hills','Fartlek','Threshold','Threshold intervals','VO₂max intervals','Race-pace intervals','Half-marathon-specific','Marathon-specific','Fitness assessment','Race'].map(x=>`<option ${r.type===x?'selected':''}>${x}</option>`).join('')}</select></div>
   <div class="field"><label>Distance km</label><input id="erDistance" type="number" inputmode="decimal" min="0.01" max="300" step="0.01" required value="${Number(r.distanceKm).toFixed(2)}"></div>
@@ -4873,30 +4953,31 @@ function updatedRunFromForm(r){
  return updated;
 }
 function runAnalysisStackHtml(r,includeEditor=false){
+ const summary=runSummaryHtml(r);
  const intelligence=workoutIntelligenceHtml(r);
- const comparable=comparableRunHtml(r);
- const pathways=postRunCoachUpdateHtml(r);
  const execution=runExecutionBreakdownHtml(r);
- const editor=includeEditor?runEditorHtml(r):'';
  const interval=intervalAnalysisHtml(r);
- return`${intelligence}${interval}${comparable}${pathways}${execution}${editor}`;
+ const comparable=comparableRunHtml(r);
+ const evidence=trainingEvidenceHtml(r);
+ const consequence=trainingConsequenceHtml(r);
+ const editor=includeEditor?`<details class="logEditFoldout"><summary>Edit run data</summary><div>${runEditorHtml(r)}</div></details>`:'';
+ return`${summary}${intelligence}${execution}${interval}${comparable}${evidence}${consequence}${editor}`;
 }
-
 function openRunDetails(runId){
  let r=state.runs.find(x=>x.id===runId);if(!r)return;
  if(r.source==='assessment'&&r.assessmentId){
    $('modalContent').innerHTML=workoutIntelligenceHtml(r)+comparableRunHtml(r)+runExecutionBreakdownHtml(r)+`<div class="note">This run was created from a fitness assessment. Edit it from the Assessments tab so both records remain synchronized.</div>`;
-   $('modal').className='modal';
+   $('modal').className='modal logDetailModal';
    return;
  }
  $('modalContent').innerHTML=runAnalysisStackHtml(r,true)+`<button id="deleteEditedRun" class="danger buttonLike full">Delete run</button>`;
- $('modal').className='modal';
+ $('modal').className='modal logDetailModal';
  bindEditorPlanRefresh(r);
  $('saveRunEdit').onclick=()=>{
    try{
     let updated=updatedRunFromForm(r),i=state.runs.findIndex(x=>x.id===r.id);
     if(i<0)throw Error('Run not found.');
-    state.runs.splice(i,1);const before=postRunCoachSnapshot(updated.date);state.runs.splice(i,0,updated);recordPredictionSnapshot(updated.date,'Run update',updated.id);const after=postRunCoachSnapshot(updated.date);updated.coachUpdate=postRunCoachUpdate(updated,before,after);save();renderAll();$('modalContent').innerHTML=runAnalysisStackHtml(updated,false)+`<button id="closeCoachUpdate" class="primary full" type="button">Done</button>`;$('modal').className='modal';$('closeCoachUpdate').onclick=closeDialog;toast('Run updated and coaching update recalculated.');
+    state.runs.splice(i,1);const before=postRunCoachSnapshot(updated.date);state.runs.splice(i,0,updated);recordPredictionSnapshot(updated.date,'Run update',updated.id);const after=postRunCoachSnapshot(updated.date);updated.coachUpdate=postRunCoachUpdate(updated,before,after);save();renderAll();$('modalContent').innerHTML=runAnalysisStackHtml(updated,false)+`<button id="closeCoachUpdate" class="primary full" type="button">Done</button>`;$('modal').className='modal logDetailModal';$('closeCoachUpdate').onclick=closeDialog;toast('Run updated and coaching update recalculated.');
    }catch(err){toast(err.message,true)}
  };
  $('deleteEditedRun').onclick=()=>{
@@ -4909,10 +4990,10 @@ $('runList').onkeydown=e=>{if((e.key==='Enter'||e.key===' ')&&e.target.matches('
 $('manualRunBtn').onclick=()=>{
  let r={id:'manual-'+Date.now(),date:iso(today()),type:'Easy',distanceKm:'',durationSec:null,avgHr:null,avgPower:null,rpe:null,pain:null,recovery:null,hrv:null,notes:''};
  $('modalContent').innerHTML=runEditorHtml(r);
- $('modal').className='modal';
+ $('modal').className='modal logEditModal';
  bindEditorPlanRefresh(r);
  $('saveRunEdit').onclick=()=>{
-   try{let created=updatedRunFromForm(r),before=postRunCoachSnapshot(created.date);state.runs.push(created);recordPredictionSnapshot(created.date,'Run saved',created.id);let after=postRunCoachSnapshot(created.date);created.coachUpdate=postRunCoachUpdate(created,before,after);save();renderAll();$('modalContent').innerHTML=runAnalysisStackHtml(created,false)+`<button id="closeCoachUpdate" class="primary full" type="button">Done</button>`;$('modal').className='modal';$('closeCoachUpdate').onclick=closeDialog;toast('Run saved and coaching update calculated.')}catch(err){toast(err.message,true)}
+   try{let created=updatedRunFromForm(r),before=postRunCoachSnapshot(created.date);state.runs.push(created);recordPredictionSnapshot(created.date,'Run saved',created.id);let after=postRunCoachSnapshot(created.date);created.coachUpdate=postRunCoachUpdate(created,before,after);save();renderAll();$('modalContent').innerHTML=runAnalysisStackHtml(created,false)+`<button id="closeCoachUpdate" class="primary full" type="button">Done</button>`;$('modal').className='modal logEditModal';$('closeCoachUpdate').onclick=closeDialog;toast('Run saved and coaching update calculated.')}catch(err){toast(err.message,true)}
  };
 };
 $('closeModal').onclick=closeDialog;
@@ -4933,7 +5014,7 @@ $('activityFile').onchange=async e=>{
 
    let m=metrics(preview),format=preview.sourceFormat==='fit-activity'?(preview.sourceDevice||'FIT activity'):'Stryd CSV';
    $('importPreview').className='panel';
-   $('importPreview').innerHTML=`<h3>${esc(format)} analysis preview</h3>
+   $('importPreview').innerHTML=`<div class="logImportPreviewHead"><span>${logPictogram('log')}</span><div><small>IMPORT CHECK</small><h3>${esc(format)} analysis preview</h3><p>Confirm the activity and planned-workout match before saving.</p></div></div>
    <div class="metricGrid">
     ${kpi('Date',preview.date)}
     ${kpi('Distance',preview.distanceKm.toFixed(2)+' km')}
@@ -4977,7 +5058,7 @@ $('activityFile').onchange=async e=>{
       let coachHtml='',coachWarning='';
       try{const after=postRunCoachSnapshot(savedRun.date);if(before){savedRun.coachUpdate=postRunCoachUpdate(savedRun,before,after);coachHtml=postRunCoachUpdateHtml(savedRun)}}catch(e){console.warn('Coach update failed',e);coachWarning=' Run saved; Coach Update unavailable for this import.'}
       save();$('importPreview').className='hidden';preview=null;input.value='';renderAll();
-      if(coachHtml){$('modalContent').innerHTML=coachHtml+`<button id="closeCoachUpdate" class="primary full" type="button">Done</button>`;$('modal').className='modal';$('closeCoachUpdate').onclick=closeDialog}
+      if(coachHtml){$('modalContent').innerHTML=coachHtml+`<button id="closeCoachUpdate" class="primary full" type="button">Done</button>`;$('modal').className='modal logDetailModal';$('closeCoachUpdate').onclick=closeDialog}
       toast(`Activity analysed and run saved.${coachWarning}`,!!coachWarning);
     }catch(err){toast(err?.message||'The run could not be saved.',true)}
    };
