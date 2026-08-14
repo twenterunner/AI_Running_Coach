@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '12.2.0';
-  const BUILD = 20200;
+  const VERSION = '12.2.1';
+  const BUILD = 20201;
   const SCHEMA = 10330;
   const PRIMARY_STORAGE_KEY = 'arc_v10330_web';
   const MIRROR_STORAGE_KEY = 'arc_v10330_mirror';
@@ -2456,21 +2456,44 @@ function todayRehabStatusSummary(active){
  };
 }
 
+function todayReadinessExplanation(ready){
+ const reasons=[];
+ const hrvDelta=Math.round((Number(ready.hrvAdj)||0)*100);
+ const painDelta=Math.round((Number(ready.painAdj?.adjustment)||0)*100);
+ const painMax=Number(ready.pain?.max);
+ if(hrvDelta<0){
+   const h=ready.hrv;
+   if(Number.isFinite(h?.rolling)&&Number.isFinite(h?.baseline))
+     reasons.push(`HRV ${Math.round(h.rolling)} vs ${Math.round(h.baseline)} ms`);
+   else reasons.push('HRV below personal baseline');
+ }
+ if(painDelta<0||painMax>=3){
+   reasons.push(Number.isFinite(painMax)?`Pain ${painMax.toFixed(0)}/10`:'Pain signal elevated');
+ }
+ const reduction=Math.round((1-ready.modifier)*100);
+ if(reasons.length){
+   return `${reasons.join(' + ')}${reduction>0?` · load reduced ${reduction}%`:''}`;
+ }
+ if(ready.hrv?.ready&&Number.isFinite(ready.hrv?.rolling)&&Number.isFinite(ready.hrv?.baseline)){
+   return `HRV ${Math.round(ready.hrv.rolling)} / ${Math.round(ready.hrv.baseline)} ms · no recovery reduction`;
+ }
+ return `No recovery restriction · load ×${ready.modifier.toFixed(3)}`;
+}
 function consolidatedTodayCoachBriefing(p){
  const engine=coachEngine(),report=evidenceBasedCoach(engine),ast=report.athleteState,ready=readinessModel(),active=todayActiveInjury(),injuryDay=active.day,rehabSummary=todayRehabStatusSummary(active);
  const evidence=Math.round(clamp(Number(report.evidenceCoverage)||0,0,100)),remaining=raceTimeRemaining(),hrv=ready.hrv,pain=ready.pain;
- const readinessDetail=hrv?.rolling!=null&&hrv?.baseline!=null?`HRV ${hrv.rolling.toFixed(0)} / ${hrv.baseline.toFixed(0)} ms`:`Load modifier ×${ready.modifier.toFixed(3)}`;
+ const readinessDetail=todayReadinessExplanation(ready);
  const painValue=Number.isFinite(Number(pain.max))?`${Number(pain.max).toFixed(0)}/10`:'—';
- const painText=active.injury?`${active.injury.bodyRegion||'Active injury'} · ${pain.status}`:pain.status;
+ const painText=active.injury?`${active.injury.bodyRegion||'Active injury'} · ${pain.status}${Number.isFinite(Number(pain.max))?' · highest recent pain':''}`:`${pain.status}${Number.isFinite(Number(pain.max))?' · highest recent pain':''}`;
  const modeTitle=injuryDay&&rehabSummary?rehabSummary.date:p&&p.type!=='Rest'?p.type:'Recovery';
- const modeText=injuryDay&&rehabSummary?rehabSummary.detail:p&&p.type!=='Rest'?`${Number(p.distance).toFixed(1)} km scheduled`:'No run scheduled';
+ const modeText=injuryDay&&rehabSummary?`Normal running estimate · ${rehabSummary.detail}`:p&&p.type!=='Rest'?`${Number(p.distance).toFixed(1)} km · ${p.purpose||'Complete as prescribed'}`:'No run scheduled · recovery is today’s training';
  let priorityTitle,priorityBullets;
  if(injuryDay){
    priorityTitle='Complete rehabilitation before considering the run plan';
    priorityBullets=[
      `${injuryDay.title} is today’s primary training task.`,
      injuryDay.rule,
-     p&&p.type!=='Rest'?`${p.type} remains secondary and should only be completed if rehabilitation criteria allow it.`:null
+     p&&p.type!=='Rest'?`${p.type} should only be completed if rehabilitation criteria allow it.`:null
    ];
  }else if(p&&p.type!=='Rest'){
    priorityTitle=`Execute ${p.type} as prescribed`;
@@ -2511,7 +2534,7 @@ function consolidatedTodayCoachBriefing(p){
    </div>
  </section>
  <div class="todayStatusGrid seriousStatusGrid">
-   <article class="todayStatusCard training"><h4>${injuryDay?'NORMAL RUNNING':'TODAY’S MODE'}</h4><div class="statusRing">${todayPictogram(injuryDay?'rehab':p&&p.type!=='Rest'?'training':'recovery')}</div><div class="statusCopy"><strong>${esc(modeTitle)}</strong><p>${esc(modeText)}</p></div></article>
+   <article class="todayStatusCard training"><h4>${injuryDay?'ACTIVE REHAB':'TODAY’S FOCUS'}</h4><div class="statusRing">${todayPictogram(injuryDay?'rehab':p&&p.type!=='Rest'?'training':'recovery')}</div><div class="statusCopy"><strong>${esc(modeTitle)}</strong><p>${esc(modeText)}</p></div></article>
    <article class="todayStatusCard ${ready.label==='Normal'?'good':ready.label==='Restricted'?'caution':'neutral'}"><h4>READINESS</h4><div class="statusRing">${todayPictogram('readiness')}</div><div class="statusCopy"><strong>${esc(ready.label)}</strong><p>${esc(readinessDetail)}</p></div></article>
    <article class="todayStatusCard ${Number(pain.max)>=3?'caution':'good'}"><h4>PAIN / INJURY</h4><div class="statusRing">${todayPictogram('pain')}</div><div class="statusCopy"><strong>${painValue}</strong><p>${esc(painText)}</p></div></article>
  </div>

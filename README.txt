@@ -1,4 +1,4 @@
-AI Running Coach v12.2.0 — Today rehab-date correction — build 20200
+AI Running Coach v12.2.1 — Today self-explanatory status tiles — build 20201
 
 Deployment
 ----------
@@ -717,3 +717,11 @@ v12.2.0
 - If no active rehab plan exists, the same tile becomes Today's Mode and shows today's run type/distance or Recovery.
 - Removed guessed return-date field aliases and ahead/behind-date inference from this tile.
 - No injury-model calculations changed.
+
+v12.2.1
+- Left status tile is Active Rehab when a rehab plan exists; it shows the model's fullDate and explains that this is the normal-running estimate.
+- Without active rehab, the same tile becomes Today's Focus and shows today's workout type/distance/purpose or recovery focus.
+- Readiness tile now explains why it is Normal/Reduced/Restricted: HRV deviation, pain signal, or both, plus the resulting percentage load reduction.
+- Pain/Injury tile wording explicitly identifies the body region/status and that the displayed value is the highest recent pain signal.
+- Removed a regressed 'remains secondary' phrase.
+- Model/data engines unchanged.
