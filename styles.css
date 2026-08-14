@@ -3468,11 +3468,92 @@ body:has(#dashboard.progressPage.active),#mainContent:has(#dashboard.progressPag
 #injury .injuryTrajectoryLegend .phase:before{content:"1–6";display:inline-grid;place-items:center;min-width:24px;height:16px;margin-right:5px;border-radius:8px;background:rgba(61,214,198,.1);color:var(--teal-2);font-size:8px;font-weight:900}
 #injury .exerciseImageButton img{object-fit:contain;background:#eef3f3}
 
-/* v13.3.2 Injury visual refinement — scoped to Injury only */
-#injury .injuryRunnerCard,#injury .rehabCalendarSection,#injury .injuryRunnerParallelCard,#injury .rehabTodayFocus,#injury .injuryTopicCard{background:linear-gradient(145deg,#075468 0%,#0a4351 48%,#123844 100%)!important;border-color:rgba(61,214,198,.32)!important}
-#injury .injuryRunnerTwoCol>div,#injury .injuryClinicalCompare,#injury .injuryRunnerMetricRow>div,#injury .injuryRunnerPrimaryMetrics>div,#injury .injuryRunnerAdherence>div,#injury .injuryRunnerStageOverview>div,#injury .exerciseDetail,#injury .rehabTodayFocus .todayPlanGrid>div,#injury .rehabStretchGoal{background:rgba(3,31,43,.24)!important;border-color:rgba(87,219,224,.13)!important}
-#injury .injuryTrajectory .phaseNumber{font-size:15px!important;font-weight:950!important;fill:var(--teal-2)!important}
+
+/* v13.3.3 Injury visual system — canonical Today-derived surfaces. Scoped to Injury only. */
+/* Level 1: exact approved Today primary card treatment. */
+#injury .injuryRunnerHero,
+#injury .injuryRunnerCard,
+#injury .rehabCalendarSection,
+#injury .injuryRunnerParallelCard,
+#injury .rehabTodayFocus,
+#injury .injuryTopicCard,
+#injury .injuryRunnerEmpty{
+  background:linear-gradient(145deg,#075468 0%,#073c50 52%,#062c3d 100%)!important;
+  border:1px solid rgba(40,214,219,.42)!important;
+  border-radius:18px!important;
+  box-shadow:none!important;
+}
+/* Level 2: exact Today nested information surface. */
+#injury .injuryRunnerHeroLead,
+#injury .injuryRunnerPrimaryMetrics>div,
+#injury .injuryRunnerMetricRow>div,
+#injury .injuryRunnerAdherence>div,
+#injury .injuryRunnerStageOverview>div,
+#injury .injuryRunnerParallelMetrics>span,
+#injury .injuryRunnerTwoCol>div,
+#injury .injuryClinicalCompare,
+#injury .injuryRunnerCriterion,
+#injury .injuryRunnerMilestones>div,
+#injury .injuryRunnerBaseline,
+#injury .injuryRunnerClinicianTiming,
+#injury .rehabTodayFocus .todayFocus,
+#injury .rehabTodayFocus .todayPlanGrid>div,
+#injury .rehabStretchGoal,
+#injury .injuryRunnerHistoryRows>div,
+#injury .checkInHistoryRow{
+  background:rgba(5,18,24,.48)!important;
+  border:1px solid rgba(61,214,198,.15)!important;
+}
+/* Level 3/disclosure: same dark disclosure language used across the approved app. */
+#injury .injuryRunnerDisclosure,
+#injury .exerciseDetail,
+#injury .rehabDay,
+#injury .rehabDayDetails{
+  background:#0c1923!important;
+  border:1px solid rgba(136,161,177,.12)!important;
+}
+#injury .injuryRunnerDisclosure>summary,
+#injury .exerciseDetail>summary,
+#injury .rehabDay>summary,
+#injury .rehabDayDetails>summary{
+  background:rgba(61,214,198,.035)!important;
+}
+/* Trajectory: use the card's usable width rather than reserving a large plotting gutter. */
+#injury .injuryTrajectoryWrap{
+  width:100%;
+  max-width:none;
+  box-sizing:border-box;
+  margin-top:4px;
+  padding:8px 0 10px!important;
+  background:rgba(5,18,24,.48)!important;
+  border:1px solid rgba(61,214,198,.15)!important;
+  border-radius:14px;
+  overflow:hidden;
+}
+#injury .injuryTrajectory{
+  display:block;
+  width:100%!important;
+  max-width:none!important;
+  height:auto;
+  margin:0;
+}
+#injury .injuryTrajectory .phaseNumber{font-size:16px!important;font-weight:950!important;fill:#45e0e4!important}
 #injury .injuryTrajectory .phaseLabel{font-size:12px!important;font-weight:900!important;fill:#fff!important}
-#injury .exerciseImageButton img{width:88px!important;height:66px!important;object-fit:cover!important;background:#eef3f3!important;border-radius:10px}
-#injury .exerciseSummaryCopy b{font-size:14px!important;line-height:1.3!important}
-#injury .exerciseSummaryCopy small{font-size:11px!important;line-height:1.4!important}
+#injury .injuryTrajectory .currentDateLabel{font-size:10px!important;fill:#fff!important;font-weight:800}
+@media(max-width:430px){
+  #injury .injuryTrajectoryWrap{padding:7px 0 9px!important}
+  #injury .injuryTrajectory .phaseNumber{font-size:17px!important}
+  #injury .injuryTrajectory .phaseLabel{font-size:12.5px!important}
+}
+
+
+/* v13.3.4 Injury exercise text-only interaction. Scoped to Injury only. */
+#injury .exerciseDetail.textExercise>summary{grid-template-columns:minmax(0,1fr) auto!important;padding:13px 14px!important;gap:12px!important;align-items:center!important}
+#injury .exerciseDetail.textExercise .exerciseSummaryCopy{min-width:0!important}
+#injury .exerciseDetail.textExercise .exerciseChevron{white-space:nowrap!important;color:var(--teal-2)!important;font-size:11px!important;font-style:normal!important;font-weight:850!important}
+#injury .exerciseDetail.textExercise .exerciseGuide{padding:14px!important}
+#injury .exerciseDetail.textExercise .exerciseInstructionBlock{margin-top:10px!important}
+#injury .exerciseDetail.textExercise .exerciseInstructionBlock> b{display:block;margin-bottom:7px;color:#fff;font-size:13px;line-height:1.35}
+#injury .exerciseDetail.textExercise .exerciseInstructionBlock ol{margin:0;padding-left:20px}
+#injury .exerciseDetail.textExercise .exerciseInstructionBlock li{margin:0 0 7px;font-size:12px;line-height:1.5}
+@media(max-width:430px){#injury .exerciseDetail.textExercise>summary{grid-template-columns:1fr!important}#injury .exerciseDetail.textExercise .exerciseChevron{justify-self:start!important}}

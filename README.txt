@@ -1,3 +1,19 @@
+AI Running Coach v13.3.4 — Text-only rehab exercise guidance + full-width rehab phases — build 30340
+
+- Injury/Rehab exercise cards no longer use exercise images or pictograms. Tapping an exercise row expands its existing textual technique, dose, purpose, muscle-area and progression information.
+- Observed versus nominal progression phase bands now span the full usable graph width, while the observed and nominal time-series calculations remain unchanged.
+- Changes are scoped to Injury/Rehab presentation. Today, Plan, Log, Progress and Recovery are unchanged.
+- No rehabilitation, injury, prediction, pathway, recovery, plan, scoring, import, storage or other data-model calculations were changed.
+
+AI Running Coach v13.3.3 — Injury surface + trajectory width correction — build 30330
+
+- Injury & Rehab Level-1 cards now use the exact approved Today primary gradient, border and radius.
+- Injury nested Level-2 surfaces now use the Today nested surface treatment.
+- Injury Level-3 disclosures use one consistent dark disclosure treatment.
+- Observed versus nominal progression now uses essentially the full SVG width (8 px plotting inset per side instead of the prior 48/18 px gutter).
+- No rehabilitation calculations or data-model logic changed.
+- Today, Plan, Log, Progress and Recovery presentation code was not edited.
+
 AI Running Coach v13.3.2 — Injury visual refinement — build 30320
 
 - Injury-only visual refinement: Today-style teal surfaces, larger rehabilitation phase labels, and realistic exercise reference PNG integrated into exercise image viewing.
