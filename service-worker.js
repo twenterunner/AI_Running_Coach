@@ -1,6 +1,6 @@
 'use strict';
 
-const CACHE = 'arc-v1230-plan-redesign-20300';
+const CACHE = 'arc-v1306-build-30006';
 const CACHE_PREFIX = 'arc-v';
 const APP_SHELL = './index.html';
 const ASSETS = [
