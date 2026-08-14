@@ -2375,3 +2375,119 @@ canvas{display:block;width:100%!important;max-width:100%;height:auto!important;m
  #dashboard .outlookGain{grid-template-columns:1fr 1fr!important}
  #dashboard .metricTypeRow{grid-template-columns:1fr 1fr!important}
 }
+
+/* v13.1.3 Progress mobile polish — Progress only; frozen Today/Plan/Log unaffected. */
+#dashboard.progressPage .progressSection{display:grid;gap:12px;margin:0 0 30px}
+#dashboard.progressPage .progressSectionHead{margin:0 2px}
+#dashboard.progressPage .progressSection>.panel,
+#dashboard.progressPage .progressSection>.grid2,
+#dashboard.progressPage .progressSection>#progressExecution,
+#dashboard.progressPage .progressSection>#progressAdaptationHome,
+#dashboard.progressPage .progressSection>#personalResponseModel,
+#dashboard.progressPage .progressSection>#modelValidation,
+#dashboard.progressPage .progressSection>#decisionHistory,
+#dashboard.progressPage .progressSection>#progressRecovery{margin:0!important}
+#dashboard.progressPage .grid2,#dashboard.progressPage .kpis,#dashboard.progressPage .canonicalPathwayGrid,#dashboard.progressPage .canonicalPathMetrics{gap:10px!important}
+#dashboard.progressPage .kpis{margin-bottom:0!important}
+#dashboard.progressPage .panel{margin-bottom:0!important}
+
+/* Compact metric tiles: force label/value/explanation onto separate lines. */
+#dashboard.progressPage .kpi{display:flex!important;flex-direction:column!important;align-items:flex-start!important;gap:5px!important;min-height:0!important}
+#dashboard.progressPage .kpi>label{display:block!important;width:100%;font-size:10px!important;line-height:1.3!important;color:#bed4da!important;font-weight:500!important;text-transform:none!important;letter-spacing:0!important}
+#dashboard.progressPage .kpi>strong{display:block!important;width:100%;font-size:18px!important;line-height:1.18!important;color:#fff!important;overflow-wrap:anywhere}
+#dashboard.progressPage .kpi>small{display:block!important;width:100%;font-size:9px!important;line-height:1.45!important;color:#9fc1ca!important;text-transform:none!important;letter-spacing:0!important}
+
+/* Hero metric grid and projected-fitness disclosure. */
+#dashboard.progressPage .outlookGain{gap:10px!important;align-items:stretch}
+#dashboard.progressPage .outlookMiniMetric,#dashboard.progressPage .outlookMetricDetail{min-height:108px;padding:12px!important}
+#dashboard.progressPage .outlookMiniMetric{display:flex;flex-direction:column;justify-content:flex-start;gap:5px}
+#dashboard.progressPage .outlookMiniMetric>span{font-size:9px!important;line-height:1.3;color:#bed4da!important}
+#dashboard.progressPage .outlookMiniMetric>b{font-size:17px!important;line-height:1.15;margin:1px 0 2px!important}
+#dashboard.progressPage .outlookMetricDetail>summary{display:grid!important;grid-template-columns:minmax(0,1fr) auto!important;grid-template-rows:auto auto!important;column-gap:8px!important;row-gap:4px!important;align-content:center!important;align-items:center!important;min-height:82px!important;padding:0!important}
+#dashboard.progressPage .outlookMetricDetail>summary .outlookMetricLabel{grid-column:1;grid-row:1;display:block;font-size:14px!important;line-height:1.2;font-weight:800;color:#fff!important}
+#dashboard.progressPage .outlookMetricDetail>summary>b{grid-column:2;grid-row:1;display:block;font-size:18px!important;line-height:1.15;color:#fff!important;white-space:nowrap}
+#dashboard.progressPage .outlookMetricDetail>summary>small{grid-column:1/-1;grid-row:2;display:block;font-size:9px!important;line-height:1.3;color:#9fc1ca!important}
+#dashboard.progressPage .outlookMetricDetail>summary:after{grid-column:2;grid-row:2;justify-self:end;margin:0 2px 2px 0!important}
+#dashboard.progressPage .outlookMetricDetail[open]>summary{padding-bottom:10px!important}
+#dashboard.progressPage .outlookMetricCalc{display:grid;gap:10px;padding:0 2px 2px}
+#dashboard.progressPage .outlookMetricCalc p{margin:0;font-size:10px;line-height:1.5;color:#d3e4e9}
+#dashboard.progressPage .outlookMetricCalc .calcTable{display:grid;gap:0;border:1px solid rgba(80,210,219,.13);border-radius:10px;overflow:hidden}
+#dashboard.progressPage .outlookMetricCalc .calcRow{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr) auto;gap:8px;align-items:center;padding:9px 10px;border-bottom:1px solid rgba(80,210,219,.10);font-size:9px;line-height:1.35}
+#dashboard.progressPage .outlookMetricCalc .calcRow:last-child{border-bottom:0}
+#dashboard.progressPage .outlookMetricCalc .calcRow span{min-width:0;overflow-wrap:anywhere}
+
+/* Target margin: centred zero; faster is negative/left/green, slower is positive/right/red. */
+#dashboard.progressPage .targetMarginRail{position:relative;height:8px;margin-top:auto;border-radius:999px;background:#071923;overflow:hidden}
+#dashboard.progressPage .targetMarginRail .zero{position:absolute;left:50%;top:-2px;bottom:-2px;width:2px;z-index:3;background:#d7e7eb;border-radius:2px;opacity:.9}
+#dashboard.progressPage .targetMarginRail .aheadZone,#dashboard.progressPage .targetMarginRail .behindZone{position:absolute;top:0;bottom:0;width:50%;opacity:.16}
+#dashboard.progressPage .targetMarginRail .aheadZone{left:0;background:var(--green)}
+#dashboard.progressPage .targetMarginRail .behindZone{right:0;background:var(--red)}
+#dashboard.progressPage .targetMarginRail .marginBar{position:absolute;top:0;bottom:0;width:var(--margin);border-radius:999px}
+#dashboard.progressPage .targetMarginMetric.ahead .marginBar{right:50%;background:var(--green)}
+#dashboard.progressPage .targetMarginMetric.behind .marginBar{left:50%;background:var(--red)}
+#dashboard.progressPage .targetMarginMetric.on-target .marginBar{left:calc(50% - 3px);width:6px;background:var(--teal)}
+#dashboard.progressPage .targetMarginMetric.ahead>b{color:var(--green)!important}
+#dashboard.progressPage .targetMarginMetric.behind>b{color:var(--red)!important}
+#dashboard.progressPage .targetMarginMetric.on-target>b{color:var(--teal-2)!important}
+#dashboard.progressPage .marginScale{display:grid!important;grid-template-columns:1fr 1fr 1fr;width:100%;margin-top:1px;font-size:7px!important;color:#7f9ca8!important}
+#dashboard.progressPage .marginScale span:nth-child(2){text-align:center}
+#dashboard.progressPage .marginScale span:last-child{text-align:right}
+
+/* Charts: no artificial tall empty cards; one valid observation remains visible as a dot. */
+#dashboard.progressPage canvas{min-height:0!important;margin-top:2px}
+#dashboard.progressPage canvas.progressChartHidden{display:none!important}
+#dashboard.progressPage .progressChartState{margin:0!important;min-height:78px}
+#dashboard.progressPage .progressChartPanel:has(canvas.progressChartHidden),
+#dashboard.progressPage .metricCharts>.panel:has(canvas.progressChartHidden){min-height:0!important}
+#dashboard.progressPage .chartDataTable{margin-top:8px!important}
+
+/* Evidence/interpretation cards: mobile-safe hierarchy instead of concatenated text. */
+#dashboard.progressPage .coachEvidenceGrid{display:grid!important;grid-template-columns:1fr!important;gap:12px!important}
+#dashboard.progressPage .coachEvidenceGrid>section{display:grid;gap:8px;min-width:0}
+#dashboard.progressPage .coachEvidenceGrid>section>h4{margin:0;font-size:14px;line-height:1.25}
+#dashboard.progressPage .evidenceFinding{margin:0!important;border:1px solid rgba(80,210,219,.15)!important;border-radius:12px!important;background:rgba(3,31,43,.20)!important}
+#dashboard.progressPage .evidenceFinding>summary{display:grid!important;grid-template-columns:26px minmax(0,1fr)!important;gap:8px 10px!important;align-items:start!important;padding:12px!important}
+#dashboard.progressPage .evidenceFindingIcon{grid-column:1;grid-row:1/3;width:26px;height:26px;display:grid!important;place-items:center;color:#b8d9e0!important}
+#dashboard.progressPage .evidenceFindingIcon svg{width:22px;height:22px}
+#dashboard.progressPage .evidenceFindingCopy{grid-column:2;display:grid!important;gap:4px!important;min-width:0}
+#dashboard.progressPage .evidenceFindingCopy>b{display:block!important;font-size:13px!important;line-height:1.25!important;color:#fff!important;overflow-wrap:anywhere}
+#dashboard.progressPage .evidenceFindingCopy>small{display:block!important;font-size:9px!important;line-height:1.45!important;color:#a9c2ca!important;overflow-wrap:anywhere}
+#dashboard.progressPage .evidenceFindingCopy .findingScoreBar{width:100%;margin-top:3px!important}
+#dashboard.progressPage .evidenceTags{grid-column:2;display:flex!important;flex-wrap:wrap!important;gap:5px!important;min-width:0}
+#dashboard.progressPage .evidenceTags i{display:inline-flex!important;width:auto!important;padding:4px 7px;border-radius:999px;background:rgba(7,25,35,.55);font-size:8px!important;line-height:1.2!important;font-style:normal!important;color:#cde0e5!important;white-space:nowrap}
+#dashboard.progressPage .evidenceFinding>summary:after{grid-column:2;grid-row:3;justify-self:end;margin-top:-18px!important}
+#dashboard.progressPage .evidenceDetail{display:grid;gap:10px;padding:0 12px 12px}
+#dashboard.progressPage .evidenceFacts{display:grid;gap:5px}
+#dashboard.progressPage .evidenceFacts p{margin:0;font-size:10px;line-height:1.45}
+#dashboard.progressPage .evidenceMeta{display:grid!important;grid-template-columns:1fr!important;gap:6px!important}
+#dashboard.progressPage .evidenceMeta>span{display:flex!important;justify-content:space-between;gap:10px;padding:8px 9px;border-radius:9px;background:rgba(3,31,43,.30);font-size:9px;line-height:1.35}
+
+/* Pathway history and validation text spacing. */
+#dashboard.progressPage .canonicalHistory>p{margin-top:10px!important}
+#dashboard.progressPage .canonicalHistory svg{display:block;width:100%;max-width:100%;height:auto;margin:8px 0}
+#dashboard.progressPage .canonicalHistory .chartLegend,#dashboard.progressPage .pathwayLegend{display:flex!important;flex-wrap:wrap!important;gap:7px 12px!important}
+#dashboard.progressPage .modelValidationGrid>article{gap:8px!important}
+#dashboard.progressPage .metricHeadLine{display:flex!important;align-items:flex-end!important;justify-content:space-between!important;gap:10px!important}
+#dashboard.progressPage .metricHeadLine small,#dashboard.progressPage .metricHeadLine strong{display:block!important}
+
+@media(max-width:430px){
+ #dashboard.progressPage .outlookGain{grid-template-columns:1fr 1fr!important}
+ #dashboard.progressPage .outlookMiniMetric,#dashboard.progressPage .outlookMetricDetail{min-height:112px}
+ #dashboard.progressPage .outlookMetricCalc .calcRow{grid-template-columns:1fr auto!important}
+ #dashboard.progressPage .outlookMetricCalc .calcRow span:nth-child(2){grid-column:1/-1;color:#9fc1ca}
+}
+#dashboard.progressPage canvas.progressCanvasRendered{display:none!important}
+#dashboard.progressPage .progressSvgChart{display:block;width:100%;height:auto;min-height:0;margin:2px 0 0;overflow:visible}
+#dashboard.progressPage .progressSvgChart text{font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;fill:#d7e7eb}
+#dashboard.progressPage .progressSvgChart .legend{font-size:21px;font-weight:700}
+#dashboard.progressPage .progressSvgChart .axis{font-size:18px;font-weight:500;fill:#c7d9df}
+#dashboard.progressPage .progressSvgChart .axis.x{font-size:17px}
+#dashboard.progressPage .progressSvgChart .grid{stroke:rgba(91,154,180,.42);stroke-width:1}
+#dashboard.progressPage .progressSvgChart .grid.base{stroke:#c7d9df;stroke-width:2}
+#dashboard.progressPage .pathwayHistoryChart{display:grid;gap:10px}
+#dashboard.progressPage .pathwayLegend{display:grid!important;grid-template-columns:1fr 1fr!important;gap:7px 10px!important;padding:0 2px}
+#dashboard.progressPage .pathwayLegend>span{display:flex!important;align-items:center!important;gap:6px!important;font-size:9px!important;line-height:1.3!important;color:#bed4da!important;min-width:0}
+#dashboard.progressPage .pathwayLegend>span:before{content:"";width:16px;height:3px;flex:0 0 16px;border-radius:999px;background:var(--teal)}
+#dashboard.progressPage .pathwayLegend .loadLegend:before{background:#d7e7eb}
+#dashboard.progressPage .pathwayLegend .baselineLegend{grid-column:1/-1}
+#dashboard.progressPage .pathwayLegend .baselineLegend:before{background:#8faab5}

@@ -1,3 +1,15 @@
+AI Running Coach v13.1.3 — Progress chart and mobile spacing correction — build 30103
+
+Progress-only GUI correction. Today, Plan and Log remain frozen to approved v13.0.6 build 30006. Calculation/data-model logic unchanged.
+Repository remains completely flat.
+
+- Fixed Projected fitness tile/foldout hierarchy and wrapping.
+- Target margin now uses a centred faster/target/slower diverging scale with semantic colour.
+- Single valid efficiency/drift observations remain visible; zero-data charts use compact baseline states.
+- Race readiness always renders genuine start/current/model-history evidence instead of a blank chart.
+- Fixed Progress KPI, pathway, evidence and interpretation text spacing on 360–430 px screens.
+- Standardised gaps between Progress tiles/cards.
+
 AI Running Coach v13.1.2 — Progress visual alignment — build 30102
 
 Progress-only GUI release. Today, Plan and Log remain frozen to approved v13.0.6 build 30006. Calculation/data-model logic unchanged.

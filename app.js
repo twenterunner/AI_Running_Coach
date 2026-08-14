@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '13.1.2';
-  const BUILD = 30102;
+  const VERSION = '13.1.3';
+  const BUILD = 30103;
   const SCHEMA = 10330;
   const PRIMARY_STORAGE_KEY = 'arc_v10330_web';
   const MIRROR_STORAGE_KEY = 'arc_v10330_mirror';
@@ -1997,7 +1997,7 @@ function renderDashboard(){
  $('projectedProbabilityLabel').textContent=`Race-day scenario · ${paceEstimate(engine.projection.predictedTime,engine.projectedModel.provisional)}`;
  $('projectedPrediction').textContent=engine.projectedModel.provisional?'Provisional plan scenario · outcome depends on future execution evidence':`${Math.round(engine.projectedModel.probability)}% chance of target · ${engine.projectedModel.label}`;
  $('projectedRange').textContent=`Likely 70% range ${fmtEstimate(engine.projectedModel.rangeLow,engine.projectedModel.provisional)}–${fmtEstimate(engine.projectedModel.rangeHigh,engine.projectedModel.provisional)} · ${paceEstimate(engine.projectedModel.rangeLow,engine.projectedModel.provisional)}–${paceEstimate(engine.projectedModel.rangeHigh,engine.projectedModel.provisional)}`;
- const gain=engine.projectedModel.probability-engine.currentModel.probability,targetMargin=state.setup.targetTime-engine.projection.predictedTime;
+ const gain=engine.projectedModel.probability-engine.currentModel.probability,targetMargin=engine.projection.predictedTime-state.setup.targetTime;
  const health=planHealthAssessment(c)||{score:0};
  const projectedFitness=Number(engine.projection?.projectedFitnessIndex);
  const projectedFitnessSafe=Number.isFinite(projectedFitness)?projectedFitness:100;
@@ -2005,7 +2005,8 @@ function renderDashboard(){
  const fitnessGainSafe=Number.isFinite(fitnessGainPct)?fitnessGainPct:Math.max(0,(projectedFitnessSafe-100)/100);
  const fitnessContributions=Array.isArray(engine.projection?.fitnessProjection?.contributions)?engine.projection.fitnessProjection.contributions:[];
  const contributionRows=fitnessContributions.length?fitnessContributions.map(x=>{const potential=Number(x?.potential),realised=Number(x?.realised);return `<div class="calcRow"><span>${esc(x?.name||'Plan stimulus')}</span><span>${Number.isFinite(potential)?potential.toFixed(2):'—'}% potential</span><span>${Number.isFinite(realised)?realised.toFixed(2):'—'}%</span></div>`}).join(''):`<div class="calcRow"><span>Plan-derived projection</span><span>Calculated from the current plan</span><span>${(fitnessGainSafe*100).toFixed(2)}%</span></div>`;
- $('outlookGain').innerHTML=`<div class="outlookMiniMetric"><span>Expected improvement</span><b>${fmtTime(engine.projection.improvementSec)}</b><div class="metricRail"><i style="width:${clamp(Math.abs(Number(engine.projection.improvementSec)||0)/3600*100,4,100)}%"></i></div></div><div class="outlookMiniMetric"><span>Target margin</span><b>${targetMargin>=0?fmtTime(targetMargin)+' faster':fmtTime(-targetMargin)+' slower'}</b><div class="metricRail"><i style="width:${clamp(Math.abs(Number(targetMargin)||0)/1800*100,4,100)}%"></i></div></div><details class="outlookMetricDetail"><summary><span class="outlookMetricLabel">Projected fitness</span><b>${projectedFitnessSafe.toFixed(1)}</b><small>How this is calculated</small></summary><div class="outlookMetricCalc"><p><b>${projectedFitnessSafe.toFixed(1)}</b> means the model expects general race capability to be ${(projectedFitnessSafe-100).toFixed(1)}% above the latest assessment baseline of 100, before the separate durability and taper adjustments.</p><div class="calcTable">${contributionRows}<div class="calcRow total"><span>Projected Fitness gain</span><span></span><span>+${(fitnessGainSafe*100).toFixed(2)}%</span></div></div><p class="muted compact">Realisation reflects plan health, expected completion, recovery, training opportunity and diminishing returns. Marathon durability and taper are calculated separately.</p></div></details><div class="outlookMiniMetric"><span>Plan health</span><b>${Math.round(Number(health.score)||0)}/100</b><div class="metricRail"><i style="width:${clamp(Number(health.score)||0,0,100)}%"></i></div></div>`;
+ const marginAbs=Math.abs(Number(targetMargin)||0),marginPct=clamp(marginAbs/1800*50,2,50),marginClass=targetMargin<0?'ahead':targetMargin>0?'behind':'on-target';
+ $('outlookGain').innerHTML=`<div class="outlookMiniMetric"><span>Expected improvement</span><b>${fmtTime(engine.projection.improvementSec)}</b><div class="metricRail"><i style="width:${clamp(Math.abs(Number(engine.projection.improvementSec)||0)/3600*100,4,100)}%"></i></div></div><div class="outlookMiniMetric targetMarginMetric ${marginClass}"><span>Target margin</span><b>${targetMargin<0?fmtTime(marginAbs)+' faster':targetMargin>0?fmtTime(marginAbs)+' slower':'On target'}</b><div class="targetMarginRail" aria-label="Target margin: negative is faster than target, positive is slower than target"><i class="zero"></i><em class="aheadZone"></em><em class="behindZone"></em><b class="marginBar" style="--margin:${marginPct}%"></b></div><small class="marginScale"><span>faster</span><span>target</span><span>slower</span></small></div><details class="outlookMetricDetail"><summary><span class="outlookMetricLabel">Projected fitness</span><b>${projectedFitnessSafe.toFixed(1)}</b><small>How this is calculated</small></summary><div class="outlookMetricCalc"><p><strong>${projectedFitnessSafe.toFixed(1)}</strong> is the plan-derived projected fitness index. A value of 100 is the latest assessment/setup baseline; ${projectedFitnessSafe>=100?`${(projectedFitnessSafe-100).toFixed(1)}% above baseline`:`${(100-projectedFitnessSafe).toFixed(1)}% below baseline`} is projected before separate durability and taper effects.</p><div class="calcTable">${contributionRows}<div class="calcRow total"><span>Projected fitness gain</span><span>vs baseline</span><span>${fitnessGainSafe>=0?'+':''}${(fitnessGainSafe*100).toFixed(2)}%</span></div></div><p class="muted compact">Realisation uses the existing plan-health, completion, recovery, training-opportunity and diminishing-return inputs. Durability and taper remain separate parts of the race projection.</p></div></details><div class="outlookMiniMetric"><span>Plan health</span><b>${Math.round(Number(health.score)||0)}/100</b><div class="metricRail"><i style="width:${clamp(Number(health.score)||0,0,100)}%"></i></div></div>`;
  const assumption=document.querySelector('.outlookAssumption');if(assumption)assumption.textContent=`Expected scenario uses ${Math.round(clamp(Number(engine.projection.completionAssumption)||.85,.75,.93)*100)}% plan completion, plan-derived fitness and durability gains, and a taper benefit calculated from the actual taper structure.`;
  $('trackStatus').innerHTML=`<span class="statusDot"></span><b>${engine.currentModel.provisional?'Provisional outlook — add completed training evidence':engine.status}</b>`;
  const hero=$('trackStatus').closest('.outlookHero');
@@ -2156,6 +2157,34 @@ function drawLine(canvas,series,options={}){
  canvas._chartPoints=interactive;canvas._chartOptions=options;
  if(!canvas.dataset.chartInteractive){canvas.dataset.chartInteractive='1';canvas.style.cursor='pointer';canvas.addEventListener('click',ev=>{const rect=canvas.getBoundingClientRect(),sx=canvas.width/rect.width,sy=canvas.height/rect.height,x=(ev.clientX-rect.left)*sx,y=(ev.clientY-rect.top)*sy;let nearest=(canvas._chartPoints||[]).map(p=>({...p,d:Math.hypot(p.x-x,p.y-y)})).sort((a,b)=>a.d-b.d)[0];if(!nearest||nearest.d>55)return;let detail=canvas._chartOptions?.pointDetails?.[nearest.index];let formatted=canvas._chartOptions?.formatY?canvas._chartOptions.formatY(nearest.value):Number(nearest.value).toFixed(1);toast(detail||`${nearest.label}: ${formatted}`)});}
 }
+function drawProgressLine(canvas,series,options={}){
+ if(!canvas)return;
+ const W=1000,H=340,top=series.some(s=>s.label)?68:28,left=options.left||82,bottom=62,right=26;
+ const old=canvas.parentElement?.querySelector(`:scope > svg.progressSvgChart[data-for="${canvas.id}"]`);if(old)old.remove();
+ canvas.classList.add('progressCanvasRendered');
+ const tableLength=Math.max(options.labels?.length||0,...series.map(item=>item.data.length));
+ const tableHeaders=['Point',...series.map(item=>item.label||'Value')];
+ const tableRows=Array.from({length:tableLength},(_,index)=>[options.labels?.[index]||String(index+1),...series.map(item=>{const value=item.horizontal?item.data[0]:item.data[index];return Number.isFinite(value)?(options.formatY?options.formatY(value):Number(value).toFixed(1)):'—'})]);
+ updateChartTable(canvas,'View chart summary and data',tableHeaders,tableRows);
+ const vals=series.flatMap(s=>s.data).filter(Number.isFinite);
+ if(!vals.length){canvas.classList.add('progressChartHidden');return}
+ let min=Number.isFinite(options.min)?options.min:(options.zero===false?Math.min(...vals):0),max=Number.isFinite(options.max)?options.max:Math.max(...vals);
+ if(max<=min)max=min+1;
+ if(!Number.isFinite(options.min)&&!Number.isFinite(options.max)){const pad=(max-min)*.10||1;max+=pad;if(options.zero===false)min-=pad}
+ const chartH=H-bottom-top,chartW=W-left-right,n=Math.max(1,...series.filter(s=>!s.horizontal).map(s=>s.data.length),options.labels?.length||0);
+ const px=i=>n<=1?left+chartW/2:left+i*chartW/(n-1),py=v=>H-bottom-(v-min)/(max-min)*chartH;
+ const escXml=v=>String(v??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
+ let svg=`<svg class="progressSvgChart" data-for="${escXml(canvas.id)}" viewBox="0 0 ${W} ${H}" role="img" aria-label="${escXml(canvas.getAttribute('aria-label')||'Progress chart')}">`;
+ let legendX=left;
+ series.forEach(s=>{if(!s.label)return;svg+=`<line x1="${legendX}" y1="30" x2="${legendX+30}" y2="30" stroke="${s.color}" stroke-width="6" stroke-linecap="round" ${s.dashed?'stroke-dasharray="16 10"':''}/><text x="${legendX+42}" y="38" class="legend">${escXml(s.label)}</text>`;legendX+=64+String(s.label).length*12});
+ const ticks=options.ticks||5;
+ for(let i=0;i<ticks;i++){const f=i/(ticks-1),v=min+(max-min)*f,y=H-bottom-chartH*f;svg+=`<line x1="${left}" y1="${y}" x2="${W-right}" y2="${y}" class="grid ${i===0?'base':''}"/><text x="${left-12}" y="${y+7}" text-anchor="end" class="axis">${escXml(options.formatY?options.formatY(v):v.toFixed(v<10?1:0))}</text>`}
+ series.forEach((sr,si)=>{const good=sr.data.map((v,i)=>({v,i})).filter(x=>Number.isFinite(x.v));if(!good.length)return;if(sr.horizontal){const y=py(good[0].v);svg+=`<line x1="${left}" y1="${y}" x2="${W-right}" y2="${y}" stroke="${sr.color}" stroke-width="${sr.width||5}" stroke-linecap="round" ${sr.dashed?'stroke-dasharray="16 10"':''}/>`;return}if(good.length>1){svg+=`<polyline points="${good.map(o=>`${px(o.i)},${py(o.v)}`).join(' ')}" fill="none" stroke="${sr.color}" stroke-width="${sr.width||5}" stroke-linecap="round" stroke-linejoin="round" ${sr.dashed?'stroke-dasharray="16 10"':''}/>`}if(sr.points!==false)good.forEach(o=>{svg+=`<circle cx="${px(o.i)}" cy="${py(o.v)}" r="7" fill="#fff" stroke="${sr.color}" stroke-width="4"/>`})});
+ if(options.labels?.length){const positions=options.allLabels?options.labels.map((_,i)=>i):[0,Math.floor((options.labels.length-1)/2),options.labels.length-1].filter((v,i,a)=>a.indexOf(v)===i);positions.forEach(i=>{if(i>=0&&i<options.labels.length)svg+=`<text x="${px(i)}" y="${H-18}" text-anchor="middle" class="axis x">${escXml(options.labels[i]||'')}</text>`})}
+ svg+='</svg>';
+ canvas.insertAdjacentHTML('beforebegin',svg);
+}
+
 function completedWeekSeries(){
  return Array.from({length:weeks()},(_,i)=>{
   const w=i+1,data=weekData(w),start=weekStart(w),end=new Date(start.getTime()+7*DAY),raceDate=dte(state.setup.raceDate);
@@ -2209,7 +2238,7 @@ function intensityMixHtml(items,distanceKey,emptyText='No training volume'){
 function roundRect(ctx,x,y,w,h,r){w=Math.max(0,w);r=Math.min(r,w/2,h/2);ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath()}
 function drawDashboardCharts(){
  let c=confidence(),arr=completedWeekSeries(),weekLabels=arr.map((x,i)=>x.isRaceWeek?'Race':('W'+(i+1)));
- drawLine($('volumeChart'),[
+ drawProgressLine($('volumeChart'),[
    {label:'Planned km',data:arr.map(x=>x.plannedForChart),color:'#4CC9F0',dashed:true,points:false},
    {label:'Completed km',data:arr.map(x=>x.actual),color:'#4CC9F0'}
  ],{empty:'No weekly distance data yet',labels:weekLabels,area:false});
@@ -2219,7 +2248,7 @@ function drawDashboardCharts(){
    let r=completedRuns().filter(x=>['Long run','Specific long run','Race rehearsal'].includes(x.type)&&dte(x.date)>=st&&dte(x.date)<en);
    return r.length?Math.max(...r.map(x=>x.distanceKm)):null;
  });
- drawLine($('longRunChart'),[
+ drawProgressLine($('longRunChart'),[
    {label:'Planned long run',data:plannedLong,color:'#4CC9F0',dashed:true,points:false},
    {label:'Completed long run',data:completedLong,color:'#4CC9F0'}
  ],{min:0,max:Math.max(state.setup.peakLong*1.12,10),empty:'Log a long run to show completed progression',labels:weekLabels});
@@ -2230,15 +2259,21 @@ function drawDashboardCharts(){
  const predSec=history.map(x=>Number(x.seconds));
  const labels=history.map(x=>dte(x.date).toLocaleDateString(undefined,{day:'numeric',month:'short'}));
  const pointDetails=history.map(x=>`${fmtDate(x.date)} · ${x.source||'Run update'} · ${fmtTime(Number(x.seconds))}`);
- let allSec=[...predSec,startPrediction,targetTime],low=Math.min(...allSec),high=Math.max(...allSec);
+ let allSec=[...predSec,startPrediction,targetTime,Number(pred)].filter(Number.isFinite),low=Math.min(...allSec),high=Math.max(...allSec);
  let minSec=Math.max(2*3600,Math.floor((low-1800)/1800)*1800);
  let maxSec=Math.min(7*3600,Math.ceil((high+1800)/1800)*1800);
  if(maxSec-minSec<3600)maxSec=minSec+3600;
- if(progressTrendState($('predictionChart'),predSec.length,'historical race-prediction update','historical race-prediction updates')) drawLine($('predictionChart'),[
-   {label:`Prediction updates (${predSec.length})`,data:predSec,color:'#4CC9F0'},
-   {label:`Programme start ${fmtTime(startPrediction)}`,data:[startPrediction],color:'#DDF6FF',dashed:true,points:false,horizontal:true},
-   {label:`Target ${fmtTime(targetTime)}`,data:[targetTime],color:'#F47777',dashed:true,points:false,horizontal:true}
- ],{min:minSec,max:maxSec,ticks:5,formatY:v=>fmtTime(v),labels,left:98,pointDetails,empty:'No uploaded prediction updates yet'});
+ const predictionCanvas=$('predictionChart');
+ if(predictionCanvas){
+   const stateEl=predictionCanvas.parentElement?.querySelector(':scope > .progressChartState');if(stateEl)stateEl.remove();predictionCanvas.classList.remove('progressChartHidden');
+   const todayEstimate=Number(pred);const currentDate=iso(today());
+   const chartValues=[startPrediction,...predSec];const chartLabels=['Start',...labels];const chartDetails=[`Programme start · ${fmtTime(startPrediction)}`,...pointDetails];
+   if(Number.isFinite(todayEstimate)&&((history.at(-1)?.date||'')!==currentDate||Math.abs((chartValues.at(-1)??0)-todayEstimate)>.5)){chartValues.push(todayEstimate);chartLabels.push('Today');chartDetails.push(`Current model estimate · ${fmtTime(todayEstimate)}`)}
+   drawProgressLine(predictionCanvas,[
+     {label:'Race estimate',data:chartValues,color:'#4CC9F0'},
+     {label:`Target ${fmtTime(targetTime)}`,data:[targetTime],color:'#F47777',dashed:true,points:false,horizontal:true}
+   ],{min:minSec,max:maxSec,ticks:5,formatY:v=>fmtTime(v),labels:chartLabels,left:98,pointDetails:chartDetails,empty:'No race estimate available'});
+ }
 
 }
 function coachIntelligenceHtml(p){
@@ -3712,11 +3747,11 @@ function progressTrendState(canvas,count,singular,plural){
  if(!canvas)return false;
  let stateEl=canvas.parentElement?.querySelector(':scope > .progressChartState');
  if(!stateEl){stateEl=document.createElement('div');stateEl.className='progressChartState';canvas.insertAdjacentElement('beforebegin',stateEl)}
- const enough=count>=2;
- canvas.classList.toggle('progressChartHidden',!enough);
- stateEl.classList.toggle('hidden',enough);
- if(!enough){stateEl.innerHTML=`<span class="progressStateIcon">${navIcon('dashboard')}</span><div><b>Building your baseline</b><p>${count===1?`1 ${esc(singular)} recorded. A trend needs another comparable observation.`:`No ${esc(plural)} recorded yet. The chart will appear when two comparable observations are available.`}</p></div>`;}
- return enough;
+ const hasAny=count>=1;
+ canvas.classList.toggle('progressChartHidden',!hasAny);
+ stateEl.classList.toggle('hidden',hasAny);
+ if(!hasAny){canvas.parentElement?.querySelector(`:scope > svg.progressSvgChart[data-for="${canvas.id}"]`)?.remove();canvas.classList.remove('progressCanvasRendered');stateEl.innerHTML=`<span class="progressStateIcon">${navIcon('dashboard')}</span><div><b>Building your baseline</b><p>No ${esc(plural)} recorded yet. This chart will appear as soon as the first valid observation is available.</p></div>`;}
+ return hasAny;
 }
 
 function renderMetrics(){
@@ -3736,7 +3771,7 @@ function renderMetrics(){
 
  let effValues=efficiencyRuns.map(r=>metrics(r).efficiencyJ).filter(Number.isFinite);
  let effLabels=efficiencyRuns.map(r=>dte(r.date).toLocaleDateString(undefined,{day:'numeric',month:'short'}));
- if(progressTrendState($('efficiencyChart'),efficiencyRuns.length,'comparable efficiency observation','comparable efficiency observations')) drawLine($('efficiencyChart'),metricSeries(efficiencyRuns,r=>metrics(r).efficiencyJ),{
+ if(progressTrendState($('efficiencyChart'),efficiencyRuns.length,'comparable efficiency observation','comparable efficiency observations')) drawProgressLine($('efficiencyChart'),metricSeries(efficiencyRuns,r=>metrics(r).efficiencyJ),{
    min:effValues.length?Math.floor(Math.min(...effValues)-5):80,
    max:effValues.length?Math.ceil(Math.max(...effValues)+5):140,zero:false,ticks:6,
    formatY:v=>Math.round(v)+' J',labels:effLabels,allLabels:efficiencyRuns.length<=8,
@@ -3745,7 +3780,7 @@ function renderMetrics(){
  let driftValues=driftRuns.map(r=>r.powerDrift).filter(Number.isFinite);
  let driftLabels=driftRuns.map(r=>dte(r.date).toLocaleDateString(undefined,{day:'numeric',month:'short'}));
  let driftSeries=metricSeries(driftRuns,r=>r.powerDrift);
- if(progressTrendState($('driftChart'),driftRuns.length,'suitable cardiac-drift observation','suitable cardiac-drift observations')) drawLine($('driftChart'),driftSeries,{
+ if(progressTrendState($('driftChart'),driftRuns.length,'suitable cardiac-drift observation','suitable cardiac-drift observations')) drawProgressLine($('driftChart'),driftSeries,{
    min:driftValues.length?Math.min(0,Math.floor(Math.min(...driftValues)-2)):0,
    max:driftValues.length?Math.max(10,Math.ceil(Math.max(...driftValues)+2)):10,ticks:6,
    formatY:v=>Math.round(v)+'%',labels:driftLabels,allLabels:driftRuns.length<=8,
