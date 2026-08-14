@@ -3438,3 +3438,32 @@ body:has(#dashboard.progressPage.active),#mainContent:has(#dashboard.progressPag
 #injury .injuryRunnerClinicianTiming small{font-size:9px;line-height:1.2;font-weight:850;letter-spacing:.09em;color:var(--teal-2)}
 #injury .injuryRunnerClinicianTiming strong{font-size:16px;line-height:1.2;color:#fff}
 #injury .injuryRunnerClinicianTiming span{font-size:10px;line-height:1.4;color:var(--muted)}
+
+/* v13.3.1 Injury refinement — scoped to Injury only. */
+#injury .injuryRunnerDashboard{display:flex;flex-direction:column;gap:12px}
+#injury .injuryRunnerDashboard>.injuryAssessmentSection{order:1}
+#injury .injuryRunnerDashboard>.injuryProgrammeSection{order:2}
+#injury .injuryRunnerDashboard>.injuryRunnerSection:nth-of-type(1){order:3}
+#injury .injuryRunnerDashboard>.injuryRunnerSection:nth-of-type(2){order:4}
+#injury .injuryRunnerDashboard>.injuryRunnerSection:nth-of-type(3){order:5}
+#injury .injuryRunnerDashboard>.injuryRunnerSection:nth-of-type(4){order:6}
+#injury .injuryRunnerDashboard>.injuryRunnerSection:nth-of-type(6){order:7}
+#injury .injuryRunnerDashboard>.injuryRunnerSection:nth-of-type(7){order:8}
+#injury .injuryRunnerDashboard>.injuryRunnerSection:nth-of-type(8){order:9}
+#injury .injuryRunnerDashboard>.injuryRunnerSection:nth-of-type(9){order:10}
+#injury .injuryRunnerDashboard>.injuryRunnerSection:nth-of-type(11){order:11}
+#injury .injuryRunnerDashboard>.injuryRunnerSection:nth-of-type(12){order:12}
+#injury .injuryRunnerCard,#injury .rehabCalendarSection,#injury .injuryRunnerParallelCard{background:linear-gradient(145deg,#12313a,#10232f 62%);border-color:rgba(61,214,198,.25)}
+#injury .injuryRunnerTwoCol>div,#injury .injuryClinicalCompare,#injury .injuryRunnerMetricRow>div,#injury .injuryRunnerPrimaryMetrics>div,#injury .injuryRunnerAdherence>div,#injury .injuryRunnerStageOverview>div{background:rgba(5,18,24,.48);border-color:rgba(61,214,198,.15)}
+#injury .injuryRunnerTwoCol small{display:block;margin:0 0 6px;font-size:9px;line-height:1.25;font-weight:850;letter-spacing:.09em;color:var(--teal-2)}
+#injury .injuryRunnerTwoCol b{display:block;margin:0 0 5px;font-size:13px;line-height:1.35;color:#fff}
+#injury .injuryRunnerTwoCol p{margin:0;font-size:12px;line-height:1.5;color:var(--text-2)}
+#injury .injuryRunnerCard p,#injury .injuryRunnerCard li,#injury .rehabTodayFocus p,#injury .rehabTodayFocus li{font-size:12px;line-height:1.5}
+#injury .injuryRunnerDisclosure>summary{font-size:13px;line-height:1.35}
+#injury .injuryTrajectory .phaseBand:nth-of-type(odd){fill:rgba(61,214,198,.075)}
+#injury .injuryTrajectory .phaseBand:nth-of-type(even){fill:rgba(61,214,198,.025)}
+#injury .injuryTrajectory .phaseBoundary{stroke:rgba(121,238,224,.24);stroke-width:1}
+#injury .injuryTrajectory .phaseNumber{fill:var(--teal-2);font-size:10px;font-weight:900}
+#injury .injuryTrajectory .phaseLabel{fill:#fff;font-size:8px;font-weight:800}
+#injury .injuryTrajectoryLegend .phase:before{content:"1–6";display:inline-grid;place-items:center;min-width:24px;height:16px;margin-right:5px;border-radius:8px;background:rgba(61,214,198,.1);color:var(--teal-2);font-size:8px;font-weight:900}
+#injury .exerciseImageButton img{object-fit:contain;background:#eef3f3}

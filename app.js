@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '13.3.0';
-  const BUILD = 30300;
+  const VERSION = '13.3.1';
+  const BUILD = 30310;
   const SCHEMA = 10330;
   const PRIMARY_STORAGE_KEY = 'arc_v10330_web';
   const MIRROR_STORAGE_KEY = 'arc_v10330_mirror';
@@ -4799,6 +4799,11 @@ function rehabCalendarHtml(i,p){
 
 function rehabExerciseImage(name){
  const map={
+  'Pain-limited walking':'14_pain_limited_walking.png',
+  'Walk–run intervals':'15_walk_run_intervals.png',
+  'Easy continuous run':'16_easy_continuous_run.png',
+  'Controlled strides':'17_controlled_strides.png',
+  'Controlled faster running':'18_controlled_faster_running.png',
   'Slow calf raise':'01_slow_calf_raise.png',
   'Foot tripod and toe control':'02_foot_tripod_toe_control.png',
   'Slow controlled strengthening':'03_slow_controlled_strengthening.png',
@@ -4857,7 +4862,7 @@ function rehabTodayFocusHtml(i,p){
 
 function injuryTrajectorySvg(i,p){
  const W=720,H=285,left=48,right=18,top=30,bottom=58,cw=W-left-right,ch=H-top-bottom,horizon=Math.max(7,p.nominalTotal,p.elapsed+p.remaining),x=d=>left+clamp(d/horizon,0,1)*cw,y=v=>top+(100-clamp(v,0,100))/100*ch,nominalPath=`M ${x(0)} ${y(0)} L ${x(p.nominalTotal)} ${y(100)}`;
- const phaseFractions=[0,.12,.28,.46,.64,.82,1],phaseRects=INJURY_STAGES.map((st,n)=>{const start=phaseFractions[n]*p.nominalTotal,end=phaseFractions[n+1]*p.nominalTotal,w=Math.max(0,x(end)-x(start));return`<rect class="phaseBand phase${n}" x="${x(start)}" y="${top}" width="${w}" height="${ch}"/><text class="phaseLabel" x="${x(start)+w/2}" y="${top+14}" text-anchor="middle">${esc(st.name)}</text>`;}).join(''),phaseLines=phaseFractions.slice(1,-1).map(f=>`<line class="phaseBoundary" x1="${x(f*p.nominalTotal)}" y1="${top}" x2="${x(f*p.nominalTotal)}" y2="${top+ch}"/>`).join('');
+ const phaseFractions=[0,.12,.28,.46,.64,.82,1],phaseRects=INJURY_STAGES.map((st,n)=>{const start=phaseFractions[n]*p.nominalTotal,end=phaseFractions[n+1]*p.nominalTotal,w=Math.max(0,x(end)-x(start));return`<rect class="phaseBand phase${n}" x="${x(start)}" y="${top}" width="${w}" height="${ch}"/><text class="phaseNumber" x="${x(start)+w/2}" y="${top+12}" text-anchor="middle">${n+1}</text><text class="phaseLabel" x="${x(start)+w/2}" y="${top+24}" text-anchor="middle">${esc(st.name)}</text>`;}).join(''),phaseLines=phaseFractions.slice(1,-1).map(f=>`<line class="phaseBoundary" x1="${x(f*p.nominalTotal)}" y1="${top}" x2="${x(f*p.nominalTotal)}" y2="${top+ch}"/>`).join('');
  const pts=(p.checks||[]).map((c,idx)=>{const score=injuryCompletionForChecks(i,p.checks.slice(0,idx+1),p.diag,nullableNumber(i.initialPain),nullableNumber(i.initialWalkPain));return{day:Math.max(0,Math.round((dte(c.date)-dte(i.date))/DAY)),score,date:c.date};}).filter(q=>Number.isFinite(q.score));if(!pts.length&&Number.isFinite(p.completion))pts.push({day:p.elapsed,score:p.completion,date:iso(today())});const observed=pts.map((q,n)=>`${n?'L':'M'} ${x(q.day)} ${y(q.score)}`).join(' '),currentMarker=`<line class="currentDateLine" x1="${x(p.elapsed)}" y1="${top}" x2="${x(p.elapsed)}" y2="${top+ch}"/><text class="currentDateLabel" x="${x(p.elapsed)}" y="${H-36}" text-anchor="middle">Today</text>`;
  return `<div class="injuryTrajectoryWrap"><svg class="injuryTrajectory" viewBox="0 0 ${W} ${H}" role="img" aria-label="Observed rehabilitation completion, nominal recovery and rehabilitation phases">${phaseRects}${phaseLines}<line x1="${left}" y1="${y(25)}" x2="${W-right}" y2="${y(25)}"/><line x1="${left}" y1="${y(50)}" x2="${W-right}" y2="${y(50)}"/><line x1="${left}" y1="${y(75)}" x2="${W-right}" y2="${y(75)}"/>${currentMarker}<path class="nominalLine" d="${nominalPath}"/><path class="actualLine" d="${observed}"/>${pts.map(q=>`<circle cx="${x(q.day)}" cy="${y(q.score)}" r="5"><title>${fmtDate(q.date)} · ${q.score}%</title></circle>`).join('')}<text x="${left}" y="${H-12}">Injury</text><text x="${W-right}" y="${H-12}" text-anchor="end">Full unrestricted training</text><text x="${left+4}" y="${top+28}">Completion %</text></svg><div class="injuryTrajectoryLegend"><span class="actual">Observed completion</span><span class="nominal">Nominal recovery</span><span class="phase">Recovery phases</span></div></div>`;
 }
@@ -4965,7 +4970,7 @@ function renderInjury(){
  box.innerHTML=`
  <div class="injuryRunnerDashboard">
   <section class="injuryRunnerSection injuryRunnerStatusSection">
-   ${injuryRunnerSectionHead(1,'REHABILITATION STATUS','Where are you in rehabilitation?','Current stage, trajectory and expected return to unrestricted running.')}
+   ${injuryRunnerSectionHead(3,'REHABILITATION STATUS','Where are you in rehabilitation?','Current stage, trajectory and expected return to unrestricted running.')}
    <article class="injuryRunnerHero ${trajectoryClass}">
     <div class="injuryRunnerHeroTop"><span class="injuryRunnerHeroIcon">${uiIcon('rehab')}</span><div><small>ACTIVE RECOVERY PLAN</small><h3>${esc(i.location||i.bodyRegion||'Injury rehabilitation')}</h3><p>${esc(st.name)} · Stage ${p.stage+1} of ${INJURY_STAGES.length}</p></div><span class="injuryRunnerStageChip">Stage ${p.stage+1}</span></div>
     <div class="injuryRunnerHeroLead"><strong>${esc(scoreInfo.label)}</strong><p>${esc(currentRestriction)}</p></div>
@@ -4980,12 +4985,12 @@ function renderInjury(){
   </section>
 
   <section class="injuryRunnerSection">
-   ${injuryRunnerSectionHead(2,'WHAT THIS MEANS NOW','Runner interpretation','The most important rehabilitation conclusions from the evidence already recorded.')}
+   ${injuryRunnerSectionHead(4,'WHAT THIS MEANS NOW','Runner interpretation','The most important rehabilitation conclusions from the evidence already recorded.')}
    <article class="injuryRunnerCard injuryMeaningCard">${injuryRunnerInterpretation(i,p,criteria,scoreInfo,adherenceOverall,milestones)}</article>
   </section>
 
   <section class="injuryRunnerSection">
-   ${injuryRunnerSectionHead(3,'REHABILITATION TRAJECTORY','Are you recovering as expected?','Observed rehabilitation progress compared with the model’s original nominal pathway.')}
+   ${injuryRunnerSectionHead(5,'REHABILITATION TRAJECTORY','Are you recovering as expected?','Observed rehabilitation progress compared with the model’s original nominal pathway.')}
    <article class="injuryRunnerCard">
     <div class="injuryRunnerCardHead"><div><h4>Observed versus nominal progression</h4><p>${p.completion===null?'A longitudinal trajectory needs rehabilitation check-ins.':`${p.elapsed} days since injury · ${esc(scoreInfo.label)}`}</p></div><span class="injuryRunnerStatus ${trajectoryClass}">${esc(scoreInfo.label)}</span></div>
     ${p.completion===null?`<div class="injuryRunnerBaseline"><b>Building your rehabilitation trajectory</b><p>No check-in-derived completion history is available yet. Calendar time alone is not shown as observed recovery.</p></div>`:injuryTrajectorySvg(i,p)}
@@ -4994,7 +4999,7 @@ function renderInjury(){
   </section>
 
   <section class="injuryRunnerSection">
-   ${injuryRunnerSectionHead(4,'CURRENT STAGE & CRITERIA','What is stopping progression?','Current-stage purpose and the criteria required before the next stage.')}
+   ${injuryRunnerSectionHead(6,'CURRENT STAGE & CRITERIA','What is stopping progression?','Current-stage purpose and the criteria required before the next stage.')}
    <article class="injuryRunnerCard">
     <div class="injuryRunnerStageOverview"><div><small>CURRENT STAGE</small><strong>${esc(st.name)}</strong><p>${esc(stagePurpose)}</p></div><div><small>NEXT STAGE</small><strong>${esc(INJURY_STAGES[next].name)}</strong><p>${met}/${criteria.length} criteria met${unknown?` · ${unknown} not assessed`:''}</p></div></div>
     <div class="injuryRunnerCriteria">${criteria.map(c=>`<div class="injuryRunnerCriterion ${c.status}"><i>${c.status==='met'?'✓':c.status==='notMet'?'○':'?'}</i><span><b>${esc(c.label)}</b>${c.progress?`<small>${esc(c.progress.text)}</small>`:c.status==='unknown'?'<small>Evidence not yet reported</small>':''}</span><em>${c.status==='met'?'Met':c.status==='notMet'?(c.progress&&c.progress.count>0?'In progress':'Not met'):'Not assessed'}</em></div>`).join('')}</div>
@@ -5003,13 +5008,13 @@ function renderInjury(){
    </article>
   </section>
 
-  <section class="injuryRunnerSection">
-   ${injuryRunnerSectionHead(5,'REHABILITATION PROGRAMME','What do you need to do now?','Today’s complete prescription first, followed by the next seven days.')}
+  <section class="injuryRunnerSection injuryProgrammeSection">
+   ${injuryRunnerSectionHead(2,'REHABILITATION PROGRAMME','What do you need to do now?','Today’s complete prescription first, followed by the next seven days.')}
    <div class="injuryRunnerProgramme">${rehabTodayFocusHtml(i,p)}<button data-injury-check="${i.id}" class="primary full injuryPrimaryAction">Complete today’s check-in</button>${rehabCalendarHtml(i,p)}</div>
   </section>
 
   <section class="injuryRunnerSection">
-   ${injuryRunnerSectionHead(6,'PAIN & SYMPTOMS','Are symptoms actually improving?','Longitudinal symptom observations from rehabilitation check-ins.')}
+   ${injuryRunnerSectionHead(7,'PAIN & SYMPTOMS','Are symptoms actually improving?','Longitudinal symptom observations from rehabilitation check-ins.')}
    <article class="injuryRunnerCard">
     <div class="injuryRunnerMetricRow">
      <div><small>Latest pain</small><strong>${valueText(p.currentPain)}</strong><span>${p.snapshot?.painObs?.date?`Reported ${fmtDate(p.snapshot.painObs.date)}`:'Not reported in a check-in'}</span></div>
@@ -5021,7 +5026,7 @@ function renderInjury(){
   </section>
 
   <section class="injuryRunnerSection">
-   ${injuryRunnerSectionHead(7,'FUNCTION & RETURN TO RUN','What can you tolerate now?','Walking, impact and running capability accumulated through rehabilitation.')}
+   ${injuryRunnerSectionHead(8,'FUNCTION & RETURN TO RUN','What can you tolerate now?','Walking, impact and running capability accumulated through rehabilitation.')}
    <article class="injuryRunnerCard">
     <div class="injuryRunnerMetricRow">
      <div><small>Latest walking exposure</small><strong>${Number.isFinite(p.snapshot?.walkMinutes)?`${p.snapshot.walkMinutes} min`:'—'}</strong><span>${Number.isFinite(p.snapshot?.walkPain)?`Walking pain ${p.snapshot.walkPain}/10`:'Walking pain not reported'}</span></div>
@@ -5034,7 +5039,7 @@ function renderInjury(){
   </section>
 
   <section class="injuryRunnerSection">
-   ${injuryRunnerSectionHead(8,'REHABILITATION ADHERENCE','Are you completing the programme?','Execution of past scheduled rehabilitation days; future days are excluded.')}
+   ${injuryRunnerSectionHead(9,'REHABILITATION ADHERENCE','Are you completing the programme?','Execution of past scheduled rehabilitation days; future days are excluded.')}
    <article class="injuryRunnerCard">
     <div class="injuryRunnerAdherence">
      ${[[adherence7,'7 DAYS'],[adherence14,'14 DAYS'],[adherenceOverall,'OVERALL']].map(([a,label])=>`<div><small>${label}</small><strong>${a.score===null?'—':a.score+'%'}</strong><span>${a.scheduled?`${a.reported}/${a.scheduled} days reported${a.missed?` · ${a.missed} missed`:''}`:'No past scheduled days'}</span></div>`).join('')}
@@ -5044,7 +5049,7 @@ function renderInjury(){
   </section>
 
   <section class="injuryRunnerSection">
-   ${injuryRunnerSectionHead(9,'IMPACT ON RUNNING TRAINING','How is the injury affecting normal training?','Only the consequences that matter to return to the normal running programme.')}
+   ${injuryRunnerSectionHead(10,'IMPACT ON RUNNING TRAINING','How is the injury affecting normal training?','Only the consequences that matter to return to the normal running programme.')}
    <article class="injuryRunnerCard">
     <div class="injuryRunnerTrainingImpact">
      <span class="injuryRunnerImpactIcon">${uiIcon('run')}</span>
@@ -5053,8 +5058,8 @@ function renderInjury(){
    </article>
   </section>
 
-  <section class="injuryRunnerSection">
-   ${injuryRunnerSectionHead(10,'INJURY ASSESSMENT','Clinical context without dominating rehabilitation','App working pattern, clinician input and explanatory reasoning.')}
+  <section class="injuryRunnerSection injuryAssessmentSection">
+   ${injuryRunnerSectionHead(1,'INJURY ASSESSMENT','Clinical context without dominating rehabilitation','App working pattern, clinician input and explanatory reasoning.')}
    <article class="injuryRunnerCard">
     <div class="injuryRunnerAssessmentTop"><div><small>APP WORKING SYMPTOM PATTERN</small><strong>${esc(diag.name)}</strong><span>${esc(diag.strength)} match · ${esc(i.bodyRegion||'recorded region')}</span></div><span class="injuryFamilyPill">${esc((diag.family||'generic').replace('_',' '))}</span></div>
     ${clinicianBlock}${Number.isFinite(nullableNumber(i.clinicianExpectedDays))?`<div class="injuryRunnerClinicianTiming"><small>CLINICIAN EXPECTED RECOVERY PERIOD</small><strong>${nullableNumber(i.clinicianExpectedDays)} days</strong><span>This clinician-entered expectation is already incorporated by the existing prognosis model.</span></div>`:''}

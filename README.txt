@@ -1,8 +1,19 @@
-AI Running Coach v13.3.0 — Injury & Rehab serious-runner rebuild — build 30300
+AI Running Coach v13.3.1 — Injury refinement — build 30310
 
-v13.3.0
+v13.3.1
 -------
-- Today, Plan, Log, Progress and Recovery are frozen against v13.2.2 build 30202.
+- Injury Assessment (section 10) now appears first, followed immediately by Rehabilitation Programme (section 5); the remaining sections retain their established sequence.
+- Observed versus nominal progression now visibly segments and labels all six existing rehabilitation phases without changing stage logic or trajectory calculations.
+- Injury Level-2 cards now use the same approved teal-gradient surface language as the preceding runner dashboard tiles.
+- Corrected Injury typography/spacing, including block separation between eyebrow labels, values and symptom text.
+- Added flat PNG technique illustrations for every exercise currently referenced by the rehabilitation exercise-image map; exercise cards remain tappable for enlarged viewing.
+- All changes are Injury-scoped presentation/assets plus version/cache identifiers. Today, Plan, Log, Progress and Recovery remain unchanged. No calculation or data-model logic changed.
+
+AI Running Coach v13.3.1 — Injury & Rehab serious-runner rebuild — build 30301
+
+v13.3.1
+-------
+- Today, Plan, Log, Progress and Recovery are frozen against v13.3.1 build 30301.
 - Injury & Rehab rebuilt around rehabilitation status, runner interpretation, trajectory, progression criteria, today/7-day programme, symptom progression, functional/return-to-run progression, adherence, training impact, clinical context and history.
 - Injury styling is scoped under #injury and follows the approved Today-led Level-1/2/3 surface, typography, spacing and semantic-colour hierarchy.
 - Existing injury prediction, stage progression, criteria, prognosis, adherence, diagnosis, return-to-running and storage calculations are unchanged.
@@ -10,9 +21,9 @@ v13.3.0
 - Multiple assessed injuries remain supported; one active plan controls rehabilitation while parallel assessments stay separated.
 - Repository remains completely flat.
 
-AI Running Coach v13.2.2 — Recovery visual consistency refinement — build 30202
+AI Running Coach v13.3.1 — Recovery visual consistency refinement — build 30301
 
-v13.2.2
+v13.3.1
 -------
 - Removed the Recovery page subtitle requested after the v13.2.0 redesign.
 - Recovery section-number circles now exactly match the Progress section-number dimensions and responsive sizing.
