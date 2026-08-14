@@ -1,4 +1,4 @@
-AI Running Coach v12.3.0 — Serious Runner Plan — build 20300
+AI Running Coach v12.3.1 — Serious Runner Plan — build 20301
 
 Deployment
 ----------
@@ -746,3 +746,12 @@ v12.3.0 — Serious Runner Plan redesign
 - Programme Timeline shows phase blocks, current/viewed week, next key long run, peak long run, taper start and race day.
 - Intensity Distribution uses the existing plan workout classifications and actual planned distance.
 - No prediction, training-plan generation, pathway, recovery, injury, scoring, import, storage or data-model equations changed.
+
+
+v12.3.1 — Today wording + Plan consolidation
+----------------------------------------------
+- Today: removed phase priority from Race Context, removed phase name from Race Context, and removed SECONDARY from the running-plan eyebrow.
+- Plan: vague Protective adjustment top status replaced by Plan moderated plus the actual cause(s): pace/power moderation, distance/load reduction, and/or material recovery restriction.
+- Plan: selected/future-week summary and Weekly Structure consolidated into one Week Overview with date/focus, planned/completed distance, sessions, quality count, longest session, long-run share and surrounding-week volume.
+- Plan: Programme Timeline rebuilt using contained equal-width phase blocks plus a separate proportional programme-position bar so phase names/week ranges cannot spill outside their segments.
+- Model/data engines unchanged.

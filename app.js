@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '12.3.0';
-  const BUILD = 20300;
+  const VERSION = '12.3.1';
+  const BUILD = 20301;
   const SCHEMA = 10330;
   const PRIMARY_STORAGE_KEY = 'arc_v10330_web';
   const MIRROR_STORAGE_KEY = 'arc_v10330_mirror';
@@ -2415,7 +2415,7 @@ function todayWorkoutCard(p,injuryDay){
  const z=p.zone||{},targetScope=esc(p.targetScope||'main set');
  const caution=injuryDay?['Active rehabilitation takes priority over this running prescription.','Only run if today’s rehabilitation criteria and safety rule allow it.']:null;
  return`<section class="todayRunnerCard todayWorkoutCard">
-   <div class="runnerSectionHead"><span class="runnerCardIcon">${todayPictogram('shoe')}</span><div><small>${injuryDay?'RUNNING PLAN — SECONDARY':'TODAY’S RUNNING PLAN'}</small><h3>${esc(p.type)}</h3><p>${esc(p.phase||phase(currentWeek()))} · ${Number(p.distance).toFixed(1)} km</p></div></div>
+   <div class="runnerSectionHead"><span class="runnerCardIcon">${todayPictogram('shoe')}</span><div><small>TODAY’S RUNNING PLAN</small><h3>${esc(p.type)}</h3><p>${esc(p.phase||phase(currentWeek()))} · ${Number(p.distance).toFixed(1)} km</p></div></div>
    ${caution?todayBulletList(caution,'runnerBullets cautionBullets'):''}
    <div class="todayTargetGrid"><div><small>PACE</small><strong>${pace(z.pace)}</strong><span>${targetScope}</span></div><div><small>POWER</small><strong>${Number.isFinite(Number(z.power))?Math.round(z.power)+' W':'—'}</strong><span>${targetScope}</span></div><div><small>HEART RATE</small><strong>${Number.isFinite(Number(z.hr))?Math.round(z.hr)+' bpm':'—'}</strong><span>${targetScope}</span></div></div>
    <button type="button" class="workoutVizDisclosure" data-workout-toggle="${esc(p.date)}" aria-expanded="false" aria-controls="workout-details-${esc(p.date)}">
@@ -2486,10 +2486,10 @@ function todayRaceCard(engine,report){
  const timeRange=`${fmtEstimate(rangeLow,provisional)}–${fmtEstimate(rangeHigh,provisional)}`;
  const paceRange=`${paceEstimate(rangeLow,provisional)}–${paceEstimate(rangeHigh,provisional)}`;
  return`<section class="todayRunnerCard todayRaceCard">
-   <div class="runnerSectionHead"><span class="runnerCardIcon">${todayPictogram('race')}</span><div><small>RACE CONTEXT</small><h3>${esc(state.setup.raceName)}</h3><p>${Number(state.setup.raceDistance).toFixed(1)} km · ${esc(report.race.phase)} phase</p></div><span class="runnerStatus miniValue ${todayMiniValueClass('raceTime',remaining.days)}">${remaining.label}</span></div>
+   <div class="runnerSectionHead"><span class="runnerCardIcon">${todayPictogram('race')}</span><div><small>RACE CONTEXT</small><h3>${esc(state.setup.raceName)}</h3><p>${Number(state.setup.raceDistance).toFixed(1)} km</p></div><span class="runnerStatus miniValue ${todayMiniValueClass('raceTime',remaining.days)}">${remaining.label}</span></div>
    <div class="raceMetrics"><span><small>TARGET</small><b>${fmtTime(state.setup.targetTime)}</b></span><span><small>CURRENT ESTIMATE</small><b>${fmtEstimate(engine.pred,provisional)}</b></span><span><small>TARGET CHANCE</small><b>${prob===null?'Building':prob+'%'}</b></span></div>
    <div class="raceRangeStrip"><div><small>LIKELY 70% TIME RANGE</small><b>${timeRange}</b></div><div><small>LIKELY 70% PACE RANGE</small><b>${paceRange}</b></div></div>
-   ${todayBulletList([gap<=0?`${fmtTime(Math.abs(gap))} inside current target estimate`:`${fmtTime(gap)} outside current target estimate`,report.race.priority],'runnerBullets compactBullets')}
+   ${todayBulletList([gap<=0?`${fmtTime(Math.abs(gap))} inside current target estimate`:`${fmtTime(gap)} outside current target estimate`],'runnerBullets compactBullets')}
  </section>`;
 }
 function todayRehabStatusSummary(active){
@@ -2648,19 +2648,23 @@ function planAdaptationLabels(w=currentWeek()){
 }
 function planProgrammeHeaderHtml(){
  const w=currentWeek(),total=weeks(),wd=weekData(w),remaining=raceTimeRemaining(),priority=planPhasePriority(w),review=planAdaptationLabels(w),programmePct=clamp((w-1)/Math.max(1,total-1)*100,0,100);
- const adaptation=review.readyState.cls==='bad'||review.loadState.cls==='warn'||review.paceState.cls==='warn'?'Protective adjustment':review.paceState.cls==='good'||review.loadState.cls==='good'?'Progressing':'Prescription stable';
- return`<section class="planProgrammeHero"><div class="planHeroTop"><span class="planHeroIcon">${todayPictogram('race')}</span><div class="planHeroIdentity"><small>CURRENT PROGRAMME POSITION</small><h3>${esc(detailedPhase(w))} · ${esc(priority)}</h3><p>${esc(state.setup.raceName)} · target ${fmtTime(state.setup.targetTime)} (${pace(state.setup.targetTime/state.setup.raceDistance)})</p></div></div><div class="planHeroMetrics"><div><small>PROGRAMME</small><strong>Week ${w}/${total}</strong><span>${Math.round((w-1)/Math.max(1,total-1)*100)}% through build</span></div><div><small>RACE</small><strong>${remaining.label}</strong><span>${fmtDate(state.setup.raceDate)}</span></div><div><small>THIS WEEK</small><strong>${wd.planned.toFixed(1)} km</strong><span>${wd.actual.toFixed(1)} km completed</span></div><div class="${review.readyState.cls}"><small>ADAPTATION</small><strong>${adaptation}</strong><span>${review.readyState.label} recovery</span></div></div><div class="planHeroProgress" aria-label="Programme progress"><i style="width:${programmePct}%"></i></div></section>`;
+ const causes=[];
+ if(review.paceState.cls==='warn')causes.push('pace / power moderated');
+ if(review.loadState.cls==='warn')causes.push('distance / load reduced');
+ if(review.readyState.cls==='bad')causes.push('recovery restricted');
+ const progressing=review.paceState.cls==='good'||review.loadState.cls==='good';
+ const adaptation=causes.length?'Plan moderated':progressing?'Progressing':'Prescription stable';
+ const adaptationDetail=causes.length?causes.join(' · '):progressing?'Training evidence supports progression':`${review.readyState.label} recovery`;
+ return`<section class="planProgrammeHero"><div class="planHeroTop"><span class="planHeroIcon">${todayPictogram('race')}</span><div class="planHeroIdentity"><small>CURRENT PROGRAMME POSITION</small><h3>${esc(detailedPhase(w))} · ${esc(priority)}</h3><p>${esc(state.setup.raceName)} · target ${fmtTime(state.setup.targetTime)} (${pace(state.setup.targetTime/state.setup.raceDistance)})</p></div></div><div class="planHeroMetrics"><div><small>PROGRAMME</small><strong>Week ${w}/${total}</strong><span>${Math.round((w-1)/Math.max(1,total-1)*100)}% through build</span></div><div><small>RACE</small><strong>${remaining.label}</strong><span>${fmtDate(state.setup.raceDate)}</span></div><div><small>THIS WEEK</small><strong>${wd.planned.toFixed(1)} km</strong><span>${wd.actual.toFixed(1)} km completed</span></div><div class="${causes.length?'warn':progressing?'good':review.readyState.cls}"><small>ADAPTATION</small><strong>${adaptation}</strong><span>${esc(adaptationDetail)}</span></div></div><div class="planHeroProgress" aria-label="Programme progress"><i style="width:${programmePct}%"></i></div></section>`;
 }
 function planSelectedWeekHeaderHtml(w){
  const wd=weekData(w),current=currentWeek(),focus=planPhasePriority(w),pct=wd.planned>0?clamp(wd.actual/wd.planned*100,0,100):0,weekStartDate=iso(weekStart(w)),weekEndDate=iso(new Date(weekStart(w).getTime()+6*DAY));
  const viewLabel=w===current?'Current week':w<current?'Past week':'Future week';
- return`<section class="planSelectedWeek"><div class="selectedWeekTop"><div><small>${viewLabel.toUpperCase()}</small><h3>Week ${w} of ${weeks()} · ${esc(detailedPhase(w))}</h3><p>${esc(focus)}</p></div><span class="selectedWeekBadge">${fmtDate(weekStartDate)}–${fmtDate(weekEndDate)}</span></div><div class="selectedWeekMetrics"><span><b>${wd.planned.toFixed(1)} km</b><small>planned</small></span><span><b>${wd.actual.toFixed(1)} km</b><small>completed</small></span><span><b>${wd.plan.filter(p=>p.type!=='Rest').length}</b><small>run sessions</small></span><span><b>${Math.round(pct)}%</b><small>distance done</small></span></div></section>`;
-}
-function planWeekStructureHtml(w){
- const weeksList=[Math.max(1,w-1),w,Math.min(weeks(),w+1)].filter((x,i,a)=>a.indexOf(x)===i),wd=weekData(w),sessions=wd.plan.filter(p=>p.type!=='Rest'),qualitySet=['Intervals','Tempo','Fitness assessment','Hills','Fartlek','Threshold','Threshold intervals','VO₂max intervals','Race-pace intervals','Marathon-specific','Half-marathon-specific','Specific long run','Race rehearsal'],quality=sessions.filter(p=>qualitySet.includes(p.type)),long=sessions.filter(p=>['Long run','Specific long run','Race rehearsal','Progression'].includes(p.type)),longKm=sum(long.map(p=>Number(p.distance)||0)),longest=sessions.length?Math.max(...sessions.map(p=>Number(p.distance)||0)):0;
- const bars=weeksList.map(x=>({week:x,km:weekData(x).planned,current:x===w})),max=Math.max(1,...bars.map(x=>x.km)),prev=weekData(Math.max(1,w-1)).planned,delta=w>1&&prev>0?(wd.planned/prev-1)*100:null;
+ const sessions=wd.plan.filter(p=>p.type!=='Rest'),qualitySet=['Intervals','Tempo','Fitness assessment','Hills','Fartlek','Threshold','Threshold intervals','VO₂max intervals','Race-pace intervals','Marathon-specific','Half-marathon-specific','Specific long run','Race rehearsal'],quality=sessions.filter(p=>qualitySet.includes(p.type)),long=sessions.filter(p=>['Long run','Specific long run','Race rehearsal','Progression'].includes(p.type));
+ const longKm=sum(long.map(p=>Number(p.distance)||0)),longest=sessions.length?Math.max(...sessions.map(p=>Number(p.distance)||0)):0;
+ const weeksList=[Math.max(1,w-1),w,Math.min(weeks(),w+1)].filter((x,i,a)=>a.indexOf(x)===i),bars=weeksList.map(x=>({week:x,km:weekData(x).planned,current:x===w})),max=Math.max(1,...bars.map(x=>x.km)),prev=weekData(Math.max(1,w-1)).planned,delta=w>1&&prev>0?(wd.planned/prev-1)*100:null;
  const deltaText=Number.isFinite(delta)?`${delta>=0?'+':''}${delta.toFixed(0)}% vs previous week`:'Opening week';
- return`<section class="planStructureCard"><div class="planStructureMetrics"><div><span class="structureIcon">${planTinyIcon('distance')}</span><small>PLANNED DISTANCE</small><strong>${wd.planned.toFixed(1)} km</strong><p>${deltaText}</p></div><div><span class="structureIcon">${planTinyIcon('calendar')}</span><small>RUN SESSIONS</small><strong>${sessions.length}</strong><p>${quality.length} quality / specific</p></div><div><span class="structureIcon">${uiIcon('long')}</span><small>LONGEST SESSION</small><strong>${longest.toFixed(1)} km</strong><p>${wd.planned>0?Math.round(longKm/wd.planned*100):0}% of weekly distance in long work</p></div></div><div class="surroundingWeeks"><div class="surroundingHead"><small>VOLUME AROUND THIS WEEK</small><span>Planned distance</span></div><div class="weekVolumeBars">${bars.map(x=>`<div class="weekVolumeBar ${x.current?'current':''}"><b>${x.km.toFixed(1)}</b><i style="height:${Math.max(12,x.km/max*100)}%"></i><small>W${x.week}</small></div>`).join('')}</div></div></section>`;
+ return`<section class="planSelectedWeek planWeekOverview"><div class="selectedWeekTop"><div><small>${viewLabel.toUpperCase()}</small><h3>Week ${w} of ${weeks()} · ${esc(detailedPhase(w))}</h3><p>${esc(focus)}</p></div><span class="selectedWeekBadge">${fmtDate(weekStartDate)}–${fmtDate(weekEndDate)}</span></div><div class="weekOverviewMetrics"><span><b>${wd.planned.toFixed(1)} km</b><small>planned distance</small><em>${esc(deltaText)}</em></span><span><b>${sessions.length}</b><small>run sessions</small><em>${quality.length} quality / specific</em></span><span><b>${longest.toFixed(1)} km</b><small>longest session</small><em>${wd.planned>0?Math.round(longKm/wd.planned*100):0}% of weekly distance</em></span><span><b>${wd.actual.toFixed(1)} km</b><small>completed</small><em>${Math.round(pct)}% of plan</em></span></div><div class="surroundingWeeks compactSurrounding"><div class="surroundingHead"><small>VOLUME AROUND THIS WEEK</small><span>Planned distance</span></div><div class="weekVolumeBars">${bars.map(x=>`<div class="weekVolumeBar ${x.current?'current':''}"><b>${x.km.toFixed(1)}</b><i style="height:${Math.max(12,x.km/max*100)}%"></i><small>W${x.week}</small></div>`).join('')}</div></div></section>`;
 }
 function planProjectedChangeRows(r){
  return r.changes.map(x=>{const dc=Math.abs(x.nextDistance-x.distance)>=.05,pc=Math.abs(x.nextPace-x.pace)>=.5,pw=Math.abs(x.nextPower-x.power)>=1;if(!dc&&!pc&&!pw)return'';return`<div class="planProjectedRow"><div><b>${fmtDate(x.date)} · ${esc(x.type)}</b><small>Projected at next review</small></div><span>${dc?`${x.distance.toFixed(1)} → ${x.nextDistance.toFixed(1)} km`:'Distance held'}</span><span>${pc?`${pace(x.pace)} → ${pace(x.nextPace)}`:'Pace held'}</span><span>${pw?`${Math.round(x.power)} → ${Math.round(x.nextPower)} W`:'Power held'}</span></div>`}).filter(Boolean).join('');
@@ -2672,11 +2676,10 @@ function weeklyReviewHtml(w=currentWeek()){
 }
 function planTimelineHtml(viewWeek=currentWeek()){
  const total=weeks(),groups=[];for(let w=1;w<=total;w++){const name=detailedPhase(w),last=groups.at(-1);if(!last||last.name!==name)groups.push({name,start:w,end:w});else last.end=w}
- const phaseClass=n=>String(n).toLowerCase().replace(/[^a-z]/g,'');
  const longTypes=['Long run','Specific long run','Race rehearsal','Progression'],longRuns=state.plan.filter(p=>longTypes.includes(p.type)),futureLong=longRuns.filter(p=>p.date>=iso(today())).sort((a,b)=>a.date.localeCompare(b.date))[0],peakLong=longRuns.slice().sort((a,b)=>Number(b.distance)-Number(a.distance))[0],taperStart=state.plan.find(p=>p.detailedPhase==='Taper'),current=currentWeek();
- const currentPct=clamp((current-.5)/total*100,0,100),viewPct=clamp((viewWeek-.5)/total*100,0,100);
+ const programmePct=clamp((current-.5)/total*100,0,100),viewPct=clamp((viewWeek-.5)/total*100,0,100);
  const milestones=[futureLong?{label:'Next key long run',value:`${fmtDate(futureLong.date)} · ${futureLong.type} · ${Number(futureLong.distance).toFixed(1)} km`}:null,peakLong?{label:'Peak long run',value:`${fmtDate(peakLong.date)} · ${Number(peakLong.distance).toFixed(1)} km`}:null,taperStart?{label:'Taper begins',value:`Week ${taperStart.week} · ${fmtDate(taperStart.date)}`}:null,{label:'Race day',value:`${fmtDate(state.setup.raceDate)} · ${Number(state.setup.raceDistance).toFixed(1)} km`}].filter(Boolean);
- return`<section class="planTimelineCard"><div class="phaseRail" role="img" aria-label="Programme phases from plan start to race day">${groups.map(g=>`<div class="phaseSegment ${phaseClass(g.name)} ${current>=g.start&&current<=g.end?'active':''}" style="width:${(g.end-g.start+1)/total*100}%"><b>${esc(g.name)}</b><small>W${g.start}${g.end!==g.start?`–${g.end}`:''}</small></div>`).join('')}<i class="currentMarker" style="left:${currentPct}%"><span>Now</span></i>${viewWeek!==current?`<i class="viewMarker" style="left:${viewPct}%"><span>W${viewWeek}</span></i>`:''}</div><div class="timelineEnds"><span>Plan start</span><span>${weeks()} weeks · race</span></div><div class="planMilestones">${milestones.map(m=>`<div><span class="milestoneDot"></span><small>${m.label}</small><b>${esc(m.value)}</b></div>`).join('')}</div></section>`;
+ return`<section class="planTimelineCard"><div class="phaseRail equalPhaseRail" style="--phase-count:${groups.length}" role="img" aria-label="Programme phases from plan start to race day">${groups.map(g=>`<div class="phaseSegment ${current>=g.start&&current<=g.end?'active':''} ${viewWeek>=g.start&&viewWeek<=g.end&&viewWeek!==current?'viewed':''}"><b>${esc(g.name)}</b><small>Weeks ${g.start}${g.end!==g.start?`–${g.end}`:''}</small>${current>=g.start&&current<=g.end?'<em>NOW</em>':''}${viewWeek>=g.start&&viewWeek<=g.end&&viewWeek!==current?`<em class="viewedLabel">VIEW W${viewWeek}</em>`:''}</div>`).join('')}</div><div class="timelineProgressRow"><span>Plan start</span><div class="timelineProgressTrack"><i style="width:${programmePct}%"></i>${viewWeek!==current?`<b style="left:${viewPct}%" aria-label="Viewed week ${viewWeek}"></b>`:''}</div><span>Race</span></div><div class="planMilestones">${milestones.map(m=>`<div><span class="milestoneDot"></span><small>${m.label}</small><b>${esc(m.value)}</b></div>`).join('')}</div></section>`;
 }
 function planIntensityDistributionHtml(w){
  const sessions=state.plan.filter(p=>p.week===w&&!['Rest','Race Day'].includes(p.type)),rows=intensityGroups(sessions,'distance'),total=sum(rows.map(x=>Number(x.value)||0));
@@ -2690,7 +2693,6 @@ function renderPlan(){
  $('weekHeader').innerHTML=planSelectedWeekHeaderHtml(w);
  const title=$('planWeekTitle');if(title)title.textContent=`Week ${w} schedule`;
  $('planCards').innerHTML=arr.map(workoutHtml).join('')||'<div class="planEmpty"><b>No workouts generated</b><p>This week has no plan entries.</p></div>';
- $('planWeekStructure').innerHTML=planWeekStructureHtml(w);
  $('weeklyReview').innerHTML=weeklyReviewHtml(w);
  $('raceTimeline').innerHTML=planTimelineHtml(w);
  $('planIntensity').innerHTML=planIntensityDistributionHtml(w);
