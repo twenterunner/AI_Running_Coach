@@ -1,4 +1,8 @@
-AI Running Coach v13.3.4 — Text-only rehab exercise guidance + full-width rehab phases — build 30340
+AI Running Coach v13.3.5 — Injury rehab section order + copy cleanup — build 30350
+
+- Removes the explanatory rehabilitation-status/check-in paragraph below the 7-day rehabilitation calendar.
+- Swaps the visible section numbering so Rehabilitation Status is section 2 and Rehabilitation Programme is section 3.
+- No calculation, rehabilitation progression, storage, or non-Injury tab logic changed.
 
 - Injury/Rehab exercise cards no longer use exercise images or pictograms. Tapping an exercise row expands its existing textual technique, dose, purpose, muscle-area and progression information.
 - Observed versus nominal progression phase bands now span the full usable graph width, while the observed and nominal time-series calculations remain unchanged.

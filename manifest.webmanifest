@@ -4,7 +4,7 @@
   "short_name": "Run Coach",
   "description": "Private, offline-first, race-specific adaptive running plans with transparent evidence and recovery tracking.",
   "version": "13.3.4",
-  "build": 30340,
+  "build": 30350,
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
