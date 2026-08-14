@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '13.1.7';
-  const BUILD = 30107;
+  const VERSION = '13.1.8';
+  const BUILD = 30108;
   const SCHEMA = 10330;
   const PRIMARY_STORAGE_KEY = 'arc_v10330_web';
   const MIRROR_STORAGE_KEY = 'arc_v10330_mirror';
@@ -4983,7 +4983,69 @@ openInjuryCheck=function(injury,existing=null){
  $('saveCheck').onclick=()=>{const check={date:$('icDate').value,pain:nullableNumber($('icPain').value),walkPain:nullableNumber($('icWalk').value),morningStiffness:nullableNumber($('icStiff').value),confidence:nullableNumber($('icConfidence').value),walkMinutes:nullableNumber($('icWalkMinutes').value),runMinutes:nullableNumber($('icRun').value),runPain:nullableNumber($('icRunPain').value)};const errors=CORE.validateInjury({...injury,checkIns:[check]},{today:iso(today())}).filter(error=>error.field.startsWith('checkIns.'));if(errors.length){showFieldErrors(errors,{['checkIns.0.date']:'#icDate',['checkIns.0.pain']:'#icPain',['checkIns.0.walkPain']:'#icWalk',['checkIns.0.morningStiffness']:'#icStiff',['checkIns.0.confidence']:'#icConfidence',['checkIns.0.walkMinutes']:'#icWalkMinutes',['checkIns.0.runMinutes']:'#icRun',['checkIns.0.runPain']:'#icRunPain'},$('modalContent'));return toast(CORE.firstErrorMessage(errors),true)}unsafeSave()};
 };
 function renderUndoButtons(){try{$('undoSettingsBtn')?.classList.toggle('hidden',!localStorage.getItem(UNDO_KEY));$('undoRestoreBtn')?.classList.toggle('hidden',!localStorage.getItem(BACKUP_KEY))}catch{}}
-function renderAll(){[renderDashboard,renderToday,renderPlan,renderRuns,renderMetrics,renderAssessments,renderCoach,renderInjury,renderRecovery,renderRace,renderSettings,renderPlanHealth,renderMigrationReport].forEach(fn=>{try{fn()}catch(err){recordDiagnostic('Render failure in '+fn.name,err)}});renderDiagnostics();ensureAccessibleForms();renderUndoButtons()}
+
+function progressSvgIntoMount(mountId,series,options={}){
+ const mount=$(mountId);if(!mount)return;
+ try{
+  const labels=Array.isArray(options.labels)?options.labels:[];
+  const cleanSeries=(Array.isArray(series)?series:[]).map(s=>({...s,data:(Array.isArray(s.data)?s.data:[]).map(v=>v==null?null:(Number.isFinite(Number(v))?Number(v):null))}));
+  const numeric=cleanSeries.flatMap(s=>(s.data||[]).filter(v=>Number.isFinite(v)));
+  mount.setAttribute('aria-hidden','false');
+  if(!numeric.length){mount.innerHTML=`<div class="progressChartState"><div><b>Building your baseline</b><p>${esc(options.empty||'No valid observations are available yet.')}</p></div></div>`;return;}
+  const W=640,H=286,L=66,R=18,T=38,B=46,CW=W-L-R,CH=H-T-B;
+  let min=Number.isFinite(options.min)?Number(options.min):(options.zero===false?Math.min(...numeric):0);
+  let max=Number.isFinite(options.max)?Number(options.max):Math.max(...numeric);
+  if(max<=min)max=min+1;
+  if(!Number.isFinite(options.min)&&!Number.isFinite(options.max)){const pad=(max-min)*.1||1;max+=pad;if(options.zero===false)min-=pad;}
+  const n=Math.max(1,labels.length,...cleanSeries.filter(s=>!s.horizontal).map(s=>(s.data||[]).length));
+  const x=i=>n<=1?L+CW/2:L+i*CW/(n-1),y=v=>T+(max-v)/(max-min)*CH;
+  const xe=v=>String(v??'').replace(/[&<>\"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[c]||c));
+  const ticks=Math.max(2,Number(options.ticks)||5),parts=[];
+  for(let i=0;i<ticks;i++){const f=i/(ticks-1),v=min+(max-min)*f,yy=T+CH-CH*f,label=options.formatY?options.formatY(v):(Math.abs(v)<10?v.toFixed(1):Math.round(v));parts.push(`<line class="grid ${i===0?'base':''}" x1="${L}" y1="${yy}" x2="${W-R}" y2="${yy}"/><text class="axis" x="${L-9}" y="${yy+4}" text-anchor="end">${xe(label)}</text>`)}
+  cleanSeries.forEach(sr=>{
+   const vals=(sr.data||[]).map((v,i)=>({v,i})).filter(o=>Number.isFinite(o.v));if(!vals.length)return;
+   const color=sr.color||'#3dd6c6';
+   if(sr.horizontal){const yy=y(vals[0].v);parts.push(`<line x1="${L}" y1="${yy}" x2="${W-R}" y2="${yy}" stroke="${color}" stroke-width="2.5" ${sr.dashed?'stroke-dasharray="8 6"':''}/>`);return;}
+   // Never bridge across missing observations. Each contiguous run is drawn independently.
+   let segment=[];const flush=()=>{if(segment.length>1){const pts=segment.map(o=>`${x(o.i)},${y(o.v)}`).join(' ');parts.push(`<polyline fill="none" stroke="${color}" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" points="${pts}" ${sr.dashed?'stroke-dasharray="8 6"':''}/>`)}segment=[]};
+   (sr.data||[]).forEach((v,i)=>{if(Number.isFinite(v))segment.push({v,i});else flush()});flush();
+   if(sr.points!==false)vals.forEach(o=>parts.push(`<circle cx="${x(o.i)}" cy="${y(o.v)}" r="4.5" fill="#f5fbff" stroke="${color}" stroke-width="2.5"/>`));
+  });
+  const positions=options.allLabels?labels.map((_,i)=>i):[0,Math.floor((labels.length-1)/2),labels.length-1].filter((v,i,a)=>v>=0&&a.indexOf(v)===i);
+  positions.forEach(i=>{if(labels[i]!=null)parts.push(`<text class="axis x" x="${x(i)}" y="${H-13}" text-anchor="middle">${xe(labels[i])}</text>`)});
+  const legend=cleanSeries.filter(s=>s.label).map(s=>`<span><i style="--series:${s.color||'#3dd6c6'}"></i>${xe(s.label)}</span>`).join('');
+  mount.innerHTML=`${legend?`<div class="progressChartLegend">${legend}</div>`:''}<svg class="progressInlineChart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="${xe(options.aria||'Progress chart')}">${parts.join('')}</svg>`;
+ }catch(err){recordDiagnostic('Progress chart '+mountId,err);mount.setAttribute('aria-hidden','false');mount.innerHTML=`<div class="progressChartState"><div><b>Chart unavailable</b><p>The underlying data are preserved. Reload after updating the app.</p></div></div>`;}
+}
+function renderProgressChartsStandalone(){
+ // This renderer is intentionally independent from renderDashboard so an unrelated Progress card cannot suppress the charts.
+ try{
+  const arr=completedWeekSeries(),weekLabels=arr.map((x,i)=>x.isRaceWeek?'Race':`W${i+1}`),cw=currentWeek();
+  progressSvgIntoMount('volumeChartMount',[{label:'Planned km',data:arr.map(x=>x.plannedForChart),color:'#67a7ff',dashed:true,points:false},{label:'Completed km',data:arr.map((x,i)=>i+1<=cw?x.actual:null),color:'#79d69b'}],{min:0,labels:weekLabels,aria:'Weekly planned and completed distance',empty:'No weekly distance data yet.'});
+ }catch(err){recordDiagnostic('Progress weekly distance chart',err)}
+ try{
+  const labels=Array.from({length:weeks()},(_,i)=>`W${i+1}`);
+  const planned=Array.from({length:weeks()},(_,i)=>state.plan.find(x=>x.week===i+1&&['Long run','Specific long run','Race rehearsal','Progression'].includes(x.type))?.distance??null);
+  const completed=Array.from({length:weeks()},(_,i)=>{const st=weekStart(i+1),en=new Date(st.getTime()+7*DAY),runs=completedRuns().filter(x=>['Long run','Specific long run','Race rehearsal'].includes(x.type)&&dte(x.date)>=st&&dte(x.date)<en);return runs.length?Math.max(...runs.map(x=>Number(x.distanceKm)||0)):null});
+  progressSvgIntoMount('longRunChartMount',[{label:'Planned long run',data:planned,color:'#67a7ff',dashed:true,points:false},{label:'Completed long run',data:completed,color:'#79d69b'}],{min:0,max:Math.max((Number(state.setup.peakLong)||0)*1.12,10),labels,aria:'Long-run progression',empty:'No planned or completed long-run data yet.'});
+ }catch(err){recordDiagnostic('Progress long-run chart',err)}
+ try{
+  const predNow=prediction(),history=(state.predictionHistory||[]).filter(x=>Number.isFinite(Number(x.seconds))&&x.date<=iso(today())).slice().sort((a,b)=>a.date.localeCompare(b.date));
+  const start=Number(state.programStartPrediction)||initialProgrammePrediction(state.setup)||predNow,target=Number(state.setup.targetTime),vals=[start,...history.map(x=>Number(x.seconds))],labels=['Start',...history.map(x=>dte(x.date).toLocaleDateString(undefined,{day:'numeric',month:'short'}))];
+  if(Number.isFinite(Number(predNow))&&Math.abs((vals.at(-1)??0)-Number(predNow))>.5){vals.push(Number(predNow));labels.push('Today')}
+  const all=[...vals,target].filter(Number.isFinite),lo=Math.min(...all),hi=Math.max(...all),min=Math.max(2*3600,Math.floor((lo-1800)/1800)*1800),max=Math.max(min+3600,Math.min(7*3600,Math.ceil((hi+1800)/1800)*1800));
+  progressSvgIntoMount('predictionChartMount',[{label:'Race estimate',data:vals,color:'#3dd6c6'},{label:`Target ${fmtTime(target)}`,data:[target],color:'#ff8585',dashed:true,points:false,horizontal:true}],{min,max,ticks:5,formatY:v=>fmtTime(v),labels,aria:'Race readiness trajectory',empty:'No race estimate is available yet.'});
+ }catch(err){recordDiagnostic('Progress prediction chart',err)}
+ try{
+  const rs=completedRuns().slice().sort((a,b)=>a.date.localeCompare(b.date)),runs=rs.filter(r=>Number.isFinite(metrics(r).efficiencyJ)),vals=runs.map(r=>metrics(r).efficiencyJ),labels=runs.map(r=>dte(r.date).toLocaleDateString(undefined,{day:'numeric',month:'short'}));
+  progressSvgIntoMount('efficiencyChartMount',metricSeries(runs,r=>metrics(r).efficiencyJ),{min:vals.length?Math.floor(Math.min(...vals)-5):80,max:vals.length?Math.ceil(Math.max(...vals)+5):140,zero:false,ticks:5,formatY:v=>Math.round(v)+' J',labels,allLabels:runs.length<=8,aria:'Efficiency factor trend',empty:'Log a run with average power and heart rate to build efficiency history.'});
+ }catch(err){recordDiagnostic('Progress efficiency chart',err)}
+ try{
+  const rs=completedRuns().slice().sort((a,b)=>a.date.localeCompare(b.date)),runs=rs.filter(r=>Number.isFinite(Number(r.powerDrift))),vals=runs.map(r=>Number(r.powerDrift)),labels=runs.map(r=>dte(r.date).toLocaleDateString(undefined,{day:'numeric',month:'short'}));
+  progressSvgIntoMount('driftChartMount',metricSeries(runs,r=>Number(r.powerDrift)),{min:vals.length?Math.min(0,Math.floor(Math.min(...vals)-2)):0,max:vals.length?Math.max(10,Math.ceil(Math.max(...vals)+2)):10,ticks:5,formatY:v=>Math.round(v)+'%',labels,allLabels:runs.length<=8,aria:'Aerobic durability trend',empty:'No suitable power-based cardiac-drift observation is available yet.'});
+ }catch(err){recordDiagnostic('Progress durability chart',err)}
+}
+function renderAll(){[renderDashboard,renderToday,renderPlan,renderRuns,renderMetrics,renderAssessments,renderCoach,renderInjury,renderRecovery,renderRace,renderSettings,renderPlanHealth,renderMigrationReport].forEach(fn=>{try{fn()}catch(err){recordDiagnostic('Render failure in '+fn.name,err)}});try{renderProgressChartsStandalone()}catch(err){recordDiagnostic('Render failure in renderProgressChartsStandalone',err)}renderDiagnostics();ensureAccessibleForms();renderUndoButtons()}
 const pages=[['today','Today'],['plan','Plan'],['runs','Log'],['dashboard','Progress'],['assessments','Assessments'],['recovery','Recovery'],['injury','Injury'],['race','Race day'],['settings','Settings']];
 $('nav').innerHTML=pages.map((p,i)=>`<button data-page="${p[0]}" class="${i?'':'active'}">${p[1]}</button>`).join('');$('nav').onclick=e=>{let p=e.target.dataset.page;if(!p)return;document.querySelectorAll('.page').forEach(x=>x.classList.toggle('active',x.id===p));document.querySelectorAll('#nav button').forEach(x=>x.classList.toggle('active',x.dataset.page===p));renderAll();scrollTo(0,0)};document.body.onclick=e=>{let exImg=e.target.closest('[data-exercise-image]');if(exImg){const name=exImg.dataset.exerciseName||'Exercise',img=exImg.dataset.exerciseImage,muscles=rehabExerciseMuscles(name);openExerciseImage(name,img,muscles);return}if(e.target.id==='addInjuryBtn'){openInjuryForm();return}let activate=e.target.closest('[data-activate-injury-plan]');if(activate){let id=activate.dataset.activateInjuryPlan,current=state.injuries.find(x=>x.id===state.activeInjuryPlanId),next=state.injuries.find(x=>x.id===id);if(next&&confirm(`Switch the active recovery plan from ${current?.location||'the current injury'} to ${next.location||'this injury'}? Only one plan can be followed at a time.`)){state.activeInjuryPlanId=id;save();renderInjury();toast('Active recovery plan switched.')}return;}let ib=e.target.closest('[data-injury-check]');if(ib){openInjuryCheck(state.injuries.find(x=>x.id===ib.dataset.injuryCheck));return}let ice=e.target.closest('[data-injury-check-edit]');if(ice){let injury=state.injuries.find(x=>x.id===ice.dataset.injuryCheckEdit),check=injury?.checkIns?.find(x=>x.date===ice.dataset.checkDate);if(injury&&check)openInjuryCheck(injury,check);return}let ie=e.target.closest('[data-injury-edit]');if(ie){openInjuryForm(state.injuries.find(x=>x.id===ie.dataset.injuryEdit));return}let idel=e.target.closest('[data-injury-delete]');if(idel){if(confirm('Delete this injury and its check-ins?')){state.injuries=state.injuries.filter(x=>x.id!==idel.dataset.injuryDelete);if(state.activeInjuryPlanId===idel.dataset.injuryDelete)state.activeInjuryPlanId=state.injuries[0]?.id||null;save();renderInjury()}return}const go=e.target.closest('[data-go]');if(go){closeDialog();activatePage(go.dataset.go,go.dataset.anchor||null);return}const scoreLink=e.target.closest('.wiScoreLink');if(scoreLink){setTimeout(()=>{const d=document.getElementById('executionBreakdownFoldout');if(d)d.open=true},0)}const planRunBtn=e.target.closest('[data-plan-run]');if(planRunBtn){openRunDetails(planRunBtn.dataset.planRun);return}let factorToggle=e.target.closest('.factorToggle');if(factorToggle){let tile=factorToggle.closest('.factorKpi'),open=tile.classList.toggle('open');factorToggle.setAttribute('aria-expanded',String(open));return}let w=e.target.closest('.workout');if(w&&!e.target.closest('button')){document.querySelectorAll('.workout[open]').forEach(x=>{if(x!==w)x.removeAttribute('open')});}};
 const navigationPages=pages.filter(item=>item[0]!=='assessments');
