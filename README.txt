@@ -1,4 +1,8 @@
-AI Running Coach v13.3.6 — Injury rehab runner-flow hierarchy — build 30360
+AI Running Coach v13.3.7 — Injury section order follows section numbers — build 30361
+
+- Injury & Rehab sections are displayed strictly in their existing numeric order.
+- No section content, calculation, rehabilitation logic, or locked-tab behaviour changed.
+
 
 - Reorders Injury & Rehab around a serious runner workflow: status → programme → progression criteria → trajectory → symptoms → function/return-to-run → adherence → training impact → assessment → history.
 - Moves “What this means now” into Rehabilitation Status as a supporting tile rather than a separate numbered section.
