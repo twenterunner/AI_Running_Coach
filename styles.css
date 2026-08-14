@@ -38,3 +38,64 @@ canvas{display:block;width:100%!important;max-width:100%;height:auto!important;m
 @media(max-width:390px){#mainContent{padding-left:11px;padding-right:11px}.sectionTitle h2{font-size:28px}.aiCoachHeader h3{font-size:23px}.weekMetricRow{gap:4px}.workoutHead{grid-template-columns:40px 36px 1fr auto;gap:7px;padding:9px}.workout .status{max-width:62px;white-space:normal;text-align:center}.targets{grid-template-columns:1fr 1fr}.targets .target:last-child{grid-column:1/-1}.runMetricStrip{grid-template-columns:1fr 1fr}.runMetricStrip>span:last-child{grid-column:1/-1}.outlookComparison{grid-template-columns:1fr 16px 1fr}.outlookCard{padding:10px}.outlookCard strong{font-size:26px}}
 @media(min-width:760px){#mainContent{padding:28px 22px 60px}.topbar{padding-left:24px;padding-right:24px}#nav{position:sticky;top:64px;z-index:80;grid-template-columns:repeat(9,max-content) 1fr;padding:7px 22px;background:rgba(7,16,24,.94);border-bottom:1px solid var(--line);border-top:0;justify-content:center}#nav .desktopSecondary{display:grid!important}#nav button{min-height:44px;padding:5px 12px;display:flex;gap:7px}#nav .moreToggle{display:none}.moreNav{display:none!important}.navLabel{font-size:11px}.todaySupportGrid{grid-template-columns:1fr 1fr}.coachEvidenceGrid{grid-template-columns:1fr 1fr}.exerciseGrid,.rehabExerciseGrid{grid-template-columns:repeat(3,1fr)}.modal,.onboarding{place-items:center}.modalCard,.onboardingCard{border-radius:24px}}
 @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;animation:none!important;transition:none!important}}
+
+
+/* TODAY TAB — LOCKED UI CONTRACT v12.0.1
+   Do not modify from unrelated tab work. */
+#today #todayCard,#today #todayCoach{display:grid;gap:12px}
+#today .todayUnifiedTile,#today .todayWorkoutDetails{
+ background:linear-gradient(145deg,#12313a 0%,#102733 48%,#101f2b 100%);
+ border:1px solid rgba(61,214,198,.24);border-radius:18px;box-shadow:none;overflow:hidden
+}
+#today .todayUnifiedTile{padding:17px}
+#today .todaySupportGrid{display:grid;gap:12px}
+#today .todaySupportCard{margin:0}
+#today .todayTileHead{display:grid;grid-template-columns:44px minmax(0,1fr) auto;align-items:center;gap:11px;margin:0 0 14px}
+#today .todaySupportCard .todayTileHead{grid-template-columns:44px minmax(0,1fr)}
+#today .todayTileIcon{width:44px;height:44px;display:grid;place-items:center;border-radius:13px;background:rgba(61,214,198,.10);border:1px solid rgba(121,238,224,.16);color:var(--teal-2)}
+#today .todayTileIcon svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+#today .coachBriefingIcon{background:rgba(121,238,224,.13)}
+#today .todayTileTitle{display:grid;gap:3px}
+#today .todayTileTitle small{font-size:9px;line-height:1.2;font-weight:850;letter-spacing:.12em;color:var(--teal-2)}
+#today .todayTileTitle h3{margin:0;font-size:21px;line-height:1.16;letter-spacing:-.025em;overflow-wrap:anywhere}
+#today .todayCoachBriefing .todayTileTitle h3{font-size:25px}
+#today .aiCoachLead{margin:0 0 14px;font-size:13px;line-height:1.55}
+#today .genericCopy{color:var(--text-2)}
+#today .genericCopy b{color:var(--text-2)}
+#today .personalizedBadge{align-self:start;white-space:nowrap;background:rgba(121,238,224,.11);color:var(--teal-2)}
+#today .personalizedValue,#today .todayPersonalizedBlock>ul,#today .personalizedAction b{color:var(--text);font-weight:850}
+#today .personalizedValue{letter-spacing:-.01em}
+#today .todayMetricTriplet{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:0 0 14px}
+#today .todayContextMetric{min-height:98px;display:grid;grid-template-rows:25px auto 1fr;align-content:start;gap:4px;padding:10px 8px;border-radius:13px;background:rgba(5,18,24,.40);border:1px solid rgba(121,238,224,.12);text-align:left;overflow:hidden}
+#today .todayContextMetric .todayMetricIcon{width:25px;height:25px;display:grid;place-items:center;color:var(--teal-2)}
+#today .todayContextMetric .uiIcon{width:19px;height:19px}
+#today .todayContextMetric small{display:block;font-size:8px;line-height:1.2;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+#today .todayContextMetric b{display:block;font-size:12px;line-height:1.25;overflow-wrap:anywhere;align-self:start}
+#today .todayContextMetric.good{border-color:rgba(121,214,155,.24)}
+#today .todayContextMetric.caution{border-color:rgba(241,197,106,.28)}
+#today .todayContextMetric.neutral{border-color:rgba(136,161,177,.16)}
+#today .aiCoachCall{display:grid;grid-template-columns:40px minmax(0,1fr);align-items:center;gap:10px;padding:12px;margin:0;border-radius:13px;background:rgba(5,18,24,.46);border:1px solid rgba(121,238,224,.14)}
+#today .aiCoachCall>span{width:40px;height:40px;display:grid;place-items:center;border-radius:11px;background:rgba(61,214,198,.10);color:var(--teal-2)}
+#today .aiCoachCall svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+#today .aiCoachCall small{display:block;font-size:8px;font-weight:850;letter-spacing:.1em;color:var(--teal-2)}
+#today .aiCoachCall b{display:block;margin-top:2px;font-size:14px;line-height:1.35}
+#today .todayPersonalizedBlock{display:grid;gap:6px;padding:12px;margin:0 0 12px;border-radius:13px;background:rgba(5,18,24,.38);border:1px solid rgba(121,238,224,.11)}
+#today .todayPersonalizedBlock>small{font-size:8px;font-weight:850;letter-spacing:.1em;color:var(--teal-2)}
+#today .todayPersonalizedBlock>.personalizedValue{font-size:16px;line-height:1.3}
+#today .todayPersonalizedBlock ul{margin:0;padding-left:19px;font-size:13px;line-height:1.5}
+#today .todaySupportCard p{font-size:12px;line-height:1.5;margin:0 0 12px}
+#today .todayInlineLink{width:100%;min-height:46px;margin-top:auto}
+#today .todayWorkoutDetails{margin:12px 0 0}
+#today .todayWorkoutDetails>summary{min-height:48px;padding:13px 15px;background:rgba(5,18,24,.30);font-size:13px}
+@media(max-width:390px){
+ #today .todayUnifiedTile{padding:15px}
+ #today .todayTileHead{grid-template-columns:40px minmax(0,1fr) auto;gap:9px}
+ #today .todaySupportCard .todayTileHead{grid-template-columns:40px minmax(0,1fr)}
+ #today .todayTileIcon{width:40px;height:40px}
+ #today .todayCoachBriefing .todayTileTitle h3{font-size:23px}
+ #today .todayTileTitle h3{font-size:20px}
+ #today .todayMetricTriplet{gap:6px}
+ #today .todayContextMetric{min-height:96px;padding:9px 6px}
+ #today .todayContextMetric b{font-size:11px}
+}
+@media(min-width:760px){#today .todaySupportGrid{grid-template-columns:1fr 1fr}}

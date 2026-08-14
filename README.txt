@@ -1,4 +1,4 @@
-AI Running Coach v12.0.0 — GUI Rebuild — build 20000
+AI Running Coach v12.0.1 — Today Tab Locked Baseline — build 20001
 
 Deployment
 ----------
@@ -576,3 +576,14 @@ v11.3.0 Visual + typography refinement — build 18300
 - Adds deliberate pictogram colors by purpose and visual color-coding to progress bars and timeline segments.
 - Separates page background, primary cards, nested tiles and plotting surfaces into distinct dark-slate layers.
 - No model/data engine changes.
+
+
+v12.0.1 — Today tab locked baseline
+-----------------------------------
+- Today-only presentation refinement; model/data engines unchanged.
+- All Today tiles use the same teal gradient, 18 px corners and 12 px spacing.
+- Coach Briefing now uses a briefing/speech SVG pictogram.
+- Session/Rehab, Readiness and Pain use three equal-width, identically structured tiles.
+- User-specific values and actions have stronger styling than generic explanatory copy.
+- Today support cards use the same header/content/action pattern and larger headings.
+- LOCK RULE: future tab work must not change the scoped #today UI contract or Today rendering functions unless the user explicitly asks for another Today update.

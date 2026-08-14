@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '12.0.0';
-  const BUILD = 20000;
+  const VERSION = '12.0.1';
+  const BUILD = 20001;
   const SCHEMA = 10330;
   const PRIMARY_STORAGE_KEY = 'arc_v10330_web';
   const MIRROR_STORAGE_KEY = 'arc_v10330_mirror';
@@ -2251,6 +2251,7 @@ function workoutHtml(p){
 function coachVisualIcon(kind){
  const icons={
   coach:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a7 7 0 0 0-4 12.7V20l4-2 4 2v-4.3A7 7 0 0 0 12 3z"/><path d="M9 10h.01M15 10h.01M9.5 13c1.7 1.3 3.3 1.3 5 0"/></svg>',
+  briefing:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5.5h14a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2h-8l-5 3v-3H5a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2z"/><path d="M8 10h5M8 13h8"/><path d="M17.5 3.5v3M16 5h3"/></svg>',
   race:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 21V3M5 4h12l-3 4 3 4H5"/></svg>',
   recovery:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12a7 7 0 1 0 2-5"/><path d="M5 4v5h5"/></svg>',
   trend:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 17l5-5 4 3 7-8"/><path d="M15 7h5v5"/></svg>',
@@ -2324,12 +2325,28 @@ function consolidatedTodayCoachBriefing(p){
  if(injuryDay){headline='Rehab is the priority today.';lead=`${injuryDay.title}. Complete the rehabilitation objective without adding unscheduled impact.`;action='Complete the prescribed rehabilitation and today’s check-in.';}
  else if(p&&p.type!=='Rest'){headline=`${p.type} today.`;lead=p.purpose||'Deliver the intended training stimulus with control.';action=`Complete ${Number(p.distance).toFixed(1)} km as prescribed, then log or import the run.`;}
  else{headline='Recovery is the training today.';lead='No purposeful running session is scheduled. Protect the next quality exposure.';action='Keep movement comfortable and do not add catch-up mileage.';}
- const chips=[
-  {icon:injuryDay?'rehab':p&&p.type!=='Rest'?workoutTypeClass(p.type):'recovery',label:injuryDay?'Rehab':p&&p.type!=='Rest'?`${p.type} · ${Number(p.distance).toFixed(1)} km`:'Rest day',cls:'primary'},
-  {icon:'recovery',label:`Readiness: ${readiness}`,cls:readiness==='Normal'?'good':'caution'}
- ];
- if(Number.isFinite(pain.max))chips.push({icon:'pain',label:`Pain: ${pain.max}/10`,cls:pain.max>=3?'caution':'good'});
- return`<section class="aiCoachBriefing todayCoachBriefing visualToday uiLevel1"><div class="aiCoachHeader"><span class="aiCoachIcon">${coachVisualIcon('coach')}</span><div><small>TODAY'S COACH BRIEFING</small><h3>${esc(headline)}</h3></div><span class="aiCoachEvidence">${report.evidenceCoverage>0?`${report.evidenceCoverage}% evidence`:'Evidence building'}</span></div><p class="aiCoachLead">${esc(lead)}</p><div class="todayContextChips">${chips.map(c=>`<span class="${c.cls}">${uiIcon(c.icon)}<b>${esc(c.label)}</b></span>`).join('')}</div><div class="aiCoachCall"><span>${coachVisualIcon('plan')}</span><div><small>NEXT ACTION</small><b>${esc(action)}</b></div></div></section>`;
+
+ const sessionLabel=injuryDay?'Rehab':p&&p.type!=='Rest'?'Training':'Plan';
+ const sessionValue=injuryDay?injuryDay.title:p&&p.type!=='Rest'?`${p.type} · ${Number(p.distance).toFixed(1)} km`:'Rest day';
+ const sessionIcon=injuryDay?'rehab':p&&p.type!=='Rest'?workoutTypeClass(p.type):'rest';
+ const painValue=Number.isFinite(pain.max)?`${pain.max}/10`:'No data';
+ const painState=Number.isFinite(pain.max)&&pain.max>=3?'caution':Number.isFinite(pain.max)?'good':'neutral';
+ const readinessState=readiness==='Normal'?'good':readiness==='Unknown'?'neutral':'caution';
+
+ return`<section class="aiCoachBriefing todayCoachBriefing visualToday uiLevel1 todayUnifiedTile">
+   <div class="todayTileHead">
+     <span class="todayTileIcon coachBriefingIcon">${coachVisualIcon('briefing')}</span>
+     <div class="todayTileTitle"><small>TODAY'S COACH BRIEFING</small><h3>${esc(headline)}</h3></div>
+     <span class="aiCoachEvidence personalizedBadge">${report.evidenceCoverage>0?`${report.evidenceCoverage}% evidence`:'Evidence building'}</span>
+   </div>
+   <p class="aiCoachLead genericCopy">${esc(lead)}</p>
+   <div class="todayMetricTriplet" aria-label="Today's personalized context">
+     <div class="todayContextMetric primary"><span class="todayMetricIcon">${uiIcon(sessionIcon)}</span><small>${esc(sessionLabel)}</small><b class="personalizedValue">${esc(sessionValue)}</b></div>
+     <div class="todayContextMetric ${readinessState}"><span class="todayMetricIcon">${uiIcon('recovery')}</span><small>Readiness</small><b class="personalizedValue">${esc(readiness)}</b></div>
+     <div class="todayContextMetric ${painState}"><span class="todayMetricIcon">${uiIcon('pain')}</span><small>Pain</small><b class="personalizedValue">${esc(painValue)}</b></div>
+   </div>
+   <div class="aiCoachCall personalizedAction"><span>${coachVisualIcon('plan')}</span><div><small>NEXT ACTION</small><b>${esc(action)}</b></div></div>
+ </section>`;
 }
 function dailyCoachFocus(p){
  const ast=athleteState(currentWeek());
@@ -2340,12 +2357,12 @@ function dailyCoachFocus(p){
  let cards=[];
  if(injuryDay){
    const rehabItems=injuryDay.items.length?injuryDay.items.map(item=>`<li>${esc(item)}</li>`).join(''):`<li>${esc(injuryDay.rule)}</li>`;
-   cards.push(`<section class="todaySupportCard rehabSupport uiLevel2"><div class="todaySupportHead"><span>${coachVisualIcon('injury')}</span><div><small>REHABILITATION</small><h4>${esc(injuryDay.title)}</h4></div></div><ul>${rehabItems}</ul><p><b>Safety:</b> ${esc(injuryDay.rule)}</p><button type="button" class="todayInlineLink" data-go="injury">Open rehab plan</button></section>`);
+   cards.push(`<section class="todaySupportCard rehabSupport uiLevel2 todayUnifiedTile"><div class="todayTileHead"><span class="todayTileIcon">${coachVisualIcon('injury')}</span><div class="todayTileTitle"><small>REHABILITATION</small><h3>${esc(injuryDay.title)}</h3></div></div><div class="todayPersonalizedBlock"><small>TODAY'S PRESCRIPTION</small><ul>${rehabItems}</ul></div><p class="genericCopy"><b>Safety:</b> ${esc(injuryDay.rule)}</p><button type="button" class="todayInlineLink" data-go="injury">Open rehab plan</button></section>`);
  }
  let trainingBody='';
- if(p&&p.type!=='Rest')trainingBody=`<div class="supportMetric"><span>Session</span><b>${esc(p.type)} · ${Number(p.distance).toFixed(1)} km</b></div><p>${esc(p.purpose||'Complete the prescribed training objective.')}</p>${injuryDay?'<p class="supportNotice">The active rehabilitation plan takes priority today.</p>':''}`;
- else trainingBody=`<div class="supportMetric"><span>Running</span><b>No running session scheduled</b></div><p>Do not add a catch-up run. Preserve the next purposeful training exposure.</p>`;
- cards.push(`<section class="todaySupportCard trainingSupport uiLevel2"><div class="todaySupportHead"><span>${coachVisualIcon('plan')}</span><div><small>TRAINING PLAN</small><h4>Today's running plan</h4></div></div>${trainingBody}<button type="button" class="todayInlineLink" data-go="plan">View training week</button></section>`);
+ if(p&&p.type!=='Rest')trainingBody=`<div class="todayPersonalizedBlock"><small>TODAY'S SESSION</small><b class="personalizedValue">${esc(p.type)} · ${Number(p.distance).toFixed(1)} km</b></div><p class="genericCopy">${esc(p.purpose||'Complete the prescribed training objective.')}</p>${injuryDay?'<p class="supportNotice">The active rehabilitation plan takes priority today.</p>':''}`;
+ else trainingBody=`<div class="todayPersonalizedBlock"><small>TODAY'S SESSION</small><b class="personalizedValue">No running session scheduled</b></div><p class="genericCopy">Do not add a catch-up run. Preserve the next purposeful training exposure.</p>`;
+ cards.push(`<section class="todaySupportCard trainingSupport uiLevel2 todayUnifiedTile"><div class="todayTileHead"><span class="todayTileIcon">${coachVisualIcon('plan')}</span><div class="todayTileTitle"><small>TRAINING PLAN</small><h3>Today's running plan</h3></div></div>${trainingBody}<button type="button" class="todayInlineLink" data-go="plan">View training week</button></section>`);
  return `<div class="todaySupportGrid">${cards.join('')}</div>`;
 }
 function renderToday(){
