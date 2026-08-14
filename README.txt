@@ -1,4 +1,4 @@
-AI Running Coach v12.0.4 — Today Tab Locked Baseline — build 20004
+AI Running Coach v12.1.0 — Today Tab Locked Baseline — build 20100
 
 Deployment
 ----------
@@ -616,3 +616,14 @@ v12.0.4 — Today visual reliability refinement
 - Replaced the simple single-colour status icons with larger bespoke multi-tone SVG pictograms for running, readiness and pain.
 - Evidence coverage is displayed as a circular completeness plot using the existing evidenceCoverage value.
 - Today remains locked against unrelated future-tab changes.
+
+
+v12.1.0 — Serious-runner Today redesign
+----------------------------------------
+- v12.0.4 visual language is now the default visual baseline for future tab redesigns.
+- Today is rebuilt around a serious runner's daily decisions: coach priority, readiness, weekly load, pain/injury, full structured workout targets and profile, active rehab when relevant, weekly progression, latest execution signal and concise race context.
+- Today surfaces existing plan, runner and model data only; no new fitness, prediction, injury, pathway or readiness calculations were added.
+- Detailed prescription uses the existing warm-up/main/cooldown, target pace, target power, target HR, purpose and fuel/hydration fields.
+- Race context uses the existing phase, countdown, target time, race estimate and target probability.
+- Latest training signal uses the existing workout-execution, efficiency and cardiac-drift calculations.
+- The Today tab remains locked against unrelated future updates.
