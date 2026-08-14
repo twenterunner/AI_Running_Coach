@@ -1,4 +1,4 @@
-AI Running Coach v13.1.4 — Progress chart and mobile-navigation repair — build 30104
+AI Running Coach v13.1.5 — Progress chart and mobile-navigation repair — build 30105
 
 - Restored all Progress charts to the proven canvas renderer; race-readiness, weekly-distance and long-run charts no longer disappear behind an empty teal surface.
 - Aerobic durability and efficiency charts again render one valid observation as a real point; zero observations use the explicit baseline-building state.
@@ -948,3 +948,11 @@ v13.0.6
 - Fixed Log Workout Objective typography so label, objective and interpretation no longer run together.
 - Added explicit spacing between Workout Execution finding bullets/status marks and their text.
 - Today and Plan unchanged; no model/data-engine calculations changed.
+
+
+v13.1.5 Progress chart and hierarchy repair
+--------------------------------------------
+- Progress charts now use a dedicated inline SVG renderer after each model render, avoiding browser canvas blanking on mobile.
+- Race readiness, weekly distance, long-run progression, efficiency and aerobic durability charts render whenever genuine data exists.
+- Progress-only card typography, padding and spacing are normalised for Personal Response Model, Model Validation, Longitudinal Training Review and adaptive pathway cards.
+- No calculation, prediction, pathway, recovery, injury, import, matching, storage or data-model logic changed.

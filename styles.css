@@ -2512,3 +2512,61 @@ canvas{display:block;width:100%!important;max-width:100%;height:auto!important;m
 /* Keep section/card rhythm identical after the restored charts. */
 #dashboard.progressPage .progressSection{row-gap:12px!important}
 #dashboard.progressPage .metricCharts{margin:0!important}
+
+/* v13.1.5 Progress-only chart visibility + hierarchy consistency */
+#dashboard.progressPage canvas{display:none!important}
+#dashboard.progressPage .progressSvgChart{display:block!important;width:100%;height:auto;min-height:0;margin:8px 0 0;overflow:visible}
+#dashboard.progressPage .progressSvgChart .grid{stroke:rgba(102,167,255,.34);stroke-width:1}
+#dashboard.progressPage .progressSvgChart .grid.base{stroke:rgba(215,231,235,.7);stroke-width:1.5}
+#dashboard.progressPage .progressSvgChart .axis{font-size:16px;font-weight:500;fill:#b9cdd5}
+#dashboard.progressPage .progressSvgChart .axis.x{font-size:15px}
+#dashboard.progressPage .progressSvgChart .legend{font-size:17px;font-weight:750;fill:#dcecf1}
+#dashboard.progressPage .predictionPanel,
+#dashboard.progressPage .progressChartPanel,
+#dashboard.progressPage .metricCharts>.panel{min-height:0!important}
+#dashboard.progressPage .progressChartState{margin-top:8px!important}
+
+/* Keep all major Progress level-2 modules on the same Today/Plan/Log hierarchy. */
+#dashboard.progressPage .personalModelPanel,
+#dashboard.progressPage .modelValidationPanel,
+#dashboard.progressPage .coachAssessmentPanel,
+#dashboard.progressPage .canonicalAdaptationHome,
+#dashboard.progressPage .coachReport{padding:18px!important;border-radius:18px!important;background:linear-gradient(145deg,#0c6975,#084958 72%)!important;border:1px solid rgba(61,214,198,.32)!important;color:var(--text)!important}
+#dashboard.progressPage .personalModelHead,
+#dashboard.progressPage .modelValidationHead,
+#dashboard.progressPage .coachVerdict{display:grid!important;gap:4px!important;margin:0 0 12px!important;padding:0!important}
+#dashboard.progressPage .personalModelHead>div,
+#dashboard.progressPage .modelValidationHead>div{display:grid!important;gap:3px!important}
+#dashboard.progressPage .personalModelHead small,
+#dashboard.progressPage .modelValidationHead small,
+#dashboard.progressPage .coachVerdict>span{font-size:10px!important;line-height:1.2!important;font-weight:850!important;letter-spacing:.11em!important;color:var(--teal-2)!important}
+#dashboard.progressPage .personalModelHead h3,
+#dashboard.progressPage .modelValidationHead h3{margin:0!important;font-size:22px!important;line-height:1.15!important;letter-spacing:-.025em!important;color:#fff!important}
+#dashboard.progressPage .personalModelHead>span,
+#dashboard.progressPage .modelValidationHead>span{justify-self:start!important;margin-top:4px!important;font-size:9px!important;line-height:1.25!important;padding:5px 8px!important;border-radius:999px!important;background:rgba(4,26,34,.38)!important;border:1px solid rgba(61,214,198,.2)!important;color:var(--teal-2)!important}
+#dashboard.progressPage .coachVerdict .coachConclusion{font-size:18px!important;line-height:1.35!important;font-weight:800!important;margin:2px 0 0!important;color:#fff!important}
+#dashboard.progressPage .coachVerdict .coachProjection{font-size:12px!important;line-height:1.5!important;margin:0!important;color:#d0e1e6!important}
+
+/* Normalize adaptive pathway card inset and keep text away from edges. */
+#dashboard.progressPage .canonicalPathway,
+#dashboard.progressPage .canonicalPathwayCard,
+#dashboard.progressPage .adaptationVisualCard{padding:16px!important;margin:0!important}
+#dashboard.progressPage .canonicalPathwayGrid{gap:12px!important}
+#dashboard.progressPage .canonicalPathMetrics{margin-top:12px!important;gap:10px!important}
+#dashboard.progressPage .canonicalPathMetrics>div{padding:12px!important}
+#dashboard.progressPage .canonicalPathway>h3,
+#dashboard.progressPage .canonicalPathwayCard>h3{margin-left:0!important}
+
+/* Equal vertical rhythm throughout Progress. */
+#dashboard.progressPage .progressSection{gap:14px!important;margin-bottom:32px!important}
+#dashboard.progressPage .progressSection>.panel,
+#dashboard.progressPage .progressSection>.grid2,
+#dashboard.progressPage .progressSection>#progressExecution,
+#dashboard.progressPage .progressSection>#progressAdaptationHome,
+#dashboard.progressPage .progressSection>#personalResponseModel,
+#dashboard.progressPage .progressSection>#modelValidation,
+#dashboard.progressPage .progressSection>#decisionHistory,
+#dashboard.progressPage .progressSection>#progressRecovery{margin:0!important}
+#dashboard.progressPage #personalResponseModel,
+#dashboard.progressPage #modelValidation,
+#dashboard.progressPage #decisionHistory{display:grid;gap:14px}

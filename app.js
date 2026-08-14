@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '13.1.4';
-  const BUILD = 30104;
+  const VERSION = '13.1.5';
+  const BUILD = 30105;
   const SCHEMA = 10330;
   const PRIMARY_STORAGE_KEY = 'arc_v10330_web';
   const MIRROR_STORAGE_KEY = 'arc_v10330_mirror';
@@ -2165,6 +2165,31 @@ function drawProgressLine(canvas,series,options={}){
  drawLine(canvas,series,options);
 }
 
+function renderProgressSvgChart(canvas,series,options={}){
+ if(!canvas)return;
+ const parent=canvas.parentElement;if(!parent)return;
+ parent.querySelector(`:scope > svg.progressSvgChart[data-for="${canvas.id}"]`)?.remove();
+ const labels=options.labels||[];
+ const numeric=series.flatMap(s=>s.data||[]).filter(Number.isFinite);
+ if(!numeric.length){canvas.classList.add('progressChartHidden');return;}
+ canvas.classList.add('progressChartHidden');
+ const W=680,H=280,left=72,right=24,top=52,bottom=48,chartW=W-left-right,chartH=H-top-bottom;
+ let min=Number.isFinite(options.min)?options.min:(options.zero===false?Math.min(...numeric):0);
+ let max=Number.isFinite(options.max)?options.max:Math.max(...numeric);
+ if(max<=min)max=min+1;
+ if(!Number.isFinite(options.min)&&!Number.isFinite(options.max)){const pad=(max-min)*.1||1;max+=pad;if(options.zero===false)min-=pad;}
+ const n=Math.max(1,labels.length,...series.filter(s=>!s.horizontal).map(s=>(s.data||[]).length));
+ const px=i=>n===1?left+chartW/2:left+i*chartW/(n-1);
+ const py=v=>top+(max-v)/(max-min)*chartH;
+ const escXml=v=>String(v??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+ const ticks=options.ticks||5;let out=[];
+ for(let i=0;i<ticks;i++){const f=i/(ticks-1),v=min+(max-min)*f,y=top+chartH-chartH*f,label=options.formatY?options.formatY(v):v.toFixed(Math.abs(v)<10?1:0);out.push(`<line class="grid ${i===0?'base':''}" x1="${left}" y1="${y}" x2="${W-right}" y2="${y}"/><text class="axis" x="${left-10}" y="${y+5}" text-anchor="end">${escXml(label)}</text>`)}
+ const legend=[];let lx=left;series.forEach(s=>{if(!s.label)return;legend.push(`<line x1="${lx}" y1="25" x2="${lx+22}" y2="25" stroke="${s.color||'#4CC9F0'}" stroke-width="4" stroke-linecap="round" ${s.dashed?'stroke-dasharray="9 6"':''}/><text class="legend" x="${lx+30}" y="30">${escXml(s.label)}</text>`);lx+=44+Math.min(210,String(s.label).length*11)});
+ series.forEach(s=>{const vals=(s.data||[]).map((v,i)=>({v,i})).filter(o=>Number.isFinite(o.v));if(!vals.length)return;if(s.horizontal){const y=py(vals[0].v);out.push(`<line x1="${left}" y1="${y}" x2="${W-right}" y2="${y}" stroke="${s.color||'#4CC9F0'}" stroke-width="3" ${s.dashed?'stroke-dasharray="10 7"':''}/>`);return;}const pts=vals.map(o=>`${px(o.i)},${py(o.v)}`).join(' ');if(vals.length>1)out.push(`<polyline fill="none" stroke="${s.color||'#4CC9F0'}" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" points="${pts}" ${s.dashed?'stroke-dasharray="10 7"':''}/>`);if(s.points!==false)vals.forEach(o=>out.push(`<circle cx="${px(o.i)}" cy="${py(o.v)}" r="5" fill="#fff" stroke="${s.color||'#4CC9F0'}" stroke-width="3"/>`));});
+ const positions=options.allLabels?labels.map((_,i)=>i):[0,Math.floor((labels.length-1)/2),labels.length-1].filter((v,i,a)=>v>=0&&a.indexOf(v)===i);positions.forEach(i=>{if(labels[i]!=null)out.push(`<text class="axis x" x="${px(i)}" y="${H-14}" text-anchor="middle">${escXml(labels[i])}</text>`)});
+ const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');svg.setAttribute('viewBox',`0 0 ${W} ${H}`);svg.setAttribute('class','progressSvgChart');svg.dataset.for=canvas.id;svg.setAttribute('role','img');svg.setAttribute('aria-label',canvas.getAttribute('aria-label')||'Progress chart');svg.innerHTML=legend.join('')+out.join('');canvas.insertAdjacentElement('afterend',svg);
+}
+
 
 function completedWeekSeries(){
  return Array.from({length:weeks()},(_,i)=>{
@@ -2223,6 +2248,7 @@ function drawDashboardCharts(){
    {label:'Planned km',data:arr.map(x=>x.plannedForChart),color:'#4CC9F0',dashed:true,points:false},
    {label:'Completed km',data:arr.map(x=>x.actual),color:'#4CC9F0'}
  ],{empty:'No weekly distance data yet',labels:weekLabels,area:false});
+ renderProgressSvgChart($('volumeChart'),[{label:'Planned km',data:arr.map(x=>x.plannedForChart),color:'#4CC9F0',dashed:true,points:false},{label:'Completed km',data:arr.map(x=>x.actual),color:'#79D69B'}],{min:0,labels:weekLabels});
  let plannedLong=Array.from({length:weeks()},(_,i)=>state.plan.find(x=>x.week===i+1&&['Long run','Specific long run','Race rehearsal','Progression'].includes(x.type))?.distance??null);
  let completedLong=Array.from({length:weeks()},(_,i)=>{
    let st=weekStart(i+1),en=new Date(st.getTime()+7*DAY);
@@ -2233,6 +2259,7 @@ function drawDashboardCharts(){
    {label:'Planned long run',data:plannedLong,color:'#4CC9F0',dashed:true,points:false},
    {label:'Completed long run',data:completedLong,color:'#4CC9F0'}
  ],{min:0,max:Math.max(state.setup.peakLong*1.12,10),empty:'Log a long run to show completed progression',labels:weekLabels});
+ renderProgressSvgChart($('longRunChart'),[{label:'Planned long run',data:plannedLong,color:'#4CC9F0',dashed:true,points:false},{label:'Completed long run',data:completedLong,color:'#79D69B'}],{min:0,max:Math.max(state.setup.peakLong*1.12,10),labels:weekLabels});
 
  let history=(state.predictionHistory||[]).filter(x=>Number.isFinite(Number(x.seconds))&&x.date<=iso(today())).slice().sort((a,b)=>a.date.localeCompare(b.date));
  const startPrediction=Number(state.programStartPrediction)||initialProgrammePrediction(state.setup)||prediction();
@@ -2254,6 +2281,7 @@ function drawDashboardCharts(){
      {label:'Race estimate',data:chartValues,color:'#4CC9F0'},
      {label:`Target ${fmtTime(targetTime)}`,data:[targetTime],color:'#F47777',dashed:true,points:false,horizontal:true}
    ],{min:minSec,max:maxSec,ticks:5,formatY:v=>fmtTime(v),labels:chartLabels,left:98,pointDetails:chartDetails,empty:'No race estimate available'});
+   renderProgressSvgChart(predictionCanvas,[{label:'Race estimate',data:chartValues,color:'#4CC9F0'},{label:`Target ${fmtTime(targetTime)}`,data:[targetTime],color:'#F47777',dashed:true,points:false,horizontal:true}],{min:minSec,max:maxSec,ticks:5,formatY:v=>fmtTime(v),labels:chartLabels});
  }
 
 }
@@ -3757,6 +3785,7 @@ function renderMetrics(){
    max:effValues.length?Math.ceil(Math.max(...effValues)+5):140,zero:false,ticks:6,
    formatY:v=>Math.round(v)+' J',labels:effLabels,allLabels:efficiencyRuns.length<=8,
    empty:'Log or import a run with average power and heart rate'});
+ if(efficiencyRuns.length) renderProgressSvgChart($('efficiencyChart'),metricSeries(efficiencyRuns,r=>metrics(r).efficiencyJ),{min:effValues.length?Math.floor(Math.min(...effValues)-5):80,max:effValues.length?Math.ceil(Math.max(...effValues)+5):140,zero:false,ticks:6,formatY:v=>Math.round(v)+' J',labels:effLabels,allLabels:efficiencyRuns.length<=8});
 
  let driftValues=driftRuns.map(r=>r.powerDrift).filter(Number.isFinite);
  let driftLabels=driftRuns.map(r=>dte(r.date).toLocaleDateString(undefined,{day:'numeric',month:'short'}));
@@ -3766,6 +3795,7 @@ function renderMetrics(){
    max:driftValues.length?Math.max(10,Math.ceil(Math.max(...driftValues)+2)):10,ticks:6,
    formatY:v=>Math.round(v)+'%',labels:driftLabels,allLabels:driftRuns.length<=8,
    empty:'No valid power-based drift point yet. Import a FIT or detailed CSV with sufficient timestamped heart rate and running power.'});
+ if(driftRuns.length) renderProgressSvgChart($('driftChart'),driftSeries,{min:driftValues.length?Math.min(0,Math.floor(Math.min(...driftValues)-2)):0,max:driftValues.length?Math.max(10,Math.ceil(Math.max(...driftValues)+2)):10,ticks:6,formatY:v=>Math.round(v)+'%',labels:driftLabels,allLabels:driftRuns.length<=8});
 
  let summary=typeMetricSummary(rs);
  $('metricTypeSummary').innerHTML=summary.length?`<div class="metricTypeTable"><div class="metricTypeHead"><b>Run type</b><b>Efficiency avg</b><b>Efficiency best</b><b>Drift avg</b><b>Drift best</b></div>${summary.map(x=>`<div class="metricTypeRow"><span><i style="--runColor:${runTypeColors[x.type]}"></i>${esc(x.type)}</span><span>${Number.isFinite(x.effAvg)?x.effAvg.toFixed(1)+' J/beat':'—'}</span><span>${Number.isFinite(x.effBest)?x.effBest.toFixed(1)+' J/beat':'—'}</span><span>${Number.isFinite(x.driftAvg)?x.driftAvg.toFixed(1)+'%':'—'}</span><span>${Number.isFinite(x.driftBest)?x.driftBest.toFixed(1)+'%':'—'}</span></div>`).join('')}</div>`:'<span class="muted">No qualifying run metrics yet.</span>';
