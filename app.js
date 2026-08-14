@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '13.4.0';
-  const BUILD = 30400;
+  const VERSION = '13.4.1';
+  const BUILD = 30401;
   const SCHEMA = 10330;
   const PRIMARY_STORAGE_KEY = 'arc_v10330_web';
   const MIRROR_STORAGE_KEY = 'arc_v10330_mirror';
@@ -3867,7 +3867,7 @@ function renderCoach(){
 function renderRace(){
  const engine=coachEngine(),c=engine.c,pred=engine.pred,provisional=engine.currentModel.provisional;
  const targetTime=Number(state.setup.targetTime),rd=Number(state.setup.raceDistance),targetPace=targetTime/rd;
- const probability=provisional?null:Math.round(engine.currentModel.probability),gap=pred-targetTime;
+ const prob=provisional?null:Math.round(engine.currentModel.probability),gap=pred-targetTime;
  const rangeLow=engine.currentModel.rangeLow,rangeHigh=engine.currentModel.rangeHigh;
  const readiness=readinessModel(),active=(state.injuries||[]).find(x=>x.id===state.activeInjuryPlanId),pathways=pathwayFactorSummary(currentWeek()),racePlan=(state.plan||[]).find(p=>p.type==='Race Day')||null;
  const remaining=raceTimeRemaining(),first=Math.max(1,Math.round(rd*.20)),final=Math.max(first+1,Math.round(rd*.75));

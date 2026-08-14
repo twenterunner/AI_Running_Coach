@@ -1,4 +1,4 @@
-AI Running Coach v13.4.0 — Race Day execution redesign — build 30400
+AI Running Coach v13.4.1 — Race Day execution redesign — build 30401
 
 - Removes the stale Injury-only CSS `order` rules that were overriding the visible section numbers.
 - Injury/Rehab sections are now explicitly sorted by the number displayed in each section-number circle, so the current numbering is the source of truth for tile order.
@@ -1120,7 +1120,7 @@ v13.1.13 Progress typography root fix
 - Fixes concatenated labels/values such as Evidence-backed conceptsIndividualised progression and Score/Window/Verification.
 - No calculation/data-model logic changed; Today, Plan and Log implementations remain frozen.
 
-v13.4.0 Race Day execution redesign
+v13.4.1 Race Day execution redesign
 ----------------------------------
 - Rebuilds only the Race Day UI around current race outcome, execution, pace/power, effort, fuelling, evidence, endurance, constraints, adaptive confidence, target checkpoints and detailed model context.
 - Uses only existing race calculations and stored app outputs; no prediction, pathway, recovery, injury, training-plan, scoring, storage or model logic is changed.

@@ -3547,7 +3547,7 @@ body:has(#dashboard.progressPage.active),#mainContent:has(#dashboard.progressPag
 @media(max-width:430px){#injury .exerciseDetail.textExercise>summary{grid-template-columns:1fr!important}#injury .exerciseDetail.textExercise .exerciseChevron{justify-self:start!important}}
 
 
-/* v13.4.0 Race Day redesign — strictly scoped to #race */
+/* v13.4.1 Race Day redesign — strictly scoped to #race */
 #race{overflow-x:hidden;padding-bottom:calc(94px + env(safe-area-inset-bottom))}
 #race .raceDayPageTitle{display:grid;grid-template-columns:62px minmax(0,1fr);gap:13px;align-items:center;margin:0 0 14px}
 #race .raceDayPictogram{width:62px;height:62px;display:grid;place-items:center;color:#fff}
