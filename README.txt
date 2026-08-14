@@ -1,4 +1,4 @@
-AI Running Coach v12.1.2 — Today interaction refinement — build 20102
+AI Running Coach v12.1.3 — Today briefing refinement — build 20103
 
 Deployment
 ----------
@@ -649,3 +649,10 @@ v12.1.2 — Today interaction refinement
 - Removed full-description button; tapping workout structure now expands/collapses prescription and intervals.
 - Pain pictogram revised to a more anatomical lower-limb/joint representation.
 - Model/data engines unchanged.
+
+
+v12.1.3 — Today briefing refinement
+- Evidence completeness moved beside Coach Briefing heading; Today's Priority spans full width below.
+- Rehab pictogram replaced by runner-leg/resistance-band physiotherapy illustration.
+- Pain pictogram replaced by anatomical leg/knee pain illustration.
+- Remaining Today layout/interactions preserved; model/data engines unchanged.

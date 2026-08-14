@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '12.1.2';
-  const BUILD = 20102;
+  const VERSION = '12.1.3';
+  const BUILD = 20103;
   const SCHEMA = 10330;
   const PRIMARY_STORAGE_KEY = 'arc_v10330_web';
   const MIRROR_STORAGE_KEY = 'arc_v10330_mirror';
@@ -2321,12 +2321,12 @@ function todayPictogram(kind){
  const svg={
   training:`<svg class="todayPic" viewBox="0 0 64 64" aria-hidden="true"><circle class="picSkin" cx="38" cy="10" r="6"/><path class="picBase" d="M31 19l-8 13 8 5 7-10 6 8 10-4"/><path class="picBase" d="M30 36l-7 14H11M32 37l11 10 10-2"/><path class="picAccent" d="M19 31l7-11 11-2"/><path class="picWarm" d="M16 48h12"/></svg>`,
   readiness:`<svg class="todayPic" viewBox="0 0 64 64" aria-hidden="true"><path class="picBase" d="M32 53S11 40 11 23c0-8 6-13 13-13 4 0 7 2 8 5 2-3 5-5 9-5 7 0 13 5 13 13 0 17-22 30-22 30z"/><path class="picGood" d="M8 34h13l5-10 7 20 6-13 4 3h13"/></svg>`,
-  pain:`<svg class="todayPic" viewBox="0 0 64 64" aria-hidden="true"><path class="picBase" d="M25 7c5 5 7 11 6 18l-2 9c-1 5 0 10 3 14l5 8"/><path class="picBase" d="M38 8c-3 6-4 12-3 18l2 8c1 5 0 10-3 14l-5 8"/><path class="picBase" d="M25 22c4 2 8 2 12 0"/><path class="picWarm" d="M27 34c3-3 7-3 10 0M27 39c3 3 7 3 10 0"/><path class="picWarn" d="M24 36h-5M40 36h5"/><circle class="picWarn" cx="32" cy="36" r="5"/></svg>`,
+  pain:`<svg class="todayPic" viewBox="0 0 64 64" aria-hidden="true"><path class="picBase" d="M24 6c7 8 10 16 9 25l-2 8 7 18"/><path class="picBase" d="M39 7c-4 8-5 16-3 24l2 7-4 19"/><path class="picSkin" d="M28 34c3-2 7-2 10 0M29 41c3 2 6 2 9 0"/><path class="picWarn" d="M22 37h5M40 37h5M25 30l3 3M42 30l-3 3M25 45l3-3M42 45l-3-3"/><circle class="picWarm" cx="34" cy="37" r="5"/></svg>`,
   shoe:`<svg class="todayPic" viewBox="0 0 64 64" aria-hidden="true"><path class="picBase" d="M10 41c8-2 13-9 17-20l8 4c2 7 7 11 17 13 4 1 6 4 5 8-1 4-4 6-9 6H18c-7 0-11-4-8-11z"/><path class="picAccent" d="M27 25l8 5M23 31l9 5M18 37l9 5"/><path class="picWarm" d="M12 46h43"/></svg>`,
   week:`<svg class="todayPic" viewBox="0 0 64 64" aria-hidden="true"><rect class="picBase" x="10" y="14" width="44" height="38" rx="5"/><path class="picAccent" d="M10 24h44M20 9v10M44 9v10"/><path class="picGood" d="M18 35h8M30 35h8M42 35h5M18 43h8M30 43h8"/></svg>`,
   signal:`<svg class="todayPic" viewBox="0 0 64 64" aria-hidden="true"><path class="picBase" d="M9 48h46M13 44l10-10 9 6 17-22"/><path class="picAccent" d="M43 18h8v8"/><circle class="picGood" cx="23" cy="34" r="3"/><circle class="picGood" cx="32" cy="40" r="3"/></svg>`,
   race:`<svg class="todayPic" viewBox="0 0 64 64" aria-hidden="true"><path class="picBase" d="M17 55V9M18 12h28l-7 9 7 9H18"/><path class="picAccent" d="M20 14h8v8h-8zM28 22h8v8h-8zM36 14h8v8h-8z"/></svg>`,
-  rehab:`<svg class="todayPic" viewBox="0 0 64 64" aria-hidden="true"><circle class="picSkin" cx="32" cy="10" r="6"/><path class="picBase" d="M24 51l3-30h10l3 30M27 31h10"/><path class="picAccent" d="M19 38h26M32 31v14"/></svg>`,
+  rehab:`<svg class="todayPic" viewBox="0 0 64 64" aria-hidden="true"><circle class="picSkin" cx="25" cy="9" r="5"/><path class="picBase" d="M26 15l5 13-7 12-5 15M31 28l10 8 8 15"/><path class="picAccent" d="M18 47c8-5 17-5 26 0"/><path class="picGood" d="M18 47c8 4 17 4 26 0"/><path class="picWarm" d="M41 22c5 2 8 6 9 11M48 28l2 5-5-1"/></svg>`,
   recovery:`<svg class="todayPic" viewBox="0 0 64 64" aria-hidden="true"><path class="picBase" d="M43 45A20 20 0 1 1 31 9a17 17 0 0 0 12 36z"/><path class="picAccent" d="M45 12v8M41 16h8M52 26v6M49 29h6"/></svg>`,
   action:`<svg class="todayPic" viewBox="0 0 64 64" aria-hidden="true"><rect class="picBase" x="17" y="10" width="30" height="44" rx="4"/><path class="picGood" d="M25 23l3 3 6-7M25 35l3 3 6-7M25 47l3 3 6-7"/><path class="picBase" d="M37 24h5M37 36h5M37 48h5M26 10V7h12v3"/></svg>`
  };
@@ -2457,9 +2457,11 @@ function consolidatedTodayCoachBriefing(p){
    ];
  }
  return`<section class="todayBriefingCard seriousBriefing runnerFullWidth">
-   <div class="briefingCopy"><div class="briefingTitle"><span class="briefingIcon">${coachVisualIcon('briefing')}</span><div><small>DAILY DECISION</small><h3>Coach Briefing</h3><p>${esc(report.race.phase)} phase · ${remaining.label} to ${esc(state.setup.raceName)}</p></div></div>
-   <div class="briefingDecision"><small>TODAY'S PRIORITY</small><strong>${esc(priorityTitle)}</strong>${todayBulletList(priorityBullets,'runnerBullets priorityBullets')}</div></div>
-   <div class="briefingGauges"><div class="evidenceCompleteness" style="--evidence:${evidence}"><div class="evidenceRing"><strong>${evidence}</strong><span>%</span></div><small>Evidence completeness</small></div></div>
+   <div class="briefingTopRow">
+     <div class="briefingTitle"><span class="briefingIcon">${coachVisualIcon('briefing')}</span><div><small>DAILY DECISION</small><h3>Coach Briefing</h3><p>${esc(report.race.phase)} phase · ${remaining.label} to ${esc(state.setup.raceName)}</p></div></div>
+     <div class="briefingGauges"><div class="evidenceCompleteness" style="--evidence:${evidence}"><div class="evidenceRing"><strong>${evidence}</strong><span>%</span></div>
+   </div>
+   <div class="briefingDecision"><small>TODAY'S PRIORITY</small><strong>${esc(priorityTitle)}</strong>${todayBulletList(priorityBullets,'runnerBullets priorityBullets')}</div>
  </section>
  <div class="todayStatusGrid seriousStatusGrid">
    <article class="todayStatusCard training"><h4>TODAY’S MODE</h4><div class="statusRing">${todayPictogram(injuryDay?'rehab':p&&p.type!=='Rest'?'training':'recovery')}</div><div class="statusCopy"><strong>${esc(modeTitle)}</strong><p>${esc(modeText)}</p></div></article>
