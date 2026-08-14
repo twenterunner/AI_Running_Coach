@@ -2771,9 +2771,13 @@ body:has(#dashboard.progressPage.active),#mainContent:has(#dashboard.progressPag
 
 /* v13.1.14 — Progress typography/spacing canonicalization.
    Uses the same label/value/detail rhythm as the locked Today status/runner cards. */
+/* Mobile navigation is anchored directly to the browser's visual viewport.
+   Do not add visualViewport-derived offsets here: Chrome already moves fixed
+   elements with its collapsing toolbar, and double compensation caused the
+   menu to drift/clip while scrolling. */
 @media(max-width:759px){
-  #nav{bottom:var(--mobile-nav-bottom,0px)!important;transform:none!important;will-change:bottom}
-  .moreNav{bottom:calc(78px + var(--mobile-nav-bottom,0px))!important}
+  #nav{left:0!important;right:0!important;bottom:0!important;width:auto!important;transform:none!important}
+  .moreNav{bottom:78px!important}
 }
 
 #dashboard.progressPage .outlookGain{

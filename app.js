@@ -5353,18 +5353,6 @@ function navIcon(page){
  return icons[page]||icons.more;
 }
 function navButtonHtml(page,label,extra=''){return`<button ${extra} data-page="${page}"><span class="navIcon">${navIcon(page)}</span><span class="navLabel">${label}</span></button>`}
-let mobileNavSyncFrame=0;
-function syncMobileNavViewport(){
- cancelAnimationFrame(mobileNavSyncFrame);
- mobileNavSyncFrame=requestAnimationFrame(()=>{
-  const vv=window.visualViewport;
-  const inset=vv?Math.max(0,Math.round(window.innerHeight-vv.height-vv.offsetTop)):0;
-  document.documentElement.style.setProperty('--mobile-nav-bottom',`${inset}px`);
- });
-}
-if(window.visualViewport){window.visualViewport.addEventListener('resize',syncMobileNavViewport,{passive:true});window.visualViewport.addEventListener('scroll',syncMobileNavViewport,{passive:true});}
-window.addEventListener('resize',syncMobileNavViewport,{passive:true});
-syncMobileNavViewport();
 function renderNavigation(){const current=document.querySelector('.page.active')?.id||'today';$('nav').innerHTML=primaryPages.map(p=>navButtonHtml(p[0],p[1])).join('')+secondaryPages.map(p=>navButtonHtml(p[0],p[1],'class="desktopSecondary"')).join('')+`<button id="moreNavBtn" class="moreToggle" type="button" aria-expanded="false" aria-controls="moreNav"><span class="navIcon">${navIcon('more')}</span><span class="navLabel">More</span></button>`;$('moreNav').innerHTML=secondaryPages.map(p=>`<button data-page="${p[0]}"><span class="navIcon">${navIcon(p[0])}</span><span>${p[1]}</span></button>`).join('');setActiveNavigation(current)}
 function setActiveNavigation(page){document.querySelectorAll('#nav [data-page],#moreNav [data-page]').forEach(button=>{const active=button.dataset.page===page;button.classList.toggle('active',active);if(active)button.setAttribute('aria-current','page');else button.removeAttribute('aria-current')});const more=$('moreNavBtn'),secondary=secondaryPages.some(item=>item[0]===page);more?.classList.toggle('active',secondary);if(secondary)more?.setAttribute('aria-current','page');else more?.removeAttribute('aria-current')}
 function activatePage(page,anchor=null){if(!pages.some(p=>p[0]===page))return;if(page==='plan')state.weekView=currentWeek();document.querySelectorAll('.page').forEach(section=>section.classList.toggle('active',section.id===page));setActiveNavigation(page);$('moreNav').className='moreNav hidden';$('moreNavBtn')?.setAttribute('aria-expanded','false');renderAll();if(anchor){requestAnimationFrame(()=>document.getElementById(anchor)?.scrollIntoView({behavior:'smooth',block:'start'}))}else scrollTo(0,0);$('mainContent')?.focus({preventScroll:true})}
