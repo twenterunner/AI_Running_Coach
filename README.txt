@@ -1,4 +1,4 @@
-AI Running Coach v12.2.2 — Today rehab/race refinement — build 20202
+AI Running Coach v12.3.0 — Serious Runner Plan — build 20300
 
 Deployment
 ----------
@@ -731,3 +731,18 @@ v12.2.2
 - Coach Briefing phase line now shows the phase-specific race priority beside the phase name, e.g. Foundation · durable easy running and safe consistency.
 - Race Context now includes the model's existing central 70% finish-time range and matching pace range.
 - No prediction, rehab, readiness or training-model calculations changed.
+
+
+v12.3.0 — Serious Runner Plan redesign
+-----------------------------------------
+- Today is regression-locked and byte-equivalent in its Today-specific markup, rendering functions and scoped Today CSS.
+- Plan rebuilt from scratch around serious-runner questions: programme position, weekly prescription, weekly structure, adaptation consequences, programme timeline and intensity distribution.
+- Programme header shows current phase + existing phase priority, week/total, race countdown, target, current-week planned/completed distance and qualitative adaptation status.
+- Seven-day schedule is collapsed by default; only one workout expands at a time. Expanded workouts use existing pace/power/HR targets, visual warm-up/work/recovery/cooldown structure, full prescription, purpose, coaching, fueling and missed-session guidance.
+- Completed workouts link to existing Run Intelligence.
+- Weekly Structure shows planned distance, sessions, quality-session count, longest/long-run contribution and planned-volume progression around the selected week.
+- Plan Adaptation intentionally does not duplicate numeric learned pathway factors: it shows Pace & Power, Distance & Load and Recovery consequences plus projected workout changes and evidence foldouts, consistent with the app's existing information architecture.
+- Active rehab appears only as a protective plan constraint and can supersede scheduled running.
+- Programme Timeline shows phase blocks, current/viewed week, next key long run, peak long run, taper start and race day.
+- Intensity Distribution uses the existing plan workout classifications and actual planned distance.
+- No prediction, training-plan generation, pathway, recovery, injury, scoring, import, storage or data-model equations changed.

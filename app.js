@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '12.2.2';
-  const BUILD = 20202;
+  const VERSION = '12.3.0';
+  const BUILD = 20300;
   const SCHEMA = 10330;
   const PRIMARY_STORAGE_KEY = 'arc_v10330_web';
   const MIRROR_STORAGE_KEY = 'arc_v10330_mirror';
@@ -2243,10 +2243,55 @@ function coachIntelligenceHtml(p){
  if(p.type==='Rest'||p.type==='Race Day')return'';
  return `<div class="coachWhy"><h4>Coach intelligence</h4><p><b>Why this workout:</b> ${esc(p.whyThis||p.purpose)}</p><p><b>Why this amount:</b> ${esc(p.whyAmount||'The prescribed amount reflects the current phase, weekly load and Weekly Plan Adjustment.')}</p><p><b>If you skip it:</b> ${esc(p.skipImpact||'Do not catch up by stacking sessions. Continue with the next appropriate workout.')}</p></div>`;
 }
-function workoutHtml(p){
- let st=status(p),dt=new Date(p.date+'T00:00:00'),day=dt.toLocaleDateString(undefined,{weekday:'short'}),month=dt.toLocaleDateString(undefined,{month:'short'}),typeCls=workoutTypeClass(p.type);
- return`<details class="workout workout-${typeCls} uiLevel2" data-id="${p.id}"><summary class="workoutHead"><div class="dateBox"><small>${day}</small><b>${dt.getDate()}</b><span>${month}</span></div><div class="workoutTypeIcon ${typeCls}">${uiIcon(typeCls==='quality'?'quality':typeCls)}</div><div class="workoutTitle"><h3>${esc(p.type)}</h3><p>${p.type==='Rest'?esc(p.purpose):`${Number(p.distance).toFixed(1)} km · ${esc(p.phase)}`}</p></div><span class="status ${st}">${esc(st)}</span><span class="workoutChevron" aria-hidden="true">⌄</span></summary><div class="workoutDetails"><div class="targets">${p.type==='Rest'?'':`<div class="target"><small>Main-set pace</small><b>${pace(p.zone.pace)}</b></div><div class="target"><small>Main-set HR</small><b>${p.zone.hr} bpm</b></div><div class="target"><small>Main-set power</small><b>${p.zone.power} W</b></div>`}</div>${p.type==='Rest'?'':`<p class="targetScope">Targets apply to: <b>${esc(p.targetScope||'main set')}</b></p>`}<div class="prescription"><p><b>Warm-up</b><span>${p.warmup}</span></p><p><b>Main set</b><span>${p.main}</span></p><p><b>Cooldown</b><span>${p.cooldown}</span></p>${p.distanceCheck?`<p class="distanceCheck"><b>Distance check</b><span>${esc(p.distanceCheck)} ✓</span></p>`:''}<p><b>Purpose</b><span>${p.purpose}</span></p><p><b>Coach guidance</b><span>${p.coach}</span></p><p><b>Fuel / hydration</b><span>${p.fuel}</span></p></div>${coachIntelligenceHtml(p)}${(()=>{const linked=matchingRun(p);return linked?`<button class="viewPlanRun primary full" data-plan-run="${linked.id}">View entered run details</button>`:''})()}</div></details>`;
+function planTinyIcon(kind){
+ const paths={
+  distance:'<path d="M5 17c4-7 7-8 14-10"/><path d="M14 5l5 2-2 5"/><path d="M4 20h16"/>',
+  calendar:'<rect x="4" y="5" width="16" height="15" rx="2"/><path d="M8 3v4M16 3v4M4 9h16M8 13h3M13 13h3M8 16h3"/>',
+  check:'<circle cx="12" cy="12" r="9"/><path d="M8 12l3 3 5-6"/>'
+ };
+ return`<svg class="uiIcon planTinyIcon" viewBox="0 0 24 24" aria-hidden="true">${paths[kind]||paths.distance}</svg>`;
 }
+function planWorkoutPictogram(type){
+ const t=String(type||'').toLowerCase();
+ if(/rest/.test(t))return todayPictogram('recovery');
+ if(/race/.test(t))return todayPictogram('race');
+ if(/recovery|shakeout/.test(t))return todayPictogram('recovery');
+ if(/long|progression/.test(t))return todayPictogram('shoe');
+ if(/interval|hill|fartlek|tempo|threshold|marathon-specific|half-marathon-specific|vo₂|race-pace|assessment/.test(t))return todayPictogram('training');
+ return todayPictogram('shoe');
+}
+function planWorkoutStructureHtml(p){
+ if(!p||p.type==='Rest')return'';
+ if(p.type==='Race Day')return`<div class="planWorkoutViz raceProfileViz"><div class="planVizHeader"><span>RACE STRUCTURE</span><b>${Number(p.distance).toFixed(1)} km</b></div><svg class="planWorkoutProfile" viewBox="0 0 600 104" preserveAspectRatio="none" role="img" aria-label="Race day ${Number(p.distance).toFixed(1)} kilometre race"><line class="profileBaseline" x1="18" y1="77" x2="582" y2="77"/><rect class="profileWork" x="18" y="26" width="564" height="50" rx="5"/><text class="mainLabel" x="300" y="18">RACE · ${Number(p.distance).toFixed(1)} km</text><text x="300" y="95">Controlled race execution</text></svg></div>`;
+ const warm=Math.max(0,Number(p.warmDistance)||0),main=Math.max(0,Number(p.mainDistance)||0),cool=Math.max(0,Number(p.coolDistance)||0);
+ const reps=clamp(Number(p.repetitions)||Number((String(p.main||'').match(/(\d+)\s*[x×]/i)||[])[1])||1,1,12);
+ const recoveries=clamp(Number(p.recoveryCount)||0,0,Math.max(0,reps-1));
+ const fastDistance=Math.max(0,Number(p.fastDistance)||Number(p.qualityDistance)||0),recoveryDistance=Math.max(0,Number(p.recoveryDistance)||0);
+ const total=Math.max(.1,warm+main+cool),plotX=18,plotW=564;
+ let warmW=Math.max(60,plotW*(warm/total)),coolW=Math.max(60,plotW*(cool/total));
+ if(warmW+coolW>plotW*.48){const scale=(plotW*.48)/(warmW+coolW);warmW*=scale;coolW*=scale}
+ const mainW=plotW-warmW-coolW,mainX=plotX+warmW;
+ let shapes=`<rect class="profileWarm" x="${plotX}" y="48" width="${warmW.toFixed(1)}" height="28" rx="4"/>`;
+ if(reps>1){
+  const recoveryRatio=fastDistance>0&&recoveryDistance>0?recoveryDistance/(fastDistance+recoveryDistance):Math.min(.30,recoveries*.07),gapTotal=Math.min(mainW*.36,mainW*recoveryRatio),workTotal=mainW-gapTotal,workW=workTotal/reps,gapW=recoveries?gapTotal/recoveries:0;let x=mainX;
+  for(let i=0;i<reps;i++){shapes+=`<rect class="profileWork" x="${x.toFixed(1)}" y="22" width="${Math.max(5,workW-2).toFixed(1)}" height="54" rx="4"/>`;x+=workW;if(i<recoveries){shapes+=`<rect class="profileRecovery" x="${x.toFixed(1)}" y="56" width="${Math.max(3,gapW-2).toFixed(1)}" height="20" rx="3"/>`;x+=gapW}}
+ }else shapes+=`<rect class="profileWork" x="${mainX.toFixed(1)}" y="31" width="${mainW.toFixed(1)}" height="45" rx="5"/>`;
+ const coolX=plotX+warmW+mainW;shapes+=`<rect class="profileCool" x="${coolX.toFixed(1)}" y="48" width="${coolW.toFixed(1)}" height="28" rx="4"/>`;
+ const repLabel=reps>1?`${reps} repetitions`:String(p.targetScope||'Main set');
+ return`<div class="planWorkoutViz"><div class="planVizHeader"><span>WORKOUT STRUCTURE</span><b>${esc(p.distanceCheck||`${Number(p.distance).toFixed(1)} km total`)}</b></div><svg class="planWorkoutProfile" viewBox="0 0 600 104" preserveAspectRatio="none" role="img" aria-label="Workout structure with ${warm.toFixed(1)} kilometre warm-up, ${esc(repLabel)}, and ${cool.toFixed(1)} kilometre cooldown"><line class="profileBaseline" x1="18" y1="77" x2="582" y2="77"/>${shapes}<text x="${(plotX+warmW/2).toFixed(1)}" y="94">WU ${warm.toFixed(1)} km</text><text class="mainLabel" x="${(mainX+mainW/2).toFixed(1)}" y="14">${esc(repLabel)}</text><text x="${(coolX+coolW/2).toFixed(1)}" y="94">CD ${cool.toFixed(1)} km</text></svg><div class="planVizLegend"><span><i class="warmKey"></i>Warm-up</span><span><i class="workKey"></i>Work</span>${recoveries?'<span><i class="recoveryKey"></i>Recovery</span>':''}<span><i class="coolKey"></i>Cooldown</span></div></div>`;
+}
+function workoutHtml(p){
+ const st=status(p),dt=new Date(p.date+'T00:00:00'),day=dt.toLocaleDateString(undefined,{weekday:'short'}),month=dt.toLocaleDateString(undefined,{month:'short'}),linked=matchingRun(p),z=p.zone||{};
+ const completedScore=linked?workoutScore(linked,p):null;
+ const adaptedLoad=Math.abs(Number(p.factor||1)-1)>=.005,calibrated=Math.abs(Number(z.fitnessIndex||100)-100)>=.5;
+ const statusLabel=st==='completed'?'Completed':st==='missed'?'Missed':st==='today'?'Today':st==='rest'?'Rest':'Upcoming';
+ const chips=[];if(adaptedLoad)chips.push('<span class="planAdaptChip">Load adapted</span>');if(calibrated)chips.push('<span class="planAdaptChip">Pace/power calibrated</span>');
+ const quick=p.type==='Rest'?'' : `<div class="planWorkoutQuick"><span><b>${Number(p.distance).toFixed(1)}</b><small>km</small></span><span><b>${pace(z.pace)}</b><small>pace</small></span><span><b>${Number.isFinite(Number(z.power))?Math.round(z.power):'—'}</b><small>W</small></span></div>`;
+ const completion=linked?`<div class="planCompletedEvidence"><span>${planTinyIcon('check')}</span><div><small>COMPLETED EVIDENCE</small><b>${Number(linked.distanceKm).toFixed(1)} km${Number.isFinite(completedScore)?` · ${Math.round(completedScore)}/100 execution`:''}</b></div></div>`:'';
+ if(p.type==='Rest')return`<details class="workout planWorkout restWorkout" data-id="${esc(p.id)}"><summary class="planWorkoutSummary"><div class="planDateBox"><small>${day}</small><b>${dt.getDate()}</b><span>${month}</span></div><span class="planWorkoutIcon">${planWorkoutPictogram(p.type)}</span><div class="planWorkoutIdentity"><div class="planWorkoutName"><h3>Rest</h3><span class="planStatus ${st}">${statusLabel}</span></div><p>${esc(p.purpose)}</p></div></summary><div class="planWorkoutBody"><ul class="planBulletList"><li>${esc(p.coach)}</li><li>${esc(p.fuel)}</li></ul></div></details>`;
+ return`<details class="workout planWorkout workout-${workoutTypeClass(p.type)}" data-id="${esc(p.id)}"><summary class="planWorkoutSummary"><div class="planDateBox"><small>${day}</small><b>${dt.getDate()}</b><span>${month}</span></div><span class="planWorkoutIcon">${planWorkoutPictogram(p.type)}</span><div class="planWorkoutIdentity"><div class="planWorkoutName"><h3>${esc(p.type)}</h3><span class="planStatus ${st}">${statusLabel}</span></div><p>${esc(p.purpose)}</p>${quick}${chips.length?`<div class="planAdaptChips">${chips.join('')}</div>`:''}</div></summary><div class="planWorkoutBody">${completion}<div class="planTargets"><div><small>PACE</small><strong>${pace(z.pace)}</strong><span>${esc(p.targetScope||'main set')}</span></div><div><small>POWER</small><strong>${Number.isFinite(Number(z.power))?Math.round(z.power)+' W':'—'}</strong><span>${esc(p.targetScope||'main set')}</span></div><div><small>HEART RATE</small><strong>${Number.isFinite(Number(z.hr))?Math.round(z.hr)+' bpm':'—'}</strong><span>${esc(z.guide||'intensity guide')}</span></div></div>${planWorkoutStructureHtml(p)}<div class="planPrescription"><div><small>WARM-UP</small><p>${esc(p.warmup||'—')}</p></div><div class="main"><small>MAIN SET / INTERVALS</small><p>${esc(p.main||'—')}</p></div><div><small>COOLDOWN</small><p>${esc(p.cooldown||'—')}</p></div></div><div class="planGuidanceGrid"><div><small>WHY THIS SESSION</small><p>${esc(p.whyThis||p.purpose)}</p></div><div><small>WHY THIS AMOUNT</small><p>${esc(p.whyAmount||'The amount follows the generated weekly structure and current adaptation.')}</p></div><div><small>EXECUTION</small><p>${esc(p.coach||'Follow the prescribed intensity and keep the session controlled.')}</p></div><div><small>FUEL / HYDRATION</small><p>${esc(p.fuel||'Normal daily hydration.')}</p></div></div><details class="planWorkoutMore"><summary>Missed-session guidance</summary><p>${esc(p.skipImpact||'Do not stack missed training. Continue with the next appropriate session.')}</p></details>${linked?`<button class="viewPlanRun primary full" data-plan-run="${esc(linked.id)}">Open completed run intelligence</button>`:''}</div></details>`;
+}
+
 
 function coachVisualIcon(kind){
  const icons={
@@ -2584,30 +2629,74 @@ function weeklyReviewData(w=currentWeek()){
  if(Number.isFinite(maxPain))reasons.push(`Highest recorded run pain was ${maxPain}/10.`);
  return{week:w,closed,completion,avgScore,drift,maxPain,reasons,changes,paceChange:paceRatio-1,loadChange:loadRatio-1,readiness:readinessModel().modifier};
 }
+function planPhasePriority(w=currentWeek()){
+ const p=raceProfile(),dp=detailedPhase(w),map={
+  '5k':{Foundation:'easy consistency, hills and relaxed strides',Aerobic:'threshold development and aerobic support',Development:'VO₂max and repeatable speed',Specific:'5 km-pace execution and economy',Peak:'sharpness without excess fatigue',Taper:'freshness and short race-pace reminders'},
+  '10k':{Foundation:'aerobic consistency and relaxed speed',Aerobic:'threshold development',Development:'threshold durability with selective VO₂max work',Specific:'10 km-pace control',Peak:'race-specific sharpness',Taper:'freshness and pace confidence'},
+  half:{Foundation:'aerobic consistency',Aerobic:'threshold endurance and medium-long running',Development:'sustained threshold durability',Specific:'half-marathon-effort control under fatigue',Peak:'specific endurance with controlled recovery cost',Taper:'freshness while retaining race rhythm'},
+  marathon:{Foundation:'durable easy running and safe consistency',Aerobic:'aerobic volume and medium-long endurance',Endurance:'weekly-volume tolerance and long-run durability',Specific:'marathon-effort economy, fuelling and fatigue resistance',Peak:'race rehearsal and controlled peak endurance',Taper:'fatigue reduction while preserving marathon rhythm'},
+  ultra:{Foundation:'time-on-feet tolerance',Aerobic:'aerobic durability and terrain strength',Endurance:'long-run resilience and fuelling tolerance',Specific:'terrain, run-walk and race-execution rehearsal',Peak:'final durability rehearsal without overload',Taper:'freshness and logistical readiness'}
+ };
+ const key=profileMatrixKey(p);return(map[key]||map.marathon)[dp]||'consistent race-specific preparation';
+}
+function planAdaptationLabels(w=currentWeek()){
+ const r=weeklyReviewData(w);
+ const paceState=Math.abs(r.paceChange)<.001?{label:'Targets held',cls:'neutral',detail:'No meaningful pace/power change is currently projected.'}:r.paceChange>0?{label:'Progressing',cls:'good',detail:'Future quality targets are trending faster / higher power.'}:{label:'More conservative',cls:'warn',detail:'Future quality targets are being moderated.'};
+ const loadState=Math.abs(r.loadChange)<.001?{label:'Volume held',cls:'neutral',detail:'No meaningful distance/load change is currently projected.'}:r.loadChange>0?{label:'Load progressing',cls:'good',detail:'Upcoming session distance is trending upward.'}:{label:'Load reduced',cls:'warn',detail:'Upcoming distance is being moderated.'};
+ const readyState=r.readiness>=.995?{label:'Normal',cls:'good',detail:'No temporary recovery reduction is affecting the prescription.'}:r.readiness>=.96?{label:'Slightly reduced',cls:'warn',detail:'Recovery context is temporarily moderating exposure.'}:{label:'Restricted',cls:'bad',detail:'Recovery context is materially reducing exposure.'};
+ return{review:r,paceState,loadState,readyState};
+}
+function planProgrammeHeaderHtml(){
+ const w=currentWeek(),total=weeks(),wd=weekData(w),remaining=raceTimeRemaining(),priority=planPhasePriority(w),review=planAdaptationLabels(w),programmePct=clamp((w-1)/Math.max(1,total-1)*100,0,100);
+ const adaptation=review.readyState.cls==='bad'||review.loadState.cls==='warn'||review.paceState.cls==='warn'?'Protective adjustment':review.paceState.cls==='good'||review.loadState.cls==='good'?'Progressing':'Prescription stable';
+ return`<section class="planProgrammeHero"><div class="planHeroTop"><span class="planHeroIcon">${todayPictogram('race')}</span><div class="planHeroIdentity"><small>CURRENT PROGRAMME POSITION</small><h3>${esc(detailedPhase(w))} · ${esc(priority)}</h3><p>${esc(state.setup.raceName)} · target ${fmtTime(state.setup.targetTime)} (${pace(state.setup.targetTime/state.setup.raceDistance)})</p></div></div><div class="planHeroMetrics"><div><small>PROGRAMME</small><strong>Week ${w}/${total}</strong><span>${Math.round((w-1)/Math.max(1,total-1)*100)}% through build</span></div><div><small>RACE</small><strong>${remaining.label}</strong><span>${fmtDate(state.setup.raceDate)}</span></div><div><small>THIS WEEK</small><strong>${wd.planned.toFixed(1)} km</strong><span>${wd.actual.toFixed(1)} km completed</span></div><div class="${review.readyState.cls}"><small>ADAPTATION</small><strong>${adaptation}</strong><span>${review.readyState.label} recovery</span></div></div><div class="planHeroProgress" aria-label="Programme progress"><i style="width:${programmePct}%"></i></div></section>`;
+}
+function planSelectedWeekHeaderHtml(w){
+ const wd=weekData(w),current=currentWeek(),focus=planPhasePriority(w),pct=wd.planned>0?clamp(wd.actual/wd.planned*100,0,100):0,weekStartDate=iso(weekStart(w)),weekEndDate=iso(new Date(weekStart(w).getTime()+6*DAY));
+ const viewLabel=w===current?'Current week':w<current?'Past week':'Future week';
+ return`<section class="planSelectedWeek"><div class="selectedWeekTop"><div><small>${viewLabel.toUpperCase()}</small><h3>Week ${w} of ${weeks()} · ${esc(detailedPhase(w))}</h3><p>${esc(focus)}</p></div><span class="selectedWeekBadge">${fmtDate(weekStartDate)}–${fmtDate(weekEndDate)}</span></div><div class="selectedWeekMetrics"><span><b>${wd.planned.toFixed(1)} km</b><small>planned</small></span><span><b>${wd.actual.toFixed(1)} km</b><small>completed</small></span><span><b>${wd.plan.filter(p=>p.type!=='Rest').length}</b><small>run sessions</small></span><span><b>${Math.round(pct)}%</b><small>distance done</small></span></div></section>`;
+}
+function planWeekStructureHtml(w){
+ const weeksList=[Math.max(1,w-1),w,Math.min(weeks(),w+1)].filter((x,i,a)=>a.indexOf(x)===i),wd=weekData(w),sessions=wd.plan.filter(p=>p.type!=='Rest'),qualitySet=['Intervals','Tempo','Fitness assessment','Hills','Fartlek','Threshold','Threshold intervals','VO₂max intervals','Race-pace intervals','Marathon-specific','Half-marathon-specific','Specific long run','Race rehearsal'],quality=sessions.filter(p=>qualitySet.includes(p.type)),long=sessions.filter(p=>['Long run','Specific long run','Race rehearsal','Progression'].includes(p.type)),longKm=sum(long.map(p=>Number(p.distance)||0)),longest=sessions.length?Math.max(...sessions.map(p=>Number(p.distance)||0)):0;
+ const bars=weeksList.map(x=>({week:x,km:weekData(x).planned,current:x===w})),max=Math.max(1,...bars.map(x=>x.km)),prev=weekData(Math.max(1,w-1)).planned,delta=w>1&&prev>0?(wd.planned/prev-1)*100:null;
+ const deltaText=Number.isFinite(delta)?`${delta>=0?'+':''}${delta.toFixed(0)}% vs previous week`:'Opening week';
+ return`<section class="planStructureCard"><div class="planStructureMetrics"><div><span class="structureIcon">${planTinyIcon('distance')}</span><small>PLANNED DISTANCE</small><strong>${wd.planned.toFixed(1)} km</strong><p>${deltaText}</p></div><div><span class="structureIcon">${planTinyIcon('calendar')}</span><small>RUN SESSIONS</small><strong>${sessions.length}</strong><p>${quality.length} quality / specific</p></div><div><span class="structureIcon">${uiIcon('long')}</span><small>LONGEST SESSION</small><strong>${longest.toFixed(1)} km</strong><p>${wd.planned>0?Math.round(longKm/wd.planned*100):0}% of weekly distance in long work</p></div></div><div class="surroundingWeeks"><div class="surroundingHead"><small>VOLUME AROUND THIS WEEK</small><span>Planned distance</span></div><div class="weekVolumeBars">${bars.map(x=>`<div class="weekVolumeBar ${x.current?'current':''}"><b>${x.km.toFixed(1)}</b><i style="height:${Math.max(12,x.km/max*100)}%"></i><small>W${x.week}</small></div>`).join('')}</div></div></section>`;
+}
+function planProjectedChangeRows(r){
+ return r.changes.map(x=>{const dc=Math.abs(x.nextDistance-x.distance)>=.05,pc=Math.abs(x.nextPace-x.pace)>=.5,pw=Math.abs(x.nextPower-x.power)>=1;if(!dc&&!pc&&!pw)return'';return`<div class="planProjectedRow"><div><b>${fmtDate(x.date)} · ${esc(x.type)}</b><small>Projected at next review</small></div><span>${dc?`${x.distance.toFixed(1)} → ${x.nextDistance.toFixed(1)} km`:'Distance held'}</span><span>${pc?`${pace(x.pace)} → ${pace(x.nextPace)}`:'Pace held'}</span><span>${pw?`${Math.round(x.power)} → ${Math.round(x.nextPower)} W`:'Power held'}</span></div>`}).filter(Boolean).join('');
+}
 function weeklyReviewHtml(w=currentWeek()){
- const r=weeklyReviewData(w),status=r.closed?'WEEKLY REVIEW COMPLETE':'PROVISIONAL WEEKLY REVIEW';
- const paceLabel=Math.abs(r.paceChange)<.001?'Targets currently held':r.paceChange>0?'Slight performance progression':'Slightly more conservative targets';
- const loadLabel=Math.abs(r.loadChange)<.001?'Volume currently held':r.loadChange>0?'Slight load progression':'Slight load reduction';
- const rows=r.changes.map(x=>{const dc=Math.abs(x.nextDistance-x.distance)>=.05,pc=Math.abs(x.nextPace-x.pace)>=.5,pw=Math.abs(x.nextPower-x.power)>=1;if(!dc&&!pc&&!pw)return'';return`<div class="weeklyReviewChange"><div><b>${fmtDate(x.date)} · ${esc(x.type)}</b></div><span>${dc?`${x.distance.toFixed(1)} → ${x.nextDistance.toFixed(1)} km`:`${x.distance.toFixed(1)} km · held`}</span><span>${pc?`${pace(x.pace)} → ${pace(x.nextPace)}`:`${pace(x.pace)} · held`}</span><span>${pw?`${Math.round(x.power)} → ${Math.round(x.nextPower)} W`:`${Math.round(x.power)} W · held`}</span></div>`}).filter(Boolean).join('');
- const readyLabel=r.readiness>=.995?'Normal readiness':r.readiness>=.96?'Slightly reduced readiness':'Reduced readiness';
- return`<section class="weeklyReviewCard ${r.closed?'complete':'provisional'} planEffectReview uiLevel1"><div class="weeklyReviewHead"><div><small>${status}</small><h3>Week ${r.week} plan adaptation</h3></div><span>${r.closed?'Applied':'Building'}</span></div>
- <div class="planEffectSummary"><article><small>PERFORMANCE PRESCRIPTION</small><strong>${paceLabel}</strong><p>${Math.abs(r.paceChange)<.001?'No meaningful pace/power change is projected.':`Future quality targets are projected to change by about ${Math.abs(r.paceChange*100).toFixed(1)}%.`}</p></article><article><small>TRAINING LOAD</small><strong>${loadLabel}</strong><p>${Math.abs(r.loadChange)<.001?'No meaningful distance/load change is projected.':`Future session distance is projected to change by about ${Math.abs(r.loadChange*100).toFixed(1)}%.`}</p></article><article><small>RECOVERY CONTEXT</small><strong>${readyLabel}</strong><p>Temporary recovery context can moderate exposure without changing learned capability.</p></article></div>
-
- <details><summary>Show projected workout changes</summary><div class="weeklyReviewChanges">${rows||'<p class="muted">No material prescription changes are currently projected.</p>'}</div></details></section>`;
+ const {review:r,paceState,loadState,readyState}=planAdaptationLabels(w),rows=planProjectedChangeRows(r),activeInjury=(state.injuries||[]).find(x=>x.id===state.activeInjuryPlanId);
+ const status=r.closed?'Applied weekly review':w>currentWeek()?'Future prescription':'Provisional weekly review';
+ return`<section class="planAdaptationCard"><div class="planAdaptationTop"><div><small>${status.toUpperCase()}</small><h3>Prescription consequences</h3><p>Plan shows what changes for the runner; numeric learned factors remain on Progress.</p></div><span class="planReviewState ${r.closed?'good':'neutral'}">${r.closed?'Applied':'Building'}</span></div><div class="planAdaptationGrid"><article class="${paceState.cls}"><span class="adaptVisual">${uiIcon('pace')}</span><small>PACE & POWER</small><strong>${paceState.label}</strong><p>${paceState.detail}</p></article><article class="${loadState.cls}"><span class="adaptVisual">${uiIcon('load')}</span><small>DISTANCE & LOAD</small><strong>${loadState.label}</strong><p>${loadState.detail}</p></article><article class="${readyState.cls}"><span class="adaptVisual">${uiIcon('recovery')}</span><small>RECOVERY CONTEXT</small><strong>${readyState.label}</strong><p>${readyState.detail}</p></article></div>${activeInjury?`<div class="planConstraint"><span>${todayPictogram('rehab')}</span><div><small>ACTIVE REHAB CONSTRAINT</small><b>${esc(activeInjury.bodyRegion||activeInjury.location||'Active rehabilitation')}</b><p>Day-level running remains subject to the active return-to-run criteria. Rehab guidance can supersede a scheduled run.</p></div></div>`:''}<details class="planAdaptDetail"><summary>Evidence behind this review</summary>${r.reasons.length?`<ul>${r.reasons.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>`:'<p>No completed evidence is available yet for this review.</p>'}<p class="muted compact">Recovery context is temporary. Learned Pace & Power and Distance & Load calibration remains governed by the existing weekly commitment rules.</p></details><details class="planAdaptDetail"><summary>Projected workout changes</summary><div class="planProjectedChanges">${rows||'<p>No material prescription changes are currently projected.</p>'}</div><p class="muted compact">The app does not persist a separate pre-adaptation copy of every workout. This view therefore compares the applied prescription with the currently projected next-review consequence where available.</p></details></section>`;
+}
+function planTimelineHtml(viewWeek=currentWeek()){
+ const total=weeks(),groups=[];for(let w=1;w<=total;w++){const name=detailedPhase(w),last=groups.at(-1);if(!last||last.name!==name)groups.push({name,start:w,end:w});else last.end=w}
+ const phaseClass=n=>String(n).toLowerCase().replace(/[^a-z]/g,'');
+ const longTypes=['Long run','Specific long run','Race rehearsal','Progression'],longRuns=state.plan.filter(p=>longTypes.includes(p.type)),futureLong=longRuns.filter(p=>p.date>=iso(today())).sort((a,b)=>a.date.localeCompare(b.date))[0],peakLong=longRuns.slice().sort((a,b)=>Number(b.distance)-Number(a.distance))[0],taperStart=state.plan.find(p=>p.detailedPhase==='Taper'),current=currentWeek();
+ const currentPct=clamp((current-.5)/total*100,0,100),viewPct=clamp((viewWeek-.5)/total*100,0,100);
+ const milestones=[futureLong?{label:'Next key long run',value:`${fmtDate(futureLong.date)} · ${futureLong.type} · ${Number(futureLong.distance).toFixed(1)} km`}:null,peakLong?{label:'Peak long run',value:`${fmtDate(peakLong.date)} · ${Number(peakLong.distance).toFixed(1)} km`}:null,taperStart?{label:'Taper begins',value:`Week ${taperStart.week} · ${fmtDate(taperStart.date)}`}:null,{label:'Race day',value:`${fmtDate(state.setup.raceDate)} · ${Number(state.setup.raceDistance).toFixed(1)} km`}].filter(Boolean);
+ return`<section class="planTimelineCard"><div class="phaseRail" role="img" aria-label="Programme phases from plan start to race day">${groups.map(g=>`<div class="phaseSegment ${phaseClass(g.name)} ${current>=g.start&&current<=g.end?'active':''}" style="width:${(g.end-g.start+1)/total*100}%"><b>${esc(g.name)}</b><small>W${g.start}${g.end!==g.start?`–${g.end}`:''}</small></div>`).join('')}<i class="currentMarker" style="left:${currentPct}%"><span>Now</span></i>${viewWeek!==current?`<i class="viewMarker" style="left:${viewPct}%"><span>W${viewWeek}</span></i>`:''}</div><div class="timelineEnds"><span>Plan start</span><span>${weeks()} weeks · race</span></div><div class="planMilestones">${milestones.map(m=>`<div><span class="milestoneDot"></span><small>${m.label}</small><b>${esc(m.value)}</b></div>`).join('')}</div></section>`;
+}
+function planIntensityDistributionHtml(w){
+ const sessions=state.plan.filter(p=>p.week===w&&!['Rest','Race Day'].includes(p.type)),rows=intensityGroups(sessions,'distance'),total=sum(rows.map(x=>Number(x.value)||0));
+ if(!rows.length||total<=0)return`<section class="planIntensityCard"><div class="planEmpty"><b>No planned running volume</b><p>This week contains no classified training distance.</p></div></section>`;
+ const tones=['easy','aerobic','long','threshold','speed'];
+ return`<section class="planIntensityCard"><div class="intensityStack" aria-label="Selected week intensity distribution">${rows.map((r,i)=>`<i class="${tones[i]||'easy'}" style="width:${r.value/total*100}%" title="${esc(r.label)} ${Math.round(r.value/total*100)}%"></i>`).join('')}</div><div class="planIntensityRows">${rows.map((r,i)=>`<div><span class="intensitySwatch ${tones[i]||'easy'}"></span><b>${esc(r.label)}</b><strong>${Number(r.value).toFixed(1)} km</strong><small>${Math.round(r.value/total*100)}%</small></div>`).join('')}</div><details class="planIntensityDetail"><summary>Overall programme distribution</summary>${intensityMixHtml(state.plan.filter(p=>!['Rest','Race Day'].includes(p.type)),'distance','No programme volume')}</details></section>`;
 }
 function renderPlan(){
- 
- if(!state.weekView)state.weekView=currentWeek();let arr=state.plan.filter(p=>p.week===state.weekView),wd=weekData(state.weekView),weekPct=wd.planned>0?clamp(wd.actual/wd.planned*100,0,100):0;$('weekHeader').innerHTML=`<div class="weekHeroLine"><div><small>WEEK ${state.weekView}</small><b>${detailedPhase(state.weekView)}</b><span>${fmtDate(iso(weekStart(state.weekView)))}</span></div><strong>${Math.round(weekPct)}%</strong></div><div class="weekMetricRow"><span><b>${wd.planned.toFixed(1)} km</b><small>Planned</small></span><span><b>${wd.actual.toFixed(1)} km</b><small>Completed</small></span><span><b>${Math.max(0,wd.planned-wd.actual).toFixed(1)} km</b><small>Remaining</small></span></div><div class="brandProgress"><i style="width:${weekPct}%"></i></div>`;
- if($('weeklyReview'))$('weeklyReview').innerHTML=weeklyReviewHtml(state.weekView);
-$('planCards').innerHTML=arr.map(workoutHtml).join('');
- const nextWeek=Math.min(weeks(),currentWeek()+1);
- const nextWeekPlan=state.plan.filter(p=>p.type!=='Rest'&&p.type!=='Race Day'&&p.week===nextWeek);
- const completedRuns=state.runs.filter(r=>Number(r.distanceKm)>0&&dte(r.date)<=today());
- const entirePlan=state.plan.filter(p=>p.type!=='Rest'&&p.type!=='Race Day');
- if($('nextWeekMixChart'))$('nextWeekMixChart').innerHTML=intensityMixHtml(nextWeekPlan,'distance','No sessions planned next week');
- if($('completedMixChart'))$('completedMixChart').innerHTML=intensityMixHtml(completedRuns,'distanceKm','No completed runs yet');
- if($('overallMixChart'))$('overallMixChart').innerHTML=intensityMixHtml(entirePlan,'distance','No plan volume');
+ if(!state.weekView)state.weekView=currentWeek();state.weekView=clamp(state.weekView,1,weeks());const w=state.weekView,arr=state.plan.filter(p=>p.week===w);
+ $('planProgrammeHeader').innerHTML=planProgrammeHeaderHtml();
+ $('weekHeader').innerHTML=planSelectedWeekHeaderHtml(w);
+ const title=$('planWeekTitle');if(title)title.textContent=`Week ${w} schedule`;
+ $('planCards').innerHTML=arr.map(workoutHtml).join('')||'<div class="planEmpty"><b>No workouts generated</b><p>This week has no plan entries.</p></div>';
+ $('planWeekStructure').innerHTML=planWeekStructureHtml(w);
+ $('weeklyReview').innerHTML=weeklyReviewHtml(w);
+ $('raceTimeline').innerHTML=planTimelineHtml(w);
+ $('planIntensity').innerHTML=planIntensityDistributionHtml(w);
+ document.querySelectorAll('#plan .planWorkout').forEach(item=>item.addEventListener('toggle',()=>{if(!item.open)return;document.querySelectorAll('#plan .planWorkout[open]').forEach(other=>{if(other!==item)other.removeAttribute('open')})}));
 }
+
 function streamAnalysis(records){
  let valid=records.filter(r=>Number.isFinite(r.t)&&r.hr>40&&(r.power>0||r.speed>0)).sort((a,b)=>a.t-b.t);
  if(valid.length<180)return null;

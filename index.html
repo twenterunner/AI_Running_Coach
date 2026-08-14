@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#07111D"><title>AI Running Coach</title>
-<link rel="manifest" href="manifest.webmanifest?v=20202"><link rel="stylesheet" href="styles.css?v=20202-visual">
+<link rel="manifest" href="manifest.webmanifest?v=20300"><link rel="stylesheet" href="styles.css?v=20300-visual">
 <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png?v=10320">
 <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png?v=10320">
 <link rel="icon" href="favicon.ico?v=10320">
@@ -15,7 +15,7 @@
 <body>
 <a class="skipLink" href="#mainContent">Skip to main content</a>
 <header class="topbar">
-  <div class="brand"><img class="logo" src="icon-192.png?v=10320" alt="AI Running Coach logo"><div class="brand-copy"><h1>AI Running Coach</h1><p>Race-specific adaptive planning · v12.2.2 · build 20202</p></div></div>
+  <div class="brand"><img class="logo" src="icon-192.png?v=10320" alt="AI Running Coach logo"><div class="brand-copy"><h1>AI Running Coach</h1><p>Race-specific adaptive planning · v12.3.0 · build 20300</p></div></div>
   <button id="installBtn" class="install hidden">Install</button>
 </header>
 <nav id="nav" aria-label="Primary navigation"></nav>
@@ -104,20 +104,32 @@
 </section>
 
 <section id="plan" class="page">
-  <div class="sectionTitle"><div><span class="pageEyebrow">PROGRAMME</span><h2>Training plan</h2><p>Your week first. Open one day at a time for the full prescription.</p></div></div>
-  <div class="weekNav"><button id="prevWeek">‹</button><button id="thisWeek">Current week</button><button id="nextWeek">›</button></div>
-  <div id="weekHeader" class="weekHeader"></div>
-  <div class="planPrimaryHead"><span>THIS WEEK</span><p>Your scheduled sessions come first. Tap a workout for targets, rationale and execution detail.</p></div>
-  <div id="planCards"></div>
-  <div class="planSecondaryHead"><span>AFTER YOUR SESSIONS</span><p>See what this week's evidence may change in upcoming prescriptions.</p></div>
-  <div id="weeklyReview"></div>
-  <details class="planInsightsShell">
-    <summary><span class="insightSummaryTitle">Training insights &amp; adaptation</span><small class="insightSummarySub">Timeline, prescription effects and intensity distribution</small></summary>
-    <div class="planInsightsBody">
-      <article class="panel programmeTimelinePanel"><div class="panelHead"><div><h3>Programme timeline</h3><p class="muted compact">Training blocks and current position on the path to race day.</p></div></div><div id="raceTimeline"></div></article>
-      <article class="panel planMixPanel"><div class="panelHead"><div><h3>Training intensity mix</h3><p class="muted compact">Blue-bar distribution by workout category</p></div></div><div class="mixGrid"><div><h4>Next week</h4><div id="nextWeekMixChart" class="intensityBars" role="img" aria-label="Next week training intensity mix"></div></div><div><h4>Completed to date</h4><div id="completedMixChart" class="intensityBars" role="img" aria-label="Completed training intensity mix"></div></div><div><h4>Overall programme</h4><div id="overallMixChart" class="intensityBars" role="img" aria-label="Overall programme training intensity mix"></div></div></div></article>
-    </div>
-  </details>
+  <div class="sectionTitle"><div><span class="pageEyebrow">PROGRAMME</span><h2>Training plan</h2><p>Race-specific structure, weekly prescription and adaptation.</p></div></div>
+  <div id="planProgrammeHeader"></div>
+  <div class="planWeekNavWrap">
+    <div class="weekNav"><button id="prevWeek" aria-label="Previous week">‹</button><button id="thisWeek">Current week</button><button id="nextWeek" aria-label="Next week">›</button></div>
+    <div id="weekHeader"></div>
+  </div>
+  <section class="planSection planWeekSection">
+    <div class="planSectionHead"><div><span>THIS WEEK</span><h3 id="planWeekTitle">Weekly schedule</h3><p>Tap one day to open the complete prescription. Only one workout opens at a time.</p></div></div>
+    <div id="planCards"></div>
+  </section>
+  <section class="planSection">
+    <div class="planSectionHead"><div><span>WEEKLY STRUCTURE</span><h3>How the week is built</h3><p>Volume, session composition and progression around the selected week.</p></div></div>
+    <div id="planWeekStructure"></div>
+  </section>
+  <section class="planSection">
+    <div class="planSectionHead"><div><span>PLAN ADAPTATION</span><h3>What the model is changing</h3><p>Prescription consequences first; detailed evidence stays behind foldouts.</p></div></div>
+    <div id="weeklyReview"></div>
+  </section>
+  <section class="planSection">
+    <div class="planSectionHead"><div><span>PROGRAMME TIMELINE</span><h3>Build to race day</h3><p>Training phases, current position, taper and key endurance milestones.</p></div></div>
+    <div id="raceTimeline"></div>
+  </section>
+  <section class="planSection">
+    <div class="planSectionHead"><div><span>INTENSITY DISTRIBUTION</span><h3>Where the planned distance goes</h3><p>Actual selected-week distance by the workout classifications already used by the plan.</p></div></div>
+    <div id="planIntensity"></div>
+  </section>
 </section>
 
 <section id="runs" class="page">
@@ -199,7 +211,7 @@
   <article class="panel"><h3>Data</h3><div class="buttonRow"><button id="backupBtn">Download backup</button><label for="restoreFile" class="buttonLike">Restore backup</label><input id="restoreFile" type="file" accept=".json"><button id="undoRestoreBtn" type="button" class="secondary hidden">Undo last restore</button><button id="exportBtn">Export runs CSV</button><button id="resetBtn" class="danger">Reset app</button></div></article>
 </section>
 </main>
-<footer class="appFooter"><span>AI Running Coach</span><small>v12.2.2 · build 20202</small></footer>
+<footer class="appFooter"><span>AI Running Coach</span><small>v12.3.0 · build 20300</small></footer>
 
 <div id="modal" class="modal hidden" role="dialog" aria-modal="true" aria-label="AI Running Coach dialog" tabindex="-1"><div class="modalCard"><button id="closeModal" class="close" type="button" aria-label="Close dialog">×</button><div id="modalContent"></div></div></div>
 
@@ -228,5 +240,5 @@
     <button class="primary full" type="submit">Review and create my plan</button>
   </form>
 </div>
-<script src="app.js?v=20202-visual"></script>
+<script src="app.js?v=20300-visual"></script>
 </body></html>
