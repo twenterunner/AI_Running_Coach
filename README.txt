@@ -1,4 +1,4 @@
-AI Running Coach v12.1.0 — Today Tab Locked Baseline — build 20100
+AI Running Coach v12.1.1 — Runner-first Today — build 20101
 
 Deployment
 ----------
@@ -627,3 +627,16 @@ v12.1.0 — Serious-runner Today redesign
 - Race context uses the existing phase, countdown, target time, race estimate and target probability.
 - Latest training signal uses the existing workout-execution, efficiency and cardiac-drift calculations.
 - The Today tab remains locked against unrelated future updates.
+
+
+v12.1.1 — Runner-first Today refinement
+----------------------------------------
+- Plan Health removed from Today; it is programme-design context rather than a useful daily signal.
+- Active rehabilitation is now the first and strongest Today card and explicitly overrides the running plan.
+- Today hierarchy: active rehab (when present) → coach decision/evidence → mode/readiness/pain → running prescription → one weekly summary → latest run signal → race context.
+- Week load is shown only once, in the weekly summary.
+- Long explanatory text is replaced by concise bullet lists where practical.
+- Today cards use the full available card width; pictograms now sit in card headers instead of permanently reserving a left-side content column.
+- Pain pictogram changed to an anatomical lower-limb/joint cue.
+- View full prescription now resolves the workout by date instead of relying on an internal workout ID.
+- No calculation, prediction, plan-generation, pathway, readiness, injury, scoring, import, storage or data-model equations changed.
