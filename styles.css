@@ -40,79 +40,17 @@ canvas{display:block;width:100%!important;max-width:100%;height:auto!important;m
 @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;animation:none!important;transition:none!important}}
 
 
-/* TODAY TAB — LOCKED UI CONTRACT v12.0.2
-   Approved Today baseline. Do not modify from unrelated tab work. */
-#today #todayCard,#today #todayCoach{display:grid;gap:12px}
-#today #todayCard{margin-bottom:12px}
-#today .todayUnifiedTile,#today .todayWorkoutDetails{
- background:linear-gradient(145deg,#12313a 0%,#102733 48%,#101f2b 100%);
- border:1px solid rgba(61,214,198,.24);border-radius:18px;box-shadow:none;overflow:hidden
-}
-#today .aiCoachBriefing:after{display:none!important;content:none!important}
-#today .todayUnifiedTile{padding:17px}
-#today .todaySupportGrid{display:grid;gap:12px}
-#today .todaySupportCard{margin:0}
-#today .todayTileHead{display:grid;grid-template-columns:44px minmax(0,1fr) auto;align-items:center;gap:11px;margin:0 0 14px}
-#today .todaySupportCard .todayTileHead{grid-template-columns:44px minmax(0,1fr)}
-#today .todayTileIcon{width:44px;height:44px;display:grid;place-items:center;border-radius:13px;background:rgba(61,214,198,.10);border:1px solid rgba(121,238,224,.16);color:var(--teal-2)}
-#today .todayTileIcon svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
-#today .coachBriefingIcon{background:rgba(121,238,224,.10)}
-#today .todayTileTitle{display:grid;gap:3px}
-#today .todayTileTitle small{font-size:9px;line-height:1.2;font-weight:850;letter-spacing:.12em;color:var(--teal-2)}
-#today .todayTileTitle h3{margin:0;font-size:21px;line-height:1.16;letter-spacing:-.025em;overflow-wrap:anywhere}
-#today .todayCoachBriefing .todayTileTitle h3{font-size:25px}
-#today .aiCoachLead{margin:0 0 14px;font-size:13px;line-height:1.55}
-#today .genericCopy{color:var(--text-2)}
-#today .genericCopy b{color:var(--text-2)}
-#today .personalizedBadge{align-self:start;white-space:nowrap;background:rgba(121,238,224,.11);color:var(--teal-2)}
-#today .personalizedValue,#today .todayPersonalizedBlock>ul,#today .personalizedAction b{color:var(--text);font-weight:850}
-#today .personalizedValue{letter-spacing:-.015em}
-
-/* Three equal professional athlete-status cards */
-#today .todayMetricTriplet{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:0}
-#today .todayContextMetric{
- min-height:168px;display:grid;grid-template-rows:auto 62px auto 1fr;justify-items:center;align-content:start;gap:8px;
- padding:13px 8px 12px;border-radius:18px;
- background:linear-gradient(145deg,#12313a 0%,#102733 48%,#101f2b 100%);
- border:1px solid rgba(61,214,198,.24);text-align:center;overflow:hidden
-}
-#today .todayContextMetric>small{display:block;font-size:9px;line-height:1.15;font-weight:850;letter-spacing:.08em;text-transform:uppercase;color:var(--text-2);min-height:21px}
-#today .todayContextMetric .todayMetricIcon{
- width:62px;height:62px;display:grid;place-items:center;border-radius:50%;
- background:rgba(5,18,24,.34);border:2px solid var(--teal);color:var(--teal-2)
-}
-#today .todayContextMetric .uiIcon{width:32px;height:32px;stroke-width:1.65!important}
-#today .todayContextMetric b{display:block;font-size:15px;line-height:1.2;overflow-wrap:anywhere;align-self:start}
-#today .todayMetricSupport{display:block;align-self:start;font-size:10px;line-height:1.3;color:var(--muted);overflow-wrap:anywhere}
-#today .todayContextMetric.good .todayMetricIcon{border-color:var(--good);color:var(--good)}
-#today .todayContextMetric.caution .todayMetricIcon{border-color:var(--warn);color:var(--warn)}
-#today .todayContextMetric.neutral .todayMetricIcon{border-color:var(--muted);color:var(--text-2)}
-
-#today .aiCoachCall{display:grid;grid-template-columns:40px minmax(0,1fr);align-items:center;gap:10px;padding:12px;margin:0;border-radius:13px;background:rgba(5,18,24,.46);border:1px solid rgba(121,238,224,.14)}
-#today .aiCoachCall>span{width:40px;height:40px;display:grid;place-items:center;border-radius:11px;background:rgba(61,214,198,.10);color:var(--teal-2)}
-#today .aiCoachCall svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
-#today .aiCoachCall small{display:block;font-size:8px;font-weight:850;letter-spacing:.1em;color:var(--teal-2)}
-#today .aiCoachCall b{display:block;margin-top:2px;font-size:14px;line-height:1.35}
-#today .todayPersonalizedBlock{display:grid;gap:6px;padding:12px;margin:0 0 12px;border-radius:13px;background:rgba(5,18,24,.38);border:1px solid rgba(121,238,224,.11)}
-#today .todayPersonalizedBlock>small{font-size:8px;font-weight:850;letter-spacing:.1em;color:var(--teal-2)}
-#today .todayPersonalizedBlock>.personalizedValue{font-size:16px;line-height:1.3}
-#today .todayPersonalizedBlock ul{margin:0;padding-left:19px;font-size:13px;line-height:1.5}
-#today .todaySupportCard p{font-size:12px;line-height:1.5;margin:0 0 12px}
-#today .todayInlineLink{width:100%;min-height:46px;margin-top:auto}
-#today .todayWorkoutDetails{margin:0}
-#today .todayWorkoutDetails>summary{min-height:48px;padding:13px 15px;background:rgba(5,18,24,.30);font-size:13px}
-@media(max-width:390px){
- #today .todayUnifiedTile{padding:15px}
- #today .todayTileHead{grid-template-columns:40px minmax(0,1fr) auto;gap:9px}
- #today .todaySupportCard .todayTileHead{grid-template-columns:40px minmax(0,1fr)}
- #today .todayTileIcon{width:40px;height:40px}
- #today .todayCoachBriefing .todayTileTitle h3{font-size:23px}
- #today .todayTileTitle h3{font-size:20px}
- #today .todayMetricTriplet{gap:8px}
- #today .todayContextMetric{min-height:164px;padding:12px 6px 11px;grid-template-rows:auto 58px auto 1fr;gap:7px}
- #today .todayContextMetric .todayMetricIcon{width:58px;height:58px}
- #today .todayContextMetric .uiIcon{width:30px;height:30px}
- #today .todayContextMetric b{font-size:14px}
- #today .todayMetricSupport{font-size:9px}
-}
-@media(min-width:760px){#today .todaySupportGrid{grid-template-columns:1fr 1fr}}
+/* TODAY TAB — LOCKED UI CONTRACT v12.0.3
+   Render-led rebuild. Do not modify from unrelated tab work. */
+#today #todayCard,#today #todayCoach{display:grid;gap:12px}#today #todayCard{margin-bottom:12px}
+#today .todayBriefingCard,#today .todayStatusCard,#today .todayFeatureCard,#today .todayMiniCard{background:linear-gradient(145deg,#075468 0%,#073c50 52%,#062c3d 100%);border:1px solid rgba(40,214,219,.42);border-radius:18px;box-shadow:none}
+#today .todayBriefingCard{display:grid;grid-template-columns:minmax(0,1fr) 108px;gap:14px;padding:18px;align-items:stretch}
+#today .briefingCopy{min-width:0}.briefingTitle{display:grid;grid-template-columns:58px minmax(0,1fr);gap:13px;align-items:center}.briefingIcon{width:58px;height:58px;display:grid;place-items:center;color:#fff}.briefingIcon svg{width:54px;height:54px;fill:none;stroke:currentColor;stroke-width:1.45;stroke-linecap:round;stroke-linejoin:round}.briefingTitle h3{font-size:24px;line-height:1.1;margin:0;color:#fff}.briefingTitle p{font-size:12px;margin:4px 0 0;color:#45e0e4}.briefingLead{font-size:13px;line-height:1.5;color:#f2f8fb;margin:15px 0 13px}.todayPriority{padding-top:12px;border-top:1px solid rgba(153,224,232,.22);display:grid;gap:3px}.todayPriority small{font-size:9px;font-weight:900;letter-spacing:.09em;color:#45e0e4}.todayPriority b{font-size:17px;line-height:1.25;color:#fff}
+#today .planHealthGauge{display:grid;justify-items:center;align-content:center;gap:6px;text-align:center}.gaugeRing{width:94px;height:94px;border-radius:50%;display:grid;place-content:center;background:conic-gradient(#35dfd5 calc(var(--score)*1%),rgba(108,196,205,.28) 0);position:relative}.gaugeRing:after{content:"";position:absolute;inset:9px;border-radius:50%;background:#07384a}.gaugeRing strong,.gaugeRing span{position:relative;z-index:1}.gaugeRing strong{font-size:34px;line-height:.95;color:#fff}.gaugeRing span{font-size:12px;color:#c3d7df}.planHealthGauge>small{font-size:11px;color:#d0e0e6}.planHealthGauge>b{font-size:12px;color:#8be277;border:1px solid rgba(108,218,144,.22);padding:4px 9px;border-radius:9px;background:rgba(3,27,38,.25)}
+#today .todayStatusGrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+#today .todayStatusCard{min-height:184px;padding:13px 8px 12px;display:flex;flex-direction:column;align-items:center;text-align:center;overflow:hidden}.todayStatusCard h4{font-size:10px;line-height:1.15;min-height:23px;margin:0 0 8px;color:#fff;letter-spacing:.025em}.statusRing{width:78px;height:78px;border:4px solid #35dfd5;border-radius:50%;display:grid;place-items:center;color:#fff;margin-bottom:8px}.statusRing .uiIcon{width:43px;height:43px;stroke-width:1.55!important}.todayStatusCard.good .statusRing{border-color:#8bd85e}.todayStatusCard.caution .statusRing{border-color:#ff7a32}.todayStatusCard.neutral .statusRing{border-color:#79a9b8}.todayStatusCard>strong{font-size:19px;line-height:1.1;color:#42e0cf;overflow-wrap:anywhere}.todayStatusCard.good>strong{color:#8bd85e}.todayStatusCard.caution>strong{color:#ff7a32}.todayStatusCard>p{font-size:10px;line-height:1.25;margin:5px 0 0;color:#d2e0e6;overflow-wrap:anywhere}
+#today .todayFeatureCard{padding:17px;display:grid;grid-template-columns:52px minmax(0,1fr);gap:13px}.featureIcon{width:52px;height:52px;border-radius:50%;display:grid;place-items:center;background:rgba(21,184,202,.13);border:1px solid rgba(45,218,224,.35);color:#fff}.featureIcon .uiIcon{width:30px;height:30px;stroke-width:1.6!important}.featureMain{min-width:0}.featureMain>small{font-size:9px;color:#42dce0;font-weight:850;letter-spacing:.08em}.featureHeading{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}.featureHeading h3,.featureMain>h3{font-size:21px;line-height:1.15;margin:1px 0 0;color:#fff}.featureStatus{font-size:10px;color:#43dfe4;white-space:nowrap;padding-top:3px}.workoutQuickMetrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin:11px 0 8px}.workoutQuickMetrics>span{display:flex;align-items:center;gap:4px;min-width:0}.workoutQuickMetrics .uiIcon{width:17px;height:17px;flex:0 0 17px;color:#fff}.workoutQuickMetrics b{font-size:10px;color:#f3f8fb;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#today .todayWorkoutViz{margin:7px 0 7px}.vizLabels{display:grid;grid-template-columns:1fr 2fr 1fr;align-items:end;margin-bottom:3px}.vizLabels span{font-size:8px;color:#d2e0e6}.vizLabels span:last-child{text-align:right}.vizLabels b{text-align:center;font-size:8px;color:#dcecf0}.vizBars{height:46px;display:flex;align-items:flex-end;gap:3px;border-bottom:1px solid #7ed9e0;padding:0 3px}.vizBars i{display:block;flex:1;min-width:3px;border-radius:2px 2px 0 0}.vizBars .wu,.vizBars .cd{height:var(--h);background:#4d9bbb}.vizBars .work{height:82%;background:#14d4d4;box-shadow:0 0 10px rgba(20,212,212,.13)}.workoutPurpose{font-size:10px!important;line-height:1.35!important;margin:6px 0 10px!important;color:#c7d8df!important}.todayWorkoutButton{min-height:42px!important;float:right;padding:8px 14px!important;background:linear-gradient(180deg,#14bdd0,#0796b3)!important;border-color:rgba(61,225,233,.45)!important;border-radius:10px!important;font-size:12px!important}.todayWorkoutButton span{font-size:20px;color:#fff;margin-left:8px}
+#today .todaySupportPair{display:grid;grid-template-columns:1fr 1fr;gap:12px}.todayMiniCard{min-height:132px;padding:14px;display:grid;grid-template-columns:46px minmax(0,1fr) 12px;gap:10px;align-items:start}.miniCardIcon{width:46px;height:46px;border-radius:50%;display:grid;place-items:center;background:rgba(21,184,202,.13);border:1px solid rgba(45,218,224,.32);color:#fff}.miniCardIcon svg{width:27px;height:27px;fill:none;stroke:currentColor;stroke-width:1.55;stroke-linecap:round;stroke-linejoin:round}.todayMiniCard h3{font-size:15px;line-height:1.15;margin:1px 0 4px;color:#fff}.todayMiniCard small{font-size:9px;color:#42dce0}.todayMiniCard p{font-size:10px;line-height:1.35;margin:5px 0 0;color:#edf6f8}.miniChevron{font-size:24px;color:#fff;line-height:1}
+@media(max-width:390px){#today .todayBriefingCard{grid-template-columns:minmax(0,1fr) 92px;padding:15px;gap:10px}.briefingTitle{grid-template-columns:50px minmax(0,1fr);gap:10px}.briefingIcon{width:50px;height:50px}.briefingIcon svg{width:47px;height:47px}.briefingTitle h3{font-size:21px}.briefingLead{font-size:12px}.gaugeRing{width:82px;height:82px}.gaugeRing strong{font-size:30px}.todayStatusGrid{gap:8px}.todayStatusCard{min-height:172px;padding:11px 5px}.statusRing{width:68px;height:68px}.statusRing .uiIcon{width:37px;height:37px}.todayStatusCard>strong{font-size:17px}.todayFeatureCard{grid-template-columns:46px minmax(0,1fr);padding:14px;gap:10px}.featureIcon{width:46px;height:46px}.workoutQuickMetrics{gap:3px}.workoutQuickMetrics b{font-size:9px}.todaySupportPair{gap:8px}.todayMiniCard{grid-template-columns:40px minmax(0,1fr) 9px;padding:11px;gap:7px}.miniCardIcon{width:40px;height:40px}.todayMiniCard h3{font-size:13px}.todayMiniCard p{font-size:9px}}
+@media(min-width:760px){#today .todayBriefingCard{grid-template-columns:minmax(0,1fr) 150px}.gaugeRing{width:118px;height:118px}.todayStatusCard{min-height:205px}.statusRing{width:94px;height:94px}}

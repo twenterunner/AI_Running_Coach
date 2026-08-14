@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '12.0.2';
-  const BUILD = 20002;
+  const VERSION = '12.0.3';
+  const BUILD = 20003;
   const SCHEMA = 10330;
   const PRIMARY_STORAGE_KEY = 'arc_v10330_web';
   const MIRROR_STORAGE_KEY = 'arc_v10330_mirror';
@@ -2317,81 +2317,79 @@ function visualStatusIcon(kind){
  return kind==='good'?'✓':kind==='caution'?'!':kind==='bad'?'×':'•';
 }
 
+function todayWorkoutStructure(p){
+ if(!p||p.type==='Rest')return'';
+ const main=String(p.main||'');
+ const repMatch=main.match(/(\d+)\s*[x×]\s*([0-9.]+)\s*(km|m|min)/i);
+ const reps=repMatch?clamp(Number(repMatch[1])||1,1,12):(/interval|repeat|rep/i.test(main)?5:1);
+ const warmBars=4,coolBars=4;
+ const warm=Array.from({length:warmBars},(_,i)=>`<i class="wu" style="--h:${36+i*4}%"></i>`).join('');
+ const work=Array.from({length:reps},()=>'<i class="work"></i>').join('');
+ const cool=Array.from({length:coolBars},(_,i)=>`<i class="cd" style="--h:${48-i*4}%"></i>`).join('');
+ const workLabel=repMatch?`${repMatch[1]} × ${repMatch[2]} ${repMatch[3]}`:esc(p.type);
+ return`<div class="todayWorkoutViz" role="img" aria-label="Workout structure: warm-up, ${esc(workLabel)}, cooldown"><div class="vizLabels"><span>WU</span><b>${esc(workLabel)}</b><span>CD</span></div><div class="vizBars">${warm}${work}${cool}</div></div>`;
+}
+function todayWorkoutCard(p,injuryDay){
+ if(!p||p.type==='Rest')return`<section class="todayFeatureCard todayWorkoutCard"><div class="featureIcon">${uiIcon('rest')}</div><div class="featureMain"><small>TODAY'S WORKOUT</small><h3>Recovery day</h3><p>No running session scheduled. Protect the next purposeful training exposure.</p></div></section>`;
+ const z=p.zone||{},main=String(p.main||''),repMatch=main.match(/(\d+)\s*[x×]\s*([0-9.]+)\s*(km|m|min)/i);
+ const repText=repMatch?`${repMatch[1]} × ${repMatch[2]} ${repMatch[3]}`:main;
+ return`<section class="todayFeatureCard todayWorkoutCard">
+   <div class="featureIcon shoeIcon">${uiIcon(workoutTypeClass(p.type))}</div>
+   <div class="featureMain">
+     <div class="featureHeading"><div><small>TODAY'S WORKOUT</small><h3>${esc(p.type)}</h3></div><span class="featureStatus">${injuryDay?'Rehab priority':'Scheduled'}</span></div>
+     <div class="workoutQuickMetrics">
+       <span>${uiIcon('long')}<b>${Number(p.distance).toFixed(1)} km</b></span>
+       <span>${uiIcon('quality')}<b>${esc(repText)}</b></span>
+       <span>${uiIcon('pace')}<b>${pace(z.pace)}</b></span>
+     </div>
+     ${todayWorkoutStructure(p)}
+     <p class="workoutPurpose">${esc(p.purpose||'Complete the prescribed training objective.')}</p>
+     <button type="button" class="todayWorkoutButton" data-today-workout="${esc(p.id)}">View workout <span>›</span></button>
+   </div>
+ </section>`;
+}
 function consolidatedTodayCoachBriefing(p){
- const engine=coachEngine(),report=evidenceBasedCoach(engine),ast=report.athleteState;
+ const engine=coachEngine(),report=evidenceBasedCoach(engine),ast=report.athleteState,health=planHealthAssessment();
  const activeInjury=(state.injuries||[]).find(injury=>injury.id===state.activeInjuryPlanId),injuryProgress=activeInjury?injuryPrediction(activeInjury):null,injuryDay=activeInjury?rehabCalendarDay(activeInjury,injuryProgress,iso(today()),rehabPlanDayIndex(activeInjury,iso(today()))):null;
  const readiness=ast.readiness||'Unknown',pain=ast.pain||{},readinessDetail=readinessModel();
- let headline='Stay disciplined and let the plan work.',lead='',action='';
- if(injuryDay){headline='Rehab is the priority today.';lead=`${injuryDay.title}. Complete the rehabilitation objective without adding unscheduled impact.`;action='Complete the prescribed rehabilitation and today’s check-in.';}
- else if(p&&p.type!=='Rest'){headline=`${p.type} today.`;lead=p.purpose||'Deliver the intended training stimulus with control.';action=`Complete ${Number(p.distance).toFixed(1)} km as prescribed, then log or import the run.`;}
- else{headline='Recovery is the training today.';lead='No purposeful running session is scheduled. Protect the next quality exposure.';action='Keep movement comfortable and do not add catch-up mileage.';}
-
- const sessionLabel=injuryDay?'Rehab / training':p&&p.type!=='Rest'?'Training':'Training';
- const sessionMain=injuryDay?'Rehab today':p&&p.type!=='Rest'?p.type:'Rest day';
- const sessionSub=injuryDay?injuryDay.title:p&&p.type!=='Rest'?`${Number(p.distance).toFixed(1)} km prescribed`:'No run scheduled';
- const sessionIcon=injuryDay?'rehab':p&&p.type!=='Rest'?workoutTypeClass(p.type):'rest';
- const painValue=Number.isFinite(pain.max)?`${pain.max}/10`:'No data';
- const painSub=Number.isFinite(pain.max)?(pain.max===0?'No pain recorded':pain.max<=2?'Low recorded pain':pain.max<=4?'Monitor symptoms':'Pain constraint active'):'No recent pain entry';
- const painState=Number.isFinite(pain.max)&&pain.max>=3?'caution':Number.isFinite(pain.max)?'good':'neutral';
+ let headline='Stay disciplined and let the plan work.',lead='',priority='Protect the next purposeful session';
+ if(injuryDay){headline='Rehab is the priority today';lead=`${injuryDay.title}. Complete the rehabilitation objective without adding unscheduled impact.`;priority='Complete today’s rehabilitation';}
+ else if(p&&p.type!=='Rest'){headline=`${p.type} today`;lead=p.purpose||'Deliver the intended training stimulus with control.';priority=`Complete your ${String(p.type).toLowerCase()} workout`;}
+ else{headline='Recovery is the training today';lead='No purposeful running session is scheduled. Use the day to absorb the training already completed.';priority='Recover and prepare for the next run';}
+ const healthScore=Math.round(Number(health.score)||0),healthLabel=health.label||'Plan';
+ const sessionMain=injuryDay?'Rehab':p&&p.type!=='Rest'?'On track':'Recovery';
+ const sessionSub=injuryDay?injuryDay.title:p&&p.type!=='Rest'?`${p.type} · ${Number(p.distance).toFixed(1)} km`:'No run today';
  const readinessState=readiness==='Normal'?'good':readiness==='Unknown'?'neutral':'caution';
- const readinessSub=Number.isFinite(Number(readinessDetail.modifier))?`Load modifier ×${Number(readinessDetail.modifier).toFixed(3)}`:'Temporary recovery context';
-
- return`<section class="aiCoachBriefing todayCoachBriefing visualToday uiLevel1 todayUnifiedTile">
-   <div class="todayTileHead">
-     <span class="todayTileIcon coachBriefingIcon">${coachVisualIcon('briefing')}</span>
-     <div class="todayTileTitle"><small>TODAY'S COACH BRIEFING</small><h3>${esc(headline)}</h3></div>
-     <span class="aiCoachEvidence personalizedBadge">${report.evidenceCoverage>0?`${report.evidenceCoverage}% evidence`:'Evidence building'}</span>
-   </div>
-   <p class="aiCoachLead genericCopy">${esc(lead)}</p>
-   <div class="aiCoachCall personalizedAction"><span>${coachVisualIcon('plan')}</span><div><small>NEXT ACTION</small><b>${esc(action)}</b></div></div>
+ const painNum=Number.isFinite(pain.max)?Number(pain.max):null,painState=painNum===null?'neutral':painNum<=2?'good':'caution';
+ const painLabel=painNum===null?'No data':painNum===0?'Clear':painNum<=2?'Low':painNum<=4?'Monitor':'Constraint';
+ const loadMod=Number(readinessDetail.modifier);
+ return`<section class="todayBriefingCard">
+   <div class="briefingCopy"><div class="briefingTitle"><span class="briefingIcon">${coachVisualIcon('briefing')}</span><div><h3>Coach Briefing</h3><p>Why this is your focus today</p></div></div><p class="briefingLead">${esc(lead)}</p><div class="todayPriority"><small>TODAY'S PRIORITY</small><b>${esc(priority)}</b></div></div>
+   <div class="planHealthGauge" style="--score:${healthScore}"><div class="gaugeRing"><strong>${healthScore}</strong><span>/100</span></div><small>Plan Health</small><b>${esc(healthLabel)}</b></div>
  </section>
- <div class="todayMetricTriplet" aria-label="Today's personalized context">
-   <article class="todayContextMetric primary">
-     <small>${esc(sessionLabel)}</small>
-     <span class="todayMetricIcon">${uiIcon(sessionIcon)}</span>
-     <b class="personalizedValue">${esc(sessionMain)}</b>
-     <span class="todayMetricSupport">${esc(sessionSub)}</span>
-   </article>
-   <article class="todayContextMetric ${readinessState}">
-     <small>Readiness</small>
-     <span class="todayMetricIcon">${uiIcon('recovery')}</span>
-     <b class="personalizedValue">${esc(readiness)}</b>
-     <span class="todayMetricSupport">${esc(readinessSub)}</span>
-   </article>
-   <article class="todayContextMetric ${painState}">
-     <small>Pain</small>
-     <span class="todayMetricIcon">${uiIcon('pain')}</span>
-     <b class="personalizedValue">${esc(painValue)}</b>
-     <span class="todayMetricSupport">${esc(painSub)}</span>
-   </article>
- </div>`;
+ <div class="todayStatusGrid">
+   <article class="todayStatusCard training"><h4>REHAB / TRAINING</h4><div class="statusRing">${uiIcon(injuryDay?'rehab':p&&p.type!=='Rest'?workoutTypeClass(p.type):'rest')}</div><strong>${esc(sessionMain)}</strong><p>${esc(sessionSub)}</p></article>
+   <article class="todayStatusCard ${readinessState}"><h4>READINESS</h4><div class="statusRing">${uiIcon('heart')}</div><strong>${esc(readiness)}</strong><p>${Number.isFinite(loadMod)?`Load ×${loadMod.toFixed(3)}`:'Recovery context'}</p></article>
+   <article class="todayStatusCard ${painState}"><h4>PAIN</h4><div class="statusRing">${uiIcon('pain')}</div><strong>${painNum===null?'—':painNum+'/10'}</strong><p>${esc(painLabel)}</p></article>
+ </div>
+ ${todayWorkoutCard(p,injuryDay)}`;
 }
 function dailyCoachFocus(p){
- const ast=athleteState(currentWeek());
- const activeInjury=(state.injuries||[]).find(injury=>injury.id===state.activeInjuryPlanId);
- const injuryProgress=activeInjury?injuryPrediction(activeInjury):null;
- const injuryDay=activeInjury?rehabCalendarDay(activeInjury,injuryProgress,iso(today()),rehabPlanDayIndex(activeInjury,iso(today()))):null;
- const wd=weekData(ast.currentWeek),completion=wd.planned>0?Math.round(wd.actual/wd.planned*100):null;
- let cards=[];
- if(injuryDay){
-   const rehabItems=injuryDay.items.length?injuryDay.items.map(item=>`<li>${esc(item)}</li>`).join(''):`<li>${esc(injuryDay.rule)}</li>`;
-   cards.push(`<section class="todaySupportCard rehabSupport uiLevel2 todayUnifiedTile"><div class="todayTileHead"><span class="todayTileIcon">${coachVisualIcon('injury')}</span><div class="todayTileTitle"><small>REHABILITATION</small><h3>${esc(injuryDay.title)}</h3></div></div><div class="todayPersonalizedBlock"><small>TODAY'S PRESCRIPTION</small><ul>${rehabItems}</ul></div><p class="genericCopy"><b>Safety:</b> ${esc(injuryDay.rule)}</p><button type="button" class="todayInlineLink" data-go="injury">Open rehab plan</button></section>`);
- }
- let trainingBody='';
- if(p&&p.type!=='Rest')trainingBody=`<div class="todayPersonalizedBlock"><small>TODAY'S SESSION</small><b class="personalizedValue">${esc(p.type)} · ${Number(p.distance).toFixed(1)} km</b></div><p class="genericCopy">${esc(p.purpose||'Complete the prescribed training objective.')}</p>${injuryDay?'<p class="supportNotice">The active rehabilitation plan takes priority today.</p>':''}`;
- else trainingBody=`<div class="todayPersonalizedBlock"><small>TODAY'S SESSION</small><b class="personalizedValue">No running session scheduled</b></div><p class="genericCopy">Do not add a catch-up run. Preserve the next purposeful training exposure.</p>`;
- cards.push(`<section class="todaySupportCard trainingSupport uiLevel2 todayUnifiedTile"><div class="todayTileHead"><span class="todayTileIcon">${coachVisualIcon('plan')}</span><div class="todayTileTitle"><small>TRAINING PLAN</small><h3>Today's running plan</h3></div></div>${trainingBody}<button type="button" class="todayInlineLink" data-go="plan">View training week</button></section>`);
- return `<div class="todaySupportGrid">${cards.join('')}</div>`;
+ const ast=athleteState(currentWeek()),activeInjury=(state.injuries||[]).find(injury=>injury.id===state.activeInjuryPlanId),injuryProgress=activeInjury?injuryPrediction(activeInjury):null,injuryDay=activeInjury?rehabCalendarDay(activeInjury,injuryProgress,iso(today()),rehabPlanDayIndex(activeInjury,iso(today()))):null;
+ const recoveryText=ast.readiness==='Normal'?'Recovery signals are supportive of the planned session.':'Use recovery signals to keep the prescribed effort controlled.';
+ const nextAction=injuryDay?'Complete today’s rehab and check-in before adding any running.':p&&p.type!=='Rest'?`Execute ${p.type} as prescribed, then log or import the run.`:'Keep movement comfortable and prepare for the next scheduled session.';
+ return`<div class="todaySupportPair">
+   <section class="todayMiniCard"><span class="miniCardIcon">${coachVisualIcon('recovery')}</span><div><h3>Recovery Support</h3><small>Current context</small><p>${esc(recoveryText)}</p></div><span class="miniChevron">›</span></section>
+   <section class="todayMiniCard"><span class="miniCardIcon">${coachVisualIcon('plan')}</span><div><h3>Next Action</h3><small>Most important next step</small><p>${esc(nextAction)}</p></div><span class="miniChevron">›</span></section>
+ </div>`;
 }
 function renderToday(){
  let p=state.plan.find(x=>x.date===iso(today()));
  $('todayDate').textContent=today().toLocaleDateString(undefined,{weekday:'long',day:'numeric',month:'long'});
- const activeInjury=(state.injuries||[]).find(injury=>injury.id===state.activeInjuryPlanId);
- const injuryProgress=activeInjury?injuryPrediction(activeInjury):null;
- const injuryDay=activeInjury?rehabCalendarDay(activeInjury,injuryProgress,iso(today()),rehabPlanDayIndex(activeInjury,iso(today()))):null;
- const workoutSection=!injuryDay&&p&&p.type!=='Rest'?`<details class="todayWorkoutDetails"><summary>View today’s detailed running prescription</summary>${workoutHtml(p)}</details>`:'';
- $('todayCard').innerHTML=consolidatedTodayCoachBriefing(p)+workoutSection;
+ $('todayCard').innerHTML=consolidatedTodayCoachBriefing(p);
  $('todayCoach').innerHTML=dailyCoachFocus(p);
+ const workoutBtn=document.querySelector('[data-today-workout]');
+ if(workoutBtn)workoutBtn.onclick=()=>{const target=state.plan.find(x=>x.id===workoutBtn.dataset.todayWorkout);if(target)openModal(`<div class="todayWorkoutModal">${workoutHtml(target)}</div>`);};
 }
 
 function weeklyReviewData(w=currentWeek()){

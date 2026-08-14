@@ -1,4 +1,4 @@
-AI Running Coach v12.0.2 — Today Tab Locked Baseline — build 20002
+AI Running Coach v12.0.3 — Today Tab Locked Baseline — build 20003
 
 Deployment
 ----------
@@ -597,3 +597,12 @@ v12.0.2 — Today professional status cards
 - Rehab/Training, Readiness and Pain are standalone equal-width cards with centered large circular pictograms, strong personalized values and compact supporting context from existing app data.
 - The three status cards share exactly the same internal layout and spacing.
 - Today v12.0.2 remains the locked baseline for all future non-Today tab work.
+
+
+v12.0.3 — Today render-led rebuild
+-----------------------------------
+- Today tab rebuilt from the approved reference render, not patched from the previous layout.
+- Larger SVG pictograms, three equal athlete-status cards, Plan Health gauge, visual workout-structure bars and compact support cards.
+- Workout structure visual is generated only from the existing prescribed workout data (warm-up / main set / cooldown and detected repetition count).
+- No calculation, prediction, pathway, recovery, injury, scoring, import, storage or data-model engine logic changed.
+- Today remains locked against unrelated future tab updates.
