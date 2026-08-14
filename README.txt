@@ -576,3 +576,13 @@ v11.1.0 Premium UI rebuild
 - Today coach action icon receives fixed dimensions to prevent oversized/black SVG boxes.
 - Consistent card, foldout, button, chart, badge and icon primitives across all destinations.
 - No training, prediction, adaptation, recovery, injury, scoring, storage, import or assessment engine changes.
+
+v11.2.0 UX refinement — build 18200
+-----------------------------------
+- UI-only change. No training, prediction, adaptation, recovery, injury, scoring, import or storage engines changed.
+- Plan days are collapsed by default and expand when the day is tapped.
+- Reworked Progress evidence cards so titles, explanations, impact and confidence never concatenate.
+- Added/strengthened micro-visuals: pathway sparklines, evidence score bars, recovery score/pain bars, plan-health and outlook rails.
+- Replaced bright blue CTA slabs with dark premium controls and cyan emphasis.
+- Recovery/injury KPI tiles use a robust 2-column mobile layout.
+- More menu is a compact icon + label list.
