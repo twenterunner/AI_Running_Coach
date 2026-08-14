@@ -586,3 +586,12 @@ v11.2.0 UX refinement — build 18200
 - Replaced bright blue CTA slabs with dark premium controls and cyan emphasis.
 - Recovery/injury KPI tiles use a robust 2-column mobile layout.
 - More menu is a compact icon + label list.
+
+v11.3.0 Visual + typography refinement — build 18300
+----------------------------------------------------
+- UI-only changes.
+- Restores the graphical Programme Timeline with colored phase segments and current-week marker.
+- Revisits global text spacing, line-height, wrapping and metric-card structure to prevent concatenation/misalignment.
+- Adds deliberate pictogram colors by purpose and visual color-coding to progress bars and timeline segments.
+- Separates page background, primary cards, nested tiles and plotting surfaces into distinct dark-slate layers.
+- No model/data engine changes.

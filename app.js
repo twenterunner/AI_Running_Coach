@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '11.2.0';
-  const BUILD = 18200;
+  const VERSION = '11.3.0';
+  const BUILD = 18300;
   const SCHEMA = 10330;
   const PRIMARY_STORAGE_KEY = 'arc_v10330_web';
   const MIRROR_STORAGE_KEY = 'arc_v10330_mirror';
@@ -2046,7 +2046,17 @@ function renderDashboard(){
  const remaining=raceTimeRemaining();
  const programmeSpan=Math.max(DAY,programmeEnd-programmeStart);
  const programmeCompletion=clamp((today()-programmeStart)/programmeSpan*100,0,100);
- $('raceTimeline').innerHTML=`<div class="timelineBlocks">${blocks.map(b=>`<div class="timelineBlock timeline-${b.cls}" style="left:${b.start}%;width:${b.end-b.start}%" title="${esc(b.name)}"><span>${b.label}</span></div>`).join('')}<i class="timelineProgress" style="width:${pos}%"></i><span class="timelineNow" style="left:${pos}%" aria-label="Current programme position"></span></div><div class="timelineScale"><span>Plan start</span><span>Race day</span></div><div class="timelineMeta"><b>${detailedPhase(engine.cw)} phase · week ${engine.cw} of ${total}</b><span>${Math.round(programmeCompletion)}% complete · ${remaining.label} until race</span></div>`;
+ $('raceTimeline').innerHTML=(()=>{
+ const blocks=programmeBlocks(),pct=clamp((currentWeek-1)/Math.max(1,planWeeks.length-1)*100,0,100);
+ return `<div class="programmeTimelineVisual">
+   <div class="timelineRailWrap">
+     <div class="timelineLabels">${blocks.map(b=>`<span style="width:${b.pct}%">${esc(b.label)}</span>`).join('')}</div>
+     <div class="timelineRail">${blocks.map((b,i)=>`<i class="block b${i+1}" style="width:${b.pct}%"></i>`).join('')}<b class="timelineMarker" style="left:${pct}%"></b></div>
+     <div class="timelineEnds"><span>Plan start</span><span>Race day</span></div>
+   </div>
+   <div class="timelineSummary"><strong>${esc(currentBlockName())} phase · week ${currentWeek} of ${planWeeks.length}</strong><span>${Math.round(pct)}% complete · ${Math.max(0,planWeeks.length-currentWeek)} weeks until race</span></div>
+ </div>`;
+})();
  let afd=adaptiveFactorDetails(cw);
  $('kpis').innerHTML=kpi('Time until race',remaining.label,'Remaining')+kpi('Programme completion',`${Math.round(programmeCompletion)}%`,'Elapsed on timeline');
  $('weeklyDistanceSummary').innerHTML=`<span class="chartSummaryLabel">This week</span><strong>${wd.actual.toFixed(1)} / ${wd.planned.toFixed(1)} km</strong>`;

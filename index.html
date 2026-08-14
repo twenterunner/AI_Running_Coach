@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#07111D"><title>AI Running Coach</title>
-<link rel="manifest" href="manifest.webmanifest?v=18200"><link rel="stylesheet" href="styles.css?v=18200-ux">
+<link rel="manifest" href="manifest.webmanifest?v=18300"><link rel="stylesheet" href="styles.css?v=18300-visual">
 <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png?v=10320">
 <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png?v=10320">
 <link rel="icon" href="favicon.ico?v=10320">
@@ -15,7 +15,7 @@
 <body>
 <a class="skipLink" href="#mainContent">Skip to main content</a>
 <header class="topbar">
-  <div class="brand"><img class="logo" src="icon-192.png?v=10320" alt="AI Running Coach logo"><div class="brand-copy"><h1>AI Running Coach</h1><p>Race-specific adaptive planning · v11.2.0 · build 18200</p></div></div>
+  <div class="brand"><img class="logo" src="icon-192.png?v=10320" alt="AI Running Coach logo"><div class="brand-copy"><h1>AI Running Coach</h1><p>Race-specific adaptive planning · v11.3.0 · build 18300</p></div></div>
   <button id="installBtn" class="install hidden">Install</button>
 </header>
 <nav id="nav" aria-label="Primary navigation"></nav>
@@ -112,7 +112,7 @@
   <div class="planSecondaryHead"><span>AFTER YOUR SESSIONS</span><p>See what this week's evidence may change in upcoming prescriptions.</p></div>
   <div id="weeklyReview"></div>
   <details class="planInsightsShell">
-    <summary><span>Training insights &amp; adaptation</span><small>Timeline, prescription effects and intensity distribution</small></summary>
+    <summary><span class="insightSummaryTitle">Training insights &amp; adaptation</span><small class="insightSummarySub">Timeline, prescription effects and intensity distribution</small></summary>
     <div class="planInsightsBody">
       <article class="panel programmeTimelinePanel"><div class="panelHead"><div><h3>Programme timeline</h3><p class="muted compact">Training blocks and current position on the path to race day.</p></div></div><div id="raceTimeline"></div></article>
       <article class="panel planMixPanel"><div class="panelHead"><div><h3>Training intensity mix</h3><p class="muted compact">Blue-bar distribution by workout category</p></div></div><div class="mixGrid"><div><h4>Next week</h4><div id="nextWeekMixChart" class="intensityBars" role="img" aria-label="Next week training intensity mix"></div></div><div><h4>Completed to date</h4><div id="completedMixChart" class="intensityBars" role="img" aria-label="Completed training intensity mix"></div></div><div><h4>Overall programme</h4><div id="overallMixChart" class="intensityBars" role="img" aria-label="Overall programme training intensity mix"></div></div></div></article>
@@ -199,7 +199,7 @@
   <article class="panel"><h3>Data</h3><div class="buttonRow"><button id="backupBtn">Download backup</button><label for="restoreFile" class="buttonLike">Restore backup</label><input id="restoreFile" type="file" accept=".json"><button id="undoRestoreBtn" type="button" class="secondary hidden">Undo last restore</button><button id="exportBtn">Export runs CSV</button><button id="resetBtn" class="danger">Reset app</button></div></article>
 </section>
 </main>
-<footer class="appFooter"><span>AI Running Coach</span><small>v11.2.0 · build 18200</small></footer>
+<footer class="appFooter"><span>AI Running Coach</span><small>v11.3.0 · build 18300</small></footer>
 
 <div id="modal" class="modal hidden" role="dialog" aria-modal="true" aria-label="AI Running Coach dialog" tabindex="-1"><div class="modalCard"><button id="closeModal" class="close" type="button" aria-label="Close dialog">×</button><div id="modalContent"></div></div></div>
 
@@ -228,5 +228,5 @@
     <button class="primary full" type="submit">Review and create my plan</button>
   </form>
 </div>
-<script src="app.js?v=18200-ux"></script>
+<script src="app.js?v=18300-visual"></script>
 </body></html>
