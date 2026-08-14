@@ -2737,4 +2737,218 @@ canvas{display:block;width:100%!important;max-width:100%;height:auto!important;m
  #dashboard.progressPage .progressInlineChart .axis.x{font-size:11px!important}
  #dashboard.progressPage .progressChartLegend{font-size:9px!important;gap:6px 10px!important}
 }
-\n\n/* v13.1.9 Progress-only hierarchy + chart-card sizing.\n   Exact primary surface copied from the locked Today visual contract. */\n#dashboard.progressPage{\n --progress-l1:linear-gradient(145deg,#075468 0%,#073c50 52%,#062c3d 100%);\n --progress-l1-border:rgba(40,214,219,.42);\n --progress-l2:rgba(3,31,43,.28);\n --progress-l2-border:rgba(87,219,224,.16);\n --progress-l3:rgba(2,27,37,.50);\n --progress-l3-border:rgba(87,219,224,.13);\n overflow-x:clip!important;\n overscroll-behavior-x:none;\n touch-action:pan-y;\n}\nbody:has(#dashboard.progressPage.active),\n#mainContent:has(#dashboard.progressPage.active){overflow-x:hidden!important;max-width:100vw!important}\n#dashboard.progressPage .progressHero,\n#dashboard.progressPage .progressSection>.panel,\n#dashboard.progressPage .progressSection>.grid2>.panel,\n#dashboard.progressPage .progressReviewSlot>.panel,\n#dashboard.progressPage .progressExecutionCard,\n#dashboard.progressPage .progressRecoveryCard,\n#dashboard.progressPage .canonicalAdaptationHome,\n#dashboard.progressPage .personalModelPanel,\n#dashboard.progressPage .modelValidationPanel,\n#dashboard.progressPage .coachAssessmentPanel{\n background:var(--progress-l1)!important;\n border:1px solid var(--progress-l1-border)!important;\n border-radius:18px!important;\n box-shadow:none!important;\n}\n#dashboard.progressPage :is(.outlookCard,.outlookMiniMetric,.outlookMetricDetail,.fitnessMetricGroup .kpi,.progressMetricLead>div,.predictionReferences>div,.predictionCurrent,.predictionAwaiting,.canonicalPathwayGrid>.adaptationVisualCard,.canonicalPathMetrics>div,.personalDimension,.personalModelSummary>div,.modelValidationGrid>article,.scienceProvenance>div,.coachVerdict,.coachEvidenceGrid>section,.coachAction,.evidenceFinding,.executionAssessment,.progressInterruption,.recoveryQuickGrid>div){\n background:var(--progress-l2)!important;\n border:1px solid var(--progress-l2-border)!important;\n}\n#dashboard.progressPage details:not(.modelDetails)>summary,\n#dashboard.progressPage .evidenceDetail,\n#dashboard.progressPage .executionRow,\n#dashboard.progressPage .chartDataTable{background:var(--progress-l3)!important;border-color:var(--progress-l3-border)!important}\n\n/* The chart itself defines the card height. No hidden summary/fallback occupies space. */\n#dashboard.progressPage .predictionPanel,\n#dashboard.progressPage .progressChartPanel,\n#dashboard.progressPage .metricCharts>.panel{\n min-height:0!important;\n height:auto!important;\n padding:14px!important;\n align-self:start!important;\n overflow:hidden!important;\n}\n#dashboard.progressPage #predictionSummary{display:none!important}\n#dashboard.progressPage .chartDataTable{display:none!important}\n#dashboard.progressPage .progressChartPanel .panelHead,\n#dashboard.progressPage .metricCharts>.panel .panelHead{margin-bottom:6px!important}\n#dashboard.progressPage .progressChartMount{\n margin:6px 0 0!important;\n padding:0!important;\n min-height:0!important;\n height:auto!important;\n overflow:hidden!important;\n contain:content!important;\n}\n#dashboard.progressPage .progressInlineChart{\n display:block!important;\n width:100%!important;\n height:auto!important;\n max-width:100%!important;\n aspect-ratio:640/286!important;\n margin:0!important;\n}\n#dashboard.progressPage .progressChartLegend{margin:0 0 2px!important;padding:0!important}\n#dashboard.progressPage .progressReviewSlot{display:grid;gap:0;margin:0 0 30px;width:100%;max-width:100%}\n#dashboard.progressPage .progressReviewSlot>.panel{margin:0!important;padding:16px!important}\n#dashboard.progressPage .progressReviewSlot .coachVerdict{margin-bottom:10px!important}\n#dashboard.progressPage .progressReviewSlot .progressReviewBullets{padding-left:18px!important}\n#dashboard.progressPage .progressReviewSlot .progressReviewBullets li{margin:0 0 5px!important}\n\n/* Never allow a Progress child to widen the viewport. */\n#dashboard.progressPage,\n#dashboard.progressPage *,\n#dashboard.progressPage *::before,\n#dashboard.progressPage *::after{max-inline-size:100%;min-inline-size:0}\n#dashboard.progressPage svg,#dashboard.progressPage canvas,#dashboard.progressPage table{max-width:100%!important}\n#dashboard.progressPage .tableScroll{overflow-x:auto!important;max-width:100%!important}\n
+
+
+/* v13.1.9 Progress-only hierarchy + chart-card sizing.
+   Exact primary surface copied from the locked Today visual contract. */
+#dashboard.progressPage{
+ --progress-l1:linear-gradient(145deg,#075468 0%,#073c50 52%,#062c3d 100%);
+ --progress-l1-border:rgba(40,214,219,.42);
+ --progress-l2:rgba(3,31,43,.28);
+ --progress-l2-border:rgba(87,219,224,.16);
+ --progress-l3:rgba(2,27,37,.50);
+ --progress-l3-border:rgba(87,219,224,.13);
+ overflow-x:clip!important;
+ overscroll-behavior-x:none;
+ touch-action:pan-y;
+}
+body:has(#dashboard.progressPage.active),
+#mainContent:has(#dashboard.progressPage.active){overflow-x:hidden!important;max-width:100vw!important}
+#dashboard.progressPage .progressHero,
+#dashboard.progressPage .progressSection>.panel,
+#dashboard.progressPage .progressSection>.grid2>.panel,
+#dashboard.progressPage .progressReviewSlot>.panel,
+#dashboard.progressPage .progressExecutionCard,
+#dashboard.progressPage .progressRecoveryCard,
+#dashboard.progressPage .canonicalAdaptationHome,
+#dashboard.progressPage .personalModelPanel,
+#dashboard.progressPage .modelValidationPanel,
+#dashboard.progressPage .coachAssessmentPanel{
+ background:var(--progress-l1)!important;
+ border:1px solid var(--progress-l1-border)!important;
+ border-radius:18px!important;
+ box-shadow:none!important;
+}
+#dashboard.progressPage :is(.outlookCard,.outlookMiniMetric,.outlookMetricDetail,.fitnessMetricGroup .kpi,.progressMetricLead>div,.predictionReferences>div,.predictionCurrent,.predictionAwaiting,.canonicalPathwayGrid>.adaptationVisualCard,.canonicalPathMetrics>div,.personalDimension,.personalModelSummary>div,.modelValidationGrid>article,.scienceProvenance>div,.coachVerdict,.coachEvidenceGrid>section,.coachAction,.evidenceFinding,.executionAssessment,.progressInterruption,.recoveryQuickGrid>div){
+ background:var(--progress-l2)!important;
+ border:1px solid var(--progress-l2-border)!important;
+}
+#dashboard.progressPage details:not(.modelDetails)>summary,
+#dashboard.progressPage .evidenceDetail,
+#dashboard.progressPage .executionRow,
+#dashboard.progressPage .chartDataTable{background:var(--progress-l3)!important;border-color:var(--progress-l3-border)!important}
+
+/* The chart itself defines the card height. No hidden summary/fallback occupies space. */
+#dashboard.progressPage .predictionPanel,
+#dashboard.progressPage .progressChartPanel,
+#dashboard.progressPage .metricCharts>.panel{
+ min-height:0!important;
+ height:auto!important;
+ padding:14px!important;
+ align-self:start!important;
+ overflow:hidden!important;
+}
+#dashboard.progressPage #predictionSummary{display:none!important}
+#dashboard.progressPage .chartDataTable{display:none!important}
+#dashboard.progressPage .progressChartPanel .panelHead,
+#dashboard.progressPage .metricCharts>.panel .panelHead{margin-bottom:6px!important}
+#dashboard.progressPage .progressChartMount{
+ margin:6px 0 0!important;
+ padding:0!important;
+ min-height:0!important;
+ height:auto!important;
+ overflow:hidden!important;
+ contain:content!important;
+}
+#dashboard.progressPage .progressInlineChart{
+ display:block!important;
+ width:100%!important;
+ height:auto!important;
+ max-width:100%!important;
+ aspect-ratio:640/286!important;
+ margin:0!important;
+}
+#dashboard.progressPage .progressChartLegend{margin:0 0 2px!important;padding:0!important}
+#dashboard.progressPage .progressReviewSlot{display:grid;gap:0;margin:0 0 30px;width:100%;max-width:100%}
+#dashboard.progressPage .progressReviewSlot>.panel{margin:0!important;padding:16px!important}
+#dashboard.progressPage .progressReviewSlot .coachVerdict{margin-bottom:10px!important}
+#dashboard.progressPage .progressReviewSlot .progressReviewBullets{padding-left:18px!important}
+#dashboard.progressPage .progressReviewSlot .progressReviewBullets li{margin:0 0 5px!important}
+
+/* Never allow a Progress child to widen the viewport. */
+#dashboard.progressPage,
+#dashboard.progressPage *,
+#dashboard.progressPage *::before,
+#dashboard.progressPage *::after{max-inline-size:100%;min-inline-size:0}
+#dashboard.progressPage svg,#dashboard.progressPage canvas,#dashboard.progressPage table{max-width:100%!important}
+#dashboard.progressPage .tableScroll{overflow-x:auto!important;max-width:100%!important}
+
+
+/* v13.1.10 Progress contract — mirrors the locked Today visual language. */
+#dashboard.progressPage{
+  overflow-x:hidden!important;
+  overscroll-behavior-x:none;
+  touch-action:pan-y;
+}
+#dashboard.progressPage,
+#dashboard.progressPage *{box-sizing:border-box;min-width:0;max-width:100%}
+#dashboard.progressPage svg,#dashboard.progressPage canvas{display:block;max-width:100%!important}
+
+/* Level 1 / hero: exact Today briefing treatment. */
+#dashboard.progressPage .progressHero{
+  background:linear-gradient(145deg,#12313a,#10232f 62%)!important;
+  border:1px solid rgba(61,214,198,.25)!important;
+  border-radius:var(--r2)!important;
+  box-shadow:none!important;
+}
+
+/* Level 1 content cards: exact Today support-card surface. */
+#dashboard.progressPage :is(
+  .predictionPanel,.progressChartPanel,.metricCharts>.panel,.fitnessMetricGroup,
+  .progressExecutionCard,.progressRecoveryCard,.canonicalAdaptationHome,
+  .personalModelPanel,.modelValidationPanel,.coachAssessmentPanel,
+  .progressReviewSlot>.panel
+){
+  background:var(--card)!important;
+  border:1px solid rgba(136,161,177,.13)!important;
+  border-radius:var(--r2)!important;
+  box-shadow:none!important;
+  color:var(--text)!important;
+}
+
+/* Level 2: exact nested surface used throughout Today. */
+#dashboard.progressPage :is(
+  .outlookCard,.outlookMiniMetric,.outlookMetricDetail,.fitnessMetricGroup .kpi,
+  .progressMetricLead>div,.predictionReferences>div,.predictionCurrent,
+  .predictionAwaiting,.canonicalPathwayGrid>.adaptationVisualCard,
+  .canonicalPathMetrics>div,.personalDimension,.personalModelSummary>div,
+  .modelValidationGrid>article,.scienceProvenance>div,.coachVerdict,
+  .coachEvidenceGrid>section,.coachAction,.evidenceFinding,.executionAssessment,
+  .progressInterruption,.recoveryQuickGrid>div,.executionKpis>span
+){
+  background:var(--nested)!important;
+  border:1px solid rgba(136,161,177,.11)!important;
+  border-radius:var(--r1)!important;
+}
+
+/* Level 3 / disclosure: same disclosure surface as Today. */
+#dashboard.progressPage details:not(.panel):not(.workout),
+#dashboard.progressPage .evidenceDetail,
+#dashboard.progressPage .executionRow{
+  background:#0c1923!important;
+  border:1px solid rgba(136,161,177,.12)!important;
+  border-radius:13px!important;
+}
+#dashboard.progressPage details:not(.panel):not(.workout)>summary{
+  background:rgba(61,214,198,.035)!important;
+}
+
+/* Today-equivalent typography inside cards. */
+#dashboard.progressPage .panelHead h3,
+#dashboard.progressPage .progressChartPanel h3,
+#dashboard.progressPage .metricCharts>.panel h3{
+  margin:0 0 3px!important;
+  font-size:18px!important;
+  line-height:1.2!important;
+  letter-spacing:-.015em!important;
+  font-weight:850!important;
+}
+#dashboard.progressPage .panelHead p,
+#dashboard.progressPage .progressChartPanel .muted,
+#dashboard.progressPage .metricCharts>.panel .muted{
+  margin:0!important;
+  font-size:12px!important;
+  line-height:1.4!important;
+  color:var(--muted)!important;
+}
+
+/* Chart cards must hug their chart — no inherited minimum heights or aspect-ratio spacers. */
+#dashboard.progressPage :is(.predictionPanel,.progressChartPanel,.metricCharts>.panel){
+  display:block!important;
+  min-height:0!important;
+  height:auto!important;
+  padding:16px!important;
+  margin-bottom:12px!important;
+  overflow:hidden!important;
+}
+#dashboard.progressPage :is(.predictionPanel,.progressChartPanel,.metricCharts>.panel) .panelHead{
+  margin:0 0 10px!important;
+}
+#dashboard.progressPage .progressChartMount,
+#dashboard.progressPage .progressChartMount[aria-hidden="true"]{
+  display:block!important;
+  width:100%!important;
+  min-height:0!important;
+  height:auto!important;
+  margin:0!important;
+  padding:0!important;
+  overflow:hidden!important;
+  contain:none!important;
+}
+#dashboard.progressPage .progressChartLegend{
+  display:flex!important;
+  flex-wrap:wrap!important;
+  gap:6px 14px!important;
+  margin:0 0 6px!important;
+  padding:0!important;
+  font-size:10px!important;
+  line-height:1.25!important;
+}
+#dashboard.progressPage .progressInlineChart{
+  display:block!important;
+  width:100%!important;
+  height:auto!important;
+  max-width:100%!important;
+  aspect-ratio:auto!important;
+  margin:0!important;
+  overflow:hidden!important;
+}
+#dashboard.progressPage .progressInlineChart .axis{font-size:12px!important;font-weight:600!important;fill:var(--text-2)!important}
+#dashboard.progressPage .progressInlineChart .axis.x{font-size:11px!important}
+#dashboard.progressPage .progressInlineChart .grid{stroke:rgba(136,161,177,.18)!important}
+#dashboard.progressPage .progressInlineChart .grid.base{stroke:rgba(196,213,223,.45)!important}
+
+/* Keep the page fixed to the phone viewport width. */
+body:has(#dashboard.progressPage.active),
+#mainContent:has(#dashboard.progressPage.active){overflow-x:hidden!important;max-width:100vw!important}
+#dashboard.progressPage .tableScroll{overflow-x:auto!important;max-width:100%!important}

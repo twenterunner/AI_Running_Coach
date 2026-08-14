@@ -1,4 +1,4 @@
-AI Running Coach v13.1.9 — Progress hierarchy refinement — build 30109
+AI Running Coach v13.1.10 — Progress hierarchy refinement — build 30110
 
 - Longitudinal Training Review now sits directly between Race Readiness and Fitness & Capability.
 - Progress chart cards shrink to their chart content and no longer show the View chart summary and data foldouts.
@@ -986,7 +986,7 @@ v13.1.8 Progress chart reliability correction
 - No training, prediction, pathway, recovery, injury, scoring, import, storage or data-model calculation was changed.
 
 
-v13.1.9 Progress hierarchy refinement
+v13.1.10 Progress hierarchy refinement
 -------------------------------------
 - Moves the Longitudinal Training Review directly below Race Readiness, before Fitness & Capability.
 - Removes the visible chart-summary/data disclosures from Progress charts while retaining accessible chart labels.

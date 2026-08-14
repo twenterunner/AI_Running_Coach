@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '13.1.9';
-  const BUILD = 30109;
+  const VERSION = '13.1.10';
+  const BUILD = 30110;
   const SCHEMA = 10330;
   const PRIMARY_STORAGE_KEY = 'arc_v10330_web';
   const MIRROR_STORAGE_KEY = 'arc_v10330_mirror';
@@ -4992,7 +4992,7 @@ function progressSvgIntoMount(mountId,series,options={}){
   const numeric=cleanSeries.flatMap(s=>(s.data||[]).filter(v=>Number.isFinite(v)));
   mount.setAttribute('aria-hidden','false');
   if(!numeric.length){mount.innerHTML=`<div class="progressChartState"><div><b>Building your baseline</b><p>${esc(options.empty||'No valid observations are available yet.')}</p></div></div>`;return;}
-  const W=640,H=286,L=66,R=18,T=38,B=46,CW=W-L-R,CH=H-T-B;
+  const W=640,H=226,L=58,R=14,T=18,B=34,CW=W-L-R,CH=H-T-B;
   let min=Number.isFinite(options.min)?Number(options.min):(options.zero===false?Math.min(...numeric):0);
   let max=Number.isFinite(options.max)?Number(options.max):Math.max(...numeric);
   if(max<=min)max=min+1;
@@ -5012,7 +5012,7 @@ function progressSvgIntoMount(mountId,series,options={}){
    if(sr.points!==false)vals.forEach(o=>parts.push(`<circle cx="${x(o.i)}" cy="${y(o.v)}" r="4.5" fill="#f5fbff" stroke="${color}" stroke-width="2.5"/>`));
   });
   const positions=options.allLabels?labels.map((_,i)=>i):[0,Math.floor((labels.length-1)/2),labels.length-1].filter((v,i,a)=>v>=0&&a.indexOf(v)===i);
-  positions.forEach(i=>{if(labels[i]!=null)parts.push(`<text class="axis x" x="${x(i)}" y="${H-13}" text-anchor="middle">${xe(labels[i])}</text>`)});
+  positions.forEach(i=>{if(labels[i]!=null)parts.push(`<text class="axis x" x="${x(i)}" y="${H-9}" text-anchor="middle">${xe(labels[i])}</text>`)});
   const legend=cleanSeries.filter(s=>s.label).map(s=>`<span><i style="--series:${s.color||'#3dd6c6'}"></i>${xe(s.label)}</span>`).join('');
   mount.innerHTML=`${legend?`<div class="progressChartLegend">${legend}</div>`:''}<svg class="progressInlineChart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="${xe(options.aria||'Progress chart')}">${parts.join('')}</svg>`;
  }catch(err){recordDiagnostic('Progress chart '+mountId,err);mount.setAttribute('aria-hidden','false');mount.innerHTML=`<div class="progressChartState"><div><b>Chart unavailable</b><p>The underlying data are preserved. Reload after updating the app.</p></div></div>`;}
