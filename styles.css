@@ -359,3 +359,36 @@ canvas{display:block;width:100%!important;max-width:100%;height:auto!important;m
     font-size:17px!important;
   }
 }
+
+
+/* TODAY TAB — LOCKED UI CONTRACT v12.1.6
+   Reference-derived pictogram refinement; workout disclosure has no arrow. */
+#today .workoutVizTapHint{
+  justify-content:center!important;
+  gap:0!important;
+}
+#today .workoutVizTapHint b{display:none!important}
+
+#today .todayStatusCard .statusRing .todayPic,
+#today .rehabPriorityHero .runnerCardIcon .todayPic{
+  width:55px!important;
+  height:55px!important;
+}
+#today .todayStatusCard .statusRing .picAccent,
+#today .rehabPriorityHero .runnerCardIcon .picAccent{
+  stroke:#38ddd7!important;
+  stroke-width:3.1!important;
+}
+#today .todayStatusCard .statusRing .picGood,
+#today .rehabPriorityHero .runnerCardIcon .picGood{
+  stroke:#8bdd69!important;
+  stroke-width:3.2!important;
+}
+#today .todayStatusCard .statusRing .picWarn{
+  stroke:#ff6842!important;
+  stroke-width:3.5!important;
+}
+#today .todayStatusCard .statusRing .picWarm{
+  stroke:#f1b45f!important;
+  stroke-width:3!important;
+}

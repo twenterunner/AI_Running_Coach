@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '12.1.5';
-  const BUILD = 20105;
+  const VERSION = '12.1.6';
+  const BUILD = 20106;
   const SCHEMA = 10330;
   const PRIMARY_STORAGE_KEY = 'arc_v10330_web';
   const MIRROR_STORAGE_KEY = 'arc_v10330_mirror';
@@ -2322,20 +2322,21 @@ function todayPictogram(kind){
   training:`<svg class="todayPic" viewBox="0 0 64 64" aria-hidden="true"><circle class="picSkin" cx="38" cy="10" r="6"/><path class="picBase" d="M31 19l-8 13 8 5 7-10 6 8 10-4"/><path class="picBase" d="M30 36l-7 14H11M32 37l11 10 10-2"/><path class="picAccent" d="M19 31l7-11 11-2"/><path class="picWarm" d="M16 48h12"/></svg>`,
   readiness:`<svg class="todayPic" viewBox="0 0 64 64" aria-hidden="true"><path class="picBase" d="M32 53S11 40 11 23c0-8 6-13 13-13 4 0 7 2 8 5 2-3 5-5 9-5 7 0 13 5 13 13 0 17-22 30-22 30z"/><path class="picGood" d="M8 34h13l5-10 7 20 6-13 4 3h13"/></svg>`,
   pain:`<svg class="todayPic" viewBox="0 0 64 64" aria-hidden="true">
-    <path class="picBase" d="M22 7c7 8 10 16 9 25l-2 7 10 17"/>
-    <path class="picBase" d="M39 8c-4 8-5 15-3 23l2 7-5 18"/>
-    <path class="picWarn" d="M31 31l8 5-6 3 5 6"/>
-    <path class="picWarm" d="M24 35h-6M45 35h6M26 27l-4-4M43 27l4-4M26 45l-4 4M43 45l4 4"/>
+    <circle class="picSkin" cx="27" cy="10" r="5"/>
+    <path class="picBase" d="M27 16l7 11 11 3M32 27l-9 9-11 3M23 36l-7 15M23 36l12 9 8 10"/>
+    <path class="picWarn" d="M38 28l7 4-4 4 5 4-8 6 2-6-5-3z"/>
+    <path class="picWarm" d="M43 24l4-4M47 29h6M44 44l4 4"/>
   </svg>`,
   shoe:`<svg class="todayPic" viewBox="0 0 64 64" aria-hidden="true"><path class="picBase" d="M10 41c8-2 13-9 17-20l8 4c2 7 7 11 17 13 4 1 6 4 5 8-1 4-4 6-9 6H18c-7 0-11-4-8-11z"/><path class="picAccent" d="M27 25l8 5M23 31l9 5M18 37l9 5"/><path class="picWarm" d="M12 46h43"/></svg>`,
   week:`<svg class="todayPic" viewBox="0 0 64 64" aria-hidden="true"><rect class="picBase" x="10" y="14" width="44" height="38" rx="5"/><path class="picAccent" d="M10 24h44M20 9v10M44 9v10"/><path class="picGood" d="M18 35h8M30 35h8M42 35h5M18 43h8M30 43h8"/></svg>`,
   signal:`<svg class="todayPic" viewBox="0 0 64 64" aria-hidden="true"><path class="picBase" d="M9 48h46M13 44l10-10 9 6 17-22"/><path class="picAccent" d="M43 18h8v8"/><circle class="picGood" cx="23" cy="34" r="3"/><circle class="picGood" cx="32" cy="40" r="3"/></svg>`,
   race:`<svg class="todayPic" viewBox="0 0 64 64" aria-hidden="true"><path class="picBase" d="M17 55V9M18 12h28l-7 9 7 9H18"/><path class="picAccent" d="M20 14h8v8h-8zM28 22h8v8h-8zM36 14h8v8h-8z"/></svg>`,
   rehab:`<svg class="todayPic" viewBox="0 0 64 64" aria-hidden="true">
-    <circle class="picSkin" cx="20" cy="10" r="5"/>
-    <path class="picBase" d="M21 16l7 13-5 10-9 12M28 29l13 5 10-2"/>
-    <path class="picAccent" d="M15 47c10-5 21-5 32 0M15 47c10 5 21 5 32 0"/>
-    <path class="picGood" d="M49 10v12M43 16h12"/>
+    <circle class="picSkin" cx="18" cy="11" r="5"/>
+    <path class="picBase" d="M19 17l9 9 8 2M28 26l-4 12-8 15M24 38l9 15"/>
+    <path class="picAccent" d="M8 35h38M12 35v18M42 35v18"/>
+    <path class="picGood" d="M49 13h10M54 8v10"/>
+    <path class="picWarm" d="M35 27c4 1 8 0 12-2"/>
   </svg>`,
   recovery:`<svg class="todayPic" viewBox="0 0 64 64" aria-hidden="true"><path class="picBase" d="M43 45A20 20 0 1 1 31 9a17 17 0 0 0 12 36z"/><path class="picAccent" d="M45 12v8M41 16h8M52 26v6M49 29h6"/></svg>`,
   action:`<svg class="todayPic" viewBox="0 0 64 64" aria-hidden="true"><rect class="picBase" x="17" y="10" width="30" height="44" rx="4"/><path class="picGood" d="M25 23l3 3 6-7M25 35l3 3 6-7M25 47l3 3 6-7"/><path class="picBase" d="M37 24h5M37 36h5M37 48h5M26 10V7h12v3"/></svg>`
@@ -2382,7 +2383,7 @@ function todayWorkoutCard(p,injuryDay){
    <div class="todayTargetGrid"><div><small>PACE</small><strong>${pace(z.pace)}</strong><span>${targetScope}</span></div><div><small>POWER</small><strong>${Number.isFinite(Number(z.power))?Math.round(z.power)+' W':'—'}</strong><span>${targetScope}</span></div><div><small>HEART RATE</small><strong>${Number.isFinite(Number(z.hr))?Math.round(z.hr)+' bpm':'—'}</strong><span>${targetScope}</span></div></div>
    <button type="button" class="workoutVizDisclosure" data-workout-toggle="${esc(p.date)}" aria-expanded="false" aria-controls="workout-details-${esc(p.date)}">
      ${todayWorkoutStructure(p)}
-     <span class="workoutVizTapHint">Tap workout structure for full details <b>⌄</b></span>
+     <span class="workoutVizTapHint">Tap workout structure for full details</span>
    </button>
    <div class="todayWorkoutDetails" id="workout-details-${esc(p.date)}" hidden>
      <div class="todayPrescription"><div><small>WARM-UP</small><p>${esc(p.warmup||'—')}</p></div><div class="main"><small>MAIN SET / INTERVALS</small><p>${esc(p.main||'—')}</p></div><div><small>COOLDOWN</small><p>${esc(p.cooldown||'—')}</p></div></div>
@@ -2508,7 +2509,6 @@ function renderToday(){
    if(!details)return;
    const opening=details.hidden;details.hidden=!opening;
    btn.setAttribute('aria-expanded',opening?'true':'false');
-   const hint=btn.querySelector('.workoutVizTapHint b');if(hint)hint.textContent=opening?'⌃':'⌄';
  }));
  document.querySelectorAll('#today [data-go]').forEach(btn=>btn.addEventListener('click',()=>showPage(btn.dataset.go)));
 }

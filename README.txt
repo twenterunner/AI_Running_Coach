@@ -1,4 +1,4 @@
-AI Running Coach v12.1.5 — Today structural fix — build 20105
+AI Running Coach v12.1.6 — Today pictogram refinement — build 20106
 
 Deployment
 ----------
@@ -676,4 +676,13 @@ v12.1.5 — Today structural fix
 - Today's Priority is a separate DOM sibling below the header and therefore always spans the full card width.
 - Rehab pictogram changed to a controlled physiotherapy leg exercise with resistance band and medical cross.
 - Pain pictogram changed to a bent leg/knee with a prominent pain bolt and radiating pain marks.
+- No model/data-engine calculations changed.
+
+
+v12.1.6 — Today pictogram refinement
+------------------------------------
+- Rehab pictogram redesigned using the supplied rehabilitation reference as direction: person at a rehab/treatment bench with medical cross.
+- Pain/Injury pictogram redesigned using the supplied running-pain reference as direction: running figure with a localized pain bolt at the hip/thigh.
+- Artwork is newly drawn SVG and does not reuse or copy the stock-image assets.
+- Removed the up/down arrow from the tappable workout-structure foldout; the workout visualization itself remains the disclosure control.
 - No model/data-engine calculations changed.
