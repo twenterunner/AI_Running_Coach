@@ -564,3 +564,15 @@ storage, migration or calculation engine was intentionally changed.
 Information architecture retained:
 Today = decision/action; Plan = prescription; Log = observed execution;
 Progress = longitudinal learning/prediction; More = assessments/recovery/injury/race/settings.
+
+
+v11.1.0 Premium UI rebuild
+--------------------------
+- New neutral dark-navy/slate visual system with blue/cyan data accents.
+- Bottom navigation fixed to exactly Today, Plan, Log, Progress and More on mobile.
+- More menu converted to compact list rows with correctly stroked SVG icons.
+- Metric cards receive explicit block layout and overflow protection to prevent concatenated text.
+- Injury recovery overview uses a 2x2 metric grid on mobile to accommodate long stage names.
+- Today coach action icon receives fixed dimensions to prevent oversized/black SVG boxes.
+- Consistent card, foldout, button, chart, badge and icon primitives across all destinations.
+- No training, prediction, adaptation, recovery, injury, scoring, storage, import or assessment engine changes.

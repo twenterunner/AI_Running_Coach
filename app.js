@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '11.0.0';
-  const BUILD = 18000;
+  const VERSION = '11.1.0';
+  const BUILD = 18100;
   const SCHEMA = 10330;
   const PRIMARY_STORAGE_KEY = 'arc_v10330_web';
   const MIRROR_STORAGE_KEY = 'arc_v10330_mirror';
@@ -918,7 +918,7 @@ let validRun=dur>0&&km>0,validHr=validRun&&hr>0,validPw=validRun&&pw>0&&kg>0;
 return{pace:validRun?dur/km:null,dph:validHr?km*1000/(dur/60*hr):null,wpb:validHr&&pw>0?pw/hr:null,
  efficiencyJ:validHr&&pw>0?pw*60/hr:null,effect:validPw?(km*1000/dur)/(pw/kg):null,wkg:pw>0&&kg>0?pw/kg:null}}
 const metricRunTypes=['Recovery','Easy','Easy + strides','Steady aerobic','Medium-long','Long run','Specific long run','Race rehearsal','Marathon-specific','Half-marathon-specific','Threshold','Threshold intervals','Hills','Fartlek','VO₂max intervals','Race-pace intervals','Fitness assessment','Race'];
-const runTypeColors={'Recovery':'#3980EC','Shakeout':'#3980EC','Easy':'#88C5FC','Easy + strides':'#88C5FC','Steady aerobic':'#88C5FC','Medium-long':'#88C5FC','Long run':'#88C5FC','Specific long run':'#88C5FC','Race rehearsal':'#0129BF','Marathon':'#F2B84B','Marathon-specific':'#F2B84B','Half-marathon-specific':'#F2B84B','Tempo':'#FF6378','Threshold':'#FF6378','Threshold intervals':'#FF6378','Intervals':'#F2B84B','Hills':'#F2B84B','Fartlek':'#F2B84B','VO₂max intervals':'#F2B84B','Race-pace intervals':'#F2B84B','Fitness assessment':'#BBF5F9','Race':'#080B6C'};
+const runTypeColors={'Recovery':'#3B82F6','Shakeout':'#3B82F6','Easy':'#4CC9F0','Easy + strides':'#4CC9F0','Steady aerobic':'#4CC9F0','Medium-long':'#4CC9F0','Long run':'#4CC9F0','Specific long run':'#4CC9F0','Race rehearsal':'#3B82F6','Marathon':'#F6B94A','Marathon-specific':'#F6B94A','Half-marathon-specific':'#F6B94A','Tempo':'#F47777','Threshold':'#F47777','Threshold intervals':'#F47777','Intervals':'#F6B94A','Hills':'#F6B94A','Fartlek':'#F6B94A','VO₂max intervals':'#F6B94A','Race-pace intervals':'#F6B94A','Fitness assessment':'#DDF6FF','Race':'#07111D'};
 function metricSeries(runs,valueFn,labelSuffix=''){return metricRunTypes.map(type=>({
  label:type+labelSuffix,data:runs.map(r=>r.type===type?valueFn(r):null),color:runTypeColors[type]
 })).filter(s=>s.data.some(Number.isFinite))}
@@ -1404,11 +1404,11 @@ function confidence(){
  let marathonPreparation=weighted([{name:'Long-run execution',score:longRunExecution,weight:.45,hasEvidence:dueLongs.length>0},{name:'Volume progression',score:volumeProgression,weight:.30,hasEvidence:completedRunsToDate.some(r=>(Number(r.distanceKm)||0)>0)},{name:'Specificity',score:specificity,weight:.25,hasEvidence:specificDue.length>0}]);
  let planExecution=weighted([{name:'Adherence',score:adherence,weight:.45,hasEvidence:executionEvidence},{name:'Consistency',score:consistency,weight:.35,hasEvidence:executionEvidence},{name:'Schedule adherence',score:scheduleAdherence,weight:.20,hasEvidence:matchedRuns.length>0}]);
  let recoveryHealth=weighted([{name:'Garmin HRV trend',score:recoveryScore,weight:.60,hasEvidence:hrvState.ready},{name:'Pain status',score:painScore,weight:.40,hasEvidence:painValues.length>0}]);
- let performancePillar={name:'Physiological fitness',weight:1,color:'#88C5FC',description:'Demonstrated capability used to centre the marathon-time prediction.',...physiological};
+ let performancePillar={name:'Physiological fitness',weight:1,color:'#4CC9F0',description:'Demonstrated capability used to centre the marathon-time prediction.',...physiological};
  let pillars=[
-  {name:'Marathon preparation',weight:.50,color:'#F2B84B',description:'How much marathon-specific evidence supports sustaining the predicted pace for 42.2 km.',...marathonPreparation},
-  {name:'Plan execution',weight:.30,color:'#88C5FC',description:'How reliably completed volume, sessions and timing match the programme.',...planExecution},
-  {name:'HRV & health',weight:.20,color:'#88C5FC',description:'Whether the recent Garmin HRV pattern and pain evidence support absorbing training.',...recoveryHealth}
+  {name:'Marathon preparation',weight:.50,color:'#F6B94A',description:'How much marathon-specific evidence supports sustaining the predicted pace for 42.2 km.',...marathonPreparation},
+  {name:'Plan execution',weight:.30,color:'#4CC9F0',description:'How reliably completed volume, sessions and timing match the programme.',...planExecution},
+  {name:'HRV & health',weight:.20,color:'#4CC9F0',description:'Whether the recent Garmin HRV pattern and pain evidence support absorbing training.',...recoveryHealth}
  ];
  let scoredPillars=pillars.filter(p=>Number.isFinite(p.score));
  let overall=scoredPillars.length?clamp(sum(scoredPillars.map(p=>p.score*p.weight))/sum(scoredPillars.map(p=>p.weight)),0,100):null;
@@ -2078,14 +2078,14 @@ function drawLine(canvas,series,options={}){
      ctx.save();ctx.strokeStyle=s.color;ctx.lineWidth=6;ctx.lineCap='round';
      if(s.dashed)ctx.setLineDash([16,10]);
      ctx.beginPath();ctx.moveTo(x,30);ctx.lineTo(x+30,30);ctx.stroke();ctx.restore();
-     ctx.fillStyle='#BBF5F9';ctx.fillText(s.label,x+42,38);
+     ctx.fillStyle='#DDF6FF';ctx.fillText(s.label,x+42,38);
      x+=52+ctx.measureText(s.label).width+34;
    });
  }
 
  let vals=series.flatMap(s=>s.data).filter(Number.isFinite);
  if(!vals.length){
-   ctx.fillStyle='#BBF5F9';ctx.font='600 27px system-ui';ctx.textAlign='center';
+   ctx.fillStyle='#DDF6FF';ctx.font='600 27px system-ui';ctx.textAlign='center';
    ctx.fillText(options.empty||'More completed data is needed',W/2,H/2);return;
  }
  let min=Number.isFinite(options.min)?options.min:(options.zero===false?Math.min(...vals):0);
@@ -2099,9 +2099,9 @@ function drawLine(canvas,series,options={}){
  let ticks=options.ticks||5;
  for(let i=0;i<ticks;i++){
    let fraction=i/(ticks-1),v=min+(max-min)*fraction,y=H-bottom-chartH*fraction;
-   ctx.strokeStyle=i===0?'#BBF5F9':'#0129BF';ctx.lineWidth=i===0?2:1;
+   ctx.strokeStyle=i===0?'#DDF6FF':'#3B82F6';ctx.lineWidth=i===0?2:1;
    ctx.beginPath();ctx.moveTo(left,y);ctx.lineTo(W-right,y);ctx.stroke();
-   ctx.fillStyle='#BBF5F9';
+   ctx.fillStyle='#DDF6FF';
    ctx.fillText(options.formatY?options.formatY(v):v.toFixed(v<10?1:0),left-12,y+7);
  }
  let n=Math.max(1,...series.map(s=>s.data.length));
@@ -2135,7 +2135,7 @@ function drawLine(canvas,series,options={}){
  if(options.labels?.length){
    let positions=options.allLabels?options.labels.map((_,i)=>i):
      [0,Math.floor((options.labels.length-1)/2),options.labels.length-1].filter((v,i,a)=>a.indexOf(v)===i);
-   ctx.font='19px system-ui';ctx.fillStyle='#BBF5F9';ctx.textAlign='center';
+   ctx.font='19px system-ui';ctx.fillStyle='#DDF6FF';ctx.textAlign='center';
    positions.forEach(i=>ctx.fillText(options.labels[i]||'',px(i),H-18));
  }
  const interactive=[];series.forEach(s=>s.data.forEach((v,i)=>{if(Number.isFinite(v)&&s.points!==false)interactive.push({x:px(i),y:py(v),label:s.label||'Value',value:v,index:i})}));
@@ -2156,14 +2156,14 @@ function drawDonut(canvas,segments,centerLabel='planned',emptyText='No training 
  const rows=(segments||[]).filter(x=>Number(x.value)>0),cssH=Math.max(138,44+(rows.length||1)*54);
  canvas.width=Math.round(cssW*dpr);canvas.height=Math.round(cssH*dpr);ctx.setTransform(dpr,0,0,dpr,0,0);
  ctx.clearRect(0,0,cssW,cssH);
- if(!rows.length){ctx.fillStyle='#BBF5F9';ctx.font='600 14px system-ui';ctx.fillText(emptyText,18,38);appendChartDataDisclosure(canvas,[],emptyText);return;}
+ if(!rows.length){ctx.fillStyle='#DDF6FF';ctx.font='600 14px system-ui';ctx.fillText(emptyText,18,38);appendChartDataDisclosure(canvas,[],emptyText);return;}
  const total=rows.reduce((a,b)=>a+Number(b.value||0),0),max=Math.max(...rows.map(x=>Number(x.value)||0),1);
- const palette=['#88C5FC','#88C5FC','#88C5FC','#BBF5F9','#88C5FC'];
+ const palette=['#4CC9F0','#4CC9F0','#4CC9F0','#DDF6FF','#4CC9F0'];
  ctx.font='700 13px system-ui';ctx.textBaseline='middle';
  rows.forEach((seg,i)=>{
    const y=24+i*54,label=String(seg.label||'').replace(/\s+/g,' ').trim(),val=Number(seg.value)||0,pct=total?Math.round(val/total*100):0;
    ctx.fillStyle='#FFFFFF';ctx.fillText(label,18,y);
-   const valueText=`${val.toFixed(1)} km · ${pct}%`;ctx.fillStyle='#BBF5F9';ctx.font='600 12px system-ui';
+   const valueText=`${val.toFixed(1)} km · ${pct}%`;ctx.fillStyle='#DDF6FF';ctx.font='600 12px system-ui';
    const tw=ctx.measureText(valueText).width;ctx.fillText(valueText,cssW-18-tw,y);ctx.font='700 13px system-ui';
    const x=18,barY=y+18,w=cssW-36,h=10;
    ctx.fillStyle='rgba(125,183,226,.16)';roundRect(ctx,x,barY,w,h,5);ctx.fill();
@@ -2196,8 +2196,8 @@ function roundRect(ctx,x,y,w,h,r){w=Math.max(0,w);r=Math.min(r,w/2,h/2);ctx.begi
 function drawDashboardCharts(){
  let c=confidence(),arr=completedWeekSeries(),weekLabels=arr.map((x,i)=>x.isRaceWeek?'Race':('W'+(i+1)));
  drawLine($('volumeChart'),[
-   {label:'Planned km',data:arr.map(x=>x.plannedForChart),color:'#88C5FC',dashed:true,points:false},
-   {label:'Completed km',data:arr.map(x=>x.actual),color:'#88C5FC'}
+   {label:'Planned km',data:arr.map(x=>x.plannedForChart),color:'#4CC9F0',dashed:true,points:false},
+   {label:'Completed km',data:arr.map(x=>x.actual),color:'#4CC9F0'}
  ],{empty:'No weekly distance data yet',labels:weekLabels,area:false});
  let plannedLong=Array.from({length:weeks()},(_,i)=>state.plan.find(x=>x.week===i+1&&['Long run','Specific long run','Race rehearsal','Progression'].includes(x.type))?.distance??null);
  let completedLong=Array.from({length:weeks()},(_,i)=>{
@@ -2206,8 +2206,8 @@ function drawDashboardCharts(){
    return r.length?Math.max(...r.map(x=>x.distanceKm)):null;
  });
  drawLine($('longRunChart'),[
-   {label:'Planned long run',data:plannedLong,color:'#88C5FC',dashed:true,points:false},
-   {label:'Completed long run',data:completedLong,color:'#88C5FC'}
+   {label:'Planned long run',data:plannedLong,color:'#4CC9F0',dashed:true,points:false},
+   {label:'Completed long run',data:completedLong,color:'#4CC9F0'}
  ],{min:0,max:Math.max(state.setup.peakLong*1.12,10),empty:'Log a long run to show completed progression',labels:weekLabels});
 
  let history=(state.predictionHistory||[]).filter(x=>Number.isFinite(Number(x.seconds))&&x.date<=iso(today())).slice().sort((a,b)=>a.date.localeCompare(b.date));
@@ -2221,9 +2221,9 @@ function drawDashboardCharts(){
  let maxSec=Math.min(7*3600,Math.ceil((high+1800)/1800)*1800);
  if(maxSec-minSec<3600)maxSec=minSec+3600;
  drawLine($('predictionChart'),[
-   {label:`Prediction updates${predSec.length?` (${predSec.length})`:''}`,data:predSec,color:'#88C5FC'},
-   {label:`Programme start ${fmtTime(startPrediction)}`,data:[startPrediction],color:'#BBF5F9',dashed:true,points:false,horizontal:true},
-   {label:`Target ${fmtTime(targetTime)}`,data:[targetTime],color:'#FF6378',dashed:true,points:false,horizontal:true}
+   {label:`Prediction updates${predSec.length?` (${predSec.length})`:''}`,data:predSec,color:'#4CC9F0'},
+   {label:`Programme start ${fmtTime(startPrediction)}`,data:[startPrediction],color:'#DDF6FF',dashed:true,points:false,horizontal:true},
+   {label:`Target ${fmtTime(targetTime)}`,data:[targetTime],color:'#F47777',dashed:true,points:false,horizontal:true}
  ],{min:minSec,max:maxSec,ticks:5,formatY:v=>fmtTime(v),labels,left:98,pointDetails,empty:'No uploaded prediction updates yet'});
 
 }
@@ -3423,18 +3423,18 @@ function renderRecovery(){
 }
 function drawHrvChart(){
  const canvas=$('hrvChart');if(!canvas)return;const ctx=canvas.getContext('2d'),W=canvas.width,H=canvas.height,hist=hrvHistory(),model=hrvModel();ctx.clearRect(0,0,W,H);updateChartTable(canvas,'View HRV chart data',['Date','Previous-night HRV'],hist.map(item=>[fmtDate(item.date),`${Math.round(item.value)} ms`]));
- if(!hist.length){ctx.fillStyle='#BBF5F9';ctx.font='600 27px system-ui';ctx.textAlign='center';ctx.fillText('Log previous-night Garmin HRV to start the trend',W/2,H/2);return}
+ if(!hist.length){ctx.fillStyle='#DDF6FF';ctx.font='600 27px system-ui';ctx.textAlign='center';ctx.fillText('Log previous-night Garmin HRV to start the trend',W/2,H/2);return}
  const shown=hist.slice(-28),vals=shown.map(x=>x.value),base=Number.isFinite(model.baseline)?model.baseline:median(vals),recentN=model.count<=3?model.count:model.count<=6?3:7;
  const rolling=shown.map((x,i)=>avg(shown.slice(Math.max(0,i-recentN+1),i+1).map(y=>y.value)));
  let min=Math.min(...vals,base*.62),max=Math.max(...vals,base*1.18),pad=Math.max(3,(max-min)*.08);min=Math.max(0,min-pad);max+=pad;
  const left=78,right=24,top=34,bottom=70,cw=W-left-right,ch=H-top-bottom,px=i=>shown.length===1?left+cw/2:left+i*cw/(shown.length-1),py=v=>top+(max-v)/(max-min)*ch;
  const bands=[{from:min,to:base*.65,fill:'rgba(197,73,63,.10)'},{from:base*.65,to:base*.75,fill:'rgba(224,157,42,.10)'},{from:base*.75,to:max,fill:'rgba(55,151,91,.08)'}];
  bands.forEach(b=>{const y1=py(Math.min(max,b.to)),y2=py(Math.max(min,b.from));ctx.fillStyle=b.fill;ctx.fillRect(left,y1,cw,Math.max(0,y2-y1))});
- ctx.font='20px system-ui';ctx.textAlign='right';for(let i=0;i<5;i++){const v=min+(max-min)*i/4,y=py(v);ctx.strokeStyle='#88C5FC';ctx.beginPath();ctx.moveTo(left,y);ctx.lineTo(W-right,y);ctx.stroke();ctx.fillStyle='#BBF5F9';ctx.fillText(Math.round(v),left-12,y+7)}
- ctx.save();ctx.strokeStyle='#88C5FC';ctx.setLineDash([14,10]);ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(left,py(base));ctx.lineTo(W-right,py(base));ctx.stroke();ctx.restore();
- ctx.strokeStyle='#3980EC';ctx.lineWidth=4;ctx.beginPath();rolling.forEach((v,i)=>i?ctx.lineTo(px(i),py(v)):ctx.moveTo(px(i),py(v)));ctx.stroke();
- ctx.strokeStyle='#88C5FC';ctx.lineWidth=4;ctx.beginPath();vals.forEach((v,i)=>i?ctx.lineTo(px(i),py(v)):ctx.moveTo(px(i),py(v)));ctx.stroke();vals.forEach((v,i)=>{ctx.fillStyle='#88C5FC';ctx.beginPath();ctx.arc(px(i),py(v),6,0,Math.PI*2);ctx.fill()});
- ctx.font='18px system-ui';ctx.fillStyle='#BBF5F9';ctx.textAlign='center';const step=Math.max(1,Math.ceil(shown.length/6));shown.forEach((x,i)=>{if(i%step&&i!==shown.length-1)return;const d=dte(x.date);ctx.fillText(`${d.toLocaleDateString(undefined,{weekday:'short'})} ${d.getDate()}/${d.getMonth()+1}`,px(i),H-32)});ctx.save();ctx.translate(24,H/2);ctx.rotate(-Math.PI/2);ctx.fillText('HRV (ms)',0,0);ctx.restore();
+ ctx.font='20px system-ui';ctx.textAlign='right';for(let i=0;i<5;i++){const v=min+(max-min)*i/4,y=py(v);ctx.strokeStyle='#4CC9F0';ctx.beginPath();ctx.moveTo(left,y);ctx.lineTo(W-right,y);ctx.stroke();ctx.fillStyle='#DDF6FF';ctx.fillText(Math.round(v),left-12,y+7)}
+ ctx.save();ctx.strokeStyle='#4CC9F0';ctx.setLineDash([14,10]);ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(left,py(base));ctx.lineTo(W-right,py(base));ctx.stroke();ctx.restore();
+ ctx.strokeStyle='#3B82F6';ctx.lineWidth=4;ctx.beginPath();rolling.forEach((v,i)=>i?ctx.lineTo(px(i),py(v)):ctx.moveTo(px(i),py(v)));ctx.stroke();
+ ctx.strokeStyle='#4CC9F0';ctx.lineWidth=4;ctx.beginPath();vals.forEach((v,i)=>i?ctx.lineTo(px(i),py(v)):ctx.moveTo(px(i),py(v)));ctx.stroke();vals.forEach((v,i)=>{ctx.fillStyle='#4CC9F0';ctx.beginPath();ctx.arc(px(i),py(v),6,0,Math.PI*2);ctx.fill()});
+ ctx.font='18px system-ui';ctx.fillStyle='#DDF6FF';ctx.textAlign='center';const step=Math.max(1,Math.ceil(shown.length/6));shown.forEach((x,i)=>{if(i%step&&i!==shown.length-1)return;const d=dte(x.date);ctx.fillText(`${d.toLocaleDateString(undefined,{weekday:'short'})} ${d.getDate()}/${d.getMonth()+1}`,px(i),H-32)});ctx.save();ctx.translate(24,H/2);ctx.rotate(-Math.PI/2);ctx.fillText('HRV (ms)',0,0);ctx.restore();
 }
 function renderPlanHealth(){
  const box=$('planHealthContent');if(!box)return;

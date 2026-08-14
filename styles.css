@@ -1,277 +1,84 @@
-
-/* AI Running Coach v11.0 — clean-slate interface
-   Visual layer only. No model/data logic lives in this file. */
+/* AI Running Coach v11.1.0 — premium mobile-first UI\n   Presentation layer only. Engine/data logic remains in app.js. */
 :root{
-  --ice:#BBF5F9; --sky:#88C5FC; --blue:#3980EC; --royal:#0129BF; --navy:#080B6C;
-  --white:#FFFFFF; --amber:#F2B84B; --red:#FF6378;
-  --bg:#050947; --bg2:#080B6C; --surface:#0D176F; --surface2:#122482;
-  --card:#132A86; --card2:#173A9B; --soft:#EAF8FF; --muted:#A9CFF5;
-  --line:rgba(136,197,252,.18); --line2:rgba(187,245,249,.30);
-  --shadow:0 14px 34px rgba(1,4,54,.22);
-  --r-xl:24px; --r-lg:20px; --r-md:15px; --r-sm:11px;
-  --pad:clamp(16px,4vw,24px);
-  color-scheme:dark;
+ --bg:#07111D; --bg-elev:#0B1726; --surface:#102235; --surface-2:#162D43; --surface-3:#1B3852;
+ --text:#F8FBFF; --muted:#A9BED0; --subtle:#7894AA; --line:rgba(148,184,211,.16);
+ --blue:#3B82F6; --cyan:#4CC9F0; --ice:#DDF6FF; --success:#8FD36A; --warning:#F6B94A; --danger:#F47777;
+ --shadow:0 16px 38px rgba(0,0,0,.22); --radius:18px; --radius-sm:13px;
+ color-scheme:dark;
 }
-*{box-sizing:border-box}
+*{box-sizing:border-box;min-width:0}
 html{background:var(--bg);scroll-behavior:smooth}
-body{
-  margin:0; min-height:100vh; background:
-  radial-gradient(circle at 15% -10%,rgba(57,128,236,.18),transparent 34rem),
-  linear-gradient(180deg,var(--bg2) 0,var(--bg) 36rem,var(--bg) 100%);
-  color:var(--white); font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
-  font-size:16px; line-height:1.5; -webkit-font-smoothing:antialiased;
-}
-button,input,select,textarea{font:inherit}
-button,[role=button],summary,label[for]{-webkit-tap-highlight-color:transparent}
-button{cursor:pointer}
-.hidden{display:none!important}
-.skipLink{position:fixed;left:12px;top:-60px;z-index:9999;background:var(--ice);color:var(--navy);padding:10px 14px;border-radius:10px}
-.skipLink:focus{top:12px}
-h1,h2,h3,h4,h5,p{margin-top:0}
-h1,h2,h3,h4,h5,strong,b{color:var(--white)}
-p,li,dd,dt,label,span,small{color:var(--soft)}
-.muted,.compact,.meta,.caption,small{color:var(--muted)}
-.compact{margin-bottom:0}
-a{color:var(--ice)}
-code{display:block;white-space:normal;overflow-wrap:anywhere;background:rgba(5,9,71,.62);border:1px solid var(--line);border-radius:12px;padding:10px 12px;color:var(--ice)}
-pre{white-space:pre-wrap;overflow-wrap:anywhere}
-hr{border:0;border-top:1px solid var(--line)}
+body{margin:0;min-height:100vh;background:linear-gradient(180deg,#081521 0,#07111D 42%,#06101A 100%);color:var(--text);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;font-size:16px;line-height:1.45;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+button,input,select,textarea{font:inherit} button,summary,[role=button]{-webkit-tap-highlight-color:transparent} button{cursor:pointer}
+.hidden{display:none!important}.skipLink{position:fixed;left:12px;top:-60px;z-index:999;background:white;color:#07111D;padding:9px 12px;border-radius:10px}.skipLink:focus{top:12px}
+h1,h2,h3,h4,h5,p{margin-top:0} h1,h2,h3,h4,h5,strong,b{color:var(--text)} p,li,dd,dt,label,span,small{color:var(--muted)}
+.muted,.compact,.meta,.caption,small{color:var(--subtle)} .compact{margin-bottom:0} a{color:var(--cyan)} code{overflow-wrap:anywhere;color:var(--ice)}
 
-/* APP CHROME */
-.topbar{
-  position:sticky;top:0;z-index:90;height:74px;padding:12px max(18px,env(safe-area-inset-left));
-  display:flex;align-items:center;justify-content:space-between;
-  background:rgba(8,11,108,.92);backdrop-filter:blur(18px);border-bottom:1px solid var(--line)
-}
-.brand{display:flex;align-items:center;gap:12px;min-width:0}
-.logo{width:46px;height:46px;border-radius:50%;background:white;object-fit:cover;box-shadow:0 0 0 2px rgba(187,245,249,.25)}
-.brand-copy{min-width:0}.brand-copy h1{font-size:20px;line-height:1.1;margin:0;white-space:nowrap}.brand-copy p{font-size:10px;margin:4px 0 0;color:var(--sky);white-space:nowrap}
-.install{border:1px solid var(--line2);background:var(--blue);color:white;border-radius:12px;padding:9px 12px;font-weight:800}
-#mainContent{width:min(100%,1180px);margin:0 auto;padding:24px var(--pad) 126px}
-.page{display:none;animation:pageIn .18s ease-out}.page.active{display:block}
-@keyframes pageIn{from{opacity:.45;transform:translateY(3px)}to{opacity:1;transform:none}}
+/* Header */
+.topbar{position:sticky;top:0;z-index:90;height:70px;display:flex;align-items:center;justify-content:space-between;padding:10px 18px;background:rgba(7,17,29,.94);backdrop-filter:blur(18px);border-bottom:1px solid var(--line)}
+.brand{display:flex;align-items:center;gap:11px}.logo{width:43px;height:43px;border-radius:50%;object-fit:cover;background:white;box-shadow:0 0 0 1px rgba(255,255,255,.15)}
+.brand-copy h1{margin:0;font-size:19px;line-height:1.05;letter-spacing:-.02em;white-space:nowrap}.brand-copy p{display:none}.install{border:0;background:var(--blue);color:white;border-radius:12px;padding:9px 12px;font-weight:800}
+#mainContent{width:min(100%,1100px);margin:0 auto;padding:22px 16px 112px}.page{display:none}.page.active{display:block;animation:fadein .16s ease-out}@keyframes fadein{from{opacity:.45;transform:translateY(2px)}to{opacity:1;transform:none}}
 .appFooter{display:none}
 
-/* BOTTOM NAVIGATION */
-.mobileBottomNav,#nav{
-  position:fixed;left:0;right:0;bottom:0;z-index:100;
-  display:grid;grid-template-columns:repeat(5,1fr);gap:4px;
-  padding:9px max(10px,env(safe-area-inset-right)) calc(9px + env(safe-area-inset-bottom)) max(10px,env(safe-area-inset-left));
-  background:rgba(5,9,71,.96);backdrop-filter:blur(22px);border-top:1px solid var(--line)
-}
-#nav button{
-  min-height:66px;border:0;border-radius:18px;background:transparent;color:var(--sky);
-  display:grid;place-items:center;align-content:center;gap:3px;padding:6px 3px;font-size:12px;font-weight:800
-}
-#nav button *{color:inherit}
-#nav button svg{width:24px;height:24px;stroke:currentColor;fill:none}
-#nav button.active{background:var(--ice);color:var(--navy);box-shadow:0 8px 24px rgba(0,0,0,.18)}
-.moreNav{
-  position:fixed;z-index:110;right:12px;bottom:88px;width:min(340px,calc(100vw - 24px));
-  padding:10px;background:rgba(13,23,111,.98);border:1px solid var(--line2);border-radius:20px;box-shadow:var(--shadow);
-  display:grid;grid-template-columns:1fr 1fr;gap:8px
-}
-.moreNav button{min-height:52px;border:1px solid var(--line);background:var(--card);color:white;border-radius:14px;font-weight:800}
+/* Bottom navigation: exactly 5 destinations */
+#nav{position:fixed;left:0;right:0;bottom:0;z-index:100;display:grid;grid-template-columns:repeat(5,1fr);gap:3px;padding:8px 9px calc(8px + env(safe-area-inset-bottom));background:rgba(7,17,29,.97);backdrop-filter:blur(20px);border-top:1px solid var(--line)}
+#nav .desktopSecondary{display:none!important}
+#nav button{min-height:62px;border:0;background:transparent;color:#6F8DA4;border-radius:15px;padding:5px 2px;display:grid;place-items:center;align-content:center;gap:2px;font-size:11px;font-weight:800}
+#nav button *{color:inherit}#nav button.active{background:rgba(76,201,240,.12);color:var(--ice)}#nav button.active:after{content:"";width:18px;height:3px;border-radius:3px;background:var(--cyan);position:absolute;bottom:7px}
+#nav button{position:relative}.navIcon{display:grid;place-items:center}.navIcon svg{width:23px;height:23px;fill:none!important;stroke:currentColor!important;stroke-width:1.7!important;stroke-linecap:round;stroke-linejoin:round}.navLabel{font-size:11px;color:inherit!important}
+.moreNav{position:fixed;z-index:115;right:12px;bottom:84px;width:min(310px,calc(100vw - 24px));padding:8px;background:rgba(16,34,53,.98);border:1px solid rgba(148,184,211,.2);border-radius:18px;box-shadow:0 24px 60px rgba(0,0,0,.4);display:grid;gap:4px}
+.moreNav button{height:48px;border:0;border-radius:12px;background:transparent;color:var(--text);display:flex;align-items:center;gap:12px;padding:0 13px;text-align:left;font-weight:750}.moreNav button:active{background:rgba(76,201,240,.1)}.moreNav .navIcon svg{width:21px;height:21px}.moreNav span{color:inherit}
 
-/* PAGE TITLES */
-.sectionTitle{display:flex;align-items:flex-end;justify-content:space-between;gap:14px;margin:2px 2px 22px}
-.sectionTitle h2{font-size:clamp(30px,7vw,42px);line-height:1.04;letter-spacing:-.035em;margin:0}
-.sectionTitle p{margin:8px 0 0;color:var(--muted);font-size:14px}
-.sectionTitle .primary.small{flex:0 0 auto}
-.dashboardSection{margin:34px 0 0}
-.dashboardSectionHead{display:flex;align-items:flex-start;gap:12px;margin:0 2px 16px}
-.dashboardSectionHead>span{
-  flex:0 0 34px;width:34px;height:34px;border-radius:12px;display:grid;place-items:center;
-  background:var(--blue);color:white;font-weight:900;box-shadow:inset 0 0 0 1px rgba(255,255,255,.14)
-}
-.dashboardSectionHead h3{font-size:23px;line-height:1.12;margin:1px 0 4px;letter-spacing:-.02em}
-.dashboardSectionHead p{margin:0;color:var(--muted);font-size:13px}
+/* Titles */
+.sectionTitle{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin:4px 2px 20px}.sectionTitle h2{margin:0;font-size:30px;line-height:1.06;letter-spacing:-.035em}.sectionTitle p{margin:7px 0 0;font-size:13px;color:var(--muted)}
+.dashboardSection{margin:30px 0 0}.dashboardSectionHead{display:flex;gap:11px;align-items:flex-start;margin:0 2px 14px}.dashboardSectionHead>span{width:31px;height:31px;flex:0 0 31px;display:grid;place-items:center;border-radius:9px;background:var(--blue);color:white;font-weight:900}.dashboardSectionHead h3{font-size:21px;line-height:1.15;margin:1px 0 3px}.dashboardSectionHead p{font-size:12px;margin:0;color:var(--subtle)}
 
-/* SURFACE SYSTEM */
-.panel,.hero,.workout,.runCard,.assessmentCard,.coachCard,.injuryCard,.todaySupportCard,.weeklyReviewCard,
-.recoveryStatus,.canonicalAdaptationHome,.personalModelPanel,.modelValidationPanel,.predictionPanel,.rehabTodayFocus,
-.injuryTopicCard,.readinessCenter,.readinessPanel,.programmeTimelinePanel,.planMixPanel,.executionAssessment,
-.postRunCoachUpdate,.workoutIntelligence,.diagnosisOverview,.recoveryConclusion{
-  background:linear-gradient(180deg,rgba(19,42,134,.98),rgba(13,23,111,.98));
-  border:1px solid var(--line);border-radius:var(--r-xl);box-shadow:var(--shadow);color:var(--white)
-}
-.panel{padding:20px;margin:0 0 16px}
-.panelHead{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;margin-bottom:16px}
-.panelHead h3{font-size:20px;margin:0 0 3px}.panelHead p{margin:0}
-.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
-.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:0 0 16px}
-.kpi,.kpis>div,.kpis>article{
-  min-width:0;background:var(--card);border:1px solid var(--line);border-radius:var(--r-lg);padding:16px
-}
-.kpi span,.kpis span{font-size:12px;color:var(--muted)}.kpi b,.kpis b,.kpi strong,.kpis strong{display:block;font-size:24px;line-height:1.1;margin-top:5px}
-.guideGrid,.componentGuide{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
-.guideGrid>div,.componentGuide>div,.metricCell,.summaryTile,.infoTile,.dataTile,.statusTile,.planTile,.calibrationTile,.metricTile,
-.supportMetric,.canonicalPathMetrics>div,.scienceProvenance>div,.comparisonMetric,.powerCoverage,.evidenceDriver,
-.intervalVisualMetrics>div,.adherenceTile,.prognosisStrip>div,.injuryKpiGrid>div,.clinicalReasoningGrid>div,
-.modelValidationGrid>article,.preparationHeadline>div,.executionKpis span,.planEffectSummary article,
-.predictionSummary>div,.predictionSummary article,.personalModelSummary>div,.coachRecoverySummary>div,.mixGrid>div{
-  background:rgba(57,128,236,.22);border:1px solid var(--line);border-radius:var(--r-md);padding:14px
-}
+/* Universal surface system */
+.panel,.hero,.workout,.runCard,.assessmentCard,.coachCard,.injuryCard,.todaySupportCard,.weeklyReviewCard,.recoveryStatus,.canonicalAdaptationHome,.personalModelPanel,.modelValidationPanel,.predictionPanel,.rehabTodayFocus,.injuryTopicCard,.readinessCenter,.readinessPanel,.programmeTimelinePanel,.planMixPanel,.executionAssessment,.postRunCoachUpdate,.workoutIntelligence,.diagnosisOverview,.recoveryConclusion,.personalComparison,.intervalAnalysisCard,.adaptationVisualCard,.pathwayHistoryPanel{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);box-shadow:none;color:var(--text)}
+.panel{padding:18px;margin:0 0 14px}.panelHead{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:14px}.panelHead h3{font-size:19px;margin:0 0 3px}.panelHead p{margin:0;font-size:12px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:10px;margin-bottom:14px}.kpis>div,.kpis>article,.kpi{padding:14px;background:var(--surface-2);border:1px solid var(--line);border-radius:var(--radius-sm)}
+.guideGrid,.componentGuide{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px}.guideGrid>div,.componentGuide>div,.metricCell,.summaryTile,.infoTile,.dataTile,.statusTile,.planTile,.calibrationTile,.metricTile,.supportMetric,.canonicalPathMetrics>div,.scienceProvenance>div,.comparisonMetric,.powerCoverage,.evidenceDriver,.intervalVisualMetrics>div,.adherenceTile,.prognosisStrip>div,.injuryKpiGrid>div,.clinicalReasoningGrid>div,.modelValidationGrid>article,.preparationHeadline>div,.executionKpis span,.planEffectSummary article,.predictionSummary>div,.predictionSummary article,.personalModelSummary>div,.coachRecoverySummary>div{background:var(--surface-2);border:1px solid var(--line);border-radius:var(--radius-sm);padding:13px}
 
-/* BUTTONS + INPUTS */
-.primary,.secondary,button:not(.close):not(#nav button),.buttonLike,.filePick,.todayInlineLink,.coachPlanLink,.logProgressLink{
-  border:1px solid rgba(187,245,249,.28);background:var(--blue);color:white;border-radius:13px;padding:11px 15px;font-weight:850;
-  box-shadow:none;transition:transform .12s ease,filter .12s ease
-}
-button:active,.buttonLike:active,.filePick:active{transform:scale(.985)}
-.secondary{background:rgba(57,128,236,.18);color:var(--ice)}
-.danger{background:var(--red)!important}
-.full{width:100%;margin-top:10px}
-.buttonRow{display:flex;flex-wrap:wrap;gap:9px}
-input,select,textarea{
-  width:100%;border:1px solid var(--line2);border-radius:12px;background:rgba(5,9,71,.62);color:white;
-  padding:11px 12px;outline:0
-}
-input:focus,select:focus,textarea:focus{border-color:var(--sky);box-shadow:0 0 0 3px rgba(136,197,252,.14)}
-input[type=file]{padding:8px}.field label{display:block;font-size:12px;font-weight:800;color:var(--sky);margin-bottom:6px}
-.formGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:13px}
+/* Text safety: no collisions or run-off */
+:is(.metric-card,.supportMetric,.adherenceTile,.prognosisStrip>div,.injuryKpiGrid>div,.recoveryQuickGrid>div,.canonicalPathMetrics>div,.executionKpis>span,.intervalVisualMetrics>div){display:flex;flex-direction:column;gap:3px;min-width:0;overflow:hidden}
+:is(.metric-card,.supportMetric,.adherenceTile,.prognosisStrip>div,.injuryKpiGrid>div,.recoveryQuickGrid>div,.canonicalPathMetrics>div,.executionKpis>span,.intervalVisualMetrics>div)>span,
+:is(.metric-card,.supportMetric,.adherenceTile,.prognosisStrip>div,.injuryKpiGrid>div,.recoveryQuickGrid>div,.canonicalPathMetrics>div,.executionKpis>span,.intervalVisualMetrics>div)>small{display:block!important;font-size:11px!important;line-height:1.3!important;color:var(--subtle)!important;overflow-wrap:anywhere}
+:is(.metric-card,.supportMetric,.adherenceTile,.prognosisStrip>div,.injuryKpiGrid>div,.recoveryQuickGrid>div,.canonicalPathMetrics>div,.executionKpis>span,.intervalVisualMetrics>div)>strong,
+:is(.metric-card,.supportMetric,.adherenceTile,.prognosisStrip>div,.injuryKpiGrid>div,.recoveryQuickGrid>div,.canonicalPathMetrics>div,.executionKpis>span,.intervalVisualMetrics>div)>b{display:block!important;font-size:18px!important;line-height:1.2!important;color:var(--text)!important;overflow-wrap:anywhere;word-break:normal}
+.viz-stat-value{font-size:24px!important}.injuryStageValue{font-size:17px!important}
 
-/* DETAILS / DISCLOSURES */
-details{overflow:hidden}
-details>summary{list-style:none;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:12px;font-weight:850;color:white}
-details>summary::-webkit-details-marker{display:none}
-details>summary:after{content:"⌄";font-size:18px;color:var(--sky);transition:transform .16s ease}
-details[open]>summary:after{transform:rotate(180deg)}
-details.panel>summary{margin:-20px;padding:18px 20px;background:rgba(57,128,236,.18)}
-details.panel[open]>summary{margin-bottom:18px;border-bottom:1px solid var(--line)}
-details:not(.panel){border:1px solid var(--line);border-radius:15px;background:rgba(5,9,71,.22)}
-details:not(.panel)>summary{padding:14px 16px;background:rgba(57,128,236,.18)}
-details:not(.panel)[open]>:not(summary){margin-left:16px;margin-right:16px}
-details:not(.panel)[open]>:last-child{margin-bottom:16px}
+/* Buttons + inputs */
+.primary,.secondary,.buttonLike,.filePick,.todayInlineLink,.coachPlanLink,.logProgressLink,button:not(#nav button):not(.close){border:1px solid rgba(76,201,240,.22);background:var(--blue);color:white;border-radius:12px;padding:10px 14px;font-weight:800;box-shadow:none}.secondary{background:rgba(76,201,240,.08);color:var(--ice)}.danger{background:#45242B!important;color:#FFC5CD!important;border-color:rgba(244,119,119,.3)!important}.full{width:100%;margin-top:10px}.buttonRow{display:flex;flex-wrap:wrap;gap:8px}
+input,select,textarea{width:100%;border:1px solid var(--line);background:var(--bg-elev);color:var(--text);border-radius:11px;padding:10px 11px;outline:0}input:focus,select:focus,textarea:focus{border-color:var(--cyan);box-shadow:0 0 0 3px rgba(76,201,240,.10)}.field label{display:block;font-size:11px;font-weight:800;color:var(--muted);margin-bottom:5px}.formGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px}
 
-/* BADGES / CHIPS */
-.badge,.evidenceBadge,.status,.todayContextChips>span,.aiCoachEvidence,.injuryFamilyPill,.activePlanBadge,
-.recoveryConfidence,.pill,.chip{
-  display:inline-flex;align-items:center;gap:6px;width:max-content;max-width:100%;
-  padding:6px 10px;border-radius:999px;background:rgba(136,197,252,.14);border:1px solid rgba(187,245,249,.18);
-  color:var(--ice);font-size:11px;font-weight:850;letter-spacing:.02em
-}
-.status{background:var(--blue);color:white}.status.missed,.bad,.negative{color:#FFDDE4!important}
-.note{padding:13px 14px;border-radius:14px;background:rgba(57,128,236,.14);border:1px solid var(--line);margin:10px 0}
-.note.warn{border-left:4px solid var(--amber)}.note.bad{border-left:4px solid var(--red)}.note.good{border-left:4px solid var(--sky)}
+/* Foldouts */
+details{overflow:hidden}details>summary{list-style:none;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:10px;color:var(--text);font-weight:800}details>summary::-webkit-details-marker{display:none}details>summary:after{content:"⌄";color:var(--cyan);font-size:16px;transition:.15s}details[open]>summary:after{transform:rotate(180deg)}details.panel>summary{margin:-18px;padding:15px 18px;background:var(--surface-2)}details.panel[open]>summary{margin-bottom:16px;border-bottom:1px solid var(--line)}details:not(.panel){border:1px solid var(--line);border-radius:13px;background:var(--bg-elev)}details:not(.panel)>summary{padding:13px 14px;background:rgba(76,201,240,.06)}details:not(.panel)[open]>:not(summary){margin-left:14px;margin-right:14px}details:not(.panel)[open]>:last-child{margin-bottom:14px}
 
-/* ICON LANGUAGE */
-.uiIcon,.workoutTypeIcon svg,.todaySupportHead svg,.aiCoachIcon svg,.coachVisual svg{
-  fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round
-}
-.workoutTypeIcon,.aiCoachIcon,.coachVisualIcon,.sectionVisualIcon,.exerciseFallback,.todaySupportHead>span{
-  width:48px;height:48px;flex:0 0 48px;display:grid;place-items:center;border-radius:15px;
-  background:rgba(136,197,252,.12);border:1px solid var(--line2);color:var(--ice)
-}
-.workoutTypeIcon svg,.aiCoachIcon svg{width:26px;height:26px}
+/* Chips + icon language */
+.badge,.evidenceBadge,.status,.todayContextChips>span,.aiCoachEvidence,.injuryFamilyPill,.activePlanBadge,.recoveryConfidence,.pill,.chip{display:inline-flex;align-items:center;gap:6px;width:max-content;max-width:100%;padding:5px 9px;border-radius:999px;background:rgba(76,201,240,.08);border:1px solid rgba(76,201,240,.16);color:var(--ice);font-size:10px;font-weight:800}.status{background:rgba(59,130,246,.18)}
+.uiIcon,.workoutTypeIcon svg,.todaySupportHead svg,.aiCoachIcon svg,.coachVisual svg,.aiCoachCall svg,.recoveryMain svg{fill:none!important;stroke:currentColor!important;stroke-width:1.8!important;stroke-linecap:round!important;stroke-linejoin:round!important}.uiIcon{width:20px;height:20px}.workoutTypeIcon,.aiCoachIcon,.coachVisualIcon,.sectionVisualIcon,.exerciseFallback,.todaySupportHead>span{width:44px;height:44px;flex:0 0 44px;display:grid;place-items:center;border-radius:13px;background:rgba(76,201,240,.08);border:1px solid var(--line);color:var(--cyan)}.workoutTypeIcon svg,.aiCoachIcon svg,.todaySupportHead svg{width:23px;height:23px}
 
-/* TODAY — decision first */
-#todayCard,#todayCoach{display:grid;gap:16px}
-.aiCoachBriefing,.todayPrimaryCard,.rehabTodayFocus{padding:22px;position:relative;overflow:hidden}
-.aiCoachBriefing:before,.todayPrimaryCard:before,.rehabTodayFocus:before{
-  content:"";position:absolute;inset:0 auto 0 0;width:4px;background:var(--sky)
-}
-.aiCoachBriefing h3,.todayPrimaryCard h3{font-size:clamp(25px,6vw,34px);line-height:1.08;letter-spacing:-.025em}
-.todayContextChips{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0}
-.todaySupportCard{padding:18px}.todaySupportHead{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+/* Today */
+#todayCard,#todayCoach{display:grid;gap:13px}.aiCoachBriefing{padding:19px;border-color:rgba(76,201,240,.24);position:relative}.aiCoachBriefing:before{content:"";position:absolute;left:0;top:18px;bottom:18px;width:3px;border-radius:3px;background:var(--cyan)}.aiCoachHeader{display:grid;grid-template-columns:44px 1fr;gap:11px;align-items:start}.aiCoachHeader>.aiCoachEvidence{grid-column:2;justify-self:start}.aiCoachHeader h3{font-size:25px;line-height:1.12;letter-spacing:-.02em;margin:2px 0 0}.aiCoachLead{font-size:15px;line-height:1.55;margin:16px 0}.todayContextChips{display:flex;flex-wrap:wrap;gap:7px;margin:0 0 15px}.todayContextChips>span{padding:7px 9px}.todayContextChips svg{width:17px;height:17px}.aiCoachCall{display:grid;grid-template-columns:42px 1fr;gap:11px;align-items:center;padding:13px;background:var(--surface-2);border:1px solid var(--line);border-radius:14px}.aiCoachCall>span{width:42px;height:42px;display:grid;place-items:center;border-radius:12px;background:rgba(76,201,240,.08);color:var(--cyan)}.aiCoachCall svg{width:22px!important;height:22px!important}.aiCoachCall small{display:block;font-size:9px;letter-spacing:.08em}.aiCoachCall b{display:block;font-size:15px;line-height:1.35;margin-top:2px}.todaySupportGrid{display:grid;gap:12px}.todaySupportCard{padding:16px}.todaySupportHead{display:flex;align-items:center;gap:10px;margin-bottom:12px}.todaySupportHead h4{margin:2px 0 0;font-size:18px}.todaySupportCard ul{margin:8px 0 14px;padding-left:21px}.todaySupportCard li{margin:5px 0}.supportNotice{padding:10px;border-radius:11px;background:rgba(246,185,74,.08);border-left:3px solid var(--warning)}
 
-/* PLAN — scannable weekly agenda */
-.weekNav{display:grid;grid-template-columns:58px 1fr 58px;gap:10px;margin-bottom:12px}
-.weekNav button{min-height:48px}
-.weekHeader{padding:18px;background:linear-gradient(135deg,var(--royal),var(--blue));border:1px solid rgba(187,245,249,.26);border-radius:20px;box-shadow:var(--shadow);margin-bottom:24px}
-.weekHeroLine{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
-.weekHeroLine>div{display:grid;grid-template-columns:auto 1fr;gap:2px 8px;align-items:baseline;min-width:0}
-.weekHeroLine small{grid-column:1;font-size:10px;letter-spacing:.08em}.weekHeroLine b{grid-column:2;font-size:20px}.weekHeroLine span{grid-column:1/-1;font-size:12px;color:var(--ice)}
-.weekHeroLine>strong{font-size:28px;line-height:1}
-.weekMetricRow{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:14px}
-.weekMetricRow>span{padding:10px;background:rgba(5,9,71,.28);border:1px solid rgba(187,245,249,.16);border-radius:12px}
-.weekMetricRow b{display:block;font-size:15px;white-space:nowrap}.weekMetricRow small{display:block;font-size:8px;text-transform:uppercase;letter-spacing:.08em;margin-top:3px}
-.brandProgress,.progressTrack,.pillarBar,.deltaTrack,.bar,.confidenceBar,.findingScoreBar,.intensityBarTrack{
-  height:7px;background:rgba(5,9,71,.55);border-radius:999px;overflow:hidden
-}
-.brandProgress{margin-top:12px}.brandProgress i,.progressTrack i,.pillarBar i,.deltaTrack i,.bar i,.confidenceBar i,.findingScoreBar i,.intensityBarTrack i{display:block;height:100%;background:var(--sky);border-radius:inherit}
-.planPrimaryHead,.planSecondaryHead{margin:24px 2px 12px}.planPrimaryHead>span,.planSecondaryHead>span{font-size:11px;font-weight:900;letter-spacing:.13em;color:var(--sky)}.planPrimaryHead p,.planSecondaryHead p{font-size:13px;color:var(--muted);margin:5px 0 0}
-#planCards{display:grid;gap:12px}
-.workout{position:relative;overflow:hidden;border-radius:20px}
-.workout:before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--sky)}
-.workoutHead{display:grid;grid-template-columns:76px 48px 1fr auto;align-items:center;gap:12px;padding:16px 16px 16px 20px}
-.dateBox{min-height:72px;display:grid;place-items:center;align-content:center;background:rgba(57,128,236,.17);border:1px solid var(--line);border-radius:14px;text-align:center}
-.dateBox b{font-size:22px;line-height:1}.dateBox small{font-size:9px;letter-spacing:.08em}.workoutTitle b{display:block;font-size:19px}.workoutTitle span{font-size:13px;color:var(--muted)}
-.workoutDetails{padding:16px 20px 20px;border-top:1px solid var(--line);background:rgba(5,9,71,.24)}
-.planInsightsShell{margin-top:18px}.planInsightsShell>summary{padding:17px 18px}.planInsightsBody{padding:14px}
-.mixGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.mixGrid h4{margin-bottom:12px}
-.intensityBarList{display:grid;gap:14px}.intensityBarRow{display:grid;gap:6px}.intensityBarHead{display:flex;justify-content:space-between;gap:10px;font-size:12px}.intensityBarTrack{height:9px}.intensityBarTrack i.tone2{background:var(--sky)}.intensityBarTrack i.tone3{background:var(--ice)}
+/* Plan */
+.weekNav{display:grid;grid-template-columns:50px 1fr 50px;gap:8px;margin-bottom:10px}.weekNav button{min-height:44px}.weekHeader{padding:16px;background:linear-gradient(135deg,#15314A,#123A58);border:1px solid rgba(76,201,240,.22);border-radius:17px;margin-bottom:20px}.weekHeroLine{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:start}.weekHeroLine>div{display:grid;grid-template-columns:auto 1fr;column-gap:7px;row-gap:2px;align-items:baseline}.weekHeroLine small{grid-column:1;font-size:9px;letter-spacing:.08em}.weekHeroLine b{grid-column:2;font-size:19px}.weekHeroLine span{grid-column:1/-1;font-size:11px;color:var(--muted)}.weekHeroLine>strong{font-size:25px;line-height:1}.weekMetricRow{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-top:12px}.weekMetricRow>span{display:block;padding:9px 7px;background:rgba(7,17,29,.35);border:1px solid var(--line);border-radius:10px}.weekMetricRow b{display:block;font-size:13px;line-height:1.15;white-space:nowrap}.weekMetricRow small{display:block;font-size:7px;letter-spacing:.08em;text-transform:uppercase;margin-top:2px}.brandProgress,.progressTrack,.pillarBar,.deltaTrack,.bar,.confidenceBar,.findingScoreBar,.intensityBarTrack{height:6px;background:rgba(7,17,29,.55);border-radius:999px;overflow:hidden}.brandProgress{margin-top:10px}.brandProgress i,.progressTrack i,.pillarBar i,.deltaTrack i,.bar i,.confidenceBar i,.findingScoreBar i,.intensityBarTrack i{display:block;height:100%;background:var(--cyan);border-radius:inherit}.planPrimaryHead,.planSecondaryHead{margin:21px 2px 10px}.planPrimaryHead>span,.planSecondaryHead>span{font-size:10px;font-weight:900;letter-spacing:.12em;color:var(--cyan)}.planPrimaryHead p,.planSecondaryHead p{font-size:12px;margin:4px 0 0}.workout{position:relative;overflow:hidden}.workout:before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--cyan)}#planCards{display:grid;gap:10px}.workoutHead{display:grid;grid-template-columns:62px 40px 1fr;gap:10px;align-items:center;padding:13px 12px 13px 15px}.workoutHead>.status{grid-column:3;justify-self:start}.dateBox{height:62px;display:grid;place-items:center;align-content:center;border:1px solid var(--line);border-radius:12px;background:rgba(76,201,240,.05);text-align:center}.dateBox small{font-size:8px;letter-spacing:.07em}.dateBox b{font-size:20px;line-height:1}.workoutTypeIcon{width:40px;height:40px;flex-basis:40px}.workoutTitle b{display:block;font-size:17px}.workoutTitle span{font-size:12px;color:var(--muted)}.workoutDetails{padding:14px 16px 17px;border-top:1px solid var(--line);background:var(--bg-elev)}.mixGrid{display:grid;grid-template-columns:1fr;gap:10px}.mixGrid>div{padding:13px}.intensityBarList{display:grid;gap:12px}.intensityBarHead{display:flex;justify-content:space-between;gap:8px;font-size:11px}.intensityBarTrack{height:7px}
 
-/* RUN LOG — analysis hierarchy */
-.importBox{display:grid;grid-template-columns:1fr;gap:14px}
-.filePick{display:flex;justify-content:center;align-items:center;min-height:48px}
-#runList{display:grid;gap:12px}
-.workoutIntelligence,.postRunCoachUpdate,.intervalAnalysisCard{padding:20px;margin-bottom:16px}
-.intervalAnalysisHead{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
-.intervalAnalysisHead>b{padding:9px 12px;border-radius:12px;background:var(--ice);color:var(--navy);font-size:20px}
-.repDots{display:flex;flex-wrap:wrap;gap:7px}.repDots i{width:15px;height:15px;border-radius:50%;background:var(--sky)}.repDots i.extra{background:var(--amber)}.repDots i.missing{background:var(--red)}
-.intervalVisualMetrics,.executionKpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px}
-.intervalVisualMetrics>div,.executionKpis>span{padding:13px;background:rgba(57,128,236,.18);border:1px solid var(--line);border-radius:14px}
-.powerCoverage{display:flex;align-items:center;justify-content:space-between;gap:10px}
+/* Run log */
+.importBox{display:grid;gap:11px}.filePick{display:flex;align-items:center;justify-content:center;min-height:44px}.logPrimaryHead{margin:21px 2px 10px}.logPrimaryHead>span{font-size:10px;font-weight:900;letter-spacing:.12em;color:var(--cyan)}.logPrimaryHead p{font-size:12px;margin:4px 0 0}.workoutIntelligence,.postRunCoachUpdate,.intervalAnalysisCard{padding:17px;margin-bottom:13px}.intervalAnalysisHead{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}.intervalAnalysisHead>b{padding:8px 10px;border-radius:10px;background:rgba(76,201,240,.10);border:1px solid var(--line);font-size:18px}.repDots{display:flex;flex-wrap:wrap;gap:6px}.repDots i{width:13px;height:13px;border-radius:50%;background:var(--cyan)}.repDots i.extra{background:var(--warning)}.repDots i.missing{background:var(--danger)}.intervalVisualMetrics,.executionKpis{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.intervalVisualMetrics>div:last-child{grid-column:1/-1}.powerCoverage{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}.powerCoverage b{font-size:16px}.powerCoverage span{font-size:12px;text-align:right}
 
-/* PROGRESS — editorial dashboard, not a wall of cards */
-.outlookHero{padding:22px;margin-bottom:30px;background:linear-gradient(145deg,var(--royal),#132A86 68%,#173A9B)}
-.outlookHeroIntro h2{font-size:clamp(28px,7vw,44px);line-height:1.05;letter-spacing:-.035em;margin:10px 0 6px}
-.outlookComparison{display:grid;grid-template-columns:1fr auto 1fr;gap:12px;align-items:stretch;margin:18px 0}
-.outlookCard{padding:16px;border-radius:18px;background:rgba(5,9,71,.34);border:1px solid var(--line)}
-.outlookCard>span{font-size:11px;color:var(--sky);font-weight:800}.outlookCard>strong{display:block;font-size:clamp(34px,9vw,52px);line-height:1;margin:7px 0}.outlookCard>b{display:block;font-size:13px}.outlookCard>small{display:block;margin-top:4px}
-.outlookArrow{display:grid;place-items:center;color:var(--ice);font-size:24px}
-.outlookGain{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:9px}.outlookGain>div,.outlookGain>details{padding:12px;background:rgba(57,128,236,.18);border:1px solid var(--line);border-radius:13px}
-.canonicalAdaptationHome,.personalModelPanel,.modelValidationPanel{padding:20px;margin-bottom:16px}
-.adaptationVisualCard,.personalDimension,.modelValidationGrid>article,.evidenceFinding>summary,.canonicalPathMetrics>div{
-  background:rgba(57,128,236,.16);border:1px solid var(--line);border-radius:16px
-}
-.adaptationVisualCard{padding:16px;margin:12px 0;position:relative;overflow:hidden}.adaptationVisualCard:before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--sky)}
-.canonicalPathMetrics{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.canonicalPathMetrics>div{padding:11px}
-canvas{display:block;width:100%!important;height:auto!important;max-height:320px;background:rgba(5,9,71,.42);border:1px solid var(--line);border-radius:15px}
-.chartMetric{text-align:right}.chartMetric span{display:block;font-size:10px;color:var(--muted)}.chartMetric strong{font-size:15px}
-.chartDataTable{margin-top:10px}
+/* Progress */
+.outlookHero{padding:18px;margin-bottom:25px}.outlookHeroIntro h2{font-size:31px;line-height:1.06;letter-spacing:-.03em;margin:8px 0 5px}.outlookComparison{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:14px 0}.outlookArrow{display:none}.outlookCard{padding:13px;border-radius:14px;background:var(--surface-2);border:1px solid var(--line)}.outlookCard>span{display:block;font-size:9px;font-weight:800;color:var(--subtle);line-height:1.3}.outlookCard>strong{display:block;font-size:34px;line-height:1;margin:7px 0 5px}.outlookCard>b{display:block;font-size:12px}.outlookCard>small{display:block;font-size:9px;margin-top:3px}.outlookGain{display:grid;grid-template-columns:1fr 1fr;gap:8px}.outlookGain>div,.outlookGain>details{padding:10px;background:rgba(76,201,240,.05);border:1px solid var(--line);border-radius:11px}.canonicalAdaptationHome,.personalModelPanel,.modelValidationPanel{padding:17px;margin-bottom:13px}.adaptationVisualCard,.personalDimension,.modelValidationGrid>article,.evidenceFinding>summary,.canonicalPathMetrics>div{background:var(--surface-2);border:1px solid var(--line);border-radius:13px}.adaptationVisualCard{padding:14px;margin:9px 0}.canonicalPathMetrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.canonicalPathMetrics>div{padding:9px 7px}.canonicalPathMetrics b{font-size:13px!important}.canonicalPathMetrics small{font-size:8px!important}canvas{display:block;width:100%!important;height:auto!important;max-height:300px;background:var(--bg-elev);border:1px solid var(--line);border-radius:12px}.chartMetric{text-align:right}.chartMetric span{display:block;font-size:9px}.chartMetric strong{font-size:13px}
 
-/* RECOVERY / INJURY — calm clinical visual language */
-.recoveryConclusion,.rehabTodayFocus,.injuryCard{padding:20px;margin-bottom:16px}
-.recoveryMain{display:flex;align-items:center;gap:12px}.recoveryMain>div{flex:1}.recoveryMain small{display:block;font-size:10px;letter-spacing:.1em}.recoveryMain strong{display:block;font-size:26px;line-height:1.05}
-.recoveryQuickGrid,.injuryKpiGrid,.prognosisStrip{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-top:16px}
-.recoveryQuickGrid>div,.injuryKpiGrid>div,.prognosisStrip>div{padding:12px;background:rgba(57,128,236,.16);border:1px solid var(--line);border-radius:14px}
-.recoveryQuickGrid small{display:block;font-size:9px}.recoveryQuickGrid b{display:block;font-size:18px}
-.readinessHero{display:grid;grid-template-columns:1fr 1fr;gap:14px}.readinessFormula{display:grid;gap:8px}.readinessFormula>div{display:flex;justify-content:space-between;gap:12px;padding:10px;background:rgba(57,128,236,.14);border-radius:11px}
-.injuryCard h3{font-size:24px}.diagnosisBox{padding:16px;background:rgba(57,128,236,.16);border:1px solid var(--line2);border-radius:17px}
-.exerciseCard{padding:15px;border:1px solid var(--line);border-radius:16px;background:rgba(57,128,236,.12);margin:10px 0}
-.exerciseMuscles{display:flex;flex-wrap:wrap;gap:6px}.exerciseMuscles i{font-style:normal;font-size:10px;padding:4px 8px;border-radius:999px;background:rgba(136,197,252,.14);color:var(--ice)}
+/* Recovery & Injury */
+.recoveryConclusion,.rehabTodayFocus,.injuryCard{padding:17px;margin-bottom:13px}.recoveryMain{display:flex;align-items:center;gap:10px}.recoveryMain>span:first-child{width:42px;height:42px;display:grid;place-items:center;border-radius:12px;background:rgba(76,201,240,.08);color:var(--cyan)}.recoveryMain>span:first-child svg{width:22px;height:22px}.recoveryMain>div{flex:1}.recoveryMain small{display:block;font-size:9px;letter-spacing:.08em}.recoveryMain strong{display:block;font-size:23px}.recoveryQuickGrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-top:13px}.recoveryQuickGrid>div{padding:10px;background:var(--surface-2);border:1px solid var(--line);border-radius:11px}.recoveryQuickGrid b{font-size:16px!important}.recoveryQuickGrid span{font-size:9px!important}.injuryKpiGrid,.prognosisStrip{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:12px}.adherencePeriods{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:6px!important}.adherenceTile{padding:9px 7px!important}.adherenceTile strong{font-size:19px!important}.adherenceTile span{font-size:9px!important}.diagnosisBox{padding:14px;background:var(--surface-2);border:1px solid var(--line);border-radius:14px}.injurySectionHead{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}.injurySectionHead h4{margin-bottom:3px}.criterion,.milestone{display:grid;grid-template-columns:28px 1fr auto;gap:9px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)}.criterionCopy{display:grid}.criterionLabel{color:var(--text);font-weight:700}.criterionProgress{font-size:10px}.checkInHistory{display:grid;gap:7px}.checkInHistoryRow{display:flex!important;justify-content:space-between!important;align-items:center!important;text-align:left;background:var(--surface-2)!important}.exerciseCard{padding:13px;border:1px solid var(--line);border-radius:13px;background:var(--surface-2);margin:8px 0}.exerciseMuscles{display:flex;flex-wrap:wrap;gap:5px}.exerciseMuscles i{font-style:normal;font-size:9px;padding:4px 7px;border-radius:999px;background:rgba(76,201,240,.08);color:var(--ice)}
 
-/* TABLES / CALCULATIONS */
-.calcTable{display:grid;gap:7px;margin:12px 0}.calcRow{display:grid;grid-template-columns:1fr auto auto;gap:10px;padding:9px 0;border-bottom:1px solid var(--line);font-size:12px}.calcRow.total{font-weight:900;border-bottom:0}
-table{width:100%;border-collapse:collapse;font-size:12px}th,td{padding:9px 8px;text-align:left;border-bottom:1px solid var(--line)}th{color:var(--sky)}
+/* Tables */
+.calcTable{display:grid;gap:6px}.calcRow{display:grid;grid-template-columns:1fr auto auto;gap:8px;padding:8px 0;border-bottom:1px solid var(--line);font-size:11px}table{width:100%;border-collapse:collapse;font-size:11px}th,td{padding:8px 6px;border-bottom:1px solid var(--line);text-align:left}th{color:var(--cyan)}
 
-/* MODALS */
-.modal,.onboarding{position:fixed;inset:0;z-index:500;background:rgba(1,4,54,.82);backdrop-filter:blur(10px);display:grid;place-items:center;padding:14px}
-.modalCard,.onboardingCard{position:relative;width:min(760px,100%);max-height:calc(100vh - 28px);overflow:auto;background:var(--surface);border:1px solid var(--line2);border-radius:24px;padding:22px;box-shadow:0 30px 80px rgba(0,0,0,.4)}
-.close{position:sticky;float:right;top:0;z-index:2;width:42px;height:42px;border-radius:50%;border:1px solid var(--line2);background:var(--blue);color:white;font-size:25px;line-height:1}
-.onboarding fieldset{border:1px solid var(--line);border-radius:18px;margin:14px 0;padding:16px}.onboarding legend{font-weight:900;color:white}.onboarding legend i{font-style:normal;display:inline-grid;place-items:center;width:28px;height:28px;border-radius:10px;background:var(--blue);margin-right:6px}
-.toast{position:fixed;z-index:800;left:50%;bottom:100px;transform:translateX(-50%);width:min(440px,calc(100vw - 24px));padding:13px 15px;background:var(--ice);color:var(--navy);font-weight:850;border-radius:14px;box-shadow:var(--shadow)}
+/* Modal */
+.modal,.onboarding{position:fixed;inset:0;z-index:500;display:grid;place-items:center;padding:12px;background:rgba(2,8,14,.82);backdrop-filter:blur(10px)}.modalCard,.onboardingCard{position:relative;width:min(740px,100%);max-height:calc(100vh - 24px);overflow:auto;background:var(--surface);border:1px solid rgba(76,201,240,.22);border-radius:20px;padding:17px;box-shadow:0 30px 80px rgba(0,0,0,.42)}.close{position:sticky;float:right;top:0;z-index:3;width:40px;height:40px;border-radius:50%;border:1px solid rgba(76,201,240,.22);background:var(--surface-3);color:white;font-size:22px}.toast{position:fixed;z-index:900;left:50%;bottom:88px;transform:translateX(-50%);width:min(420px,calc(100vw - 24px));padding:12px 14px;border-radius:12px;background:var(--ice);color:#07111D;font-weight:800;box-shadow:var(--shadow)}
 
-/* RESPONSIVE */
-@media(max-width:760px){
-  #mainContent{padding-top:20px}
-  .grid2,.mixGrid{grid-template-columns:1fr}
-  .workoutHead{grid-template-columns:66px 42px 1fr}.workoutHead>.status{grid-column:3;justify-self:start}
-  .outlookComparison{grid-template-columns:1fr 1fr}.outlookArrow{display:none}
-  .recoveryQuickGrid,.injuryKpiGrid,.prognosisStrip{grid-template-columns:repeat(3,1fr)}
-  .readinessHero{grid-template-columns:1fr}
-}
-@media(max-width:470px){
-  .topbar{height:68px}.logo{width:42px;height:42px}.brand-copy h1{font-size:18px}.brand-copy p{display:none}
-  #mainContent{padding-left:14px;padding-right:14px}
-  .sectionTitle{align-items:center}.sectionTitle h2{font-size:32px}
-  .panel,.aiCoachBriefing,.todayPrimaryCard,.rehabTodayFocus,.canonicalAdaptationHome,.personalModelPanel,.modelValidationPanel{padding:17px}
-  .weekMetricRow{gap:6px}.weekMetricRow>span{padding:9px 7px}.weekMetricRow b{font-size:13px}.weekMetricRow small{font-size:7px}
-  .workoutHead{grid-template-columns:62px 40px 1fr;gap:9px;padding:14px 12px 14px 16px}.dateBox{min-height:64px}.workoutTitle b{font-size:17px}
-  .outlookCard{padding:13px}.outlookCard>strong{font-size:38px}
-  .canonicalPathMetrics{grid-template-columns:1fr 1fr 1fr}.canonicalPathMetrics>div{padding:9px 7px}
-  .recoveryQuickGrid,.injuryKpiGrid,.prognosisStrip{gap:6px}.recoveryQuickGrid>div,.injuryKpiGrid>div,.prognosisStrip>div{padding:9px 7px}
-  .calcRow{grid-template-columns:1fr auto}.calcRow>span:nth-child(2){display:none}
-}
+@media(min-width:760px){#mainContent{padding-left:24px;padding-right:24px}.todaySupportGrid{grid-template-columns:1fr 1fr}.mixGrid{grid-template-columns:repeat(3,1fr)}.workoutHead{grid-template-columns:70px 44px 1fr auto}.workoutHead>.status{grid-column:auto;justify-self:end}.outlookComparison{grid-template-columns:1fr auto 1fr}.outlookArrow{display:grid;place-items:center}.injuryKpiGrid,.prognosisStrip{grid-template-columns:repeat(4,1fr)}}
+@media(max-width:390px){#mainContent{padding-left:12px;padding-right:12px}.sectionTitle h2{font-size:28px}.weekMetricRow b{font-size:12px}.weekMetricRow>span{padding:8px 5px}.aiCoachHeader h3{font-size:23px}.canonicalPathMetrics>div{padding:8px 5px}.recoveryQuickGrid>div{padding:8px 5px}}
