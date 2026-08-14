@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '12.3.5';
-  const BUILD = 20305;
+  const VERSION = '12.3.6';
+  const BUILD = 20306;
   const SCHEMA = 10330;
   const PRIMARY_STORAGE_KEY = 'arc_v10330_web';
   const MIRROR_STORAGE_KEY = 'arc_v10330_mirror';
@@ -2711,10 +2711,14 @@ function weeklyReviewHtml(w=currentWeek()){
 }
 function planTimelineHtml(viewWeek=currentWeek()){
  const total=weeks(),groups=[];for(let w=1;w<=total;w++){const name=detailedPhase(w),last=groups.at(-1);if(!last||last.name!==name)groups.push({name,start:w,end:w});else last.end=w}
- const longTypes=['Long run','Specific long run','Race rehearsal','Progression'],longRuns=state.plan.filter(p=>longTypes.includes(p.type)),futureLong=longRuns.filter(p=>p.date>=iso(today())).sort((a,b)=>a.date.localeCompare(b.date))[0],peakLong=longRuns.slice().sort((a,b)=>Number(b.distance)-Number(a.distance))[0],taperStart=state.plan.find(p=>p.detailedPhase==='Taper'),current=currentWeek();
+ const longTypes=['Long run','Specific long run','Race rehearsal','Progression'],qualityTypes=['Threshold','Threshold intervals','VO₂max intervals','Race-pace intervals','Hills','Fartlek','Half-marathon-specific','Marathon-specific','Specific long run','Race rehearsal'];
+ const longRuns=state.plan.filter(p=>longTypes.includes(p.type)),futureLong=longRuns.filter(p=>p.date>=iso(today())).sort((a,b)=>a.date.localeCompare(b.date))[0],peakLong=longRuns.slice().sort((a,b)=>Number(b.distance)-Number(a.distance))[0],taperStart=state.plan.find(p=>p.detailedPhase==='Taper'),current=currentWeek();
  const programmePct=clamp((current-.5)/total*100,0,100),viewPct=clamp((viewWeek-.5)/total*100,0,100);
+ const phaseStats=groups.map(g=>{const rows=state.plan.filter(p=>p.week>=g.start&&p.week<=g.end&&!['Rest','Race Day'].includes(p.type)),km=sum(rows.map(p=>Number(p.distance)||0)),duration=g.end-g.start+1,avgKm=km/Math.max(1,duration),qualityKm=sum(rows.filter(p=>qualityTypes.includes(p.type)).map(p=>Number(p.distance)||0)),qualityShare=km>0?qualityKm/km:0;return{...g,duration,avgKm,qualityShare}});
+ const maxAvg=Math.max(1,...phaseStats.map(g=>g.avgKm));
+ phaseStats.forEach(g=>{const demand=.68*(g.avgKm/maxAvg)+.32*Math.min(1,g.qualityShare/.30);g.demand=demand;g.tone=demand>=.82?'peak':demand>=.64?'high':demand>=.44?'moderate':'low'});
  const milestones=[futureLong?{label:'Next key long run',value:`${fmtDate(futureLong.date)} · ${futureLong.type} · ${Number(futureLong.distance).toFixed(1)} km`}:null,peakLong?{label:'Peak long run',value:`${fmtDate(peakLong.date)} · ${Number(peakLong.distance).toFixed(1)} km`}:null,taperStart?{label:'Taper begins',value:`Week ${taperStart.week} · ${fmtDate(taperStart.date)}`}:null,{label:'Race day',value:`${fmtDate(state.setup.raceDate)} · ${Number(state.setup.raceDistance).toFixed(1)} km`}].filter(Boolean);
- return`<section class="planTimelineCard"><div class="phaseRail equalPhaseRail" style="--phase-count:${groups.length}" role="img" aria-label="Programme phases from plan start to race day">${groups.map(g=>`<div class="phaseSegment ${current>=g.start&&current<=g.end?'active':''} ${viewWeek>=g.start&&viewWeek<=g.end&&viewWeek!==current?'viewed':''}"><b>${esc(g.name)}</b><small>Weeks ${g.start}${g.end!==g.start?`–${g.end}`:''}</small>${current>=g.start&&current<=g.end?'<em>NOW</em>':''}${viewWeek>=g.start&&viewWeek<=g.end&&viewWeek!==current?`<em class="viewedLabel">VIEW W${viewWeek}</em>`:''}</div>`).join('')}</div><div class="timelineProgressRow"><span>Plan start</span><div class="timelineProgressTrack"><i style="width:${programmePct}%"></i>${viewWeek!==current?`<b style="left:${viewPct}%" aria-label="Viewed week ${viewWeek}"></b>`:''}</div><span>Race</span></div><div class="planMilestones">${milestones.map(m=>`<div><span class="milestoneDot"></span><small>${m.label}</small><b>${esc(m.value)}</b></div>`).join('')}</div></section>`;
+ return`<section class="planTimelineCard"><div class="phaseRail proportionalPhaseRail" role="img" aria-label="Programme phases sized by duration and coloured by planned training demand">${phaseStats.map(g=>`<div class="phaseSegment demand-${g.tone} ${current>=g.start&&current<=g.end?'active':''} ${viewWeek>=g.start&&viewWeek<=g.end&&viewWeek!==current?'viewed':''}" style="flex:${g.duration} 1 0" title="${esc(g.name)} · ${g.duration} week${g.duration===1?'':'s'} · ${g.avgKm.toFixed(1)} km/week average"><b>${esc(g.name)}</b><small>W${g.start}${g.end!==g.start?`–${g.end}`:''}</small>${current>=g.start&&current<=g.end?'<em>NOW</em>':''}${viewWeek>=g.start&&viewWeek<=g.end&&viewWeek!==current?`<em class="viewedLabel">VIEW W${viewWeek}</em>`:''}</div>`).join('')}</div><div class="phaseDemandLegend"><span><i class="low"></i>Lower</span><span><i class="moderate"></i>Moderate</span><span><i class="high"></i>High</span><span><i class="peak"></i>Peak demand</span></div><div class="timelineProgressRow"><span>Plan start</span><div class="timelineProgressTrack"><i style="width:${programmePct}%"></i>${viewWeek!==current?`<b style="left:${viewPct}%" aria-label="Viewed week ${viewWeek}"></b>`:''}</div><span>Race</span></div><div class="planMilestones">${milestones.map(m=>`<div><span class="milestoneDot"></span><small>${m.label}</small><b>${esc(m.value)}</b></div>`).join('')}</div></section>`;
 }
 function planIntensityDistributionHtml(w){
  const sessions=state.plan.filter(p=>p.week===w&&!['Rest','Race Day'].includes(p.type)),rows=intensityGroups(sessions,'distance'),total=sum(rows.map(x=>Number(x.value)||0));
@@ -2723,26 +2727,6 @@ function planIntensityDistributionHtml(w){
  return`<section class="planIntensityCard"><div class="intensityStack" aria-label="Selected week intensity distribution">${rows.map((r,i)=>`<i class="${tones[i]||'easy'}" style="width:${r.value/total*100}%" title="${esc(r.label)} ${Math.round(r.value/total*100)}%"></i>`).join('')}</div><div class="planIntensityRows">${rows.map((r,i)=>`<div><span class="intensitySwatch ${tones[i]||'easy'}"></span><b>${esc(r.label)}</b><strong>${Number(r.value).toFixed(1)} km</strong><small>${Math.round(r.value/total*100)}%</small></div>`).join('')}</div><details class="planIntensityDetail"><summary>Overall programme distribution</summary>${intensityMixHtml(state.plan.filter(p=>!['Rest','Race Day'].includes(p.type)),'distance','No programme volume')}</details></section>`;
 }
 
-function sizeAndToneProgrammeTimeline(){
- const root=$('raceTimeline'); if(!root)return;
- const segs=[...root.querySelectorAll('.phaseSeg,.phaseBlock,.programmePhase,.timelinePhase,.planPhase')];
- if(!segs.length)return;
- const tones=['base','build','specific','peak','taper','race'];
- segs.forEach((el,i)=>{
-   const txt=el.textContent||'';
-   let weeks=1;
-   const range=txt.match(/(?:W(?:eek)?\s*)?(\d+)\s*[–-]\s*(?:W(?:eek)?\s*)?(\d+)/i);
-   if(range) weeks=Math.max(1,+range[2]-+range[1]+1);
-   else {
-     const one=txt.match(/(?:W(?:eek)?\s*)(\d+)/i);
-     weeks=one?1:Math.max(1,Math.round(100/segs.length));
-   }
-   el.style.setProperty('--phase-weeks',weeks);
-   const low=txt.toLowerCase();
-   let tone=low.includes('taper')?'taper':low.includes('race')?'race':low.includes('peak')?'peak':low.includes('specific')?'specific':low.includes('build')?'build':'base';
-   el.dataset.phaseTone=tone;
- });
-}
 function renderPlan(){
  if(!state.weekView)state.weekView=currentWeek();state.weekView=clamp(state.weekView,1,weeks());const w=state.weekView,arr=state.plan.filter(p=>p.week===w);
  $('planProgrammeHeader').innerHTML=planProgrammeHeaderHtml();
@@ -2750,7 +2734,7 @@ function renderPlan(){
  const title=$('planWeekTitle');if(title)title.textContent=`Week ${w} schedule`;
  $('planCards').innerHTML=arr.map(workoutHtml).join('')||'<div class="planEmpty"><b>No workouts generated</b><p>This week has no plan entries.</p></div>';
  $('weeklyReview').innerHTML=weeklyReviewHtml(w);
- $('raceTimeline').innerHTML=planTimelineHtml(w);sizeAndToneProgrammeTimeline();
+ $('raceTimeline').innerHTML=planTimelineHtml(w);
  $('planIntensity').innerHTML=planIntensityDistributionHtml(w);
  document.querySelectorAll('#plan .planWorkout').forEach(item=>item.addEventListener('toggle',()=>{if(!item.open)return;document.querySelectorAll('#plan .planWorkout[open]').forEach(other=>{if(other!==item)other.removeAttribute('open')})}));
 }
@@ -4818,7 +4802,7 @@ function navIcon(page){
 function navButtonHtml(page,label,extra=''){return`<button ${extra} data-page="${page}"><span class="navIcon">${navIcon(page)}</span><span class="navLabel">${label}</span></button>`}
 function renderNavigation(){const current=document.querySelector('.page.active')?.id||'today';$('nav').innerHTML=primaryPages.map(p=>navButtonHtml(p[0],p[1])).join('')+secondaryPages.map(p=>navButtonHtml(p[0],p[1],'class="desktopSecondary"')).join('')+`<button id="moreNavBtn" class="moreToggle" type="button" aria-expanded="false" aria-controls="moreNav"><span class="navIcon">${navIcon('more')}</span><span class="navLabel">More</span></button>`;$('moreNav').innerHTML=secondaryPages.map(p=>`<button data-page="${p[0]}"><span class="navIcon">${navIcon(p[0])}</span><span>${p[1]}</span></button>`).join('');setActiveNavigation(current)}
 function setActiveNavigation(page){document.querySelectorAll('#nav [data-page],#moreNav [data-page]').forEach(button=>{const active=button.dataset.page===page;button.classList.toggle('active',active);if(active)button.setAttribute('aria-current','page');else button.removeAttribute('aria-current')});const more=$('moreNavBtn'),secondary=secondaryPages.some(item=>item[0]===page);more?.classList.toggle('active',secondary);if(secondary)more?.setAttribute('aria-current','page');else more?.removeAttribute('aria-current')}
-function activatePage(page,anchor=null){if(!pages.some(p=>p[0]===page))return;document.querySelectorAll('.page').forEach(section=>section.classList.toggle('active',section.id===page));setActiveNavigation(page);$('moreNav').className='moreNav hidden';$('moreNavBtn')?.setAttribute('aria-expanded','false');renderAll();if(anchor){requestAnimationFrame(()=>document.getElementById(anchor)?.scrollIntoView({behavior:'smooth',block:'start'}))}else scrollTo(0,0);$('mainContent')?.focus({preventScroll:true})}
+function activatePage(page,anchor=null){if(!pages.some(p=>p[0]===page))return;if(page==='plan')state.weekView=currentWeek();document.querySelectorAll('.page').forEach(section=>section.classList.toggle('active',section.id===page));setActiveNavigation(page);$('moreNav').className='moreNav hidden';$('moreNavBtn')?.setAttribute('aria-expanded','false');renderAll();if(anchor){requestAnimationFrame(()=>document.getElementById(anchor)?.scrollIntoView({behavior:'smooth',block:'start'}))}else scrollTo(0,0);$('mainContent')?.focus({preventScroll:true})}
 renderNavigation();
 $('nav').onclick=event=>{
  const button=event.target.closest('button');

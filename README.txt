@@ -1,4 +1,4 @@
-AI Running Coach v12.3.5 — Serious Runner Plan — build 20305
+AI Running Coach v12.3.6 — Serious Runner Plan — build 20306
 
 Deployment
 ----------
@@ -793,3 +793,11 @@ v12.3.5 — Plan spacing and timeline refinement
 - Programme phase widths are proportional to their week duration.
 - Programme phase colours now communicate training demand/phase character: base, build, specific, peak, taper and race.
 - Existing model/data calculations remain unchanged.
+
+
+v12.3.6 — corrected Plan default week and programme timeline
+- Opening Plan now explicitly resets state.weekView to currentWeek() before rendering.
+- Timeline phase width is flex-weighted by actual phase duration in weeks.
+- Timeline colour is data-driven from existing planned average weekly distance and quality/specific distance share.
+- Added compact demand legend.
+- No calculation/model/data-engine changes.
