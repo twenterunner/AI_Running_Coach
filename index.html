@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#07111D"><title>AI Running Coach</title>
-<link rel="manifest" href="manifest.webmanifest?v=30006"><link rel="stylesheet" href="styles.css?v=30006-visual">
+<link rel="manifest" href="manifest.webmanifest?v=30100"><link rel="stylesheet" href="styles.css?v=30100-visual">
 <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png?v=10320">
 <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png?v=10320">
 <link rel="icon" href="favicon.ico?v=10320">
@@ -15,7 +15,7 @@
 <body>
 <a class="skipLink" href="#mainContent">Skip to main content</a>
 <header class="topbar">
-  <div class="brand"><img class="logo" src="icon-192.png?v=10320" alt="AI Running Coach logo"><div class="brand-copy"><h1>AI Running Coach</h1><p>Race-specific adaptive planning · v13.0.6 · build 30006</p></div></div>
+  <div class="brand"><img class="logo" src="icon-192.png?v=10320" alt="AI Running Coach logo"><div class="brand-copy"><h1>AI Running Coach</h1><p>Race-specific adaptive planning · v13.1.0 · build 30100</p></div></div>
   <button id="installBtn" class="install hidden">Install</button>
 </header>
 <nav id="nav" aria-label="Primary navigation"></nav>
@@ -23,78 +23,30 @@
 <main id="mainContent" tabindex="-1">
 <div id="toast" class="toast hidden" role="status" aria-live="polite" aria-atomic="true"></div>
 
-<section id="dashboard" class="page">
-  <div class="hero outlookHero">
-    <div class="outlookHeroIntro">
-      <span id="phaseBadge" class="badge"></span>
-      <h2 id="raceTitle"></h2>
-      <p id="raceSubtitle"></p>
-      <div id="trackStatus" class="trackStatus"></div>
-    </div>
-    <div class="outlookComparison" aria-label="Target outlook comparison">
-      <article class="outlookCard currentOutlook">
-        <span>Chance of meeting target if racing today</span>
-        <strong id="currentProbability">—</strong>
-        <b id="currentProbabilityLabel">—</b>
-        <small id="currentPrediction">—</small>
-        <small id="currentRange">—</small>
-      </article>
-      <div class="outlookArrow" aria-hidden="true">→</div>
-      <article class="outlookCard projectedOutlook">
-        <span>Chance of meeting target after full programme</span>
-        <strong id="projectedProbability">—</strong>
-        <b id="projectedProbabilityLabel">—</b>
-        <small id="projectedPrediction">—</small>
-        <small id="projectedRange">—</small>
-      </article>
-    </div>
-    <div id="outlookGain" class="outlookGain"></div>
-    <p class="outlookAssumption">Expected scenario uses realistic plan completion, plan-derived fitness and durability gains, and a taper benefit calculated from the actual taper structure.</p>
+<section id="dashboard" class="page progressPage">
+  <div class="progressPageTitle"><div class="progressPictogram" aria-hidden="true"><svg viewBox="0 0 48 48"><path d="M7 35c7-1 10-8 16-9 5-1 7 3 12-2l6-7"/><path d="M35 17h6v6"/><circle cx="13" cy="15" r="3"/><path d="M15 19l6 4-4 7m4-7 5-5m-9 12-6 7m6-7 7 6"/></svg></div><div><span class="pageEyebrow">ATHLETE TRAJECTORY</span><h2>Progress</h2><p>Is the training working, and are you becoming ready for your race?</p></div></div>
+  <div class="hero outlookHero progressHero">
+    <div class="outlookHeroIntro"><span id="phaseBadge" class="badge"></span><h2 id="raceTitle"></h2><p id="raceSubtitle"></p><div id="trackStatus" class="trackStatus"></div></div>
+    <div class="outlookComparison" aria-label="Race readiness trajectory"><article class="outlookCard currentOutlook"><span>Current race capability</span><strong id="currentProbability">—</strong><b id="currentProbabilityLabel">—</b><small id="currentPrediction">—</small><small id="currentRange">—</small></article><div class="outlookArrow" aria-hidden="true">→</div><article class="outlookCard projectedOutlook"><span>Expected programme outcome</span><strong id="projectedProbability">—</strong><b id="projectedProbabilityLabel">—</b><small id="projectedPrediction">—</small><small id="projectedRange">—</small></article></div>
+    <div id="outlookGain" class="outlookGain"></div><p class="outlookAssumption"></p>
   </div>
 
-  <div class="dashboardSection firstDashboardSection">
-    <div class="dashboardSectionHead"><span>1</span><div><h3>Training review</h3><p>Long-term trajectory, strengths, limiters and strategic priorities.</p></div></div>
-    <div id="progressAdaptationHome"></div>
-    <div id="modelValidation"></div>
-    <article class="panel coachAssessmentPanel"><p class="muted compact"></p><div id="assessmentText"></div></article>
-    <div id="decisionHistory"></div>
-    <div id="personalResponseModel"></div>
-  </div>
+  <section class="progressSection level1"><div class="progressSectionHead"><span>01</span><div><small>RACE READINESS</small><h3>Are you moving toward the target?</h3><p>Historical model estimates versus the fixed target.</p></div></div><article class="panel predictionPanel"><div id="predictionSummary" class="predictionSummary"></div><canvas id="predictionChart" width="1000" height="340" role="img" aria-label="Predicted race-time trend chart">Predicted race-time trend.</canvas></article></section>
 
-  <div class="dashboardSection">
-    <div class="dashboardSectionHead"><span>2</span><div><h3>Prediction confidence</h3><p>Why the likely finish-time range is wide or narrow.</p></div></div>
-    <article class="panel readinessPanel">
-      <div class="panelHead"><div><h3>Execution-confidence model</h3><p class="muted compact">Coverage widens or narrows the likely finish-time range; it does not move the central capability estimate</p></div><div id="evidenceBadge" class="evidenceBadge"></div></div>
-      <div class="preparationHeadline single"><div><span>Current execution confidence</span><strong id="currentPreparationScore">—</strong></div></div>
-      <div id="pillarCards" class="pillarGrid preparationGrid"></div>
-    </article>
-  </div>
+  <section class="progressSection"><div class="progressSectionHead"><span>02</span><div><small>FITNESS & CAPABILITY</small><h3>Can you produce more for the same physiological cost?</h3><p>Comparable physiological evidence, not raw pace across unrelated sessions.</p></div></div><div id="metricKpis" class="kpis"></div><div class="grid2 metricCharts"><article class="panel"><div class="panelHead"><div><h3>Efficiency factor</h3><p class="muted compact">Joules of running power per heartbeat · compare similar sessions</p></div></div><canvas id="efficiencyChart" width="1000" height="380" role="img" aria-label="Efficiency factor trend chart">Efficiency factor trend.</canvas></article><article class="panel"><div class="panelHead"><div><h3>Aerobic durability</h3><p class="muted compact">Power-based cardiac drift on suitable continuous runs · lower is better</p></div></div><canvas id="driftChart" width="1000" height="380" role="img" aria-label="Power-based cardiac drift trend chart">Power-based cardiac drift trend.</canvas></article></div><details class="panel modelDetails"><summary>Metrics by comparable run type</summary><div id="metricTypeSummary"></div></details></section>
 
-  <div class="dashboardSection">
-    <div class="dashboardSectionHead"><span>3</span><div><h3>Progress to race</h3><p>How the plan is progressing and what remains.</p></div></div>
-    <div id="kpis" class="kpis"></div>
-    <div class="grid2">
-      <article class="panel progressChartPanel"><div class="panelHead progressChartHead"><div><h3>Weekly distance</h3><span class="muted">Planned vs completed</span></div><div id="weeklyDistanceSummary" class="chartMetric"></div></div><canvas id="volumeChart" width="1000" height="340" role="img" aria-label="Weekly planned and completed distance chart">Weekly planned and completed distance.</canvas></article>
-      <article class="panel progressChartPanel"><div class="panelHead progressChartHead"><div><h3>Long-run progression</h3><span class="muted">Planned vs completed</span></div><div id="longRunSummary" class="chartMetric"></div></div><canvas id="longRunChart" width="1000" height="340" role="img" aria-label="Planned and completed long-run progression chart">Planned and completed long-run distance.</canvas></article>
-    </div>
-  </div>
+  <section class="progressSection"><div class="progressSectionHead"><span>03</span><div><small>ENDURANCE & DURABILITY</small><h3>Can you sustain running better and for longer?</h3><p>Long-run progression and verified endurance exposure.</p></div></div><article class="panel progressChartPanel"><div class="panelHead progressChartHead"><div><h3>Long-run progression</h3><span class="muted">Planned versus completed</span></div><div id="longRunSummary" class="chartMetric"></div></div><canvas id="longRunChart" width="1000" height="340" role="img" aria-label="Planned and completed long-run progression chart">Planned and completed long-run distance.</canvas></article></section>
 
-  <div class="dashboardSection">
-    <div class="dashboardSectionHead"><span>4</span><div><h3>Performance trends</h3><p>Evidence that explains changes in fitness and outlook.</p></div></div>
-    <article class="panel predictionPanel">
-      <div class="panelHead"><div><h3>Predicted marathon-time trend</h3><p class="muted compact">A history of the central finish-time estimate—not the target probability</p></div></div>
-      <div id="predictionSummary" class="predictionSummary"></div>
-      <canvas id="predictionChart" width="1000" height="340" role="img" aria-label="Predicted race-time trend chart">Predicted race-time trend.</canvas>
-    </article>
-    <div id="metricKpis" class="kpis"></div>
-    <div class="grid2 metricCharts">
-      <article class="panel"><div class="panelHead"><div><h3>Efficiency factor</h3><p class="muted compact">Joules of running power per heartbeat · higher is better</p></div></div><canvas id="efficiencyChart" width="1000" height="380" role="img" aria-label="Efficiency factor trend chart">Efficiency factor trend.</canvas></article>
-      <article class="panel"><div class="panelHead"><div><h3>Power-based cardiac drift</h3><p class="muted compact">Change in power–HR efficiency · lower is better</p></div></div><canvas id="driftChart" width="1000" height="380" role="img" aria-label="Power-based cardiac drift trend chart">Power-based cardiac drift trend.</canvas></article>
-    </div>
-    <article class="panel"><div class="panelHead"><div><h3>Metrics by run type</h3><p class="muted compact">Average and best values calculated separately for each session category</p></div></div><div id="metricTypeSummary"></div></article>
-    <details class="panel modelDetails"><summary>Model and metric definitions</summary><div id="componentGuide" class="guideGrid componentGuide"></div><div class="guideGrid componentGuide"><div><b>Efficiency factor · J/heartbeat</b><p>Average power × 60 ÷ average heart rate. It estimates external running work per heartbeat. Compare only similar conditions and run types.</p></div><div><b>Power-based cardiac drift · %</b><p>Change in power per heartbeat from the first half to the second half after warm-up. Lower is better and timestamped heart-rate and power data are required.</p></div></div></details>
-    <details class="panel modelDetails"><summary>Data needed</summary><div id="dataNeeded"></div></details>
-  </div>
+  <section class="progressSection"><div class="progressSectionHead"><span>04</span><div><small>TRAINING LOAD & CONSISTENCY</small><h3>Are you tolerating the programme?</h3><p>Weekly exposure, completion and planned progression.</p></div></div><div id="kpis" class="kpis"></div><article class="panel progressChartPanel"><div class="panelHead progressChartHead"><div><h3>Weekly distance</h3><span class="muted">Planned versus completed</span></div><div id="weeklyDistanceSummary" class="chartMetric"></div></div><canvas id="volumeChart" width="1000" height="340" role="img" aria-label="Weekly planned and completed distance chart">Weekly planned and completed distance.</canvas></article></section>
+
+  <section class="progressSection"><div class="progressSectionHead"><span>05</span><div><small>WORKOUT EXECUTION</small><h3>Are you getting better at delivering the intended stimulus?</h3><p>Recent scored sessions aggregated over time.</p></div></div><div id="progressExecution"></div></section>
+
+  <section class="progressSection"><div class="progressSectionHead"><span>06</span><div><small>ADAPTIVE LEARNING</small><h3>What is the model learning about you?</h3><p>Accumulated Pace & Power and Distance & Load evidence.</p></div></div><div id="progressAdaptationHome"></div><div id="personalResponseModel"></div><div id="modelValidation"></div><div id="decisionHistory"></div></section>
+
+  <section class="progressSection"><div class="progressSectionHead"><span>07</span><div><small>RECOVERY VS TRAINING</small><h3>Are you absorbing the training?</h3><p>Longitudinal recovery context only; today’s decision remains in Recovery.</p></div></div><div id="progressRecovery"></div></section>
+
+  <section class="progressSection"><div class="progressSectionHead"><span>08</span><div><small>INTERPRETATION</small><h3>What does your progress currently mean?</h3><p>Existing evidence-based conclusions, consolidated once.</p></div></div><article class="panel coachAssessmentPanel"><div id="assessmentText"></div></article></section>
+  <div class="hidden" aria-hidden="true"><div id="currentPreparationScore"></div><div id="evidenceBadge"></div><div id="pillarCards"></div></div>
 </section>
 
 <section id="today" class="page active">
@@ -220,7 +172,7 @@
   <article class="panel"><h3>Data</h3><div class="buttonRow"><button id="backupBtn">Download backup</button><label for="restoreFile" class="buttonLike">Restore backup</label><input id="restoreFile" type="file" accept=".json"><button id="undoRestoreBtn" type="button" class="secondary hidden">Undo last restore</button><button id="exportBtn">Export runs CSV</button><button id="resetBtn" class="danger">Reset app</button></div></article>
 </section>
 </main>
-<footer class="appFooter"><span>AI Running Coach</span><small>v13.0.6 · build 30006</small></footer>
+<footer class="appFooter"><span>AI Running Coach</span><small>v13.1.0 · build 30100</small></footer>
 
 <div id="modal" class="modal hidden" role="dialog" aria-modal="true" aria-label="AI Running Coach dialog" tabindex="-1"><div class="modalCard"><button id="closeModal" class="close" type="button" aria-label="Close dialog">×</button><div id="modalContent"></div></div></div>
 
@@ -249,5 +201,5 @@
     <button class="primary full" type="submit">Review and create my plan</button>
   </form>
 </div>
-<script src="app.js?v=30006-visual"></script>
+<script src="app.js?v=30100-visual"></script>
 </body></html>

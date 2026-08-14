@@ -1,3 +1,8 @@
+AI Running Coach v13.1.0 — Progress Redesign — build 30100
+
+Progress-only GUI release. Today, Plan and Log remain frozen to approved v13.0.6 build 30006. Calculation/data-model logic unchanged.
+Repository remains completely flat.
+
 AI Running Coach v13.0.6 — Serious Runner Plan — build 30006
 
 Deployment

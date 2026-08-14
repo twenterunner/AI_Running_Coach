@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '13.0.6';
-  const BUILD = 30006;
+  const VERSION = '13.1.0';
+  const BUILD = 30100;
   const SCHEMA = 10330;
   const PRIMARY_STORAGE_KEY = 'arc_v10330_web';
   const MIRROR_STORAGE_KEY = 'arc_v10330_mirror';
@@ -2017,6 +2017,8 @@ function renderDashboard(){
  if(projectedCard)projectedCard.classList.add(engine.projectedModel.probability>=70?'metric-good':engine.projectedModel.probability>=45?'metric-watch':'metric-action');
  const coachReport=evidenceBasedCoach(engine);
  $('assessmentText').innerHTML=coachReportHtml(coachReport,true);
+ const progressExecution=$('progressExecution');if(progressExecution){const ex=executionScoreSummary();progressExecution.innerHTML=ex.count?`<article class="panel progressExecutionCard"><div class="progressMetricLead"><div><small>RECENT EXECUTION</small><strong>${Math.round(ex.average)}/100</strong><span>${scoreBand(Math.round(ex.average))}</span></div><div><small>KEY SESSIONS</small><strong>${Number.isFinite(ex.keyAverage)?Math.round(ex.keyAverage)+'/100':'—'}</strong><span>${Number.isFinite(ex.trend)?`${ex.trend>=0?'+':''}${ex.trend.toFixed(0)} pts recent trend`:'Building trend evidence'}</span></div></div><details><summary>Session-by-session evidence</summary>${ex.recent.map(x=>`<div class="executionRow"><span>${fmtDate(x.date)} · ${esc(x.type)}</span><b>${x.score}/100</b></div>`).join('')}</details></article>`:`<article class="panel progressBaseline"><b>Building your execution baseline</b><p>No completed run has enough information for an execution score yet.</p></article>`;}
+ const progressRecovery=$('progressRecovery');if(progressRecovery){const h=hrvModel(),ast=athleteState(cw),active=(state.injuries||[]).find(x=>x.id===state.activeInjuryPlanId);progressRecovery.innerHTML=`<article class="panel progressRecoveryCard"><div class="progressMetricLead"><div><small>RECOVERY CONTEXT</small><strong>${esc(ast.readiness||'—')}</strong><span>Temporary overlay, not learned capability</span></div><div><small>HRV EVIDENCE</small><strong>${h.count||0}</strong><span>${h.rolling!=null?`Recent ${h.rolling.toFixed(0)} ms${h.baseline!=null?` · baseline ${h.baseline.toFixed(0)} ms`:''}`:'Building personal baseline'}</span></div></div>${active?`<div class="progressInterruption"><b>Active rehabilitation affects training exposure</b><p>Progress charts preserve the interruption rather than treating missing or reduced running as zero fitness.</p></div>`:''}</article>`;}
  const adaptationHome=$('progressAdaptationHome');if(adaptationHome)adaptationHome.innerHTML=progressAdaptationHomeHtml();
  const validationEl=$('modelValidation');if(validationEl)validationEl.innerHTML=modelValidationHtml();
  const decisionHistory=$('decisionHistory');if(decisionHistory)decisionHistory.innerHTML=decisionHistoryHtml();
