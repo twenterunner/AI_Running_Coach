@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '13.0.2';
-  const BUILD = 30002;
+  const VERSION = '13.0.3';
+  const BUILD = 30003;
   const SCHEMA = 10330;
   const PRIMARY_STORAGE_KEY = 'arc_v10330_web';
   const MIRROR_STORAGE_KEY = 'arc_v10330_mirror';
@@ -3576,13 +3576,24 @@ function runSummaryHtml(r){
    <div class="runDataQuality ${q.missing.length?'partial':'good'}"><b>${quality}</b><span>${q.stream?'FIT/CSV record stream can support deeper analysis where relevant.':'No detailed record stream is stored for this session.'}</span></div>
  </section>`;
 }
+function pathwayStatusClass(d,t){
+ const raw=Number(t.rawSignal), accepted=Number(t.acceptedContribution), w=Number(t.confidenceWeight);
+ if(Math.abs(accepted)>=.00005){
+   if(accepted>0)return'good';
+   if(accepted<0)return'bad';
+ }
+ if(raw<=-.20)return w<.35?'warn':'bad';
+ if(raw<-.05)return'warn';
+ if(raw>=.15)return'good';
+ return'neutral';
+}
 function pathwayEvidenceCardHtml(title,d,t){
- const accepted=Math.abs(t.acceptedContribution)>=.00005,lang=pathwayCoachLanguage(d,t),weight=Math.round(clamp(t.confidenceWeight*100,0,100));
+ const accepted=Math.abs(t.acceptedContribution)>=.00005,lang=pathwayCoachLanguage(d,t),weight=Math.round(clamp(t.confidenceWeight*100,0,100)),status=pathwayStatusClass(d,t);
  const projectedChange=t.projected-t.applied;
- return`<article class="logEvidencePath">
-   <div class="logEvidenceHead"><div><small>${title}</small><h4>${esc(lang.q)}</h4></div><span class="${accepted?'accepted':'held'}">${accepted?'Evidence accepted':'No learned change'}</span></div>
-   <div class="logEvidenceGaugeRow"><div class="evidenceMiniGauge" style="--e:${weight}"><strong>${weight}%</strong><small>evidence weight</small></div><div class="logEvidenceMetrics"><span><small>RUN SIGNAL</small><b>${t.rawSignal>=0?'+':''}${t.rawSignal.toFixed(2)}</b></span><span><small>ACCEPTED CONTRIBUTION</small><b>${accepted?signedFactorDelta(t.acceptedContribution):'0.000'}</b></span><span><small>THIS WEEK</small><b>${signedFactorDelta(t.weeklyBucket)}</b></span></div></div>
-   <div class="logFactorFlow"><div><small>APPLIED</small><b>${t.applied.toFixed(3)}</b></div><i>→</i><div><small>PROJECTED NEXT REVIEW</small><b>${t.projected.toFixed(3)}</b><span>${signedFactorDelta(projectedChange)}</span></div></div>
+ return`<article class="logEvidencePath ${status}">
+   <div class="logEvidenceHead"><div><small>${title}</small><h4 class="pathwayStatusText ${status}">${esc(lang.q)}</h4></div><span class="pathwayStatusBadge ${status}">${accepted?'Evidence accepted':status==='warn'?'Caution signal':status==='bad'?'Negative signal held':'No learned change'}</span></div>
+   <div class="logEvidenceGaugeRow"><div class="evidenceMiniGauge ${status}" style="--e:${weight}"><strong>${weight}%</strong><small>evidence weight</small></div><div class="logEvidenceMetrics"><span><small>RUN SIGNAL</small><b>${t.rawSignal>=0?'+':''}${t.rawSignal.toFixed(2)}</b></span><span><small>ACCEPTED CONTRIBUTION</small><b>${accepted?signedFactorDelta(t.acceptedContribution):'0.000'}</b></span><span><small>THIS WEEK</small><b>${signedFactorDelta(t.weeklyBucket)}</b></span></div></div>
+   <div class="logFactorFlow"><div class="factorTile"><small>APPLIED</small><b>${t.applied.toFixed(3)}</b><span>Current committed factor</span></div><i>→</i><div class="factorTile"><small>PROJECTED NEXT REVIEW</small><b>${t.projected.toFixed(3)}</b><span>${signedFactorDelta(projectedChange)} vs applied</span></div></div>
    <p class="logEvidenceMeaning">${esc(lang.runMeaning)} ${esc(lang.response)}</p>
    ${!accepted&&t.safeguard?`<div class="logEvidenceSafeguard">${esc(t.safeguard)}</div>`:''}
    <details class="logEvidenceCalc"><summary>How was this calculated?</summary><div class="logEvidenceDrivers"><h5>Evidence used</h5><div class="evidenceDriverList">${pathwayEvidenceSummaryHtml(d,t)}</div></div>${pathwayCalculationDetailsHtml(d,t)}</details>

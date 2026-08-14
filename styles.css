@@ -1842,3 +1842,227 @@ canvas{display:block;width:100%!important;max-width:100%;height:auto!important;m
    grid-template-columns:1fr auto!important;
  }
 }
+
+
+/* LOG TAB — v13.0.3 pathway typography + semantic alignment */
+.logDetailModal .logEvidencePath{
+  --path-status:#65dede;
+}
+.logDetailModal .logEvidencePath.good{--path-status:#8bdd69}
+.logDetailModal .logEvidencePath.warn{--path-status:#f3bd62}
+.logDetailModal .logEvidencePath.bad{--path-status:#ff6f54}
+.logDetailModal .logEvidencePath.neutral{--path-status:#65dede}
+
+.logDetailModal .logEvidenceHead{
+  align-items:flex-start!important;
+}
+.logDetailModal .logEvidenceHead small{
+  font-size:7px!important;
+  line-height:1.2!important;
+  font-weight:900!important;
+  letter-spacing:.06em!important;
+}
+.logDetailModal .logEvidenceHead h4{
+  margin:3px 0 0!important;
+  font-size:13px!important;
+  line-height:1.2!important;
+  font-weight:800!important;
+}
+.logDetailModal .pathwayStatusText.good{color:#9ae77d!important}
+.logDetailModal .pathwayStatusText.warn{color:#ffd071!important}
+.logDetailModal .pathwayStatusText.bad{color:#ff8a72!important}
+.logDetailModal .pathwayStatusText.neutral{color:#fff!important}
+
+.logDetailModal .pathwayStatusBadge{
+  display:inline-flex!important;
+  align-items:center!important;
+  min-height:24px!important;
+  padding:4px 7px!important;
+  border-radius:7px!important;
+  border:1px solid color-mix(in srgb,var(--path-status) 35%,transparent)!important;
+  background:color-mix(in srgb,var(--path-status) 10%,transparent)!important;
+  color:var(--path-status)!important;
+  font-size:6.5px!important;
+  line-height:1.1!important;
+  font-weight:850!important;
+  white-space:nowrap!important;
+}
+
+.logDetailModal .evidenceMiniGauge{
+  --gauge:#65dede;
+  background:conic-gradient(var(--gauge) calc(var(--e)*1%),rgba(104,171,181,.20) 0)!important;
+}
+.logDetailModal .evidenceMiniGauge.good{--gauge:#8bdd69}
+.logDetailModal .evidenceMiniGauge.warn{--gauge:#f3bd62}
+.logDetailModal .evidenceMiniGauge.bad{--gauge:#ff6f54}
+.logDetailModal .evidenceMiniGauge.neutral{--gauge:#65dede}
+.logDetailModal .evidenceMiniGauge strong{
+  font-size:15px!important;
+  line-height:1!important;
+  font-weight:800!important;
+  color:#fff!important;
+  font-variant-numeric:tabular-nums!important;
+}
+.logDetailModal .evidenceMiniGauge small{
+  margin-top:3px!important;
+  font-size:5.8px!important;
+  line-height:1.1!important;
+  font-weight:700!important;
+  color:#a7c1ca!important;
+  text-align:center!important;
+}
+
+/* Three evidence metrics align exactly as a single table. */
+.logDetailModal .logEvidenceMetrics{
+  display:grid!important;
+  grid-template-columns:repeat(3,minmax(0,1fr))!important;
+  gap:6px!important;
+  align-items:stretch!important;
+}
+.logDetailModal .logEvidenceMetrics>span{
+  display:grid!important;
+  grid-template-rows:minmax(22px,auto) 22px!important;
+  align-items:end!important;
+  min-width:0!important;
+  padding:7px 5px!important;
+  border-radius:8px!important;
+  background:rgba(3,31,43,.20)!important;
+}
+.logDetailModal .logEvidenceMetrics small{
+  display:block!important;
+  align-self:start!important;
+  margin:0!important;
+  font-size:5.6px!important;
+  line-height:1.2!important;
+  font-weight:800!important;
+  letter-spacing:.03em!important;
+  color:#90afb9!important;
+  text-align:left!important;
+}
+.logDetailModal .logEvidenceMetrics b{
+  display:block!important;
+  align-self:end!important;
+  margin:0!important;
+  font-size:11px!important;
+  line-height:1!important;
+  font-weight:800!important;
+  font-variant-numeric:tabular-nums!important;
+  color:#fff!important;
+  text-align:right!important;
+  white-space:nowrap!important;
+}
+
+/* Applied and projected tiles: same dimensions, same type system. */
+.logDetailModal .logFactorFlow{
+  display:grid!important;
+  grid-template-columns:minmax(0,1fr) 18px minmax(0,1fr)!important;
+  gap:7px!important;
+  align-items:stretch!important;
+}
+.logDetailModal .logFactorFlow>.factorTile{
+  display:grid!important;
+  grid-template-rows:18px 24px minmax(22px,auto)!important;
+  align-items:start!important;
+  min-height:78px!important;
+  padding:9px!important;
+  border-radius:9px!important;
+  background:rgba(3,25,35,.25)!important;
+  border:1px solid rgba(80,210,219,.10)!important;
+}
+.logDetailModal .logFactorFlow>.factorTile small{
+  display:block!important;
+  margin:0!important;
+  font-size:6px!important;
+  line-height:1.1!important;
+  font-weight:850!important;
+  letter-spacing:.04em!important;
+  color:#91b0ba!important;
+}
+.logDetailModal .logFactorFlow>.factorTile b{
+  display:block!important;
+  margin:0!important;
+  font-size:13px!important;
+  line-height:1!important;
+  font-weight:800!important;
+  font-variant-numeric:tabular-nums!important;
+  color:#fff!important;
+}
+.logDetailModal .logFactorFlow>.factorTile span{
+  display:block!important;
+  margin:0!important;
+  font-size:6.8px!important;
+  line-height:1.25!important;
+  font-weight:500!important;
+  color:#9fc0c9!important;
+}
+.logDetailModal .logFactorFlow>i{
+  align-self:center!important;
+  font-size:16px!important;
+  line-height:1!important;
+}
+
+/* Calculation section type scale normalization. */
+.logDetailModal .pathCalcAudit,
+.logDetailModal .executionBridge{
+  font-size:9px!important;
+}
+.logDetailModal .executionBridge h5,
+.logDetailModal .pathCalcAudit h5{
+  font-size:10px!important;
+  line-height:1.25!important;
+  font-weight:800!important;
+}
+.logDetailModal .executionBridge p,
+.logDetailModal .pathCalcAudit p,
+.logDetailModal .executionBridge small,
+.logDetailModal .pathCalcAudit small{
+  font-size:8px!important;
+  line-height:1.4!important;
+  font-weight:400!important;
+}
+.logDetailModal .executionBridge b,
+.logDetailModal .pathCalcAudit b{
+  font-weight:800!important;
+}
+.logDetailModal .executionBridgeComponent,
+.logDetailModal .pathCalcComponent{
+  font-size:9px!important;
+}
+.logDetailModal .executionBridgeComponent>div>b,
+.logDetailModal .pathCalcComponentText>b{
+  font-size:10px!important;
+  font-weight:800!important;
+  line-height:1.25!important;
+}
+.logDetailModal .executionBridgeComponent>div>small,
+.logDetailModal .pathCalcComponentText>small{
+  font-size:8px!important;
+  font-weight:400!important;
+  line-height:1.4!important;
+}
+.logDetailModal .executionBridgeComponent>span,
+.logDetailModal .pathCalcWeight{
+  font-size:7.5px!important;
+  font-weight:500!important;
+}
+.logDetailModal .executionBridgeComponent>strong,
+.logDetailModal .pathCalcResult{
+  font-size:9px!important;
+  font-weight:800!important;
+}
+
+@media(max-width:390px){
+ .logDetailModal .logEvidenceGaugeRow{
+   grid-template-columns:62px minmax(0,1fr)!important;
+   gap:7px!important;
+ }
+ .logDetailModal .evidenceMiniGauge{width:60px!important;height:60px!important}
+ .logDetailModal .logEvidenceMetrics{
+   gap:4px!important;
+ }
+ .logDetailModal .logEvidenceMetrics>span{
+   padding:6px 4px!important;
+ }
+ .logDetailModal .logEvidenceMetrics small{font-size:5.2px!important}
+ .logDetailModal .logEvidenceMetrics b{font-size:10px!important}
+}

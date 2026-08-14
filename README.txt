@@ -1,4 +1,4 @@
-AI Running Coach v13.0.2 — Serious Runner Plan — build 30002
+AI Running Coach v13.0.3 — Serious Runner Plan — build 30003
 
 Deployment
 ----------
@@ -880,4 +880,16 @@ v13.0.2 — Log text rhythm and run-card metrics
 - Pace & Power and Distance & Load values in Training Consequence now use identical font size, weight and markup.
 - Recent-run cards now add available runner-relevant chips for HR, power, RPE, pain, efficiency (J/beat) and power-based cardiac drift.
 - Sparse metrics are omitted rather than showing meaningless placeholders.
+- No calculation, scoring, pathway, prediction, adaptation, import, matching, storage or data-model equations changed.
+
+
+v13.0.3 — Pathway evidence typography and semantic alignment
+-------------------------------------------------------------
+- Today and Plan remain regression-locked to approved v12.4.1.
+- Pathway status text is now semantic: green/amber/red/teal according to the existing run signal, accepted contribution and evidence confidence.
+- Evidence-weight circular gauges use the same semantic status colour.
+- Run signal, accepted contribution and this-week values are aligned in equal metric cells with identical numeric typography.
+- Applied and Projected Next Review tiles now have equal dimensions and matching font sizes/weights.
+- Pace & Power and Distance & Load pathway presentation remains explicit and consistent.
+- Deeper calculation foldouts now use one unified font scale and weight hierarchy.
 - No calculation, scoring, pathway, prediction, adaptation, import, matching, storage or data-model equations changed.
