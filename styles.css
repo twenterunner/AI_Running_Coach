@@ -1040,3 +1040,96 @@ canvas{display:block;width:100%!important;max-width:100%;height:auto!important;m
    padding-right:0!important;
  }
 }
+
+
+/* PLAN TAB — v12.4.0 readable rotated phase labels + in-graph current marker */
+#plan .phaseGraphWrap{
+  position:relative!important;
+  width:100%!important;
+  padding-top:15px!important;
+}
+#plan .proportionalPhaseRail{
+  position:relative!important;
+  min-height:122px!important;
+  height:122px!important;
+}
+#plan .proportionalPhaseRail .phaseSegment{
+  position:relative!important;
+  height:122px!important;
+  padding:6px 2px 7px!important;
+  gap:5px!important;
+  justify-content:flex-end!important;
+}
+#plan .proportionalPhaseRail .phaseSegment b{
+  position:absolute!important;
+  left:50%!important;
+  top:50%!important;
+  width:auto!important;
+  max-width:none!important;
+  white-space:nowrap!important;
+  overflow:visible!important;
+  font-size:10.5px!important;
+  line-height:1!important;
+  font-weight:800!important;
+  letter-spacing:.01em!important;
+  transform:translate(-50%,-50%) rotate(-90deg)!important;
+  transform-origin:center center!important;
+  color:#f7fcfd!important;
+}
+#plan .proportionalPhaseRail .phaseSegment small{
+  position:relative!important;
+  z-index:2!important;
+  width:100%!important;
+  max-width:100%!important;
+  white-space:nowrap!important;
+  overflow:hidden!important;
+  font-size:7px!important;
+  line-height:1!important;
+  text-align:center!important;
+  color:rgba(244,252,253,.86)!important;
+}
+#plan .currentWeekMarker{
+  position:absolute!important;
+  z-index:8!important;
+  top:0!important;
+  bottom:0!important;
+  width:2px!important;
+  transform:translateX(-1px)!important;
+  background:#f7fbfc!important;
+  box-shadow:0 0 0 1px rgba(3,31,43,.25),0 0 8px rgba(255,255,255,.25)!important;
+  pointer-events:none!important;
+}
+#plan .currentWeekMarker:after{
+  content:""!important;
+  position:absolute!important;
+  top:13px!important;
+  left:50%!important;
+  width:7px!important;
+  height:7px!important;
+  border-radius:50%!important;
+  transform:translate(-50%,-50%)!important;
+  background:#f7fbfc!important;
+}
+#plan .currentWeekMarker span{
+  position:absolute!important;
+  top:0!important;
+  left:50%!important;
+  transform:translate(-50%,-100%)!important;
+  padding:2px 4px!important;
+  border-radius:5px!important;
+  background:#f7fbfc!important;
+  color:#07384a!important;
+  font-size:6.5px!important;
+  font-weight:900!important;
+  line-height:1!important;
+  white-space:nowrap!important;
+}
+#plan .timelineProgressRow{
+  display:none!important;
+}
+@media(max-width:390px){
+ #plan .proportionalPhaseRail,
+ #plan .proportionalPhaseRail .phaseSegment{height:116px!important;min-height:116px!important}
+ #plan .proportionalPhaseRail .phaseSegment b{font-size:9.5px!important}
+ #plan .proportionalPhaseRail .phaseSegment small{font-size:6.5px!important}
+}

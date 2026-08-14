@@ -1,4 +1,4 @@
-AI Running Coach v12.3.9 — Serious Runner Plan — build 20309
+AI Running Coach v12.4.0 — Serious Runner Plan — build 20400
 
 Deployment
 ----------
@@ -823,3 +823,12 @@ v12.3.9 — Programme Timeline phase-label fit
 - Added last-resort horizontal compression for very short proportional phases.
 - Removed NOW and VIEW W... badges from inside phase blocks; current/viewed state remains communicated by segment highlighting.
 - No timeline duration or demand-colour calculations changed.
+
+
+v12.4.0 — Programme Timeline readability
+- Programme phase names are rotated vertically at a readable font size instead of being aggressively shrunk.
+- Week ranges remain horizontal and compact at the bottom of each proportional phase.
+- Removed the separate programme-position slider below the timeline.
+- Current programme position is now shown as a vertical line directly through the phase graph, with the current week label.
+- Phase duration proportions and data-driven demand colours remain unchanged.
+- No model/data-engine calculations changed.
