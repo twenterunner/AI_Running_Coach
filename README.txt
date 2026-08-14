@@ -1,4 +1,4 @@
-AI Running Coach v13.1.15 — Progress outlook visual parity — build 30115
+AI Running Coach v13.1.16 — Progress outlook visual parity — build 30116
 
 v13.1.13 Progress canonical Today-style root fix
 ------------------------------------------------

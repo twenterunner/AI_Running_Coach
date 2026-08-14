@@ -3000,3 +3000,93 @@ body:has(#dashboard.progressPage.active),#mainContent:has(#dashboard.progressPag
 #dashboard.progressPage .targetMarginMetric>b{
   color:#fff!important;
 }
+
+
+/* v13.1.16 — root fix: outlook tile structure mirrors ordinary Today metric tiles.
+   Semantic target-margin status is confined to the rail; the value remains standard white text. */
+#dashboard.progressPage .projectedFitnessMetric{
+  display:block!important;
+  padding:12px!important;
+  background:var(--progress-nested)!important;
+  border:1px solid var(--progress-nested-border)!important;
+  border-radius:11px!important;
+  color:inherit!important;
+}
+#dashboard.progressPage .projectedFitnessMetric>.projectedFitnessDisclosure,
+#dashboard.progressPage .projectedFitnessMetric>.projectedFitnessDisclosure[open]{
+  display:block!important;
+  margin:0!important;
+  padding:0!important;
+  background:transparent!important;
+  border:0!important;
+  border-radius:0!important;
+  box-shadow:none!important;
+  color:inherit!important;
+  overflow:visible!important;
+}
+#dashboard.progressPage .projectedFitnessMetric>.projectedFitnessDisclosure>summary,
+#dashboard.progressPage .projectedFitnessMetric>.projectedFitnessDisclosure[open]>summary{
+  min-height:0!important;
+  margin:0!important;
+  padding:0!important;
+  background:transparent!important;
+  border:0!important;
+  box-shadow:none!important;
+}
+#dashboard.progressPage .projectedFitnessMetric>.projectedFitnessDisclosure[open]>summary{margin-bottom:10px!important}
+#dashboard.progressPage .projectedFitnessMetric>.projectedFitnessDisclosure>summary>small{
+  font-size:8px!important;
+  line-height:1.25!important;
+  color:#9fc1ca!important;
+}
+#dashboard.progressPage .projectedFitnessMetric .outlookMetricLabel{
+  display:block!important;
+  margin:0!important;
+  font-size:9px!important;
+  line-height:1.25!important;
+  font-weight:700!important;
+  color:#c6d9df!important;
+}
+#dashboard.progressPage .projectedFitnessMetric .outlookMetricSummaryCopy>b{
+  display:block!important;
+  margin:4px 0 0!important;
+  font-size:17px!important;
+  line-height:1.15!important;
+  font-weight:850!important;
+  color:#fff!important;
+}
+#dashboard.progressPage .targetMarginMetric,
+#dashboard.progressPage .targetMarginMetric.ahead,
+#dashboard.progressPage .targetMarginMetric.behind,
+#dashboard.progressPage .targetMarginMetric.on-target{color:inherit!important}
+#dashboard.progressPage .targetMarginMetric>b,
+#dashboard.progressPage .targetMarginMetric.ahead>b,
+#dashboard.progressPage .targetMarginMetric.behind>b,
+#dashboard.progressPage .targetMarginMetric.on-target>b{color:#fff!important}
+#dashboard.progressPage .targetMarginMetric.ahead .marginBar{background:var(--green)!important}
+#dashboard.progressPage .targetMarginMetric.behind .marginBar{background:var(--red)!important}
+#dashboard.progressPage .targetMarginMetric.on-target .marginBar{background:var(--teal)!important}
+
+/* Specificity guard for v13.1.16: these selectors intentionally outrank the generic
+   Progress disclosure/status rules above. */
+#dashboard.progressPage .outlookGain .projectedFitnessMetric > details.projectedFitnessDisclosure,
+#dashboard.progressPage .outlookGain .projectedFitnessMetric > details.projectedFitnessDisclosure[open]{
+  background:transparent!important;
+  border:0!important;
+  box-shadow:none!important;
+  margin:0!important;
+  padding:0!important;
+}
+#dashboard.progressPage .outlookGain .projectedFitnessMetric > details.projectedFitnessDisclosure > summary,
+#dashboard.progressPage .outlookGain .projectedFitnessMetric > details.projectedFitnessDisclosure[open] > summary{
+  background:transparent!important;
+  border:0!important;
+  box-shadow:none!important;
+  margin:0!important;
+  padding:0!important;
+}
+#dashboard.progressPage .outlookGain .projectedFitnessMetric > details.projectedFitnessDisclosure[open] > summary{margin-bottom:10px!important}
+#dashboard.progressPage .outlookGain .targetMarginMetric > b,
+#dashboard.progressPage .outlookGain .targetMarginMetric.ahead > b,
+#dashboard.progressPage .outlookGain .targetMarginMetric.behind > b,
+#dashboard.progressPage .outlookGain .targetMarginMetric.on-target > b{color:#fff!important}
