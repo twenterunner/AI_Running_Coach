@@ -392,3 +392,9 @@ canvas{display:block;width:100%!important;max-width:100%;height:auto!important;m
   stroke:#f1b45f!important;
   stroke-width:3!important;
 }
+
+/* TODAY TAB — LOCKED UI CONTRACT v12.1.7 */
+#today .todayStatusCard .statusRing .todayPic,#today .rehabPriorityHero .runnerCardIcon .todayPic{width:56px!important;height:56px!important}
+#today .todayStatusCard .statusRing .picBase,#today .rehabPriorityHero .runnerCardIcon .picBase{stroke-width:3.2!important}
+#today .todayStatusCard .statusRing .picWarn{stroke:#ff6842!important;stroke-width:3.6!important}
+#today .todayStatusCard .statusRing .picGood,#today .rehabPriorityHero .runnerCardIcon .picGood{stroke:#8bdd69!important;stroke-width:3.4!important}

@@ -1,4 +1,4 @@
-AI Running Coach v12.1.6 — Today pictogram refinement — build 20106
+AI Running Coach v12.1.7 — Today pictogram refinement — build 20107
 
 Deployment
 ----------
@@ -686,3 +686,10 @@ v12.1.6 — Today pictogram refinement
 - Artwork is newly drawn SVG and does not reuse or copy the stock-image assets.
 - Removed the up/down arrow from the tappable workout-structure foldout; the workout visualization itself remains the disclosure control.
 - No model/data-engine calculations changed.
+
+
+v12.1.7
+- Removed 'Priority 1' and 'secondary' wording from Today.
+- Rehab icon: exactly two arms/two legs, rehab table, medical cross.
+- Pain/Injury icon: exactly two arms/two legs, localized pain bolt.
+- Model/data engines unchanged.
