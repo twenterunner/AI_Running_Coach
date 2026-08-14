@@ -1,4 +1,4 @@
-AI Running Coach v12.3.1 — Serious Runner Plan — build 20301
+AI Running Coach v12.3.2 — Serious Runner Plan — build 20302
 
 Deployment
 ----------
@@ -755,3 +755,12 @@ v12.3.1 — Today wording + Plan consolidation
 - Plan: selected/future-week summary and Weekly Structure consolidated into one Week Overview with date/focus, planned/completed distance, sessions, quality count, longest session, long-run share and surrounding-week volume.
 - Plan: Programme Timeline rebuilt using contained equal-width phase blocks plus a separate proportional programme-position bar so phase names/week ranges cannot spill outside their segments.
 - Model/data engines unchanged.
+
+
+v12.3.2 — Quantified Plan adaptation
+-------------------------------------
+- Plan Adaptation now shows applied adaptation for the selected/current week and projected adaptation for the next weekly review.
+- Pace & Power and Distance & Load are shown separately, each as percentage vs baseline and factor value.
+- Recovery is shown separately as a temporary overlay because it is not a learned weekly adaptation.
+- Existing adaptation/pathway calculations are unchanged; the UI exposes intermediate values already calculated by weeklyReviewData.
+- Today remains unchanged from v12.3.1.

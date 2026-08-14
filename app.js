@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '12.3.1';
-  const BUILD = 20301;
+  const VERSION = '12.3.2';
+  const BUILD = 20302;
   const SCHEMA = 10330;
   const PRIMARY_STORAGE_KEY = 'arc_v10330_web';
   const MIRROR_STORAGE_KEY = 'arc_v10330_mirror';
@@ -2627,7 +2627,7 @@ function weeklyReviewData(w=currentWeek()){
  if(Number.isFinite(avgScore))reasons.push(`Workout execution averaged ${Math.round(avgScore)}/100 across ${scores.length} scored session${scores.length===1?'':'s'}.`);
  if(Number.isFinite(drift))reasons.push(`Average power-based cardiac drift was ${drift.toFixed(1)}%.`);
  if(Number.isFinite(maxPain))reasons.push(`Highest recorded run pain was ${maxPain}/10.`);
- return{week:w,closed,completion,avgScore,drift,maxPain,reasons,changes,paceChange:paceRatio-1,loadChange:loadRatio-1,readiness:readinessModel().modifier};
+ return{week:w,closed,completion,avgScore,drift,maxPain,reasons,changes,paceChange:paceRatio-1,loadChange:loadRatio-1,readiness:readinessModel().modifier,appliedPace,provisionalPace,loadApplied,loadProjected,nextWeek};
 }
 function planPhasePriority(w=currentWeek()){
  const p=raceProfile(),dp=detailedPhase(w),map={
@@ -2669,10 +2669,44 @@ function planSelectedWeekHeaderHtml(w){
 function planProjectedChangeRows(r){
  return r.changes.map(x=>{const dc=Math.abs(x.nextDistance-x.distance)>=.05,pc=Math.abs(x.nextPace-x.pace)>=.5,pw=Math.abs(x.nextPower-x.power)>=1;if(!dc&&!pc&&!pw)return'';return`<div class="planProjectedRow"><div><b>${fmtDate(x.date)} · ${esc(x.type)}</b><small>Projected at next review</small></div><span>${dc?`${x.distance.toFixed(1)} → ${x.nextDistance.toFixed(1)} km`:'Distance held'}</span><span>${pc?`${pace(x.pace)} → ${pace(x.nextPace)}`:'Pace held'}</span><span>${pw?`${Math.round(x.power)} → ${Math.round(x.nextPower)} W`:'Power held'}</span></div>`}).filter(Boolean).join('');
 }
+function planAdaptPercent(factor){
+ const n=Number(factor);
+ if(!Number.isFinite(n))return'—';
+ const pct=(n-1)*100;
+ return `${pct>0?'+':''}${pct.toFixed(1)}%`;
+}
+function planAdaptFactor(factor){
+ const n=Number(factor);
+ return Number.isFinite(n)?n.toFixed(3):'—';
+}
+function planAdaptAmountClass(factor){
+ const n=Number(factor);
+ if(!Number.isFinite(n)||Math.abs(n-1)<.0005)return'neutral';
+ return n>1?'good':'warn';
+}
+function planAdaptationAmountHtml(r){
+ const row=(icon,title,applied,projected)=>`
+   <article class="planAdaptAmountRow">
+     <div class="adaptAmountLabel"><span>${uiIcon(icon)}</span><div><small>${title}</small><b>${planAdaptPercent(applied)} applied</b></div></div>
+     <div class="adaptAmountCompare">
+       <div class="${planAdaptAmountClass(applied)}"><small>THIS WEEK</small><strong>${planAdaptPercent(applied)}</strong><span>factor ${planAdaptFactor(applied)}</span></div>
+       <i aria-hidden="true">→</i>
+       <div class="${planAdaptAmountClass(projected)}"><small>NEXT REVIEW</small><strong>${planAdaptPercent(projected)}</strong><span>factor ${planAdaptFactor(projected)}</span></div>
+     </div>
+   </article>`;
+ const readiness=Number(r.readiness);
+ const recoveryPct=Number.isFinite(readiness)?(1-readiness)*100:null;
+ return`<div class="planAdaptAmount">
+   <div class="planAdaptAmountHead"><div><small>ADAPTATION AMOUNT</small><h4>This week → projected next week</h4></div><span>Baseline = 1.000</span></div>
+   ${row('pace','PACE & POWER',r.appliedPace,r.provisionalPace)}
+   ${row('load','DISTANCE & LOAD',r.loadApplied,r.loadProjected)}
+   <div class="adaptRecoveryNote"><span>${uiIcon('recovery')}</span><p><b>Recovery overlay:</b> ${Number.isFinite(recoveryPct)&&recoveryPct>.05?`${recoveryPct.toFixed(1)}% temporary reduction currently applied`:'no meaningful temporary reduction'}. This is not carried forward as learned adaptation.</p></div>
+ </div>`;
+}
 function weeklyReviewHtml(w=currentWeek()){
  const {review:r,paceState,loadState,readyState}=planAdaptationLabels(w),rows=planProjectedChangeRows(r),activeInjury=(state.injuries||[]).find(x=>x.id===state.activeInjuryPlanId);
  const status=r.closed?'Applied weekly review':w>currentWeek()?'Future prescription':'Provisional weekly review';
- return`<section class="planAdaptationCard"><div class="planAdaptationTop"><div><small>${status.toUpperCase()}</small><h3>Prescription consequences</h3><p>Plan shows what changes for the runner; numeric learned factors remain on Progress.</p></div><span class="planReviewState ${r.closed?'good':'neutral'}">${r.closed?'Applied':'Building'}</span></div><div class="planAdaptationGrid"><article class="${paceState.cls}"><span class="adaptVisual">${uiIcon('pace')}</span><small>PACE & POWER</small><strong>${paceState.label}</strong><p>${paceState.detail}</p></article><article class="${loadState.cls}"><span class="adaptVisual">${uiIcon('load')}</span><small>DISTANCE & LOAD</small><strong>${loadState.label}</strong><p>${loadState.detail}</p></article><article class="${readyState.cls}"><span class="adaptVisual">${uiIcon('recovery')}</span><small>RECOVERY CONTEXT</small><strong>${readyState.label}</strong><p>${readyState.detail}</p></article></div>${activeInjury?`<div class="planConstraint"><span>${todayPictogram('rehab')}</span><div><small>ACTIVE REHAB CONSTRAINT</small><b>${esc(activeInjury.bodyRegion||activeInjury.location||'Active rehabilitation')}</b><p>Day-level running remains subject to the active return-to-run criteria. Rehab guidance can supersede a scheduled run.</p></div></div>`:''}<details class="planAdaptDetail"><summary>Evidence behind this review</summary>${r.reasons.length?`<ul>${r.reasons.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>`:'<p>No completed evidence is available yet for this review.</p>'}<p class="muted compact">Recovery context is temporary. Learned Pace & Power and Distance & Load calibration remains governed by the existing weekly commitment rules.</p></details><details class="planAdaptDetail"><summary>Projected workout changes</summary><div class="planProjectedChanges">${rows||'<p>No material prescription changes are currently projected.</p>'}</div><p class="muted compact">The app does not persist a separate pre-adaptation copy of every workout. This view therefore compares the applied prescription with the currently projected next-review consequence where available.</p></details></section>`;
+ return`<section class="planAdaptationCard"><div class="planAdaptationTop"><div><small>${status.toUpperCase()}</small><h3>Prescription consequences</h3><p>Plan shows what changes for the runner; numeric learned factors remain on Progress.</p></div><span class="planReviewState ${r.closed?'good':'neutral'}">${r.closed?'Applied':'Building'}</span></div><div class="planAdaptationGrid"><article class="${paceState.cls}"><span class="adaptVisual">${uiIcon('pace')}</span><small>PACE & POWER</small><strong>${paceState.label}</strong><p>${paceState.detail}</p></article><article class="${loadState.cls}"><span class="adaptVisual">${uiIcon('load')}</span><small>DISTANCE & LOAD</small><strong>${loadState.label}</strong><p>${loadState.detail}</p></article><article class="${readyState.cls}"><span class="adaptVisual">${uiIcon('recovery')}</span><small>RECOVERY CONTEXT</small><strong>${readyState.label}</strong><p>${readyState.detail}</p></article></div>${planAdaptationAmountHtml(r)}${activeInjury?`<div class="planConstraint"><span>${todayPictogram('rehab')}</span><div><small>ACTIVE REHAB CONSTRAINT</small><b>${esc(activeInjury.bodyRegion||activeInjury.location||'Active rehabilitation')}</b><p>Day-level running remains subject to the active return-to-run criteria. Rehab guidance can supersede a scheduled run.</p></div></div>`:''}<details class="planAdaptDetail"><summary>Evidence behind this review</summary>${r.reasons.length?`<ul>${r.reasons.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>`:'<p>No completed evidence is available yet for this review.</p>'}<p class="muted compact">Recovery context is temporary. Learned Pace & Power and Distance & Load calibration remains governed by the existing weekly commitment rules.</p></details><details class="planAdaptDetail"><summary>Projected workout changes</summary><div class="planProjectedChanges">${rows||'<p>No material prescription changes are currently projected.</p>'}</div><p class="muted compact">The app does not persist a separate pre-adaptation copy of every workout. This view therefore compares the applied prescription with the currently projected next-review consequence where available.</p></details></section>`;
 }
 function planTimelineHtml(viewWeek=currentWeek()){
  const total=weeks(),groups=[];for(let w=1;w<=total;w++){const name=detailedPhase(w),last=groups.at(-1);if(!last||last.name!==name)groups.push({name,start:w,end:w});else last.end=w}

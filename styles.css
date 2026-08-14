@@ -616,3 +616,138 @@ canvas{display:block;width:100%!important;max-width:100%;height:auto!important;m
 #plan .planHeroMetrics>div.warn span{color:#e6cf9b}
 @media(max-width:430px){#plan .weekOverviewMetrics{grid-template-columns:1fr 1fr}#plan .equalPhaseRail .phaseSegment{height:88px!important;padding:6px 2px!important}#plan .equalPhaseRail .phaseSegment b{font-size:6.5px!important}#plan .equalPhaseRail .phaseSegment small{font-size:6px!important}}
 @media(max-width:360px){#plan .equalPhaseRail .phaseSegment b{font-size:6px!important}#plan .equalPhaseRail .phaseSegment small{font-size:5.5px!important}}
+
+
+/* PLAN TAB — v12.3.2 quantified weekly adaptation */
+#plan .planAdaptAmount{
+  margin-top:12px;
+  padding:13px;
+  border-radius:14px;
+  background:rgba(3,31,43,.24);
+  border:1px solid rgba(80,210,219,.14);
+}
+#plan .planAdaptAmountHead{
+  display:flex;
+  align-items:flex-end;
+  justify-content:space-between;
+  gap:10px;
+  margin-bottom:10px;
+}
+#plan .planAdaptAmountHead small{
+  display:block;
+  font-size:8px;
+  font-weight:900;
+  letter-spacing:.09em;
+  color:var(--teal-2);
+}
+#plan .planAdaptAmountHead h4{
+  margin:2px 0 0;
+  font-size:15px;
+  line-height:1.15;
+}
+#plan .planAdaptAmountHead>span{
+  font-size:8px;
+  color:var(--muted);
+  white-space:nowrap;
+}
+#plan .planAdaptAmountRow{
+  display:grid;
+  grid-template-columns:minmax(0,.8fr) minmax(0,1.35fr);
+  gap:10px;
+  align-items:center;
+  padding:10px 0;
+  border-top:1px solid rgba(136,161,177,.10);
+}
+#plan .adaptAmountLabel{
+  display:grid;
+  grid-template-columns:30px minmax(0,1fr);
+  gap:8px;
+  align-items:center;
+}
+#plan .adaptAmountLabel>span{
+  width:30px;height:30px;
+  display:grid;place-items:center;
+  border-radius:9px;
+  background:rgba(61,214,198,.08);
+  color:var(--teal-2);
+}
+#plan .adaptAmountLabel .uiIcon{width:18px;height:18px}
+#plan .adaptAmountLabel small{
+  display:block;
+  font-size:7px;
+  font-weight:850;
+  letter-spacing:.06em;
+  color:var(--muted);
+}
+#plan .adaptAmountLabel b{
+  display:block;
+  margin-top:2px;
+  font-size:11px;
+}
+#plan .adaptAmountCompare{
+  display:grid;
+  grid-template-columns:1fr 14px 1fr;
+  gap:5px;
+  align-items:center;
+}
+#plan .adaptAmountCompare>div{
+  min-width:0;
+  padding:8px 7px;
+  border-radius:10px;
+  background:rgba(6,25,35,.33);
+  border:1px solid rgba(136,161,177,.11);
+}
+#plan .adaptAmountCompare>i{
+  text-align:center;
+  font-style:normal;
+  color:var(--teal-2);
+  font-size:14px;
+}
+#plan .adaptAmountCompare small{
+  display:block;
+  font-size:7px;
+  font-weight:850;
+  letter-spacing:.05em;
+  color:var(--muted);
+}
+#plan .adaptAmountCompare strong{
+  display:block;
+  margin-top:2px;
+  font-size:14px;
+  line-height:1.05;
+}
+#plan .adaptAmountCompare span{
+  display:block;
+  margin-top:3px;
+  font-size:7px;
+  color:var(--muted);
+}
+#plan .adaptAmountCompare .good strong{color:var(--green)}
+#plan .adaptAmountCompare .warn strong{color:var(--amber)}
+#plan .adaptAmountCompare .neutral strong{color:var(--text)}
+#plan .adaptRecoveryNote{
+  display:grid;
+  grid-template-columns:28px minmax(0,1fr);
+  gap:8px;
+  align-items:start;
+  padding-top:9px;
+  border-top:1px solid rgba(136,161,177,.10);
+}
+#plan .adaptRecoveryNote>span{
+  width:28px;height:28px;
+  display:grid;place-items:center;
+  color:var(--teal-2);
+}
+#plan .adaptRecoveryNote .uiIcon{width:18px;height:18px}
+#plan .adaptRecoveryNote p{
+  margin:0;
+  font-size:9px;
+  line-height:1.35;
+  color:var(--text-2);
+}
+@media(max-width:390px){
+ #plan .planAdaptAmountHead{align-items:flex-start}
+ #plan .planAdaptAmountRow{grid-template-columns:1fr;gap:7px}
+ #plan .adaptAmountCompare{grid-template-columns:1fr 12px 1fr}
+ #plan .adaptAmountCompare strong{font-size:13px}
+}
