@@ -788,82 +788,13 @@ canvas{display:block;width:100%!important;max-width:100%;height:auto!important;m
  #plan .planRaceRanges{grid-template-columns:1fr}
 }
 
-
-/* PLAN TAB — v12.3.4 timeline promoted + intensity nested */
-#plan .planRaceGap{
-  margin:8px 2px 0!important;
-  padding:0!important;
-  font-size:9px!important;
-  line-height:1.3!important;
-  color:var(--muted)!important;
-}
-#plan .planProgrammeTimelineCard{
-  width:100%;
-  padding:16px;
-  margin-bottom:12px;
-  background:linear-gradient(145deg,#075468 0%,#073c50 52%,#062c3d 100%);
-  border:1px solid rgba(40,214,219,.42);
-  border-radius:18px;
-}
-#plan .planProgrammeTimelineCard .planSectionHead{
-  display:grid;
-  grid-template-columns:48px minmax(0,1fr);
-  gap:11px;
-  align-items:center;
-  margin-bottom:13px;
-}
-#plan .planProgrammeTimelineCard .planSectionIcon{
-  width:48px;height:48px;
-  display:grid;place-items:center;
-  border-radius:50%;
-  background:rgba(21,184,202,.13);
-  border:1px solid rgba(45,218,224,.35);
-  color:#fff;
-}
-#plan .planProgrammeTimelineCard .planSectionIcon .uiIcon{width:27px;height:27px}
-#plan .planProgrammeTimelineCard .planSectionHead small{
-  font-size:8px;font-weight:900;letter-spacing:.09em;color:#45e0e4;
-}
-#plan .planProgrammeTimelineCard .planSectionHead h3{
-  margin:2px 0 0;font-size:20px;line-height:1.15;color:#fff;
-}
-#plan .planProgrammeTimelineCard .planSectionHead p{
-  margin:3px 0 0;font-size:9px;line-height:1.3;color:#bfd4da;
-}
-#plan .planIntensityFoldout{
-  margin-top:12px;
-  border:1px solid rgba(80,210,219,.15)!important;
-  border-radius:12px!important;
-  background:rgba(3,31,43,.20)!important;
-}
-#plan .planIntensityFoldout>summary{
-  min-height:46px;
-  padding:10px 12px!important;
-  background:transparent!important;
-}
-#plan .planIntensityFoldout>summary>span{
-  display:grid;gap:2px;
-}
-#plan .planIntensityFoldout>summary b{
-  font-size:11px;color:#fff;
-}
-#plan .planIntensityFoldout>summary small{
-  font-size:8px;color:#9dbbc4;
-}
-#plan .planIntensityFoldoutBody{
-  padding:0 12px 12px;
-}
-#plan .planIntensityFoldoutBody .planMixPanel,
-#plan .planIntensityFoldoutBody .panel{
-  margin:0!important;
-  padding:0!important;
-  background:transparent!important;
-  border:0!important;
-}
-@media(max-width:390px){
- #plan .planProgrammeTimelineCard{padding:14px}
- #plan .planProgrammeTimelineCard .planSectionHead{grid-template-columns:42px minmax(0,1fr);gap:9px}
- #plan .planProgrammeTimelineCard .planSectionIcon{width:42px;height:42px}
- #plan .planProgrammeTimelineCard .planSectionHead h3{font-size:18px}
- #plan .planRaceGap{font-size:8.5px!important}
-}
+/* PLAN TAB — v12.3.4 corrected */
+#plan .planRaceGap{margin:8px 2px 0!important;font-size:9px!important;line-height:1.3!important;color:var(--muted)!important}
+#plan .promotedTimelinePanel{margin-top:0;background:linear-gradient(145deg,#075468 0%,#073c50 52%,#062c3d 100%);border:1px solid rgba(40,214,219,.42);border-radius:18px}
+#plan .planIntensityFoldout{margin-top:12px;border:1px solid rgba(80,210,219,.15);border-radius:12px;background:rgba(3,31,43,.20)}
+#plan .planIntensityFoldout>summary{min-height:46px;padding:10px 12px}
+#plan .planIntensityFoldout>summary>span{display:grid;gap:2px}
+#plan .planIntensityFoldout>summary b{font-size:11px;color:#fff}
+#plan .planIntensityFoldout>summary small{font-size:8px;color:#9dbbc4}
+#plan .planIntensityFoldoutBody{padding:0 12px 12px}
+@media(max-width:390px){#plan .planRaceGap{font-size:8.5px!important}}

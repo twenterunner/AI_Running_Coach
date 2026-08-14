@@ -776,11 +776,10 @@ v12.3.3 — Race Context moved to Plan
 - No model/data-engine calculations changed.
 
 
-v12.3.4 — Plan timeline hierarchy refinement
---------------------------------------------
-- Programme Timeline promoted to the second Plan card, directly after Race Context.
-- Training Intensity Distribution moved into Programme Timeline as a collapsed foldout.
-- Removed the bullet before the race target-gap sentence.
-- Target-gap sentence is now smaller and visually subordinate.
-- Remaining approved Today/Plan content is unchanged.
-- No model/data-engine calculations changed.
+v12.3.4 corrected
+- Rebuilt from known-good v12.3.3.
+- Programme Timeline is second Plan tile.
+- Intensity Distribution is a foldout inside it.
+- Existing Plan renderer and target IDs preserved.
+- Race target-gap bullet removed and text reduced.
+- No model/data-engine changes.
