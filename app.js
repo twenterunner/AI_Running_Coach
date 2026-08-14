@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '13.1.13';
-  const BUILD = 30113;
+  const VERSION = '13.1.14';
+  const BUILD = 30114;
   const SCHEMA = 10330;
   const PRIMARY_STORAGE_KEY = 'arc_v10330_web';
   const MIRROR_STORAGE_KEY = 'arc_v10330_mirror';
@@ -1957,7 +1957,7 @@ function progressCard(x){let pct=clamp(x.value/Math.max(.01,x.target)*100,0,100)
 function decisionHistoryHtml(){
  const rows=completedRuns().slice().sort((a,b)=>b.date.localeCompare(a.date)).slice(0,10).map(r=>{
    const two=r.coachUpdate?.twoPathway||twoPathwayDecisionForRun(r,r.planId?state.plan.find(p=>p.id===r.planId):null),pd=two.pace,ld=two.load;
-   return`<div class="decisionHistoryRow two"><div><b>${fmtDate(r.date)} · ${esc(r.type)}</b><small>${esc(pd.interpretation)} ${esc(ld.interpretation)}</small></div><span class="hold">P ${pd.finalSignal>=0?'+':''}${pd.finalSignal.toFixed(2)} · L ${ld.finalSignal>=0?'+':''}${ld.finalSignal.toFixed(2)}</span><em>${pd.confidence}/${ld.confidence} confidence</em></div>`;
+   return`<div class="decisionHistoryRow two"><div class="decisionHistoryCopy"><b>${fmtDate(r.date)} · ${esc(r.type)}</b><small>${esc(pd.interpretation)} ${esc(ld.interpretation)}</small></div><div class="decisionHistoryMeta"><span class="hold">P ${pd.finalSignal>=0?'+':''}${pd.finalSignal.toFixed(2)} · L ${ld.finalSignal>=0?'+':''}${ld.finalSignal.toFixed(2)}</span><em>${pd.confidence}/${ld.confidence} confidence</em></div></div>`;
  });
  return rows.length?`<details class="decisionHistoryPanel"><summary><span>Adaptation decision history</span><b>${rows.length} recent decisions</b></summary><p class="muted compact">A persistent audit trail of how uploaded runs were interpreted before pathway evidence was updated.</p><div>${rows.join('')}</div></details>`:'';
 }
@@ -2001,7 +2001,7 @@ function renderDashboard(){
  $('currentProbability').textContent=fmtEstimate(pred,engine.currentModel.provisional);
  $('currentProbabilityLabel').textContent=`Today · ${paceEstimate(pred,engine.currentModel.provisional)}`;
  $('currentPrediction').textContent=engine.currentModel.provisional?'Provisional estimate · log completed training before target probability is scored':`${Math.round(engine.currentModel.probability)}% chance of ${fmtTime(state.setup.targetTime)} · ${engine.currentModel.label}`;
- $('currentRange').textContent=`Likely 70% range ${fmtEstimate(engine.currentModel.rangeLow,engine.currentModel.provisional)}–${fmtEstimate(engine.currentModel.rangeHigh,engine.currentModel.provisional)} · ${paceEstimate(engine.currentModel.rangeLow,engine.currentModel.provisional)}–${paceEstimate(engine.currentModel.rangeHigh,engine.currentModel.provisional)}`;
+ $('currentRange').textContent=`Range ${fmtEstimate(engine.currentModel.rangeLow,engine.currentModel.provisional)}–${fmtEstimate(engine.currentModel.rangeHigh,engine.currentModel.provisional)} · ${paceEstimate(engine.currentModel.rangeLow,engine.currentModel.provisional)}–${paceEstimate(engine.currentModel.rangeHigh,engine.currentModel.provisional)}`;
  $('projectedProbability').textContent=fmtEstimate(engine.projection.predictedTime,engine.projectedModel.provisional);
  $('projectedProbabilityLabel').textContent=`Race-day scenario · ${paceEstimate(engine.projection.predictedTime,engine.projectedModel.provisional)}`;
  $('projectedPrediction').textContent=engine.projectedModel.provisional?'Provisional plan scenario · outcome depends on future execution evidence':`${Math.round(engine.projectedModel.probability)}% chance of target · ${engine.projectedModel.label}`;
@@ -2015,7 +2015,7 @@ function renderDashboard(){
  const fitnessContributions=Array.isArray(engine.projection?.fitnessProjection?.contributions)?engine.projection.fitnessProjection.contributions:[];
  const contributionRows=fitnessContributions.length?fitnessContributions.map(x=>{const potential=Number(x?.potential),realised=Number(x?.realised);return `<div class="calcRow"><span>${esc(x?.name||'Plan stimulus')}</span><span>${Number.isFinite(potential)?potential.toFixed(2):'—'}% potential</span><span>${Number.isFinite(realised)?realised.toFixed(2):'—'}%</span></div>`}).join(''):`<div class="calcRow"><span>Plan-derived projection</span><span>Calculated from the current plan</span><span>${(fitnessGainSafe*100).toFixed(2)}%</span></div>`;
  const marginAbs=Math.abs(Number(targetMargin)||0),marginPct=clamp(marginAbs/1800*50,2,50),marginClass=targetMargin<0?'ahead':targetMargin>0?'behind':'on-target';
- $('outlookGain').innerHTML=`<div class="outlookMiniMetric"><span>Expected improvement</span><b>${fmtTime(engine.projection.improvementSec)}</b><div class="metricRail"><i style="width:${clamp(Math.abs(Number(engine.projection.improvementSec)||0)/3600*100,4,100)}%"></i></div></div><div class="outlookMiniMetric targetMarginMetric ${marginClass}"><span>Target margin</span><b>${targetMargin<0?fmtTime(marginAbs)+' faster':targetMargin>0?fmtTime(marginAbs)+' slower':'On target'}</b><div class="targetMarginRail" aria-label="Target margin: negative is faster than target, positive is slower than target"><span class="marginHalf marginAhead"></span><span class="marginHalf marginBehind"></span><i class="zero"></i><b class="marginBar" style="--margin:${marginPct}%"></b></div><div class="marginScale"><span>− faster</span><span>0 target</span><span>+ slower</span></div></div><details class="outlookMetricDetail"><summary><span class="outlookMetricSummaryCopy"><span class="outlookMetricLabel">Projected fitness</span><b>${projectedFitnessSafe.toFixed(1)}</b></span><small>How this is calculated</small></summary><div class="outlookMetricCalc"><p><strong>Projected fitness index: ${projectedFitnessSafe.toFixed(1)}</strong></p><p>100 is the latest assessment/setup baseline. The plan currently projects ${projectedFitnessSafe>=100?`${(projectedFitnessSafe-100).toFixed(1)}% above baseline`:`${(100-projectedFitnessSafe).toFixed(1)}% below baseline`} before separate durability and taper effects.</p><div class="calcTable">${contributionRows}<div class="calcRow total"><span>Projected fitness gain</span><span>vs baseline</span><span>${fitnessGainSafe>=0?'+':''}${(fitnessGainSafe*100).toFixed(2)}%</span></div></div><p class="muted compact">Uses the existing plan-health, completion, recovery, training-opportunity and diminishing-return inputs. Durability and taper are separate parts of the race projection.</p></div></details><div class="outlookMiniMetric"><span>Plan health</span><b>${Math.round(Number(health.score)||0)}/100</b><div class="metricRail"><i style="width:${clamp(Number(health.score)||0,0,100)}%"></i></div></div>`;
+ $('outlookGain').innerHTML=`<div class="outlookMiniMetric"><span>Expected improvement</span><b>${fmtTime(engine.projection.improvementSec)}</b><div class="metricRail"><i style="width:${clamp(Math.abs(Number(engine.projection.improvementSec)||0)/3600*100,4,100)}%"></i></div></div><div class="outlookMiniMetric targetMarginMetric ${marginClass}"><span>Target margin</span><b>${targetMargin<0?fmtTime(marginAbs)+' faster':targetMargin>0?fmtTime(marginAbs)+' slower':'On target'}</b><div class="targetMarginRail" aria-label="Target margin: negative is faster than target, positive is slower than target"><span class="marginHalf marginAhead"></span><span class="marginHalf marginBehind"></span><i class="zero"></i><b class="marginBar" style="--margin:${marginPct}%"></b></div><div class="marginScale"><span>− faster</span><span>0 target</span><span>+ slower</span></div></div><details class="outlookMiniMetric outlookMetricDetail"><summary><span class="outlookMetricSummaryCopy"><span class="outlookMetricLabel">Projected fitness</span><b>${projectedFitnessSafe.toFixed(1)}</b></span><small>How this is calculated</small></summary><div class="outlookMetricCalc"><p><strong>Projected fitness index: ${projectedFitnessSafe.toFixed(1)}</strong></p><p>100 is the latest assessment/setup baseline. The plan currently projects ${projectedFitnessSafe>=100?`${(projectedFitnessSafe-100).toFixed(1)}% above baseline`:`${(100-projectedFitnessSafe).toFixed(1)}% below baseline`} before separate durability and taper effects.</p><div class="calcTable">${contributionRows}<div class="calcRow total"><span>Projected fitness gain</span><span>vs baseline</span><span>${fitnessGainSafe>=0?'+':''}${(fitnessGainSafe*100).toFixed(2)}%</span></div></div><p class="muted compact">Uses the existing plan-health, completion, recovery, training-opportunity and diminishing-return inputs. Durability and taper are separate parts of the race projection.</p></div></details><div class="outlookMiniMetric"><span>Plan health</span><b>${Math.round(Number(health.score)||0)}/100</b><div class="metricRail"><i style="width:${clamp(Number(health.score)||0,0,100)}%"></i></div></div>`;
  const assumption=document.querySelector('.outlookAssumption');if(assumption)assumption.textContent=`Expected scenario uses ${Math.round(clamp(Number(engine.projection.completionAssumption)||.85,.75,.93)*100)}% plan completion, plan-derived fitness and durability gains, and a taper benefit calculated from the actual taper structure.`;
  $('trackStatus').innerHTML=`<span class="statusDot"></span><b>${engine.currentModel.provisional?'Provisional outlook — add completed training evidence':engine.status}</b>`;
  const hero=$('trackStatus').closest('.outlookHero');
@@ -2027,8 +2027,8 @@ function renderDashboard(){
  if(projectedCard)projectedCard.classList.add(engine.projectedModel.probability>=70?'metric-good':engine.projectedModel.probability>=45?'metric-watch':'metric-action');
  const coachReport=evidenceBasedCoach(engine);
  $('assessmentText').innerHTML=progressCoachReportHtml(coachReport);
- const progressExecution=$('progressExecution');if(progressExecution){const ex=executionScoreSummary();progressExecution.innerHTML=ex.count?`<article class="panel progressExecutionCard"><div class="progressMetricLead"><div><small>RECENT EXECUTION</small><strong>${Math.round(ex.average)}/100</strong><span>${scoreBand(Math.round(ex.average))}</span></div><div><small>KEY SESSIONS</small><strong>${Number.isFinite(ex.keyAverage)?Math.round(ex.keyAverage)+'/100':'—'}</strong><span>${Number.isFinite(ex.trend)?`${ex.trend>=0?'+':''}${ex.trend.toFixed(0)} pts recent trend`:'Building trend evidence'}</span></div></div><details><summary>Session-by-session evidence</summary>${ex.recent.map(x=>`<div class="executionRow"><span>${fmtDate(x.date)} · ${esc(x.type)}</span><b>${x.score}/100</b></div>`).join('')}</details></article>`:`<article class="panel progressBaseline"><b>Building your execution baseline</b><p>No completed run has enough information for an execution score yet.</p></article>`;}
- const progressRecovery=$('progressRecovery');if(progressRecovery){const h=hrvModel(),ast=athleteState(cw),active=(state.injuries||[]).find(x=>x.id===state.activeInjuryPlanId);progressRecovery.innerHTML=`<article class="panel progressRecoveryCard"><div class="progressMetricLead"><div><small>RECOVERY CONTEXT</small><strong>${esc(ast.readiness||'—')}</strong><span>Temporary overlay, not learned capability</span></div><div><small>HRV EVIDENCE</small><strong>${h.count||0}</strong><span>${h.rolling!=null?`Recent ${h.rolling.toFixed(0)} ms${h.baseline!=null?` · baseline ${h.baseline.toFixed(0)} ms`:''}`:'Building personal baseline'}</span></div></div>${active?`<div class="progressInterruption"><b>Active rehabilitation affects training exposure</b><p>Progress charts preserve the interruption rather than treating missing or reduced running as zero fitness.</p></div>`:''}</article>`;}
+ const progressExecution=$('progressExecution');if(progressExecution){const ex=executionScoreSummary();progressExecution.innerHTML=ex.count?`<article class="panel progressExecutionCard"><div class="progressMetricLead"><div class="progressMetricTile"><small>RECENT EXECUTION</small><strong>${Math.round(ex.average)}/100</strong><span>${scoreBand(Math.round(ex.average))}</span></div><div class="progressMetricTile"><small>KEY SESSIONS</small><strong>${Number.isFinite(ex.keyAverage)?Math.round(ex.keyAverage)+'/100':'—'}</strong><span>${Number.isFinite(ex.trend)?`${ex.trend>=0?'+':''}${ex.trend.toFixed(0)} pts recent trend`:'Building trend evidence'}</span></div></div><details><summary>Session-by-session evidence</summary>${ex.recent.map(x=>`<div class="executionRow"><span class="executionIdentity">${fmtDate(x.date)} · ${esc(x.type)}</span><b>${x.score}/100</b></div>`).join('')}</details></article>`:`<article class="panel progressBaseline"><b>Building your execution baseline</b><p>No completed run has enough information for an execution score yet.</p></article>`;}
+ const progressRecovery=$('progressRecovery');if(progressRecovery){const h=hrvModel(),ast=athleteState(cw),active=(state.injuries||[]).find(x=>x.id===state.activeInjuryPlanId);progressRecovery.innerHTML=`<article class="panel progressRecoveryCard"><div class="progressMetricLead"><div class="progressMetricTile"><small>RECOVERY CONTEXT</small><strong>${esc(ast.readiness||'—')}</strong><span>Temporary overlay, not learned capability</span></div><div class="progressMetricTile"><small>HRV EVIDENCE</small><strong>${h.count||0}</strong><span>${h.rolling!=null?`Recent ${h.rolling.toFixed(0)} ms${h.baseline!=null?` · baseline ${h.baseline.toFixed(0)} ms`:''}`:'Building personal baseline'}</span></div></div>${active?`<div class="progressInterruption"><b>Active rehabilitation affects training exposure</b><p>Progress charts preserve the interruption rather than treating missing or reduced running as zero fitness.</p></div>`:''}</article>`;}
  const adaptationHome=$('progressAdaptationHome');if(adaptationHome)adaptationHome.innerHTML=progressAdaptationHomeHtml();
  const validationEl=$('modelValidation');if(validationEl)validationEl.innerHTML=modelValidationHtml();
  const decisionHistory=$('decisionHistory');if(decisionHistory)decisionHistory.innerHTML=decisionHistoryHtml();
@@ -3800,14 +3800,14 @@ function renderMetrics(){
  let efficiencyRuns=rs.filter(r=>Number.isFinite(metrics(r).efficiencyJ));
  let driftRuns=rs.filter(r=>Number.isFinite(r.powerDrift));
  let latestEff=efficiencyRuns.at(-1),latestDrift=driftRuns.at(-1);
- let recentEff=efficiencyRuns.slice(-3).map(r=>metrics(r).efficiencyJ);
- let recentDrift=driftRuns.slice(-3).map(r=>r.powerDrift);
+ let overallEff=efficiencyRuns.map(r=>metrics(r).efficiencyJ).filter(Number.isFinite);
+ let overallDrift=driftRuns.map(r=>r.powerDrift).filter(Number.isFinite);
 
  $('metricKpis').innerHTML=
    kpi('Latest efficiency factor',latestEff?dec(metrics(latestEff).efficiencyJ,1)+' J/beat':'—','Average running power converted to joules of external work per heartbeat. Higher is better.')+
-   kpi('3-run efficiency average',recentEff.length?dec(avg(recentEff),1)+' J/beat':'—')+
+   kpi('Overall efficiency average',overallEff.length?dec(avg(overallEff),1)+' J/beat':'—')+
    kpi('Latest power cardiac drift',latestDrift?latestDrift.powerDrift.toFixed(1)+'%':'—','Change in the power-to-heart-rate relationship between run halves. Lower is better.')+
-   kpi('3-run drift average',recentDrift.length?dec(avg(recentDrift),1)+'%':'—');
+   kpi('Overall drift average',overallDrift.length?dec(avg(overallDrift),1)+'%':'—');
 
  let effValues=efficiencyRuns.map(r=>metrics(r).efficiencyJ).filter(Number.isFinite);
  let effLabels=efficiencyRuns.map(r=>dte(r.date).toLocaleDateString(undefined,{day:'numeric',month:'short'}));
@@ -5066,11 +5066,14 @@ function navIcon(page){
  return icons[page]||icons.more;
 }
 function navButtonHtml(page,label,extra=''){return`<button ${extra} data-page="${page}"><span class="navIcon">${navIcon(page)}</span><span class="navLabel">${label}</span></button>`}
+let mobileNavSyncFrame=0;
 function syncMobileNavViewport(){
- const vv=window.visualViewport;
- let inset=0;
- if(vv){inset=Math.max(0,Math.round(window.innerHeight-(vv.height+vv.offsetTop)));}
- document.documentElement.style.setProperty('--mobile-nav-bottom',`${inset}px`);
+ cancelAnimationFrame(mobileNavSyncFrame);
+ mobileNavSyncFrame=requestAnimationFrame(()=>{
+  const vv=window.visualViewport;
+  const inset=vv?Math.max(0,Math.round(window.innerHeight-vv.height-vv.offsetTop)):0;
+  document.documentElement.style.setProperty('--mobile-nav-bottom',`${inset}px`);
+ });
 }
 if(window.visualViewport){window.visualViewport.addEventListener('resize',syncMobileNavViewport,{passive:true});window.visualViewport.addEventListener('scroll',syncMobileNavViewport,{passive:true});}
 window.addEventListener('resize',syncMobileNavViewport,{passive:true});
