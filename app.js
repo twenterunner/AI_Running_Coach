@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '13.1.8';
-  const BUILD = 30108;
+  const VERSION = '13.1.9';
+  const BUILD = 30109;
   const SCHEMA = 10330;
   const PRIMARY_STORAGE_KEY = 'arc_v10330_web';
   const MIRROR_STORAGE_KEY = 'arc_v10330_mirror';
@@ -2090,7 +2090,7 @@ function renderDashboard(){
  // Progress charts must render even when legacy Progress-only explanatory mounts are absent.
  drawDashboardCharts();
 }
-function updateChartTable(canvas,summary,headers,rows){if(!canvas)return;const id=`${canvas.id}-data`;let details=canvas.parentElement?.querySelector(`:scope > #${id}`);if(!details){details=document.createElement('details');details.id=id;details.className='chartDataTable';canvas.insertAdjacentElement('afterend',details)}details.innerHTML=`<summary>${esc(summary)}</summary><div class="tableScroll"><table><caption>${esc(canvas.getAttribute('aria-label')||summary)}</caption><thead><tr>${headers.map(header=>`<th scope="col">${esc(header)}</th>`).join('')}</tr></thead><tbody>${rows.length?rows.map(row=>`<tr>${row.map((cell,index)=>index===0?`<th scope="row">${esc(cell)}</th>`:`<td>${esc(cell)}</td>`).join('')}</tr>`).join(''):`<tr><td colspan="${headers.length}">No completed data yet.</td></tr>`}</tbody></table></div>`;canvas.setAttribute('aria-describedby',id)}
+function updateChartTable(canvas,summary,headers,rows){if(!canvas)return;const id=`${canvas.id}-data`;if(canvas.closest('#dashboard.progressPage')){canvas.parentElement?.querySelector(`:scope > #${id}`)?.remove();canvas.removeAttribute('aria-describedby');return;}let details=canvas.parentElement?.querySelector(`:scope > #${id}`);if(!details){details=document.createElement('details');details.id=id;details.className='chartDataTable';canvas.insertAdjacentElement('afterend',details)}details.innerHTML=`<summary>${esc(summary)}</summary><div class="tableScroll"><table><caption>${esc(canvas.getAttribute('aria-label')||summary)}</caption><thead><tr>${headers.map(header=>`<th scope="col">${esc(header)}</th>`).join('')}</tr></thead><tbody>${rows.length?rows.map(row=>`<tr>${row.map((cell,index)=>index===0?`<th scope="row">${esc(cell)}</th>`:`<td>${esc(cell)}</td>`).join('')}</tr>`).join(''):`<tr><td colspan="${headers.length}">No completed data yet.</td></tr>`}</tbody></table></div>`;canvas.setAttribute('aria-describedby',id)}
 function drawLine(canvas,series,options={}){
  let ctx=canvas.getContext('2d'),W=canvas.width,H=canvas.height;
  let top=series.some(s=>s.label)?70:28,left=options.left||78,bottom=66,right=24;

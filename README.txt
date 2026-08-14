@@ -1,10 +1,9 @@
-AI Running Coach v13.1.8 — Progress chart/rendering correction — build 30108
+AI Running Coach v13.1.9 — Progress hierarchy refinement — build 30109
 
-- Progress charts now render through independent permanent SVG mounts after all normal page renderers, so an unrelated Progress-card exception cannot suppress them.
-- Race readiness, weekly distance, long-run progression, efficiency and aerobic durability are rendered independently and report honest baseline states when data are absent.
-- Efficiency/durability lines never bridge missing observations or unrelated workout-family gaps.
-- Progress primary/secondary/tertiary surfaces now reuse the approved Today palette instead of the brighter standalone Progress teal.
-- Progress is hard-clipped to the viewport and uses vertical-only touch panning to prevent horizontal page movement.
+- Longitudinal Training Review now sits directly between Race Readiness and Fitness & Capability.
+- Progress chart cards shrink to their chart content and no longer show the View chart summary and data foldouts.
+- Level-1 Progress cards use the exact locked Today teal gradient and border; level-2 and level-3 surfaces use matching nested/disclosure treatments.
+- Progress is constrained to the viewport to prevent horizontal page scrolling.
 - Today, Plan and Log rendering/calculation logic remain unchanged.
 
 AI Running Coach v13.1.8 — Progress chart and mobile-navigation repair — build 30108
@@ -985,3 +984,13 @@ v13.1.8 Progress chart reliability correction
 - Comparable metric series remain separated by workout type; isolated observations render as points and only same-type observations can form a trend line.
 - Future weeks are no longer plotted as zero completed distance. Planned future volume remains a reference, while completed distance stops at the current week.
 - No training, prediction, pathway, recovery, injury, scoring, import, storage or data-model calculation was changed.
+
+
+v13.1.9 Progress hierarchy refinement
+-------------------------------------
+- Moves the Longitudinal Training Review directly below Race Readiness, before Fitness & Capability.
+- Removes the visible chart-summary/data disclosures from Progress charts while retaining accessible chart labels.
+- Progress level-1 cards now use the exact primary teal gradient/border used by the locked Today cards; nested and disclosure surfaces follow the same three-level hierarchy.
+- Chart cards size to their rendered chart content instead of carrying excess empty vertical space.
+- Progress is hard-clipped to the viewport on mobile to prevent left/right page scrolling.
+- Today, Plan and Log remain frozen; no calculation or data-model logic changed.
