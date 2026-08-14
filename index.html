@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#07111D"><title>AI Running Coach</title>
-<link rel="manifest" href="manifest.webmanifest?v=30103"><link rel="stylesheet" href="styles.css?v=30103-visual">
+<link rel="manifest" href="manifest.webmanifest?v=30104"><link rel="stylesheet" href="styles.css?v=30104-visual">
 <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png?v=10320">
 <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png?v=10320">
 <link rel="icon" href="favicon.ico?v=10320">
@@ -15,7 +15,7 @@
 <body>
 <a class="skipLink" href="#mainContent">Skip to main content</a>
 <header class="topbar">
-  <div class="brand"><img class="logo" src="icon-192.png?v=10320" alt="AI Running Coach logo"><div class="brand-copy"><h1>AI Running Coach</h1><p>Race-specific adaptive planning · v13.1.3 · build 30103</p></div></div>
+  <div class="brand"><img class="logo" src="icon-192.png?v=10320" alt="AI Running Coach logo"><div class="brand-copy"><h1>AI Running Coach</h1><p>Race-specific adaptive planning · v13.1.4 · build 30104</p></div></div>
   <button id="installBtn" class="install hidden">Install</button>
 </header>
 <nav id="nav" aria-label="Primary navigation"></nav>
@@ -33,7 +33,7 @@
 
   <section class="progressSection level1"><div class="progressSectionHead"><span>01</span><div><small>RACE READINESS</small><h3>Are you moving toward the target?</h3><p>Historical model estimates versus the fixed target.</p></div></div><article class="panel predictionPanel"><div id="predictionSummary" class="predictionSummary"></div><canvas id="predictionChart" width="1000" height="340" role="img" aria-label="Predicted race-time trend chart">Predicted race-time trend.</canvas></article></section>
 
-  <section class="progressSection"><div class="progressSectionHead"><span>02</span><div><small>FITNESS & CAPABILITY</small><h3>Can you produce more for the same physiological cost?</h3><p>Comparable physiological evidence, not raw pace across unrelated sessions.</p></div></div><div id="metricKpis" class="kpis"></div><div class="grid2 metricCharts"><article class="panel"><div class="panelHead"><div><h3>Efficiency factor</h3><p class="muted compact">Joules of running power per heartbeat · compare similar sessions</p></div></div><canvas id="efficiencyChart" width="1000" height="380" role="img" aria-label="Efficiency factor trend chart">Efficiency factor trend.</canvas></article><article class="panel"><div class="panelHead"><div><h3>Aerobic durability</h3><p class="muted compact">Power-based cardiac drift on suitable continuous runs · lower is better</p></div></div><canvas id="driftChart" width="1000" height="380" role="img" aria-label="Power-based cardiac drift trend chart">Power-based cardiac drift trend.</canvas></article></div><details class="panel modelDetails"><summary>Metrics by comparable run type</summary><div id="metricTypeSummary"></div></details></section>
+  <section class="progressSection"><div class="progressSectionHead"><span>02</span><div><small>FITNESS & CAPABILITY</small><h3>Can you produce more for the same physiological cost?</h3><p>Comparable physiological evidence, not raw pace across unrelated sessions.</p></div></div><article class="panel fitnessMetricGroup"><div id="metricKpis" class="kpis"></div></article><div class="grid2 metricCharts"><article class="panel"><div class="panelHead"><div><h3>Efficiency factor</h3><p class="muted compact">Joules of running power per heartbeat · compare similar sessions</p></div></div><canvas id="efficiencyChart" width="1000" height="380" role="img" aria-label="Efficiency factor trend chart">Efficiency factor trend.</canvas></article><article class="panel"><div class="panelHead"><div><h3>Aerobic durability</h3><p class="muted compact">Power-based cardiac drift on suitable continuous runs · lower is better</p></div></div><canvas id="driftChart" width="1000" height="380" role="img" aria-label="Power-based cardiac drift trend chart">Power-based cardiac drift trend.</canvas></article></div><details class="panel modelDetails"><summary>Metrics by comparable run type</summary><div id="metricTypeSummary"></div></details></section>
 
   <section class="progressSection"><div class="progressSectionHead"><span>03</span><div><small>ENDURANCE & DURABILITY</small><h3>Can you sustain running better and for longer?</h3><p>Long-run progression and verified endurance exposure.</p></div></div><article class="panel progressChartPanel"><div class="panelHead progressChartHead"><div><h3>Long-run progression</h3><span class="muted">Planned versus completed</span></div><div id="longRunSummary" class="chartMetric"></div></div><canvas id="longRunChart" width="1000" height="340" role="img" aria-label="Planned and completed long-run progression chart">Planned and completed long-run distance.</canvas></article></section>
 
@@ -172,7 +172,7 @@
   <article class="panel"><h3>Data</h3><div class="buttonRow"><button id="backupBtn">Download backup</button><label for="restoreFile" class="buttonLike">Restore backup</label><input id="restoreFile" type="file" accept=".json"><button id="undoRestoreBtn" type="button" class="secondary hidden">Undo last restore</button><button id="exportBtn">Export runs CSV</button><button id="resetBtn" class="danger">Reset app</button></div></article>
 </section>
 </main>
-<footer class="appFooter"><span>AI Running Coach</span><small>v13.1.3 · build 30103</small></footer>
+<footer class="appFooter"><span>AI Running Coach</span><small>v13.1.4 · build 30104</small></footer>
 
 <div id="modal" class="modal hidden" role="dialog" aria-modal="true" aria-label="AI Running Coach dialog" tabindex="-1"><div class="modalCard"><button id="closeModal" class="close" type="button" aria-label="Close dialog">×</button><div id="modalContent"></div></div></div>
 
@@ -201,5 +201,5 @@
     <button class="primary full" type="submit">Review and create my plan</button>
   </form>
 </div>
-<script src="app.js?v=30103-visual"></script>
+<script src="app.js?v=30104-visual"></script>
 </body></html>

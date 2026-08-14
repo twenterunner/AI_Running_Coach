@@ -1,3 +1,13 @@
+AI Running Coach v13.1.4 — Progress chart and mobile-navigation repair — build 30104
+
+- Restored all Progress charts to the proven canvas renderer; race-readiness, weekly-distance and long-run charts no longer disappear behind an empty teal surface.
+- Aerobic durability and efficiency charts again render one valid observation as a real point; zero observations use the explicit baseline-building state.
+- Added a matching teal level-2 container behind the four Fitness & Capability metric tiles.
+- Removed Fitness Assessments from the visible navigation while retaining the underlying assessment data/model support.
+- Hardened the mobile bottom navigation against Android browser visual-viewport changes so it remains fully visible while scrolling and browser chrome expands/collapses.
+- Progress-only visual changes; Today, Plan and Log are unchanged. No calculation, prediction, pathway, recovery, injury, import, storage or data-model logic changed.
+
+
 AI Running Coach v13.1.3 — Progress chart and mobile spacing correction — build 30103
 
 Progress-only GUI correction. Today, Plan and Log remain frozen to approved v13.0.6 build 30006. Calculation/data-model logic unchanged.

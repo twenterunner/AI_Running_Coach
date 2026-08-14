@@ -2491,3 +2491,24 @@ canvas{display:block;width:100%!important;max-width:100%;height:auto!important;m
 #dashboard.progressPage .pathwayLegend .loadLegend:before{background:#d7e7eb}
 #dashboard.progressPage .pathwayLegend .baselineLegend{grid-column:1/-1}
 #dashboard.progressPage .pathwayLegend .baselineLegend:before{background:#8faab5}
+
+
+/* v13.1.4 Progress chart + mobile-navigation repair. */
+:root{--mobile-nav-bottom:0px}
+@media(max-width:759px){
+ #nav{bottom:var(--mobile-nav-bottom)!important;min-height:72px;transform:none!important;contain:layout paint;}
+ .moreNav{bottom:calc(var(--mobile-nav-bottom) + 78px)!important}
+ #mainContent{padding-bottom:calc(112px + var(--mobile-nav-bottom))!important}
+}
+/* v13.1.4 uses the established canvas renderer again; never hide a successfully-rendered chart. */
+#dashboard.progressPage canvas.progressCanvasRendered{display:block!important}
+#dashboard.progressPage .progressSvgChart{display:none!important}
+#dashboard.progressPage canvas:not(.progressChartHidden){display:block!important;min-height:190px!important}
+#dashboard.progressPage .predictionPanel canvas:not(.progressChartHidden),
+#dashboard.progressPage .progressChartPanel canvas:not(.progressChartHidden){min-height:190px!important}
+/* The four capability metrics belong inside one level-2 teal surface, matching Today/Plan hierarchy. */
+#dashboard.progressPage .fitnessMetricGroup{padding:12px!important;background:var(--progress-surface)!important;border:1px solid var(--progress-border)!important;border-radius:18px!important}
+#dashboard.progressPage .fitnessMetricGroup .kpis{margin:0!important;gap:10px!important}
+/* Keep section/card rhythm identical after the restored charts. */
+#dashboard.progressPage .progressSection{row-gap:12px!important}
+#dashboard.progressPage .metricCharts{margin:0!important}

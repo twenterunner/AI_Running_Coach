@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '13.1.3';
-  const BUILD = 30103;
+  const VERSION = '13.1.4';
+  const BUILD = 30104;
   const SCHEMA = 10330;
   const PRIMARY_STORAGE_KEY = 'arc_v10330_web';
   const MIRROR_STORAGE_KEY = 'arc_v10330_mirror';
@@ -2159,31 +2159,12 @@ function drawLine(canvas,series,options={}){
 }
 function drawProgressLine(canvas,series,options={}){
  if(!canvas)return;
- const W=1000,H=340,top=series.some(s=>s.label)?68:28,left=options.left||82,bottom=62,right=26;
- const old=canvas.parentElement?.querySelector(`:scope > svg.progressSvgChart[data-for="${canvas.id}"]`);if(old)old.remove();
- canvas.classList.add('progressCanvasRendered');
- const tableLength=Math.max(options.labels?.length||0,...series.map(item=>item.data.length));
- const tableHeaders=['Point',...series.map(item=>item.label||'Value')];
- const tableRows=Array.from({length:tableLength},(_,index)=>[options.labels?.[index]||String(index+1),...series.map(item=>{const value=item.horizontal?item.data[0]:item.data[index];return Number.isFinite(value)?(options.formatY?options.formatY(value):Number(value).toFixed(1)):'—'})]);
- updateChartTable(canvas,'View chart summary and data',tableHeaders,tableRows);
- const vals=series.flatMap(s=>s.data).filter(Number.isFinite);
- if(!vals.length){canvas.classList.add('progressChartHidden');return}
- let min=Number.isFinite(options.min)?options.min:(options.zero===false?Math.min(...vals):0),max=Number.isFinite(options.max)?options.max:Math.max(...vals);
- if(max<=min)max=min+1;
- if(!Number.isFinite(options.min)&&!Number.isFinite(options.max)){const pad=(max-min)*.10||1;max+=pad;if(options.zero===false)min-=pad}
- const chartH=H-bottom-top,chartW=W-left-right,n=Math.max(1,...series.filter(s=>!s.horizontal).map(s=>s.data.length),options.labels?.length||0);
- const px=i=>n<=1?left+chartW/2:left+i*chartW/(n-1),py=v=>H-bottom-(v-min)/(max-min)*chartH;
- const escXml=v=>String(v??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
- let svg=`<svg class="progressSvgChart" data-for="${escXml(canvas.id)}" viewBox="0 0 ${W} ${H}" role="img" aria-label="${escXml(canvas.getAttribute('aria-label')||'Progress chart')}">`;
- let legendX=left;
- series.forEach(s=>{if(!s.label)return;svg+=`<line x1="${legendX}" y1="30" x2="${legendX+30}" y2="30" stroke="${s.color}" stroke-width="6" stroke-linecap="round" ${s.dashed?'stroke-dasharray="16 10"':''}/><text x="${legendX+42}" y="38" class="legend">${escXml(s.label)}</text>`;legendX+=64+String(s.label).length*12});
- const ticks=options.ticks||5;
- for(let i=0;i<ticks;i++){const f=i/(ticks-1),v=min+(max-min)*f,y=H-bottom-chartH*f;svg+=`<line x1="${left}" y1="${y}" x2="${W-right}" y2="${y}" class="grid ${i===0?'base':''}"/><text x="${left-12}" y="${y+7}" text-anchor="end" class="axis">${escXml(options.formatY?options.formatY(v):v.toFixed(v<10?1:0))}</text>`}
- series.forEach((sr,si)=>{const good=sr.data.map((v,i)=>({v,i})).filter(x=>Number.isFinite(x.v));if(!good.length)return;if(sr.horizontal){const y=py(good[0].v);svg+=`<line x1="${left}" y1="${y}" x2="${W-right}" y2="${y}" stroke="${sr.color}" stroke-width="${sr.width||5}" stroke-linecap="round" ${sr.dashed?'stroke-dasharray="16 10"':''}/>`;return}if(good.length>1){svg+=`<polyline points="${good.map(o=>`${px(o.i)},${py(o.v)}`).join(' ')}" fill="none" stroke="${sr.color}" stroke-width="${sr.width||5}" stroke-linecap="round" stroke-linejoin="round" ${sr.dashed?'stroke-dasharray="16 10"':''}/>`}if(sr.points!==false)good.forEach(o=>{svg+=`<circle cx="${px(o.i)}" cy="${py(o.v)}" r="7" fill="#fff" stroke="${sr.color}" stroke-width="4"/>`})});
- if(options.labels?.length){const positions=options.allLabels?options.labels.map((_,i)=>i):[0,Math.floor((options.labels.length-1)/2),options.labels.length-1].filter((v,i,a)=>a.indexOf(v)===i);positions.forEach(i=>{if(i>=0&&i<options.labels.length)svg+=`<text x="${px(i)}" y="${H-18}" text-anchor="middle" class="axis x">${escXml(options.labels[i]||'')}</text>`})}
- svg+='</svg>';
- canvas.insertAdjacentHTML('beforebegin',svg);
+ canvas.parentElement?.querySelector(`:scope > svg.progressSvgChart[data-for="${canvas.id}"]`)?.remove();
+ canvas.classList.remove('progressCanvasRendered');
+ canvas.classList.remove('progressChartHidden');
+ drawLine(canvas,series,options);
 }
+
 
 function completedWeekSeries(){
  return Array.from({length:weeks()},(_,i)=>{
@@ -4944,7 +4925,8 @@ function renderUndoButtons(){try{$('undoSettingsBtn')?.classList.toggle('hidden'
 function renderAll(){[renderDashboard,renderToday,renderPlan,renderRuns,renderMetrics,renderAssessments,renderCoach,renderInjury,renderRecovery,renderRace,renderSettings,renderPlanHealth,renderMigrationReport].forEach(fn=>{try{fn()}catch(err){recordDiagnostic('Render failure in '+fn.name,err)}});renderDiagnostics();ensureAccessibleForms();renderUndoButtons()}
 const pages=[['today','Today'],['plan','Plan'],['runs','Log'],['dashboard','Progress'],['assessments','Assessments'],['recovery','Recovery'],['injury','Injury'],['race','Race day'],['settings','Settings']];
 $('nav').innerHTML=pages.map((p,i)=>`<button data-page="${p[0]}" class="${i?'':'active'}">${p[1]}</button>`).join('');$('nav').onclick=e=>{let p=e.target.dataset.page;if(!p)return;document.querySelectorAll('.page').forEach(x=>x.classList.toggle('active',x.id===p));document.querySelectorAll('#nav button').forEach(x=>x.classList.toggle('active',x.dataset.page===p));renderAll();scrollTo(0,0)};document.body.onclick=e=>{let exImg=e.target.closest('[data-exercise-image]');if(exImg){const name=exImg.dataset.exerciseName||'Exercise',img=exImg.dataset.exerciseImage,muscles=rehabExerciseMuscles(name);openExerciseImage(name,img,muscles);return}if(e.target.id==='addInjuryBtn'){openInjuryForm();return}let activate=e.target.closest('[data-activate-injury-plan]');if(activate){let id=activate.dataset.activateInjuryPlan,current=state.injuries.find(x=>x.id===state.activeInjuryPlanId),next=state.injuries.find(x=>x.id===id);if(next&&confirm(`Switch the active recovery plan from ${current?.location||'the current injury'} to ${next.location||'this injury'}? Only one plan can be followed at a time.`)){state.activeInjuryPlanId=id;save();renderInjury();toast('Active recovery plan switched.')}return;}let ib=e.target.closest('[data-injury-check]');if(ib){openInjuryCheck(state.injuries.find(x=>x.id===ib.dataset.injuryCheck));return}let ice=e.target.closest('[data-injury-check-edit]');if(ice){let injury=state.injuries.find(x=>x.id===ice.dataset.injuryCheckEdit),check=injury?.checkIns?.find(x=>x.date===ice.dataset.checkDate);if(injury&&check)openInjuryCheck(injury,check);return}let ie=e.target.closest('[data-injury-edit]');if(ie){openInjuryForm(state.injuries.find(x=>x.id===ie.dataset.injuryEdit));return}let idel=e.target.closest('[data-injury-delete]');if(idel){if(confirm('Delete this injury and its check-ins?')){state.injuries=state.injuries.filter(x=>x.id!==idel.dataset.injuryDelete);if(state.activeInjuryPlanId===idel.dataset.injuryDelete)state.activeInjuryPlanId=state.injuries[0]?.id||null;save();renderInjury()}return}const go=e.target.closest('[data-go]');if(go){closeDialog();activatePage(go.dataset.go,go.dataset.anchor||null);return}const scoreLink=e.target.closest('.wiScoreLink');if(scoreLink){setTimeout(()=>{const d=document.getElementById('executionBreakdownFoldout');if(d)d.open=true},0)}const planRunBtn=e.target.closest('[data-plan-run]');if(planRunBtn){openRunDetails(planRunBtn.dataset.planRun);return}let factorToggle=e.target.closest('.factorToggle');if(factorToggle){let tile=factorToggle.closest('.factorKpi'),open=tile.classList.toggle('open');factorToggle.setAttribute('aria-expanded',String(open));return}let w=e.target.closest('.workout');if(w&&!e.target.closest('button')){document.querySelectorAll('.workout[open]').forEach(x=>{if(x!==w)x.removeAttribute('open')});}};
-const primaryPages=pages.slice(0,4),secondaryPages=pages.slice(4);
+const navigationPages=pages.filter(item=>item[0]!=='assessments');
+const primaryPages=navigationPages.slice(0,4),secondaryPages=navigationPages.slice(4);
 function navIcon(page){
  const icons={
   today:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 13h4l2-6 4 12 2-6h4"/><path d="M5 4h14v16H5z" opacity=".15"/></svg>',
@@ -4961,6 +4943,15 @@ function navIcon(page){
  return icons[page]||icons.more;
 }
 function navButtonHtml(page,label,extra=''){return`<button ${extra} data-page="${page}"><span class="navIcon">${navIcon(page)}</span><span class="navLabel">${label}</span></button>`}
+function syncMobileNavViewport(){
+ const vv=window.visualViewport;
+ let inset=0;
+ if(vv){inset=Math.max(0,Math.round(window.innerHeight-(vv.height+vv.offsetTop)));}
+ document.documentElement.style.setProperty('--mobile-nav-bottom',`${inset}px`);
+}
+if(window.visualViewport){window.visualViewport.addEventListener('resize',syncMobileNavViewport,{passive:true});window.visualViewport.addEventListener('scroll',syncMobileNavViewport,{passive:true});}
+window.addEventListener('resize',syncMobileNavViewport,{passive:true});
+syncMobileNavViewport();
 function renderNavigation(){const current=document.querySelector('.page.active')?.id||'today';$('nav').innerHTML=primaryPages.map(p=>navButtonHtml(p[0],p[1])).join('')+secondaryPages.map(p=>navButtonHtml(p[0],p[1],'class="desktopSecondary"')).join('')+`<button id="moreNavBtn" class="moreToggle" type="button" aria-expanded="false" aria-controls="moreNav"><span class="navIcon">${navIcon('more')}</span><span class="navLabel">More</span></button>`;$('moreNav').innerHTML=secondaryPages.map(p=>`<button data-page="${p[0]}"><span class="navIcon">${navIcon(p[0])}</span><span>${p[1]}</span></button>`).join('');setActiveNavigation(current)}
 function setActiveNavigation(page){document.querySelectorAll('#nav [data-page],#moreNav [data-page]').forEach(button=>{const active=button.dataset.page===page;button.classList.toggle('active',active);if(active)button.setAttribute('aria-current','page');else button.removeAttribute('aria-current')});const more=$('moreNavBtn'),secondary=secondaryPages.some(item=>item[0]===page);more?.classList.toggle('active',secondary);if(secondary)more?.setAttribute('aria-current','page');else more?.removeAttribute('aria-current')}
 function activatePage(page,anchor=null){if(!pages.some(p=>p[0]===page))return;if(page==='plan')state.weekView=currentWeek();document.querySelectorAll('.page').forEach(section=>section.classList.toggle('active',section.id===page));setActiveNavigation(page);$('moreNav').className='moreNav hidden';$('moreNavBtn')?.setAttribute('aria-expanded','false');renderAll();if(anchor){requestAnimationFrame(()=>document.getElementById(anchor)?.scrollIntoView({behavior:'smooth',block:'start'}))}else scrollTo(0,0);$('mainContent')?.focus({preventScroll:true})}
