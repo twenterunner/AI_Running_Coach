@@ -1,4 +1,4 @@
-AI Running Coach v13.0.0 — Serious Runner Plan — build 30000
+AI Running Coach v13.0.1 — Serious Runner Plan — build 30001
 
 Deployment
 ----------
@@ -855,3 +855,18 @@ v13.0.0 — Runner-first Log redesign
 - Training consequence explicitly separates this-run evidence, adaptation applied now, and projected next-review adaptation.
 - Import preview, manual/edit form and run-detail modal receive Log-specific mobile styling.
 - No calculation, scoring, pathway, prediction, adaptation, import parsing, matching, storage or data-model equations changed.
+
+
+v13.0.1 — Log consistency and duplication cleanup
+-------------------------------------------------
+- Today and Plan remain regression-locked to approved v12.4.1.
+- Overall workout execution score is shown once in Run Detail as a semantic radial completion gauge.
+- Recent-run execution score also uses the same semantic radial gauge language.
+- Removed the second repetition-details table; the visual repetition cards are now the only rep-detail presentation.
+- Removed duplicate visible execution-score values from Run Summary, Execution Breakdown summary, and interval summary/header.
+- Log primary cards now use the same teal gradient/card hierarchy as Today and Plan; nested cards use one consistent secondary surface.
+- Corrected mobile spacing in Running power stream, execution calculations, interval calculations and pathway calculations so labels/values cannot concatenate.
+- Expanded P&P and D&L presentation to Pace & Power and Distance & Load, with a concise pathway explanation.
+- Projected workout consequences now include future dates only; past workouts are excluded.
+- Log pictogram/navigation icon no longer contains a person; it uses running-shoe/activity-trace/check symbolism.
+- No calculation, scoring, pathway, prediction, adaptation, import, matching, storage or data-model equations changed.

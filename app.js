@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '13.0.0';
-  const BUILD = 30000;
+  const VERSION = '13.0.1';
+  const BUILD = 30001;
   const SCHEMA = 10330;
   const PRIMARY_STORAGE_KEY = 'arc_v10330_web';
   const MIRROR_STORAGE_KEY = 'arc_v10330_mirror';
@@ -3420,12 +3420,10 @@ function intervalAnalysisHtml(r){
    const extra=prescribed>0&&x.rep>prescribed,scoreVals=[x.paceScore,x.powerScore].filter(Number.isFinite),repScore=scoreVals.length?avg(scoreVals):null,cls=extra?'extra':logStatusClass(repScore);
    return`<div class="logRepCard ${cls}"><div><small>REP ${x.rep}${extra?' · EXTRA':''}</small><strong>${Number.isFinite(repScore)?Math.round(repScore)+'/100':'Detected'}</strong></div><span><b>${Number.isFinite(x.paceSecPerKm)?pace(x.paceSecPerKm):'—'}</b><small>pace</small></span><span><b>${Number.isFinite(x.avgPower)?Math.round(x.avgPower)+' W':'—'}</b><small>power</small></span><span><b>${Number.isFinite(x.avgHr)?Math.round(x.avgHr)+' bpm':'—'}</b><small>HR</small></span></div>`;
  }).join('');
- const rows=a.work.map(x=>{const extra=prescribed>0&&x.rep>prescribed;return`<div class="intervalRepRow ${extra?'extraRep':''}"><strong>Rep ${x.rep}${extra?' · extra':''}</strong><span>${Number.isFinite(x.distanceKm)?x.distanceKm.toFixed(2)+' km':'—'}</span><span>${Number.isFinite(x.paceSecPerKm)?pace(x.paceSecPerKm):'—'}</span><span>${Number.isFinite(x.avgPower)?Math.round(x.avgPower)+' W':'—'}</span><span>${Number.isFinite(x.avgHr)?Math.round(x.avgHr)+' bpm':'—'}</span></div>`}).join('');
  const pd=r.powerDiagnostics,powerDiag=pd?`<div class="powerCoverage ${pd.coverage>=.8?'good':pd.coverage>0?'partial':'missing'}"><b>Running power stream</b><span>${Math.round(pd.coverage*100)}% coverage</span><small>${esc(pd.rawSource||pd.mapping||'No record-level running power recovered')}</small></div>`:'';
- return`<section class="logIntervalAnalysis"><div class="logDetailSectionHead compact"><span>${uiIcon('quality')}</span><div><small>INTERVAL-LEVEL FIT</small><h3>${detected}${prescribed?` detected / ${prescribed} prescribed`: ' repetitions detected'}</h3><p>Each repetition is shown from the existing interval detector and target-scoring data.</p></div><b>${a.usableForScore&&Number.isFinite(a.repScore)?a.repScore+'/100':esc(a.quality)}</b></div>
-   <div class="logIntervalSummary"><div><small>EXECUTION</small><strong>${Number.isFinite(a.repScore)?Math.round(a.repScore)+'/100':'Not scored'}</strong></div><div><small>CONSISTENCY</small><strong>${Number.isFinite(cv)?cv.toFixed(1)+'% variation':'—'}</strong></div><div><small>LATE CHANGE</small><strong>${late}</strong></div></div>
+ return`<section class="logIntervalAnalysis"><div class="logDetailSectionHead compact"><span>${uiIcon('quality')}</span><div><small>INTERVAL-LEVEL FIT</small><h3>${detected}${prescribed?` detected / ${prescribed} prescribed`: ' repetitions detected'}</h3><p>Each repetition is shown from the existing interval detector and target-scoring data.</p></div><b>${a.usableForScore?'Fit analysed':esc(a.quality)}</b></div>
+   <div class="logIntervalSummary"><div><small>CONSISTENCY</small><strong>${Number.isFinite(cv)?cv.toFixed(1)+'% variation':'—'}</strong></div><div><small>LATE CHANGE</small><strong>${late}</strong></div></div>
    <div class="logRepScroller">${repCards}</div>${powerDiag}
-   <details class="intervalRepDetails"><summary>Rep details · ${detected} detected</summary><div class="intervalRepTable"><div class="intervalRepHeader"><b>Rep</b><b>Distance</b><b>Pace</b><b>Power</b><b>HR</b></div>${rows}</div></details>
    <details class="intervalScoreCalc"><summary>How interval execution is scored</summary><div class="intervalCalcRows">${Number.isFinite(a.paceComponent)?`<div><span>Prescribed-rep pace</span><b>${Math.round(a.paceComponent)}/100</b></div>`:''}${Number.isFinite(a.powerComponent)?`<div><span>Prescribed-rep power</span><b>${Math.round(a.powerComponent)}/100</b></div>`:''}<div><span>Base rep execution</span><b>${Number.isFinite(a.baseRepScore)?Math.round(a.baseRepScore)+'/100':'—'}</b></div>${a.extraPenalty?`<div class="penalty"><span>${a.extraReps} extra rep${a.extraReps===1?'':'s'}</span><b>−${a.extraPenalty.toFixed(0)}</b></div>`:''}${a.missingPenalty?`<div class="penalty"><span>${a.missingReps} missing rep${a.missingReps===1?'':'s'}</span><b>−${a.missingPenalty.toFixed(0)}</b></div>`:''}<div class="total"><span>Interval execution</span><b>${Number.isFinite(a.repScore)?a.repScore+'/100':'Not scored'}</b></div></div></details>
  </section>`;
 }
@@ -3543,7 +3541,7 @@ function workoutIntelligence(run){
 }
 function logPictogram(kind='log'){
  const icons={
-  log:`<svg class="logPic" viewBox="0 0 72 72" aria-hidden="true"><circle class="logSkin" cx="24" cy="13" r="5"/><path class="logBase" d="M25 20l8 11 12 3M32 31l-10 10-11 3M22 41l-7 16M22 41l13 10 9 9"/><path class="logAccent" d="M47 18h14v24H47zM51 34l3-5 3 2 4-7"/><path class="logGood" d="M49 48l5 5 10-12"/></svg>`,
+  log:`<svg class="logPic" viewBox="0 0 72 72" aria-hidden="true"><path class="logBase" d="M9 43c7 0 12-3 17-9l5 5c5 5 12 8 21 8h8v8H18c-6 0-9-4-9-12z"/><path class="logAccent" d="M38 17v18M48 21v14M58 13v22M37 29l8-5 6 4 8-9"/><path class="logGood" d="M48 59l5 5 10-12"/></svg>`,
   evidence:`<svg class="logPic" viewBox="0 0 72 72" aria-hidden="true"><path class="logBase" d="M12 54V34M26 54V22M40 54V30M54 54V15"/><path class="logAccent" d="M9 17l13 7 13-8 18 6"/><path class="logGood" d="M49 43l5 5 10-12"/></svg>`,
   consequence:`<svg class="logPic" viewBox="0 0 72 72" aria-hidden="true"><path class="logBase" d="M11 51h19l7-15 8 8 16-23"/><path class="logAccent" d="M51 21h10v10"/><circle class="logGood" cx="18" cy="51" r="5"/></svg>`
  };
@@ -3568,11 +3566,11 @@ function logHeroHtml(){
  </section>`;
 }
 function runSummaryHtml(r){
- const m=metrics(r),plan=r.planId?state.plan.find(p=>p.id===r.planId):null,score=workoutScore(r),q=logDataQuality(r);
+ const m=metrics(r),plan=r.planId?state.plan.find(p=>p.id===r.planId):null,q=logDataQuality(r);
  const completion=plan&&Number(plan.distance)>0?Number(r.distanceKm)/Number(plan.distance):null;
  const quality=q.missing.length?`Missing ${q.missing.join(' + ')}`:q.stream?'Detailed stream available':'Summary data complete';
  return`<section class="runSummaryHero">
-   <div class="runSummaryHead"><span class="runSummaryIcon">${logPictogram('log')}</span><div><small>${fmtDate(r.date)} · ${esc(matchSummary(r))}</small><h2>${esc(r.type)}</h2><p>${plan?`Matched to ${esc(plan.type)} · ${Number(plan.distance).toFixed(1)} km planned`:'Ad hoc / unmatched session'}</p></div>${Number.isFinite(score)?`<div class="runSummaryScore ${logStatusClass(score)}"><strong>${Math.round(score)}</strong><span>/100</span><small>execution</small></div>`:''}</div>
+   <div class="runSummaryHead"><span class="runSummaryIcon">${logPictogram('log')}</span><div><small>${fmtDate(r.date)} · ${esc(matchSummary(r))}</small><h2>${esc(r.type)}</h2><p>${plan?`Matched to ${esc(plan.type)} · ${Number(plan.distance).toFixed(1)} km planned`:'Ad hoc / unmatched session'}</p></div></div>
    <div class="runSummaryMetrics"><div><small>DISTANCE</small><b>${Number(r.distanceKm).toFixed(2)} km</b>${plan?`<span>plan ${Number(plan.distance).toFixed(1)} km</span>`:''}</div><div><small>DURATION</small><b>${fmtTime(r.durationSec)}</b><span>${pace(m.pace)}</span></div><div><small>HEART RATE</small><b>${Number.isFinite(Number(r.avgHr))?Math.round(r.avgHr)+' bpm':'Not available'}</b></div><div><small>POWER</small><b>${Number.isFinite(Number(r.avgPower))?Math.round(r.avgPower)+' W':'Not available'}</b></div><div><small>RPE</small><b>${Number.isFinite(Number(r.rpe))?Number(r.rpe).toFixed(0)+'/10':'Not entered'}</b></div><div><small>PAIN</small><b>${Number.isFinite(Number(r.pain))?Number(r.pain).toFixed(0)+'/10':'Not entered'}</b></div></div>
    ${Number.isFinite(completion)?`<div class="runPlanCompare"><div><span>Planned distance completion</span><b>${Math.round(completion*100)}%</b></div><i><em style="width:${clamp(completion*100,0,120)}%"></em></i></div>`:''}
    <div class="runDataQuality ${q.missing.length?'partial':'good'}"><b>${quality}</b><span>${q.stream?'FIT/CSV record stream can support deeper analysis where relevant.':'No detailed record stream is stored for this session.'}</span></div>
@@ -3583,7 +3581,7 @@ function pathwayEvidenceCardHtml(title,d,t){
  const projectedChange=t.projected-t.applied;
  return`<article class="logEvidencePath">
    <div class="logEvidenceHead"><div><small>${title}</small><h4>${esc(lang.q)}</h4></div><span class="${accepted?'accepted':'held'}">${accepted?'Evidence accepted':'No learned change'}</span></div>
-   <div class="logEvidenceGaugeRow"><div class="evidenceMiniGauge" style="--e:${weight}"><strong>${weight}%</strong><small>evidence weight</small></div><div class="logEvidenceMetrics"><span><small>RUN SIGNAL</small><b>${t.rawSignal>=0?'+':''}${t.rawSignal.toFixed(2)}</b></span><span><small>THIS RUN</small><b>${accepted?signedFactorDelta(t.acceptedContribution):'0.000'}</b></span><span><small>THIS WEEK</small><b>${signedFactorDelta(t.weeklyBucket)}</b></span></div></div>
+   <div class="logEvidenceGaugeRow"><div class="evidenceMiniGauge" style="--e:${weight}"><strong>${weight}%</strong><small>evidence weight</small></div><div class="logEvidenceMetrics"><span><small>RUN SIGNAL</small><b>${t.rawSignal>=0?'+':''}${t.rawSignal.toFixed(2)}</b></span><span><small>ACCEPTED CONTRIBUTION</small><b>${accepted?signedFactorDelta(t.acceptedContribution):'0.000'}</b></span><span><small>THIS WEEK</small><b>${signedFactorDelta(t.weeklyBucket)}</b></span></div></div>
    <div class="logFactorFlow"><div><small>APPLIED</small><b>${t.applied.toFixed(3)}</b></div><i>→</i><div><small>PROJECTED NEXT REVIEW</small><b>${t.projected.toFixed(3)}</b><span>${signedFactorDelta(projectedChange)}</span></div></div>
    <p class="logEvidenceMeaning">${esc(lang.runMeaning)} ${esc(lang.response)}</p>
    ${!accepted&&t.safeguard?`<div class="logEvidenceSafeguard">${esc(t.safeguard)}</div>`:''}
@@ -3592,16 +3590,23 @@ function pathwayEvidenceCardHtml(title,d,t){
 }
 function trainingEvidenceHtml(r){
  const plan=r.planId?state.plan.find(p=>p.id===r.planId):null,two=twoPathwayDecisionForRun(r,plan),pt=pathwayEvidenceTrace(r,'pace'),lt=pathwayEvidenceTrace(r,'load');
- return`<section class="logTrainingEvidence"><div class="logDetailSectionHead"><span>${logPictogram('evidence')}</span><div><small>TRAINING EVIDENCE</small><h3>What the model learned from this run</h3><p>Run evidence is shown separately from adaptation already applied to the plan.</p></div></div><div class="logEvidenceGrid">${pathwayEvidenceCardHtml('PACE & POWER',two.pace,pt)}${pathwayEvidenceCardHtml('DISTANCE & LOAD',two.load,lt)}</div></section>`;
+ return`<section class="logTrainingEvidence"><div class="logDetailSectionHead"><span>${logPictogram('evidence')}</span><div><small>TRAINING EVIDENCE</small><h3>What the model learned from this run</h3><p><b>Pace &amp; Power</b> = capability/target calibration. <b>Distance &amp; Load</b> = training-volume tolerance. Run evidence is kept separate from adaptation already applied to the plan.</p></div></div><div class="logEvidenceGrid">${pathwayEvidenceCardHtml('PACE & POWER',two.pace,pt)}${pathwayEvidenceCardHtml('DISTANCE & LOAD',two.load,lt)}</div></section>`;
 }
 function trainingConsequenceHtml(r){
  const u=r?.coachUpdate,pt=pathwayEvidenceTrace(r,'pace'),lt=pathwayEvidenceTrace(r,'load');
- const next=u?.nextChange||((Math.abs(pt.projected-pt.applied)>=.0005||Math.abs(lt.projected-lt.applied)>=.0005)?'Accepted evidence is accumulating for the next weekly review.':'No plan change is currently projected from this run.');
+ const futureChanges=(u?.prescriptionChanges||[]).filter(c=>c.date>=iso(today())&&c.date>r.date).filter(c=>Math.abs(c.distanceDeltaKm)>=.05||Math.abs(c.paceDeltaSec)>=.5||Math.abs(c.powerDeltaW)>=1);
+ const hasProjection=Math.abs(pt.projected-pt.applied)>=.0005||Math.abs(lt.projected-lt.applied)>=.0005;
  const decision=u?.decision||'Current evidence has been re-evaluated for both adaptive pathways.';
+ const next=futureChanges.length
+   ?`The next currently projected workout-level consequence is ${fmtDate(futureChanges[0].date)} · ${futureChanges[0].type}.`
+   :hasProjection
+     ?'Pathway evidence is provisional for the next weekly review; no future workout-specific consequence is currently available.'
+     :'No future workout change is currently projected from this run.';
  return`<section class="logTrainingConsequence"><div class="logDetailSectionHead"><span>${logPictogram('consequence')}</span><div><small>TRAINING CONSEQUENCE</small><h3>What this means for your plan</h3><p>${esc(decision)}</p></div></div>
-   <div class="consequenceStages"><div><small>THIS RUN</small><b>${signedFactorDelta(pt.acceptedContribution)} P&amp;P</b><span>${signedFactorDelta(lt.acceptedContribution)} D&amp;L</span></div><i>→</i><div><small>APPLIED NOW</small><b>${pt.applied.toFixed(3)} P&amp;P</b><span>${lt.applied.toFixed(3)} D&amp;L</span></div><i>→</i><div><small>NEXT REVIEW</small><b>${pt.projected.toFixed(3)} P&amp;P</b><span>${lt.projected.toFixed(3)} D&amp;L</span></div></div>
-   <div class="consequenceCallout"><b>${esc(next)}</b><span>Learned pathway changes commit at weekly review; temporary readiness can still modify an upcoming session independently.</span></div>
-   ${u?.prescriptionChanges?.length?`<details class="logConsequenceDetails"><summary>Projected workout consequences</summary><div class="projectedChangeRows">${u.prescriptionChanges.map(c=>{const bits=[];if(Math.abs(c.distanceDeltaKm)>=.05)bits.push(`${c.beforeDistance.toFixed(1)} → ${c.afterDistance.toFixed(1)} km`);if(Math.abs(c.paceDeltaSec)>=.5)bits.push(`${pace(c.beforePace)} → ${pace(c.afterPace)}`);if(Math.abs(c.powerDeltaW)>=1)bits.push(`${Math.round(c.beforePower)} → ${Math.round(c.afterPower)} W`);return bits.length?`<div><span>${fmtDate(c.date)} · ${esc(c.type)}</span><b>${bits.join(' · ')}</b></div>`:''}).join('')}</div></details>`:''}
+   <div class="pathwayKey"><b>Adaptive pathways</b><span><strong>Pace &amp; Power</strong> learns capability/target calibration.</span><span><strong>Distance &amp; Load</strong> learns training-volume tolerance.</span></div>
+   <div class="consequenceStages"><div><small>EVIDENCE FROM THIS RUN</small><b>${signedFactorDelta(pt.acceptedContribution)} Pace &amp; Power</b><span>${signedFactorDelta(lt.acceptedContribution)} Distance &amp; Load</span></div><i>→</i><div><small>APPLIED TO PLAN NOW</small><b>${pt.applied.toFixed(3)} Pace &amp; Power</b><span>${lt.applied.toFixed(3)} Distance &amp; Load</span></div><i>→</i><div><small>PROJECTED NEXT REVIEW</small><b>${pt.projected.toFixed(3)} Pace &amp; Power</b><span>${lt.projected.toFixed(3)} Distance &amp; Load</span></div></div>
+   <div class="consequenceCallout"><b>${esc(next)}</b><span>Learned pathway changes commit at weekly review. Temporary readiness can still modify an upcoming session independently.</span></div>
+   ${futureChanges.length?`<details class="logConsequenceDetails"><summary>Future projected workout consequences</summary><div class="projectedChangeRows">${futureChanges.map(c=>{const bits=[];if(Math.abs(c.distanceDeltaKm)>=.05)bits.push(`${c.beforeDistance.toFixed(1)} → ${c.afterDistance.toFixed(1)} km`);if(Math.abs(c.paceDeltaSec)>=.5)bits.push(`${pace(c.beforePace)} → ${pace(c.afterPace)}`);if(Math.abs(c.powerDeltaW)>=1)bits.push(`${Math.round(c.beforePower)} → ${Math.round(c.afterPower)} W`);return`<div><span>${fmtDate(c.date)} · ${esc(c.type)}</span><b>${bits.join(' · ')}</b></div>`}).join('')}</div></details>`:''}
  </section>`;
 }
 function workoutIntelligenceHtml(run){
@@ -3630,8 +3635,8 @@ function runExecutionBreakdownBodyHtml(r){
  return`<div class="executionObjective"><small>WORKOUT OBJECTIVE</small><b>${esc(d.objective)}</b><span>${esc(d.interpretation)} · ${esc(d.evidenceQuality)} evidence</span></div>${plan?`<p class="muted compact">Matched to ${fmtDate(plan.date)} · ${esc(plan.type)} · ${plan.distance.toFixed(1)} km.</p>`:'<p class="muted compact">Ad hoc run: only directly observable components are scored. Missing targets reduce evidence quality rather than being awarded neutral points.</p>'}${conflict}<div class="executionCalcRows">${rows}</div><p class="muted compact"><b>Overall score:</b> weighted mean of available components after metric reliability is applied. Missing or low-confidence metrics lose weight rather than receiving an invented neutral score.</p>`;
 }
 function runExecutionBreakdownHtml(r){
- const plan=r.planId?state.plan.find(p=>p.id===r.planId):null,d=workoutScoreDetails(r,plan),score=d?.score;
- return`<details id="executionBreakdownFoldout" class="runExecutionBreakdown executionFoldout uiLevel3"><summary><span>Execution breakdown</span><b>${Number.isFinite(score)?score+'/100':'Not scored'}</b></summary><div class="executionFoldoutBody">${runExecutionBreakdownBodyHtml(r)}</div></details>`;
+ const plan=r.planId?state.plan.find(p=>p.id===r.planId):null,d=workoutScoreDetails(r,plan);
+ return`<details id="executionBreakdownFoldout" class="runExecutionBreakdown executionFoldout uiLevel3"><summary><span>Execution breakdown</span><small>Targets, reliability and component weighting</small></summary><div class="executionFoldoutBody">${runExecutionBreakdownBodyHtml(r)}</div></details>`;
 }
 function renderRuns(){
  if($('logHero'))$('logHero').innerHTML=logHeroHtml();
@@ -3641,7 +3646,7 @@ function renderRuns(){
    const day=dte(r.date).toLocaleDateString(undefined,{weekday:'short'}),date=dte(r.date).toLocaleDateString(undefined,{day:'numeric',month:'short'});
    const compare=cr&&cr.confidence!=='Low'&&Number.isFinite(cr.efficiencyDelta)?`${cr.efficiencyDelta>=0?'↑':'↓'} ${Math.abs(cr.efficiencyDelta).toFixed(1)}% efficiency vs similar`:null;
    return`<article class="logRunCard clickable" role="button" tabindex="0" data-run="${r.id}" aria-label="Open ${esc(fmtDate(r.date))} ${esc(r.type)} run details">
-     <div class="logRunTop"><span class="logRunType ${typeCls}">${uiIcon(typeCls==='quality'?'quality':typeCls)}</span><div class="logRunIdentity"><small>${day} · ${date}</small><h3>${esc(r.type)}</h3><p>${plan?`Matched: ${esc(plan.type)}`:esc(matchSummary(r))}</p></div>${Number.isFinite(ws)?`<div class="logRunScore ${logStatusClass(ws)}"><strong>${Math.round(ws)}</strong><span>/100</span></div>`:'<span class="logRunArrow">›</span>'}</div>
+     <div class="logRunTop"><span class="logRunType ${typeCls}">${uiIcon(typeCls==='quality'?'quality':typeCls)}</span><div class="logRunIdentity"><small>${day} · ${date}</small><h3>${esc(r.type)}</h3><p>${plan?`Matched: ${esc(plan.type)}`:esc(matchSummary(r))}</p></div>${Number.isFinite(ws)?`<div class="logRunScore ${logStatusClass(ws)}" style="--score:${ws}"><strong>${Math.round(ws)}</strong><span>/100</span></div>`:'<span class="logRunArrow">›</span>'}</div>
      <div class="logRunPrimary"><span><small>DISTANCE</small><b>${Number(r.distanceKm).toFixed(2)} km</b></span><span><small>DURATION</small><b>${fmtTime(r.durationSec)}</b></span><span><small>PACE</small><b>${pace(m.pace)}</b></span></div>
      <div class="logRunSecondary"><span>${Number.isFinite(Number(r.avgHr))?Math.round(r.avgHr)+' bpm':'HR unavailable'}</span><span>${Number.isFinite(Number(r.avgPower))?Math.round(r.avgPower)+' W':'Power unavailable'}</span>${compare?`<span class="${cr.efficiencyDelta>=0?'good':'warn'}">${compare}</span>`:''}</div>
      ${q.missing.length?`<div class="logRunWarning">${uiIcon('warning')}<span>Partial data: ${q.missing.join(' and ')} not available</span></div>`:''}
@@ -4878,7 +4883,7 @@ function navIcon(page){
  const icons={
   today:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 13h4l2-6 4 12 2-6h4"/><path d="M5 4h14v16H5z" opacity=".15"/></svg>',
   plan:'<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M7 3v4M17 3v4M4 9h16M8 13h3M13 13h3M8 16h3"/></svg>',
-  runs:'<svg class="logNavPic" viewBox="0 0 24 24" aria-hidden="true"><circle class="logNavSkin" cx="7.2" cy="4.4" r="1.6"/><path class="logNavBase" d="M7.8 7l2.8 3.5 4.2 1M10.6 10.5l-3.4 3.1-3.4.8M7.2 13.6L5 19M7.2 13.6l4 3.6 2.4 2.1"/><path class="logNavAccent" d="M15 5.5h6v8h-6zM16.2 11l1.2-1.8 1.1.8 1.4-2.5"/><path class="logNavGood" d="M15.5 16.8l1.8 1.8 3.4-4"/></svg>',
+  runs:'<svg class="logNavPic" viewBox="0 0 24 24" aria-hidden="true"><path class="logNavBase" d="M3 14c3 0 5-1 7-4l2 2c2 2 4 3 8 3h1v3H6c-2 0-3-1-3-4z"/><path class="logNavAccent" d="M13 4v6M17 6v4M21 3v7M13 8l3-2 2 1 3-3"/><path class="logNavGood" d="M16 20l2 2 4-5"/></svg>',
   dashboard:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19V10M10 19V5M16 19v-7M22 19H2"/><path d="M4 8l6-4 6 6 5-5"/></svg>',
   more:'<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg>',
   assessments:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h14v16H5zM8 8h8M8 12h5M8 16h7"/></svg>',
