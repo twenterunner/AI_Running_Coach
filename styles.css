@@ -927,3 +927,87 @@ canvas{display:block;width:100%!important;max-width:100%;height:auto!important;m
  #plan .proportionalPhaseRail .phaseSegment b{font-size:6.2px!important}
  #plan .proportionalPhaseRail .phaseSegment small{font-size:5.5px!important}
 }
+
+
+/* PLAN TAB — v12.3.7 programme timeline alignment */
+#plan .promotedTimelinePanel{
+  padding-left:17px!important;
+  padding-right:17px!important;
+}
+#plan .promotedTimelinePanel>.panelHead,
+#plan .promotedTimelinePanel>#raceTimeline,
+#plan .promotedTimelinePanel>.planIntensityFoldout{
+  margin-left:0!important;
+  margin-right:0!important;
+  width:100%!important;
+}
+#plan .promotedTimelinePanel>.panelHead{
+  padding-left:0!important;
+  padding-right:0!important;
+}
+#plan .promotedTimelinePanel>#raceTimeline{
+  padding-left:0!important;
+  padding-right:0!important;
+}
+@media(max-width:390px){
+  #plan .promotedTimelinePanel{
+    padding-left:14px!important;
+    padding-right:14px!important;
+  }
+}
+
+
+/* PLAN TAB — v12.3.8 exact timeline alignment + no-wrap phase labels */
+#plan .promotedTimelinePanel{
+  padding:16px!important;
+}
+#plan .promotedTimelinePanel>.panelHead{
+  margin:0 0 12px!important;
+  padding:0!important;
+}
+#plan .promotedTimelinePanel>.panelHead>div{
+  margin:0!important;
+  padding:0!important;
+}
+#plan .promotedTimelinePanel>.panelHead .eyebrow,
+#plan .promotedTimelinePanel>.panelHead h3,
+#plan .promotedTimelinePanel>.panelHead p{
+  margin-left:0!important;
+  padding-left:0!important;
+}
+#plan .promotedTimelinePanel>#raceTimeline,
+#plan .promotedTimelinePanel>.planIntensityFoldout{
+  margin-left:0!important;
+  margin-right:0!important;
+  padding-left:0!important;
+  padding-right:0!important;
+  width:100%!important;
+}
+#plan .proportionalPhaseRail .phaseSegment{
+  padding-left:2px!important;
+  padding-right:2px!important;
+}
+#plan .proportionalPhaseRail .phaseSegment b,
+#plan .proportionalPhaseRail .phaseSegment small{
+  display:block!important;
+  width:auto!important;
+  max-width:100%!important;
+  white-space:nowrap!important;
+  overflow:visible!important;
+  text-overflow:clip!important;
+  overflow-wrap:normal!important;
+  word-break:normal!important;
+  text-align:center!important;
+  line-height:1!important;
+}
+#plan .proportionalPhaseRail .phaseSegment b{
+  font-size:7px!important;
+}
+#plan .proportionalPhaseRail .phaseSegment small{
+  font-size:6px!important;
+}
+@media(max-width:390px){
+ #plan .promotedTimelinePanel{padding:14px!important}
+ #plan .proportionalPhaseRail .phaseSegment b{font-size:6.5px!important}
+ #plan .proportionalPhaseRail .phaseSegment small{font-size:5.5px!important}
+}

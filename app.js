@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '12.3.6';
-  const BUILD = 20306;
+  const VERSION = '12.3.8';
+  const BUILD = 20308;
   const SCHEMA = 10330;
   const PRIMARY_STORAGE_KEY = 'arc_v10330_web';
   const MIRROR_STORAGE_KEY = 'arc_v10330_mirror';
@@ -2727,6 +2727,24 @@ function planIntensityDistributionHtml(w){
  return`<section class="planIntensityCard"><div class="intensityStack" aria-label="Selected week intensity distribution">${rows.map((r,i)=>`<i class="${tones[i]||'easy'}" style="width:${r.value/total*100}%" title="${esc(r.label)} ${Math.round(r.value/total*100)}%"></i>`).join('')}</div><div class="planIntensityRows">${rows.map((r,i)=>`<div><span class="intensitySwatch ${tones[i]||'easy'}"></span><b>${esc(r.label)}</b><strong>${Number(r.value).toFixed(1)} km</strong><small>${Math.round(r.value/total*100)}%</small></div>`).join('')}</div><details class="planIntensityDetail"><summary>Overall programme distribution</summary>${intensityMixHtml(state.plan.filter(p=>!['Rest','Race Day'].includes(p.type)),'distance','No programme volume')}</details></section>`;
 }
 
+
+function fitProgrammeTimelineLabels(){
+ const root=document.getElementById('raceTimeline'); if(!root)return;
+ root.querySelectorAll('.proportionalPhaseRail .phaseSegment').forEach(seg=>{
+   const label=seg.querySelector('b'), range=seg.querySelector('small');
+   [label,range].forEach(el=>{
+     if(!el)return;
+     el.style.whiteSpace='nowrap';
+     el.style.transform='none';
+     el.style.fontSize='';
+     let size=parseFloat(getComputedStyle(el).fontSize)||7;
+     while(el.scrollWidth>seg.clientWidth-6 && size>4.5){
+       size-=0.25;
+       el.style.fontSize=size+'px';
+     }
+   });
+ });
+}
 function renderPlan(){
  if(!state.weekView)state.weekView=currentWeek();state.weekView=clamp(state.weekView,1,weeks());const w=state.weekView,arr=state.plan.filter(p=>p.week===w);
  $('planProgrammeHeader').innerHTML=planProgrammeHeaderHtml();
@@ -2734,7 +2752,7 @@ function renderPlan(){
  const title=$('planWeekTitle');if(title)title.textContent=`Week ${w} schedule`;
  $('planCards').innerHTML=arr.map(workoutHtml).join('')||'<div class="planEmpty"><b>No workouts generated</b><p>This week has no plan entries.</p></div>';
  $('weeklyReview').innerHTML=weeklyReviewHtml(w);
- $('raceTimeline').innerHTML=planTimelineHtml(w);
+ $('raceTimeline').innerHTML=planTimelineHtml(w);requestAnimationFrame(fitProgrammeTimelineLabels);
  $('planIntensity').innerHTML=planIntensityDistributionHtml(w);
  document.querySelectorAll('#plan .planWorkout').forEach(item=>item.addEventListener('toggle',()=>{if(!item.open)return;document.querySelectorAll('#plan .planWorkout[open]').forEach(other=>{if(other!==item)other.removeAttribute('open')})}));
 }

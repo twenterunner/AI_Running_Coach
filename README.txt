@@ -1,4 +1,4 @@
-AI Running Coach v12.3.6 — Serious Runner Plan — build 20306
+AI Running Coach v12.3.8 — Serious Runner Plan — build 20308
 
 Deployment
 ----------
@@ -801,3 +801,17 @@ v12.3.6 — corrected Plan default week and programme timeline
 - Timeline colour is data-driven from existing planned average weekly distance and quality/specific distance share.
 - Added compact demand legend.
 - No calculation/model/data-engine changes.
+
+
+v12.3.7 — Programme Timeline alignment
+- Programme Timeline card now uses the same left/right content inset as the other Plan cards.
+- Heading, timeline content and intensity foldout share the same left starting point.
+- No other Plan or Today layout/content changed.
+- No model/data-engine calculations changed.
+
+
+v12.3.8 — Programme Timeline alignment and label fit
+- Programme Timeline uses the same internal card inset as the other Plan cards, without double-padding the heading.
+- Phase names and week ranges are forced to a single line.
+- Phase label font size is dynamically reduced only when needed to fit the proportional phase width.
+- No timeline duration, colour logic, Today UI, or model/data-engine calculations changed.
