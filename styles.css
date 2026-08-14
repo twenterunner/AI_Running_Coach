@@ -2066,3 +2066,12 @@ canvas{display:block;width:100%!important;max-width:100%;height:auto!important;m
  .logDetailModal .logEvidenceMetrics small{font-size:5.2px!important}
  .logDetailModal .logEvidenceMetrics b{font-size:10px!important}
 }
+
+/* v13.0.5 Log typography/spacing refinement */
+.logDetailModal .executionObjective{display:grid!important;grid-template-columns:1fr!important;gap:5px!important;align-items:start!important;margin:0 0 7px!important}
+.logDetailModal .executionObjective small{display:block!important;margin:0!important;font-size:9px!important;line-height:1.25!important;letter-spacing:.04em!important;color:#9db8c1!important}
+.logDetailModal .executionObjective b{display:block!important;margin:0!important;font-size:15px!important;line-height:1.35!important;color:#fff!important;font-weight:800!important}
+.logDetailModal .executionObjective span{display:block!important;margin:0!important;font-size:10px!important;line-height:1.35!important;color:#b7cbd2!important;font-weight:500!important}
+.logDetailModal .wiFinding{display:grid!important;grid-template-columns:14px minmax(0,1fr)!important;column-gap:7px!important;align-items:start!important}
+.logDetailModal .wiFinding i{display:block!important;width:14px!important;text-align:center!important;font-style:normal!important;line-height:1.35!important}
+.logDetailModal .wiFinding span{display:block!important;min-width:0!important}

@@ -1,4 +1,4 @@
-AI Running Coach v13.0.4 — Serious Runner Plan — build 30004
+AI Running Coach v13.0.5 — Serious Runner Plan — build 30005
 
 Deployment
 ----------
@@ -899,3 +899,10 @@ v13.0.4
 - Removed the Training Consequence / "What this means for your plan" tile from Log run detail.
 - Today and Plan remain unchanged.
 - No calculation or data-model logic changed.
+
+
+v13.0.5
+-------
+- Fixed Log Workout Objective typography so label, objective and interpretation no longer run together.
+- Added explicit spacing between Workout Execution finding bullets/status marks and their text.
+- Today and Plan unchanged; no model/data-engine calculations changed.
