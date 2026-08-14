@@ -1,3 +1,15 @@
+AI Running Coach v13.3.0 — Injury & Rehab serious-runner rebuild — build 30300
+
+v13.3.0
+-------
+- Today, Plan, Log, Progress and Recovery are frozen against v13.2.2 build 30202.
+- Injury & Rehab rebuilt around rehabilitation status, runner interpretation, trajectory, progression criteria, today/7-day programme, symptom progression, functional/return-to-run progression, adherence, training impact, clinical context and history.
+- Injury styling is scoped under #injury and follows the approved Today-led Level-1/2/3 surface, typography, spacing and semantic-colour hierarchy.
+- Existing injury prediction, stage progression, criteria, prognosis, adherence, diagnosis, return-to-running and storage calculations are unchanged.
+- New symptom and function charts only visualise existing check-in observations; missing observations remain missing.
+- Multiple assessed injuries remain supported; one active plan controls rehabilitation while parallel assessments stay separated.
+- Repository remains completely flat.
+
 AI Running Coach v13.2.2 — Recovery visual consistency refinement — build 30202
 
 v13.2.2
