@@ -503,3 +503,8 @@ canvas{display:block;width:100%!important;max-width:100%;height:auto!important;m
  #today .evidenceRing strong{font-size:18px!important}
  #today .evidenceCompleteness>small{max-width:60px!important;font-size:7px!important}
 }
+
+/* TODAY TAB — LOCKED UI CONTRACT v12.2.0
+   Normal-running tile is informational: exact active rehab fullDate output. */
+#today .todayStatusCard.training .statusCopy>strong{color:#fff!important}
+#today .todayStatusCard.training .statusCopy>p{color:#d4e3e8!important}

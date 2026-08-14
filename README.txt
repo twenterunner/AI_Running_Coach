@@ -1,4 +1,4 @@
-AI Running Coach v12.1.9 — Today rehab refinement — build 20109
+AI Running Coach v12.2.0 — Today rehab-date correction — build 20200
 
 Deployment
 ----------
@@ -710,3 +710,10 @@ v12.1.9
 - That tile now shows the model's estimated unrestricted-running date and ahead/behind-nominal status when those fields are available.
 - Ahead/behind text uses semantic good/warn/bad color.
 - No model/data-engine calculations changed.
+
+v12.2.0
+- Small Today rehab tile now uses injuryPrediction().fullDate directly: the active rehab plan's central estimate for full unrestricted training.
+- Supporting text shows the model's remaining estimated days and confidence.
+- If no active rehab plan exists, the same tile becomes Today's Mode and shows today's run type/distance or Recovery.
+- Removed guessed return-date field aliases and ahead/behind-date inference from this tile.
+- No injury-model calculations changed.

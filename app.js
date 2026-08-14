@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '12.1.9';
-  const BUILD = 20109;
+  const VERSION = '12.2.0';
+  const BUILD = 20200;
   const SCHEMA = 10330;
   const PRIMARY_STORAGE_KEY = 'arc_v10330_web';
   const MIRROR_STORAGE_KEY = 'arc_v10330_mirror';
@@ -2444,35 +2444,26 @@ function todayRaceCard(engine,report){
  </section>`;
 }
 function todayRehabStatusSummary(active){
- const injury=active?.injury,progress=active?.progress;
- if(!injury||!progress)return {date:'—',delta:'No estimate yet',deltaClass:'neutral'};
- const candidate=progress.fullRunningDate||progress.fullReturnDate||progress.returnDate||progress.predictedFullRunDate||progress.predictedDate||null;
- const dateLabel=candidate?fmtDate(candidate):'—';
- const nominalDate=progress.nominalFullRunningDate||progress.nominalReturnDate||progress.nominalDate||null;
- let delta='On nominal trajectory',deltaClass='neutral';
- if(candidate&&nominalDate){
-   const d=Math.round((new Date(candidate+'T00:00:00')-new Date(nominalDate+'T00:00:00'))/DAY);
-   if(Number.isFinite(d)){
-     if(d<0){delta=`${Math.abs(d)} day${Math.abs(d)===1?'':'s'} ahead of nominal`;deltaClass='good';}
-     else if(d>0){delta=`${d} day${d===1?'':'s'} behind nominal`;deltaClass=d<=3?'warn':'bad';}
-     else{delta='On nominal trajectory';deltaClass='good';}
-   }
- }else if(Number.isFinite(Number(progress.daysAheadBehind))){
-   const d=Number(progress.daysAheadBehind);
-   if(d<0){delta=`${Math.abs(Math.round(d))} days ahead of nominal`;deltaClass='good';}
-   else if(d>0){delta=`${Math.round(d)} days behind nominal`;deltaClass=d<=3?'warn':'bad';}
-   else{delta='On nominal trajectory';deltaClass='good';}
- }
- return {date:dateLabel,delta,deltaClass};
+ const progress=active?.progress;
+ if(!progress||!progress.fullDate)return null;
+ const remaining=Number(progress.remaining);
+ const confidence=progress.confidence||'';
+ return{
+   date:fmtDate(progress.fullDate),
+   detail:Number.isFinite(remaining)
+     ?`${Math.round(remaining)} day${Math.round(remaining)===1?'':'s'} estimated${confidence?` · ${confidence} confidence`:''}`
+     :(confidence?`${confidence} confidence`:'Current rehabilitation estimate')
+ };
 }
+
 function consolidatedTodayCoachBriefing(p){
  const engine=coachEngine(),report=evidenceBasedCoach(engine),ast=report.athleteState,ready=readinessModel(),active=todayActiveInjury(),injuryDay=active.day,rehabSummary=todayRehabStatusSummary(active);
  const evidence=Math.round(clamp(Number(report.evidenceCoverage)||0,0,100)),remaining=raceTimeRemaining(),hrv=ready.hrv,pain=ready.pain;
  const readinessDetail=hrv?.rolling!=null&&hrv?.baseline!=null?`HRV ${hrv.rolling.toFixed(0)} / ${hrv.baseline.toFixed(0)} ms`:`Load modifier ×${ready.modifier.toFixed(3)}`;
  const painValue=Number.isFinite(Number(pain.max))?`${Number(pain.max).toFixed(0)}/10`:'—';
  const painText=active.injury?`${active.injury.bodyRegion||'Active injury'} · ${pain.status}`:pain.status;
- const modeTitle=injuryDay?rehabSummary.date:p&&p.type!=='Rest'?p.type:'Recovery';
- const modeText=injuryDay?rehabSummary.delta:p&&p.type!=='Rest'?`${Number(p.distance).toFixed(1)} km scheduled`:'No run scheduled';
+ const modeTitle=injuryDay&&rehabSummary?rehabSummary.date:p&&p.type!=='Rest'?p.type:'Recovery';
+ const modeText=injuryDay&&rehabSummary?rehabSummary.detail:p&&p.type!=='Rest'?`${Number(p.distance).toFixed(1)} km scheduled`:'No run scheduled';
  let priorityTitle,priorityBullets;
  if(injuryDay){
    priorityTitle='Complete rehabilitation before considering the run plan';
@@ -2520,7 +2511,7 @@ function consolidatedTodayCoachBriefing(p){
    </div>
  </section>
  <div class="todayStatusGrid seriousStatusGrid">
-   <article class="todayStatusCard training ${injuryDay?rehabSummary.deltaClass:''}"><h4>${injuryDay?'NORMAL RUNNING':'TODAY’S MODE'}</h4><div class="statusRing">${todayPictogram(injuryDay?'rehab':p&&p.type!=='Rest'?'training':'recovery')}</div><div class="statusCopy"><strong>${esc(modeTitle)}</strong><p>${esc(modeText)}</p></div></article>
+   <article class="todayStatusCard training"><h4>${injuryDay?'NORMAL RUNNING':'TODAY’S MODE'}</h4><div class="statusRing">${todayPictogram(injuryDay?'rehab':p&&p.type!=='Rest'?'training':'recovery')}</div><div class="statusCopy"><strong>${esc(modeTitle)}</strong><p>${esc(modeText)}</p></div></article>
    <article class="todayStatusCard ${ready.label==='Normal'?'good':ready.label==='Restricted'?'caution':'neutral'}"><h4>READINESS</h4><div class="statusRing">${todayPictogram('readiness')}</div><div class="statusCopy"><strong>${esc(ready.label)}</strong><p>${esc(readinessDetail)}</p></div></article>
    <article class="todayStatusCard ${Number(pain.max)>=3?'caution':'good'}"><h4>PAIN / INJURY</h4><div class="statusRing">${todayPictogram('pain')}</div><div class="statusCopy"><strong>${painValue}</strong><p>${esc(painText)}</p></div></article>
  </div>
