@@ -1,3 +1,11 @@
+AI Running Coach v13.3.6 — Injury rehab runner-flow hierarchy — build 30360
+
+- Reorders Injury & Rehab around a serious runner workflow: status → programme → progression criteria → trajectory → symptoms → function/return-to-run → adherence → training impact → assessment → history.
+- Moves “What this means now” into Rehabilitation Status as a supporting tile rather than a separate numbered section.
+- Renumbers Injury/Rehab sections consistently.
+- No rehabilitation calculation, progression, prescription, storage, or data-model logic changed.
+- Today, Plan, Log, Progress and Recovery implementation remains untouched.
+
 AI Running Coach v13.3.5 — Injury rehab section order + copy cleanup — build 30350
 
 - Removes the explanatory rehabilitation-status/check-in paragraph below the 7-day rehabilitation calendar.
