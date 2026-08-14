@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '12.0.3';
-  const BUILD = 20003;
+  const VERSION = '12.0.4';
+  const BUILD = 20004;
   const SCHEMA = 10330;
   const PRIMARY_STORAGE_KEY = 'arc_v10330_web';
   const MIRROR_STORAGE_KEY = 'arc_v10330_mirror';
@@ -2317,24 +2317,57 @@ function visualStatusIcon(kind){
  return kind==='good'?'✓':kind==='caution'?'!':kind==='bad'?'×':'•';
 }
 
+function todayPictogram(kind){
+ const svg={
+  training:`<svg class="todayPic" viewBox="0 0 64 64" aria-hidden="true"><circle class="picAccentSoft" cx="34" cy="11" r="6"/><circle class="picBase" cx="34" cy="11" r="6"/><path class="picBase" d="M29 19l-7 13 8 5 6-10 6 8 10-4"/><path class="picBase" d="M29 36l-6 14H12M31 37l11 10 10-2"/><path class="picAccent" d="M18 31l7-11 10-2"/></svg>`,
+  readiness:`<svg class="todayPic" viewBox="0 0 64 64" aria-hidden="true"><path class="picBase" d="M32 53S11 40 11 23c0-8 6-13 13-13 4 0 7 2 8 5 2-3 5-5 9-5 7 0 13 5 13 13 0 17-22 30-22 30z"/><path class="picAccent" d="M8 34h13l5-10 7 20 6-13 4 3h13"/></svg>`,
+  pain:`<svg class="todayPic" viewBox="0 0 64 64" aria-hidden="true"><circle class="picBase" cx="32" cy="11" r="6"/><path class="picBase" d="M20 51l2-26c1-6 5-9 10-9s9 3 10 9l2 26M22 29l-8 18M42 29l8 18"/><circle class="picAccent" cx="32" cy="39" r="10"/><circle class="picAccent" cx="32" cy="39" r="5"/><path class="picAccent" d="M32 25v5M32 48v5M18 39h5M41 39h5"/></svg>`,
+  shoe:`<svg class="todayPic" viewBox="0 0 64 64" aria-hidden="true"><path class="picBase" d="M10 41c8-2 13-9 17-20l8 4c2 7 7 11 17 13 4 1 6 4 5 8-1 4-4 6-9 6H18c-7 0-11-4-8-11z"/><path class="picAccent" d="M27 25l8 5M23 31l9 5M18 37l9 5"/><path class="picAccentSoft" d="M12 46h43"/></svg>`,
+  recovery:`<svg class="todayPic" viewBox="0 0 64 64" aria-hidden="true"><path class="picBase" d="M43 45A20 20 0 1 1 31 9a17 17 0 0 0 12 36z"/><path class="picAccent" d="M45 12v8M41 16h8M52 26v6M49 29h6"/></svg>`,
+  action:`<svg class="todayPic" viewBox="0 0 64 64" aria-hidden="true"><rect class="picBase" x="17" y="10" width="30" height="44" rx="4"/><path class="picAccent" d="M25 23l3 3 6-7M25 35l3 3 6-7M25 47l3 3 6-7"/><path class="picBase" d="M37 24h5M37 36h5M37 48h5M26 10V7h12v3"/></svg>`
+ };
+ return svg[kind]||svg.training;
+}
 function todayWorkoutStructure(p){
  if(!p||p.type==='Rest')return'';
- const main=String(p.main||'');
- const repMatch=main.match(/(\d+)\s*[x×]\s*([0-9.]+)\s*(km|m|min)/i);
- const reps=repMatch?clamp(Number(repMatch[1])||1,1,12):(/interval|repeat|rep/i.test(main)?5:1);
- const warmBars=4,coolBars=4;
- const warm=Array.from({length:warmBars},(_,i)=>`<i class="wu" style="--h:${36+i*4}%"></i>`).join('');
- const work=Array.from({length:reps},()=>'<i class="work"></i>').join('');
- const cool=Array.from({length:coolBars},(_,i)=>`<i class="cd" style="--h:${48-i*4}%"></i>`).join('');
- const workLabel=repMatch?`${repMatch[1]} × ${repMatch[2]} ${repMatch[3]}`:esc(p.type);
- return`<div class="todayWorkoutViz" role="img" aria-label="Workout structure: warm-up, ${esc(workLabel)}, cooldown"><div class="vizLabels"><span>WU</span><b>${esc(workLabel)}</b><span>CD</span></div><div class="vizBars">${warm}${work}${cool}</div></div>`;
+ const warm=Math.max(0,Number(p.warmDistance)||0),main=Math.max(0,Number(p.mainDistance)||0),cool=Math.max(0,Number(p.coolDistance)||0);
+ const reps=clamp(Number(p.repetitions)||Number((String(p.main||'').match(/(\d+)\s*[x×]/i)||[])[1])||1,1,12);
+ const recoveries=clamp(Number(p.recoveryCount)||0,0,Math.max(0,reps-1));
+ const fastDistance=Math.max(0,Number(p.fastDistance)||Number(p.qualityDistance)||0);
+ const recoveryDistance=Math.max(0,Number(p.recoveryDistance)||0);
+ const total=Math.max(.1,warm+main+cool);
+ const plotX=18,plotW=564,baseY=76;
+ const minEnd=72;
+ let warmW=Math.max(minEnd,plotW*(warm/total)),coolW=Math.max(minEnd,plotW*(cool/total));
+ if(warmW+coolW>plotW*.48){const scale=(plotW*.48)/(warmW+coolW);warmW*=scale;coolW*=scale;}
+ const mainW=plotW-warmW-coolW;
+ let shapes=`<rect class="profileWarm" x="${plotX}" y="48" width="${warmW.toFixed(1)}" height="28" rx="4"/>`;
+ const mainX=plotX+warmW;
+ if(reps>1){
+   const recoveryRatio=fastDistance>0&&recoveryDistance>0?recoveryDistance/(fastDistance+recoveryDistance):Math.min(.28,recoveries*.07);
+   const gapTotal=Math.min(mainW*.34,mainW*recoveryRatio);
+   const workTotal=mainW-gapTotal;
+   const workW=workTotal/reps,gapW=recoveries?gapTotal/recoveries:0;
+   let x=mainX;
+   for(let i=0;i<reps;i++){
+     shapes+=`<rect class="profileWork" x="${x.toFixed(1)}" y="23" width="${Math.max(5,workW-2).toFixed(1)}" height="53" rx="4"/>`;
+     x+=workW;
+     if(i<recoveries){shapes+=`<rect class="profileRecovery" x="${x.toFixed(1)}" y="55" width="${Math.max(3,gapW-2).toFixed(1)}" height="21" rx="3"/>`;x+=gapW;}
+   }
+ }else{
+   shapes+=`<rect class="profileWork" x="${mainX.toFixed(1)}" y="31" width="${mainW.toFixed(1)}" height="45" rx="5"/>`;
+ }
+ const coolX=plotX+warmW+mainW;
+ shapes+=`<rect class="profileCool" x="${coolX.toFixed(1)}" y="48" width="${coolW.toFixed(1)}" height="28" rx="4"/>`;
+ const repLabel=reps>1?`${reps} repetitions`:String(p.targetScope||'Main set');
+ return`<div class="todayWorkoutViz"><div class="workoutVizHeader"><span>WORKOUT STRUCTURE</span><b>${esc(p.distanceCheck||`${Number(p.distance).toFixed(1)} km total`)}</b></div><svg class="workoutProfile" viewBox="0 0 600 104" preserveAspectRatio="none" role="img" aria-label="Workout structure with ${warm.toFixed(1)} kilometre warm-up, ${repLabel}, and ${cool.toFixed(1)} kilometre cooldown"><line class="profileBaseline" x1="18" y1="77" x2="582" y2="77"/>${shapes}<text x="${(plotX+warmW/2).toFixed(1)}" y="94">WU ${warm.toFixed(1)} km</text><text class="mainLabel" x="${(mainX+mainW/2).toFixed(1)}" y="14">${esc(repLabel)}</text><text x="${(coolX+coolW/2).toFixed(1)}" y="94">CD ${cool.toFixed(1)} km</text></svg><div class="workoutVizLegend"><span><i class="warmKey"></i>Warm-up</span><span><i class="workKey"></i>Work</span>${recoveries?'<span><i class="recoveryKey"></i>Recovery</span>':''}<span><i class="coolKey"></i>Cooldown</span></div></div>`;
 }
 function todayWorkoutCard(p,injuryDay){
- if(!p||p.type==='Rest')return`<section class="todayFeatureCard todayWorkoutCard"><div class="featureIcon">${uiIcon('rest')}</div><div class="featureMain"><small>TODAY'S WORKOUT</small><h3>Recovery day</h3><p>No running session scheduled. Protect the next purposeful training exposure.</p></div></section>`;
- const z=p.zone||{},main=String(p.main||''),repMatch=main.match(/(\d+)\s*[x×]\s*([0-9.]+)\s*(km|m|min)/i);
- const repText=repMatch?`${repMatch[1]} × ${repMatch[2]} ${repMatch[3]}`:main;
+ if(!p||p.type==='Rest')return`<section class="todayFeatureCard todayWorkoutCard"><div class="featureIcon">${todayPictogram('recovery')}</div><div class="featureMain"><small>TODAY'S WORKOUT</small><h3>Recovery day</h3><p>No running session scheduled. Protect the next purposeful training exposure.</p></div></section>`;
+ const z=p.zone||{},main=String(p.main||''),repCount=Number(p.repetitions)||Number((main.match(/(\d+)\s*[x×]/i)||[])[1])||null;
+ const repText=repCount?`${repCount} reps`:esc(p.targetScope||'Main set');
  return`<section class="todayFeatureCard todayWorkoutCard">
-   <div class="featureIcon shoeIcon">${uiIcon(workoutTypeClass(p.type))}</div>
+   <div class="featureIcon shoeIcon">${todayPictogram('shoe')}</div>
    <div class="featureMain">
      <div class="featureHeading"><div><small>TODAY'S WORKOUT</small><h3>${esc(p.type)}</h3></div><span class="featureStatus">${injuryDay?'Rehab priority':'Scheduled'}</span></div>
      <div class="workoutQuickMetrics">
@@ -2352,11 +2385,11 @@ function consolidatedTodayCoachBriefing(p){
  const engine=coachEngine(),report=evidenceBasedCoach(engine),ast=report.athleteState,health=planHealthAssessment();
  const activeInjury=(state.injuries||[]).find(injury=>injury.id===state.activeInjuryPlanId),injuryProgress=activeInjury?injuryPrediction(activeInjury):null,injuryDay=activeInjury?rehabCalendarDay(activeInjury,injuryProgress,iso(today()),rehabPlanDayIndex(activeInjury,iso(today()))):null;
  const readiness=ast.readiness||'Unknown',pain=ast.pain||{},readinessDetail=readinessModel();
- let headline='Stay disciplined and let the plan work.',lead='',priority='Protect the next purposeful session';
- if(injuryDay){headline='Rehab is the priority today';lead=`${injuryDay.title}. Complete the rehabilitation objective without adding unscheduled impact.`;priority='Complete today’s rehabilitation';}
- else if(p&&p.type!=='Rest'){headline=`${p.type} today`;lead=p.purpose||'Deliver the intended training stimulus with control.';priority=`Complete your ${String(p.type).toLowerCase()} workout`;}
- else{headline='Recovery is the training today';lead='No purposeful running session is scheduled. Use the day to absorb the training already completed.';priority='Recover and prepare for the next run';}
- const healthScore=Math.round(Number(health.score)||0),healthLabel=health.label||'Plan';
+ let lead='',priority='Protect the next purposeful session';
+ if(injuryDay){lead=`${injuryDay.title}. Complete the rehabilitation objective without adding unscheduled impact.`;priority='Complete today’s rehabilitation';}
+ else if(p&&p.type!=='Rest'){lead=p.purpose||'Deliver the intended training stimulus with control.';priority=`Complete your ${String(p.type).toLowerCase()} workout`;}
+ else{lead='No purposeful running session is scheduled. Use the day to absorb the training already completed.';priority='Recover and prepare for the next run';}
+ const healthScore=Math.round(Number(health.score)||0),healthLabel=health.label||'Plan',evidence=Math.round(clamp(Number(report.evidenceCoverage)||0,0,100));
  const sessionMain=injuryDay?'Rehab':p&&p.type!=='Rest'?'On track':'Recovery';
  const sessionSub=injuryDay?injuryDay.title:p&&p.type!=='Rest'?`${p.type} · ${Number(p.distance).toFixed(1)} km`:'No run today';
  const readinessState=readiness==='Normal'?'good':readiness==='Unknown'?'neutral':'caution';
@@ -2365,15 +2398,16 @@ function consolidatedTodayCoachBriefing(p){
  const loadMod=Number(readinessDetail.modifier);
  return`<section class="todayBriefingCard">
    <div class="briefingCopy"><div class="briefingTitle"><span class="briefingIcon">${coachVisualIcon('briefing')}</span><div><h3>Coach Briefing</h3><p>Why this is your focus today</p></div></div><p class="briefingLead">${esc(lead)}</p><div class="todayPriority"><small>TODAY'S PRIORITY</small><b>${esc(priority)}</b></div></div>
-   <div class="planHealthGauge" style="--score:${healthScore}"><div class="gaugeRing"><strong>${healthScore}</strong><span>/100</span></div><small>Plan Health</small><b>${esc(healthLabel)}</b></div>
+   <div class="briefingGauges"><div class="planHealthGauge" style="--score:${healthScore}"><div class="gaugeRing"><strong>${healthScore}</strong><span>/100</span></div><small>Plan Health</small><b>${esc(healthLabel)}</b></div><div class="evidenceCompleteness" style="--evidence:${evidence}"><div class="evidenceRing"><strong>${evidence}%</strong></div><span>Evidence</span><small>completeness</small></div></div>
  </section>
  <div class="todayStatusGrid">
-   <article class="todayStatusCard training"><h4>REHAB / TRAINING</h4><div class="statusRing">${uiIcon(injuryDay?'rehab':p&&p.type!=='Rest'?workoutTypeClass(p.type):'rest')}</div><strong>${esc(sessionMain)}</strong><p>${esc(sessionSub)}</p></article>
-   <article class="todayStatusCard ${readinessState}"><h4>READINESS</h4><div class="statusRing">${uiIcon('heart')}</div><strong>${esc(readiness)}</strong><p>${Number.isFinite(loadMod)?`Load ×${loadMod.toFixed(3)}`:'Recovery context'}</p></article>
-   <article class="todayStatusCard ${painState}"><h4>PAIN</h4><div class="statusRing">${uiIcon('pain')}</div><strong>${painNum===null?'—':painNum+'/10'}</strong><p>${esc(painLabel)}</p></article>
+   <article class="todayStatusCard training"><h4>REHAB / TRAINING</h4><div class="statusRing">${todayPictogram('training')}</div><div class="statusCopy"><strong>${esc(sessionMain)}</strong><p>${esc(sessionSub)}</p></div></article>
+   <article class="todayStatusCard ${readinessState}"><h4>READINESS</h4><div class="statusRing">${todayPictogram('readiness')}</div><div class="statusCopy"><strong>${esc(readiness)}</strong><p>${Number.isFinite(loadMod)?`Load ×${loadMod.toFixed(3)}`:'Recovery context'}</p></div></article>
+   <article class="todayStatusCard ${painState}"><h4>PAIN</h4><div class="statusRing">${todayPictogram('pain')}</div><div class="statusCopy"><strong>${painNum===null?'—':painNum+'/10'}</strong><p>${esc(painLabel)}</p></div></article>
  </div>
  ${todayWorkoutCard(p,injuryDay)}`;
 }
+
 function dailyCoachFocus(p){
  const ast=athleteState(currentWeek()),activeInjury=(state.injuries||[]).find(injury=>injury.id===state.activeInjuryPlanId),injuryProgress=activeInjury?injuryPrediction(activeInjury):null,injuryDay=activeInjury?rehabCalendarDay(activeInjury,injuryProgress,iso(today()),rehabPlanDayIndex(activeInjury,iso(today()))):null;
  const recoveryText=ast.readiness==='Normal'?'Recovery signals are supportive of the planned session.':'Use recovery signals to keep the prescribed effort controlled.';

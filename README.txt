@@ -1,4 +1,4 @@
-AI Running Coach v12.0.3 — Today Tab Locked Baseline — build 20003
+AI Running Coach v12.0.4 — Today Tab Locked Baseline — build 20004
 
 Deployment
 ----------
@@ -606,3 +606,13 @@ v12.0.3 — Today render-led rebuild
 - Workout structure visual is generated only from the existing prescribed workout data (warm-up / main set / cooldown and detected repetition count).
 - No calculation, prediction, pathway, recovery, injury, scoring, import, storage or data-model engine logic changed.
 - Today remains locked against unrelated future tab updates.
+
+
+v12.0.4 — Today visual reliability refinement
+----------------------------------------------
+- Today-only UI refinement; calculation and data engines remain frozen.
+- Workout Structure is now a true inline SVG profile generated from the existing structured prescription fields: warm-up distance, work repetitions, recovery count/distance, main-set distance and cooldown distance.
+- The three Rehab/Training, Readiness and Pain cards now use identical grid geometry, font sizes, font weights and centered alignment.
+- Replaced the simple single-colour status icons with larger bespoke multi-tone SVG pictograms for running, readiness and pain.
+- Evidence coverage is displayed as a circular completeness plot using the existing evidenceCoverage value.
+- Today remains locked against unrelated future-tab changes.
