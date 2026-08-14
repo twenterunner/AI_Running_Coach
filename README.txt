@@ -1,4 +1,4 @@
-AI Running Coach v12.0.1 — Today Tab Locked Baseline — build 20001
+AI Running Coach v12.0.2 — Today Tab Locked Baseline — build 20002
 
 Deployment
 ----------
@@ -587,3 +587,13 @@ v12.0.1 — Today tab locked baseline
 - User-specific values and actions have stronger styling than generic explanatory copy.
 - Today support cards use the same header/content/action pattern and larger headings.
 - LOCK RULE: future tab work must not change the scoped #today UI contract or Today rendering functions unless the user explicitly asks for another Today update.
+
+
+v12.0.2 — Today professional status cards
+-----------------------------------------
+- Today-only refinement; frozen model/data engines remain unchanged.
+- Removed the decorative pale highlight from the Coach Briefing.
+- Enforced a 12 px gap between every top-level Today card, including briefing, status row, workout disclosure and support cards.
+- Rehab/Training, Readiness and Pain are standalone equal-width cards with centered large circular pictograms, strong personalized values and compact supporting context from existing app data.
+- The three status cards share exactly the same internal layout and spacing.
+- Today v12.0.2 remains the locked baseline for all future non-Today tab work.

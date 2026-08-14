@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '12.0.1';
-  const BUILD = 20001;
+  const VERSION = '12.0.2';
+  const BUILD = 20002;
   const SCHEMA = 10330;
   const PRIMARY_STORAGE_KEY = 'arc_v10330_web';
   const MIRROR_STORAGE_KEY = 'arc_v10330_mirror';
@@ -2320,18 +2320,21 @@ function visualStatusIcon(kind){
 function consolidatedTodayCoachBriefing(p){
  const engine=coachEngine(),report=evidenceBasedCoach(engine),ast=report.athleteState;
  const activeInjury=(state.injuries||[]).find(injury=>injury.id===state.activeInjuryPlanId),injuryProgress=activeInjury?injuryPrediction(activeInjury):null,injuryDay=activeInjury?rehabCalendarDay(activeInjury,injuryProgress,iso(today()),rehabPlanDayIndex(activeInjury,iso(today()))):null;
- const readiness=ast.readiness||'Unknown',pain=ast.pain||{};
+ const readiness=ast.readiness||'Unknown',pain=ast.pain||{},readinessDetail=readinessModel();
  let headline='Stay disciplined and let the plan work.',lead='',action='';
  if(injuryDay){headline='Rehab is the priority today.';lead=`${injuryDay.title}. Complete the rehabilitation objective without adding unscheduled impact.`;action='Complete the prescribed rehabilitation and today’s check-in.';}
  else if(p&&p.type!=='Rest'){headline=`${p.type} today.`;lead=p.purpose||'Deliver the intended training stimulus with control.';action=`Complete ${Number(p.distance).toFixed(1)} km as prescribed, then log or import the run.`;}
  else{headline='Recovery is the training today.';lead='No purposeful running session is scheduled. Protect the next quality exposure.';action='Keep movement comfortable and do not add catch-up mileage.';}
 
- const sessionLabel=injuryDay?'Rehab':p&&p.type!=='Rest'?'Training':'Plan';
- const sessionValue=injuryDay?injuryDay.title:p&&p.type!=='Rest'?`${p.type} · ${Number(p.distance).toFixed(1)} km`:'Rest day';
+ const sessionLabel=injuryDay?'Rehab / training':p&&p.type!=='Rest'?'Training':'Training';
+ const sessionMain=injuryDay?'Rehab today':p&&p.type!=='Rest'?p.type:'Rest day';
+ const sessionSub=injuryDay?injuryDay.title:p&&p.type!=='Rest'?`${Number(p.distance).toFixed(1)} km prescribed`:'No run scheduled';
  const sessionIcon=injuryDay?'rehab':p&&p.type!=='Rest'?workoutTypeClass(p.type):'rest';
  const painValue=Number.isFinite(pain.max)?`${pain.max}/10`:'No data';
+ const painSub=Number.isFinite(pain.max)?(pain.max===0?'No pain recorded':pain.max<=2?'Low recorded pain':pain.max<=4?'Monitor symptoms':'Pain constraint active'):'No recent pain entry';
  const painState=Number.isFinite(pain.max)&&pain.max>=3?'caution':Number.isFinite(pain.max)?'good':'neutral';
  const readinessState=readiness==='Normal'?'good':readiness==='Unknown'?'neutral':'caution';
+ const readinessSub=Number.isFinite(Number(readinessDetail.modifier))?`Load modifier ×${Number(readinessDetail.modifier).toFixed(3)}`:'Temporary recovery context';
 
  return`<section class="aiCoachBriefing todayCoachBriefing visualToday uiLevel1 todayUnifiedTile">
    <div class="todayTileHead">
@@ -2340,13 +2343,28 @@ function consolidatedTodayCoachBriefing(p){
      <span class="aiCoachEvidence personalizedBadge">${report.evidenceCoverage>0?`${report.evidenceCoverage}% evidence`:'Evidence building'}</span>
    </div>
    <p class="aiCoachLead genericCopy">${esc(lead)}</p>
-   <div class="todayMetricTriplet" aria-label="Today's personalized context">
-     <div class="todayContextMetric primary"><span class="todayMetricIcon">${uiIcon(sessionIcon)}</span><small>${esc(sessionLabel)}</small><b class="personalizedValue">${esc(sessionValue)}</b></div>
-     <div class="todayContextMetric ${readinessState}"><span class="todayMetricIcon">${uiIcon('recovery')}</span><small>Readiness</small><b class="personalizedValue">${esc(readiness)}</b></div>
-     <div class="todayContextMetric ${painState}"><span class="todayMetricIcon">${uiIcon('pain')}</span><small>Pain</small><b class="personalizedValue">${esc(painValue)}</b></div>
-   </div>
    <div class="aiCoachCall personalizedAction"><span>${coachVisualIcon('plan')}</span><div><small>NEXT ACTION</small><b>${esc(action)}</b></div></div>
- </section>`;
+ </section>
+ <div class="todayMetricTriplet" aria-label="Today's personalized context">
+   <article class="todayContextMetric primary">
+     <small>${esc(sessionLabel)}</small>
+     <span class="todayMetricIcon">${uiIcon(sessionIcon)}</span>
+     <b class="personalizedValue">${esc(sessionMain)}</b>
+     <span class="todayMetricSupport">${esc(sessionSub)}</span>
+   </article>
+   <article class="todayContextMetric ${readinessState}">
+     <small>Readiness</small>
+     <span class="todayMetricIcon">${uiIcon('recovery')}</span>
+     <b class="personalizedValue">${esc(readiness)}</b>
+     <span class="todayMetricSupport">${esc(readinessSub)}</span>
+   </article>
+   <article class="todayContextMetric ${painState}">
+     <small>Pain</small>
+     <span class="todayMetricIcon">${uiIcon('pain')}</span>
+     <b class="personalizedValue">${esc(painValue)}</b>
+     <span class="todayMetricSupport">${esc(painSub)}</span>
+   </article>
+ </div>`;
 }
 function dailyCoachFocus(p){
  const ast=athleteState(currentWeek());
