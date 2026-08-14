@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '13.1.1';
-  const BUILD = 30101;
+  const VERSION = '13.1.2';
+  const BUILD = 30102;
   const SCHEMA = 10330;
   const PRIMARY_STORAGE_KEY = 'arc_v10330_web';
   const MIRROR_STORAGE_KEY = 'arc_v10330_mirror';
@@ -2234,8 +2234,8 @@ function drawDashboardCharts(){
  let minSec=Math.max(2*3600,Math.floor((low-1800)/1800)*1800);
  let maxSec=Math.min(7*3600,Math.ceil((high+1800)/1800)*1800);
  if(maxSec-minSec<3600)maxSec=minSec+3600;
- drawLine($('predictionChart'),[
-   {label:`Prediction updates${predSec.length?` (${predSec.length})`:''}`,data:predSec,color:'#4CC9F0'},
+ if(progressTrendState($('predictionChart'),predSec.length,'historical race-prediction update','historical race-prediction updates')) drawLine($('predictionChart'),[
+   {label:`Prediction updates (${predSec.length})`,data:predSec,color:'#4CC9F0'},
    {label:`Programme start ${fmtTime(startPrediction)}`,data:[startPrediction],color:'#DDF6FF',dashed:true,points:false,horizontal:true},
    {label:`Target ${fmtTime(targetTime)}`,data:[targetTime],color:'#F47777',dashed:true,points:false,horizontal:true}
  ],{min:minSec,max:maxSec,ticks:5,formatY:v=>fmtTime(v),labels,left:98,pointDetails,empty:'No uploaded prediction updates yet'});
@@ -3708,6 +3708,17 @@ function refreshSavedStreamMetrics(){
  return changed;
 }
 
+function progressTrendState(canvas,count,singular,plural){
+ if(!canvas)return false;
+ let stateEl=canvas.parentElement?.querySelector(':scope > .progressChartState');
+ if(!stateEl){stateEl=document.createElement('div');stateEl.className='progressChartState';canvas.insertAdjacentElement('beforebegin',stateEl)}
+ const enough=count>=2;
+ canvas.classList.toggle('progressChartHidden',!enough);
+ stateEl.classList.toggle('hidden',enough);
+ if(!enough){stateEl.innerHTML=`<span class="progressStateIcon">${navIcon('dashboard')}</span><div><b>Building your baseline</b><p>${count===1?`1 ${esc(singular)} recorded. A trend needs another comparable observation.`:`No ${esc(plural)} recorded yet. The chart will appear when two comparable observations are available.`}</p></div>`;}
+ return enough;
+}
+
 function renderMetrics(){
  refreshSavedStreamMetrics();
  let rs=completedRuns().slice().sort((a,b)=>a.date.localeCompare(b.date));
@@ -3725,7 +3736,7 @@ function renderMetrics(){
 
  let effValues=efficiencyRuns.map(r=>metrics(r).efficiencyJ).filter(Number.isFinite);
  let effLabels=efficiencyRuns.map(r=>dte(r.date).toLocaleDateString(undefined,{day:'numeric',month:'short'}));
- drawLine($('efficiencyChart'),metricSeries(efficiencyRuns,r=>metrics(r).efficiencyJ),{
+ if(progressTrendState($('efficiencyChart'),efficiencyRuns.length,'comparable efficiency observation','comparable efficiency observations')) drawLine($('efficiencyChart'),metricSeries(efficiencyRuns,r=>metrics(r).efficiencyJ),{
    min:effValues.length?Math.floor(Math.min(...effValues)-5):80,
    max:effValues.length?Math.ceil(Math.max(...effValues)+5):140,zero:false,ticks:6,
    formatY:v=>Math.round(v)+' J',labels:effLabels,allLabels:efficiencyRuns.length<=8,
@@ -3734,7 +3745,7 @@ function renderMetrics(){
  let driftValues=driftRuns.map(r=>r.powerDrift).filter(Number.isFinite);
  let driftLabels=driftRuns.map(r=>dte(r.date).toLocaleDateString(undefined,{day:'numeric',month:'short'}));
  let driftSeries=metricSeries(driftRuns,r=>r.powerDrift);
- drawLine($('driftChart'),driftSeries,{
+ if(progressTrendState($('driftChart'),driftRuns.length,'suitable cardiac-drift observation','suitable cardiac-drift observations')) drawLine($('driftChart'),driftSeries,{
    min:driftValues.length?Math.min(0,Math.floor(Math.min(...driftValues)-2)):0,
    max:driftValues.length?Math.max(10,Math.ceil(Math.max(...driftValues)+2)):10,ticks:6,
    formatY:v=>Math.round(v)+'%',labels:driftLabels,allLabels:driftRuns.length<=8,

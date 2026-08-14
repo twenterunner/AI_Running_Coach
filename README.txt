@@ -1,4 +1,4 @@
-AI Running Coach v13.1.1 — Log presentation correction — build 30101
+AI Running Coach v13.1.2 — Progress visual alignment — build 30102
 
 Progress-only GUI release. Today, Plan and Log remain frozen to approved v13.0.6 build 30006. Calculation/data-model logic unchanged.
 Repository remains completely flat.
@@ -6,7 +6,14 @@ Repository remains completely flat.
 AI Running Coach v13.0.6 — Serious Runner Plan — build 30006
 
 
-v13.1.1 Log presentation correction
+v13.1.2 Progress visual alignment
+
+- Progress surfaces now use the same teal gradient, nested tile, typography and foldout language as the approved Today, Plan and Log tabs.
+- Progress header pictogram now exactly reuses the bottom-navigation Progress icon geometry.
+- Trend charts no longer show blank or misleading single-point canvases; fewer than two historical/comparable observations produce an explicit baseline-building state instead.
+- Comparable-run metric summaries use mobile metric cards rather than a squeezed five-column table.
+- Progress validation/scientific tiles have explicit label/value spacing to prevent concatenated text.
+- Changes are scoped to #dashboard; Today, Plan and Log remain unchanged. No calculation or data-model logic changed.
 ------------------------------------
 - Corrected FIT import-preview metric typography and spacing so labels, values and supporting notes cannot concatenate on narrow mobile screens.
 - Added explicit scoped styling for the post-save “What this run changes” view so both pathway blocks use the same visual hierarchy and spacing.
