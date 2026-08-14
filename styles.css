@@ -1573,3 +1573,272 @@ canvas{display:block;width:100%!important;max-width:100%;height:auto!important;m
  .logDetailModal .pathCalcComponent,
  .logDetailModal .executionBridgeComponent{grid-template-columns:minmax(0,1fr) auto!important}
 }
+
+
+/* LOG TAB — v13.0.2 text rhythm + pathway parity + richer run cards */
+
+/* Recent-run secondary metrics: compact runner metrics, not anonymous pills. */
+#runs .logRunSecondary{
+  display:flex!important;
+  flex-wrap:wrap!important;
+  align-items:stretch!important;
+  gap:6px!important;
+  margin-top:9px!important;
+}
+#runs .logMetricChip{
+  display:grid!important;
+  grid-template-columns:auto auto!important;
+  gap:4px!important;
+  align-items:baseline!important;
+  padding:5px 7px!important;
+  border-radius:8px!important;
+  background:rgba(3,31,43,.22)!important;
+  border:1px solid rgba(80,210,219,.10)!important;
+  color:#d9eaed!important;
+}
+#runs .logMetricChip small{
+  font-size:6px!important;
+  line-height:1!important;
+  font-weight:850!important;
+  letter-spacing:.04em!important;
+  color:#8faeb8!important;
+}
+#runs .logMetricChip b{
+  font-size:8px!important;
+  line-height:1!important;
+  font-weight:750!important;
+  color:#eef9fa!important;
+  white-space:nowrap!important;
+}
+#runs .logMetricChip.good b{color:#9ae77d!important}
+#runs .logMetricChip.warn b{color:#ffd071!important}
+#runs .logMetricChip.bad b{color:#ff8a72!important}
+#runs .logCompareChip{
+  display:flex!important;
+  align-items:center!important;
+  padding:5px 7px!important;
+  border-radius:8px!important;
+  background:rgba(3,31,43,.22)!important;
+  border:1px solid rgba(80,210,219,.10)!important;
+  font-size:7px!important;
+  line-height:1.2!important;
+}
+#runs .logCompareChip.good{color:#9ae77d!important}
+#runs .logCompareChip.warn{color:#ffd071!important}
+
+/* Evidence cards: every label/detail/value/role has its own track. */
+.logDetailModal .evidenceDriverList{
+  display:grid!important;
+  gap:7px!important;
+}
+.logDetailModal .evidenceDriver{
+  display:grid!important;
+  grid-template-columns:minmax(0,1fr) auto!important;
+  grid-template-areas:
+    "text value"
+    "role role"!important;
+  gap:6px 12px!important;
+  align-items:start!important;
+  padding:10px!important;
+  border-radius:10px!important;
+  background:rgba(3,31,43,.24)!important;
+  border:1px solid rgba(80,210,219,.12)!important;
+}
+.logDetailModal .evidenceDriverText{
+  grid-area:text!important;
+  display:grid!important;
+  gap:4px!important;
+  min-width:0!important;
+}
+.logDetailModal .evidenceDriverText b{
+  display:block!important;
+  margin:0!important;
+  font-size:10px!important;
+  line-height:1.25!important;
+  font-weight:800!important;
+  color:#fff!important;
+}
+.logDetailModal .evidenceDriverText small{
+  display:block!important;
+  margin:0!important;
+  font-size:8px!important;
+  line-height:1.35!important;
+  font-weight:400!important;
+  color:#9fbac3!important;
+}
+.logDetailModal .evidenceDriverValue{
+  grid-area:value!important;
+  align-self:start!important;
+  padding-top:1px!important;
+  font-size:10px!important;
+  line-height:1.2!important;
+  font-weight:800!important;
+  color:#e9f7f8!important;
+  white-space:nowrap!important;
+}
+.logDetailModal .evidenceDriverRole{
+  grid-area:role!important;
+  justify-self:start!important;
+  margin:0!important;
+  padding:3px 6px!important;
+  border-radius:6px!important;
+  background:rgba(62,216,211,.08)!important;
+  color:#75dedc!important;
+  font-size:6.5px!important;
+  line-height:1!important;
+  font-style:normal!important;
+  font-weight:800!important;
+  text-transform:uppercase!important;
+  letter-spacing:.05em!important;
+}
+
+/* Weighted pathway components: stop label/detail/weight/result collisions. */
+.logDetailModal .pathCalcComponent{
+  display:grid!important;
+  grid-template-columns:minmax(0,1fr) auto!important;
+  grid-template-areas:
+    "text weight"
+    "text result"!important;
+  column-gap:12px!important;
+  row-gap:5px!important;
+  align-items:start!important;
+  padding:10px!important;
+}
+.logDetailModal .pathCalcComponentText{
+  grid-area:text!important;
+  display:grid!important;
+  gap:4px!important;
+  min-width:0!important;
+}
+.logDetailModal .pathCalcComponentText b{
+  display:block!important;
+  margin:0!important;
+  font-size:10px!important;
+  line-height:1.25!important;
+  font-weight:800!important;
+  color:#fff!important;
+}
+.logDetailModal .pathCalcComponentText small{
+  display:block!important;
+  margin:0!important;
+  font-size:8px!important;
+  line-height:1.4!important;
+  font-weight:400!important;
+  color:#9db9c2!important;
+}
+.logDetailModal .pathCalcWeight{
+  grid-area:weight!important;
+  align-self:start!important;
+  font-size:7.5px!important;
+  line-height:1.2!important;
+  color:#a9c4cd!important;
+  white-space:nowrap!important;
+}
+.logDetailModal .pathCalcResult{
+  grid-area:result!important;
+  align-self:end!important;
+  justify-self:end!important;
+  font-size:9px!important;
+  line-height:1!important;
+  font-weight:800!important;
+  color:#fff!important;
+  white-space:nowrap!important;
+}
+
+/* Execution-to-pathway bridge uses the same spacing treatment. */
+.logDetailModal .executionBridgeComponent>div{
+  display:grid!important;
+  gap:4px!important;
+  min-width:0!important;
+}
+.logDetailModal .executionBridgeComponent>div>b{
+  display:block!important;
+  margin:0!important;
+  font-size:10px!important;
+  line-height:1.25!important;
+}
+.logDetailModal .executionBridgeComponent>div>small{
+  display:block!important;
+  margin:0!important;
+  font-size:8px!important;
+  line-height:1.4!important;
+  color:#9db9c2!important;
+}
+
+/* Both adaptive pathways use exactly the same value typography and weight. */
+.logDetailModal .pathwayStageValue{
+  display:grid!important;
+  grid-template-columns:auto minmax(0,1fr)!important;
+  gap:6px!important;
+  align-items:baseline!important;
+  margin-top:5px!important;
+}
+.logDetailModal .pathwayStageValue b,
+.logDetailModal .pathwayStageValue span{
+  margin:0!important;
+  padding:0!important;
+  font-size:9px!important;
+  line-height:1.25!important;
+  font-weight:750!important;
+  color:#eef8fa!important;
+}
+.logDetailModal .pathwayStageValue b{
+  font-variant-numeric:tabular-nums!important;
+  white-space:nowrap!important;
+}
+.logDetailModal .pathwayStageValue span{
+  white-space:normal!important;
+}
+
+/* Scientific foldouts use one readable type scale and predictable vertical spacing. */
+.logDetailModal .pathCalcAudit section{
+  margin:0!important;
+}
+.logDetailModal .pathCalcAudit section + section{
+  margin-top:10px!important;
+}
+.logDetailModal .pathCalcAudit h5{
+  font-size:10px!important;
+  line-height:1.25!important;
+  font-weight:800!important;
+}
+.logDetailModal .pathCalcStep{
+  min-height:38px!important;
+  align-items:center!important;
+}
+.logDetailModal .pathCalcStep span{
+  font-size:9px!important;
+  line-height:1.3!important;
+}
+.logDetailModal .pathCalcStep b{
+  font-size:9px!important;
+  line-height:1.3!important;
+  font-weight:800!important;
+}
+.logDetailModal .pathCalcEquation{
+  grid-template-columns:minmax(0,1fr) auto!important;
+  gap:6px 12px!important;
+}
+.logDetailModal .pathCalcEquation>span{
+  display:block!important;
+  font-size:9px!important;
+  line-height:1.3!important;
+}
+.logDetailModal .pathCalcEquation>code{
+  margin-top:2px!important;
+}
+.logDetailModal .pathCalcEquation>b{
+  margin-top:2px!important;
+}
+
+/* Preserve mobile legibility: stack evidence driver value under text only if necessary. */
+@media(max-width:360px){
+ .logDetailModal .evidenceDriver{
+   grid-template-columns:1fr!important;
+   grid-template-areas:"text" "value" "role"!important;
+ }
+ .logDetailModal .evidenceDriverValue{justify-self:start!important}
+ .logDetailModal .pathCalcComponent{
+   grid-template-columns:1fr auto!important;
+ }
+}

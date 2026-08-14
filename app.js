@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '13.0.1';
-  const BUILD = 30001;
+  const VERSION = '13.0.2';
+  const BUILD = 30002;
   const SCHEMA = 10330;
   const PRIMARY_STORAGE_KEY = 'arc_v10330_web';
   const MIRROR_STORAGE_KEY = 'arc_v10330_mirror';
@@ -3293,7 +3293,7 @@ function pathwayCalculationDetailsHtml(d,t){
  const fmtSigned=(v,digits=2)=>`${Number(v)>=0?'+':''}${Number(v).toFixed(digits)}`;
  const weightedRows=comps.map(c=>{
    const product=c.value*c.weight,derivation=d.componentDerivation?.[c.key]||'';
-   return`<div class="pathCalcComponent"><div><b>${esc(c.label)}</b><small>${esc(derivation)}</small></div><span>${fmtSigned(c.value)} × ${(c.weight*100).toFixed(0)}%</span><strong>${fmtSigned(product,3)}</strong></div>`;
+   return`<div class="pathCalcComponent"><div class="pathCalcComponentText"><b>${esc(c.label)}</b><small>${esc(derivation)}</small></div><span class="pathCalcWeight">${fmtSigned(c.value)} × ${(c.weight*100).toFixed(0)}%</span><strong class="pathCalcResult">${fmtSigned(product,3)}</strong></div>`;
  }).join('');
  const sumExpr=comps.map(c=>`(${fmtSigned(c.value)} × ${(c.weight*100).toFixed(0)}%)`).join(' + ');
  const raw=t.rawSignal;
@@ -3341,7 +3341,7 @@ function qualitativePathwaySignal(v){
 }
 function pathwayEvidenceSummaryHtml(d,t){
  const rows=[];
- const add=(name,detail,observed,role)=>rows.push(`<div class="evidenceDriver consistent"><div><b>${esc(name)}</b><small>${esc(detail||'')}</small></div><span>${esc(observed)}</span><em>${esc(role)}</em></div>`);
+ const add=(name,detail,observed,role)=>rows.push(`<div class="evidenceDriver consistent"><div class="evidenceDriverText"><b>${esc(name)}</b><small>${esc(detail||'')}</small></div><span class="evidenceDriverValue">${esc(observed)}</span><em class="evidenceDriverRole">${esc(role)}</em></div>`);
  if(d.pathway==='pace'){
    const comps=d.capabilityExecutionComponents||[];
    comps.forEach(c=>{
@@ -3604,7 +3604,11 @@ function trainingConsequenceHtml(r){
      :'No future workout change is currently projected from this run.';
  return`<section class="logTrainingConsequence"><div class="logDetailSectionHead"><span>${logPictogram('consequence')}</span><div><small>TRAINING CONSEQUENCE</small><h3>What this means for your plan</h3><p>${esc(decision)}</p></div></div>
    <div class="pathwayKey"><b>Adaptive pathways</b><span><strong>Pace &amp; Power</strong> learns capability/target calibration.</span><span><strong>Distance &amp; Load</strong> learns training-volume tolerance.</span></div>
-   <div class="consequenceStages"><div><small>EVIDENCE FROM THIS RUN</small><b>${signedFactorDelta(pt.acceptedContribution)} Pace &amp; Power</b><span>${signedFactorDelta(lt.acceptedContribution)} Distance &amp; Load</span></div><i>→</i><div><small>APPLIED TO PLAN NOW</small><b>${pt.applied.toFixed(3)} Pace &amp; Power</b><span>${lt.applied.toFixed(3)} Distance &amp; Load</span></div><i>→</i><div><small>PROJECTED NEXT REVIEW</small><b>${pt.projected.toFixed(3)} Pace &amp; Power</b><span>${lt.projected.toFixed(3)} Distance &amp; Load</span></div></div>
+   <div class="consequenceStages">
+     <div><small>EVIDENCE FROM THIS RUN</small><div class="pathwayStageValue"><b>${signedFactorDelta(pt.acceptedContribution)}</b><span>Pace &amp; Power</span></div><div class="pathwayStageValue"><b>${signedFactorDelta(lt.acceptedContribution)}</b><span>Distance &amp; Load</span></div></div><i>→</i>
+     <div><small>APPLIED TO PLAN NOW</small><div class="pathwayStageValue"><b>${pt.applied.toFixed(3)}</b><span>Pace &amp; Power</span></div><div class="pathwayStageValue"><b>${lt.applied.toFixed(3)}</b><span>Distance &amp; Load</span></div></div><i>→</i>
+     <div><small>PROJECTED NEXT REVIEW</small><div class="pathwayStageValue"><b>${pt.projected.toFixed(3)}</b><span>Pace &amp; Power</span></div><div class="pathwayStageValue"><b>${lt.projected.toFixed(3)}</b><span>Distance &amp; Load</span></div></div>
+   </div>
    <div class="consequenceCallout"><b>${esc(next)}</b><span>Learned pathway changes commit at weekly review. Temporary readiness can still modify an upcoming session independently.</span></div>
    ${futureChanges.length?`<details class="logConsequenceDetails"><summary>Future projected workout consequences</summary><div class="projectedChangeRows">${futureChanges.map(c=>{const bits=[];if(Math.abs(c.distanceDeltaKm)>=.05)bits.push(`${c.beforeDistance.toFixed(1)} → ${c.afterDistance.toFixed(1)} km`);if(Math.abs(c.paceDeltaSec)>=.5)bits.push(`${pace(c.beforePace)} → ${pace(c.afterPace)}`);if(Math.abs(c.powerDeltaW)>=1)bits.push(`${Math.round(c.beforePower)} → ${Math.round(c.afterPower)} W`);return`<div><span>${fmtDate(c.date)} · ${esc(c.type)}</span><b>${bits.join(' · ')}</b></div>`}).join('')}</div></details>`:''}
  </section>`;
@@ -3645,10 +3649,18 @@ function renderRuns(){
    const m=metrics(r),ws=workoutScore(r),plan=r.planId?state.plan.find(p=>p.id===r.planId):null,q=logDataQuality(r),typeCls=workoutTypeClass(r.type),cr=comparableRunAnalysis(r);
    const day=dte(r.date).toLocaleDateString(undefined,{weekday:'short'}),date=dte(r.date).toLocaleDateString(undefined,{day:'numeric',month:'short'});
    const compare=cr&&cr.confidence!=='Low'&&Number.isFinite(cr.efficiencyDelta)?`${cr.efficiencyDelta>=0?'↑':'↓'} ${Math.abs(cr.efficiencyDelta).toFixed(1)}% efficiency vs similar`:null;
+   const secondaryMetrics=[
+     Number.isFinite(Number(r.avgHr))?{label:'HR',value:`${Math.round(r.avgHr)} bpm`}:null,
+     Number.isFinite(Number(r.avgPower))?{label:'POWER',value:`${Math.round(r.avgPower)} W`}:null,
+     Number.isFinite(Number(r.rpe))?{label:'RPE',value:`${Math.round(r.rpe)}/10`}:null,
+     Number.isFinite(Number(r.pain))?{label:'PAIN',value:`${Math.round(r.pain)}/10`,status:Number(r.pain)>=5?'bad':Number(r.pain)>=3?'warn':'good'}:null,
+     Number.isFinite(m.efficiencyJ)?{label:'EFFICIENCY',value:`${m.efficiencyJ.toFixed(1)} J/beat`}:null,
+     Number.isFinite(Number(r.powerDrift))?{label:'CARDIAC DRIFT',value:`${Number(r.powerDrift).toFixed(1)}%`,status:Math.abs(Number(r.powerDrift))<=5?'good':Math.abs(Number(r.powerDrift))<=8?'warn':'bad'}:null
+   ].filter(Boolean);
    return`<article class="logRunCard clickable" role="button" tabindex="0" data-run="${r.id}" aria-label="Open ${esc(fmtDate(r.date))} ${esc(r.type)} run details">
      <div class="logRunTop"><span class="logRunType ${typeCls}">${uiIcon(typeCls==='quality'?'quality':typeCls)}</span><div class="logRunIdentity"><small>${day} · ${date}</small><h3>${esc(r.type)}</h3><p>${plan?`Matched: ${esc(plan.type)}`:esc(matchSummary(r))}</p></div>${Number.isFinite(ws)?`<div class="logRunScore ${logStatusClass(ws)}" style="--score:${ws}"><strong>${Math.round(ws)}</strong><span>/100</span></div>`:'<span class="logRunArrow">›</span>'}</div>
      <div class="logRunPrimary"><span><small>DISTANCE</small><b>${Number(r.distanceKm).toFixed(2)} km</b></span><span><small>DURATION</small><b>${fmtTime(r.durationSec)}</b></span><span><small>PACE</small><b>${pace(m.pace)}</b></span></div>
-     <div class="logRunSecondary"><span>${Number.isFinite(Number(r.avgHr))?Math.round(r.avgHr)+' bpm':'HR unavailable'}</span><span>${Number.isFinite(Number(r.avgPower))?Math.round(r.avgPower)+' W':'Power unavailable'}</span>${compare?`<span class="${cr.efficiencyDelta>=0?'good':'warn'}">${compare}</span>`:''}</div>
+     <div class="logRunSecondary">${secondaryMetrics.map(x=>`<span class="logMetricChip ${x.status||''}"><small>${x.label}</small><b>${x.value}</b></span>`).join('')}${compare?`<span class="logCompareChip ${cr.efficiencyDelta>=0?'good':'warn'}">${compare}</span>`:''}</div>
      ${q.missing.length?`<div class="logRunWarning">${uiIcon('warning')}<span>Partial data: ${q.missing.join(' and ')} not available</span></div>`:''}
    </article>`;
  }).join('')||`<div class="logEmptyState"><span>${logPictogram('log')}</span><h3>No runs logged yet</h3><p>Import a FIT/CSV activity for the richest analysis, or add a run manually.</p><label for="activityFile" class="primary">Import your first run</label></div>`;

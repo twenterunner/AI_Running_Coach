@@ -1,4 +1,4 @@
-AI Running Coach v13.0.1 — Serious Runner Plan — build 30001
+AI Running Coach v13.0.2 — Serious Runner Plan — build 30002
 
 Deployment
 ----------
@@ -869,4 +869,15 @@ v13.0.1 — Log consistency and duplication cleanup
 - Expanded P&P and D&L presentation to Pace & Power and Distance & Load, with a concise pathway explanation.
 - Projected workout consequences now include future dates only; past workouts are excluded.
 - Log pictogram/navigation icon no longer contains a person; it uses running-shoe/activity-trace/check symbolism.
+- No calculation, scoring, pathway, prediction, adaptation, import, matching, storage or data-model equations changed.
+
+
+v13.0.2 — Log text rhythm and run-card metrics
+-----------------------------------------------
+- Today and Plan remain regression-locked to approved v12.4.1.
+- Rebuilt pathway evidence-driver layout so name, explanation, observed score and Primary/Secondary/Supporting role cannot concatenate.
+- Rebuilt weighted pathway calculation rows so component name, derivation, weighting and result have explicit spacing tracks.
+- Pace & Power and Distance & Load values in Training Consequence now use identical font size, weight and markup.
+- Recent-run cards now add available runner-relevant chips for HR, power, RPE, pain, efficiency (J/beat) and power-based cardiac drift.
+- Sparse metrics are omitted rather than showing meaningless placeholders.
 - No calculation, scoring, pathway, prediction, adaptation, import, matching, storage or data-model equations changed.
