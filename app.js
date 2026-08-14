@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '13.5.0';
-  const BUILD = 30500;
+  const VERSION = '13.5.1';
+  const BUILD = 30501;
   const SCHEMA = 10330;
   const PRIMARY_STORAGE_KEY = 'arc_v10330_web';
   const MIRROR_STORAGE_KEY = 'arc_v10330_mirror';
