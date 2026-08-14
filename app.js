@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '13.1.16';
-  const BUILD = 30116;
+  const VERSION = '13.1.18';
+  const BUILD = 30118;
   const SCHEMA = 10330;
   const PRIMARY_STORAGE_KEY = 'arc_v10330_web';
   const MIRROR_STORAGE_KEY = 'arc_v10330_mirror';
@@ -1036,8 +1036,11 @@ function signedFactorDelta(v){
 function pathwayHistorySvg(history){
  if(!history?.length)return '<p class="muted">No pathway history available.</p>';
  const W=760,H=250,pad={l:54,r:24,t:24,b:42};
- const vals=history.flatMap(x=>[x.pace,x.load]).filter(Number.isFinite);
- let min=Math.min(.94,...vals),max=Math.max(1.06,...vals);if(max-min<.04){min-=.02;max+=.02}
+ const vals=[1,...history.flatMap(x=>[x.pace,x.load])].filter(Number.isFinite);
+ let rawMin=Math.min(...vals),rawMax=Math.max(...vals),span=rawMax-rawMin;
+ const scalePad=Math.max(span*.14,.004);
+ let min=rawMin-scalePad,max=rawMax+scalePad;
+ if(max-min<.012){const mid=(max+min)/2;min=mid-.006;max=mid+.006}
  const x=i=>pad.l+(history.length===1?(W-pad.l-pad.r)/2:i*(W-pad.l-pad.r)/(history.length-1));
  const y=v=>pad.t+(max-v)*(H-pad.t-pad.b)/(max-min);
  const path=key=>history.map((r,i)=>`${i?'L':'M'}${x(i).toFixed(1)},${y(r[key]).toFixed(1)}`).join(' ');
@@ -1957,7 +1960,7 @@ function progressCard(x){let pct=clamp(x.value/Math.max(.01,x.target)*100,0,100)
 function decisionHistoryHtml(){
  const rows=completedRuns().slice().sort((a,b)=>b.date.localeCompare(a.date)).slice(0,10).map(r=>{
    const two=r.coachUpdate?.twoPathway||twoPathwayDecisionForRun(r,r.planId?state.plan.find(p=>p.id===r.planId):null),pd=two.pace,ld=two.load;
-   return`<div class="decisionHistoryRow two"><div class="decisionHistoryCopy"><b>${fmtDate(r.date)} · ${esc(r.type)}</b><small>${esc(pd.interpretation)} ${esc(ld.interpretation)}</small></div><div class="decisionHistoryMeta"><span class="hold">P ${pd.finalSignal>=0?'+':''}${pd.finalSignal.toFixed(2)} · L ${ld.finalSignal>=0?'+':''}${ld.finalSignal.toFixed(2)}</span><em>${pd.confidence}/${ld.confidence} confidence</em></div></div>`;
+   return`<div class="decisionHistoryRow two"><div class="decisionHistoryCopy"><b>${fmtDate(r.date)} · ${esc(r.type)}</b><small>${esc(pd.interpretation)} ${esc(ld.interpretation)}</small></div><div class="decisionHistoryMeta"><span class="hold"><b>Pace &amp; Power</b> ${pd.finalSignal>=0?'+':''}${pd.finalSignal.toFixed(2)} <i aria-hidden="true">·</i> <b>Distance &amp; Load</b> ${ld.finalSignal>=0?'+':''}${ld.finalSignal.toFixed(2)}</span><em>${pd.confidence}/${ld.confidence} confidence</em></div></div>`;
  });
  return rows.length?`<details class="decisionHistoryPanel"><summary><span>Adaptation decision history</span><b>${rows.length} recent decisions</b></summary><p class="muted compact">A persistent audit trail of how uploaded runs were interpreted before pathway evidence was updated.</p><div>${rows.join('')}</div></details>`:'';
 }
@@ -4984,6 +4987,32 @@ openInjuryCheck=function(injury,existing=null){
 };
 function renderUndoButtons(){try{$('undoSettingsBtn')?.classList.toggle('hidden',!localStorage.getItem(UNDO_KEY));$('undoRestoreBtn')?.classList.toggle('hidden',!localStorage.getItem(BACKUP_KEY))}catch{}}
 
+function progressAutoScale(series,options={}){
+ const values=(Array.isArray(series)?series:[]).flatMap(sr=>(Array.isArray(sr.data)?sr.data:[]).map(Number).filter(Number.isFinite));
+ if(!values.length)return null;
+ let rawMin=Math.min(...values),rawMax=Math.max(...values);
+ if(options.includeZero){rawMin=Math.min(rawMin,0);rawMax=Math.max(rawMax,0)}
+ let span=rawMax-rawMin;
+ let pad=span>0?span*.12:Math.max(Math.abs(rawMax)*.06,Number(options.singlePad)||1);
+ let min=rawMin-pad,max=rawMax+pad;
+ if(options.nonNegative&&rawMin>=0)min=Math.max(0,min);
+ if(Number.isFinite(options.floor))min=Math.max(Number(options.floor),min);
+ if(Number.isFinite(options.ceiling))max=Math.min(Number(options.ceiling),max);
+ if(max<=min){const extra=Math.max(Math.abs(rawMax)*.05,1);min=rawMin-extra;max=rawMax+extra}
+ // Round bounds to runner-readable tick steps while keeping the scale data-driven.
+ const targetTicks=Math.max(3,Number(options.ticks)||5),rawStep=(max-min)/(targetTicks-1);
+ let step=Number(options.tickStep);
+ if(!Number.isFinite(step)||step<=0){
+  const mag=Math.pow(10,Math.floor(Math.log10(Math.max(rawStep,1e-9)))),f=rawStep/mag;
+  const nice=f<=1?1:f<=2?2:f<=2.5?2.5:f<=5?5:10;
+  step=nice*mag;
+ }
+ min=Math.floor(min/step)*step;max=Math.ceil(max/step)*step;
+ if(options.nonNegative&&rawMin>=0)min=Math.max(0,min);
+ if(options.includeZero){min=Math.min(min,0);max=Math.max(max,0)}
+ if(max<=min)max=min+step;
+ return{min,max,step};
+}
 function progressSvgIntoMount(mountId,series,options={}){
  const mount=$(mountId);if(!mount)return;
  try{
@@ -4993,10 +5022,8 @@ function progressSvgIntoMount(mountId,series,options={}){
   mount.setAttribute('aria-hidden','false');
   if(!numeric.length){mount.innerHTML=`<div class="progressChartState"><div><b>Building your baseline</b><p>${esc(options.empty||'No valid observations are available yet.')}</p></div></div>`;return;}
   const W=640,H=226,L=58,R=14,T=18,B=34,CW=W-L-R,CH=H-T-B;
-  let min=Number.isFinite(options.min)?Number(options.min):(options.zero===false?Math.min(...numeric):0);
-  let max=Number.isFinite(options.max)?Number(options.max):Math.max(...numeric);
-  if(max<=min)max=min+1;
-  if(!Number.isFinite(options.min)&&!Number.isFinite(options.max)){const pad=(max-min)*.1||1;max+=pad;if(options.zero===false)min-=pad;}
+  const scale=progressAutoScale(cleanSeries,options)||{min:0,max:1,step:.25};
+  let min=scale.min,max=scale.max;
   const n=Math.max(1,labels.length,...cleanSeries.filter(s=>!s.horizontal).map(s=>(s.data||[]).length));
   const x=i=>n<=1?L+CW/2:L+i*CW/(n-1),y=v=>T+(max-v)/(max-min)*CH;
   const xe=v=>String(v??'').replace(/[&<>\"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[c]||c));
@@ -5021,28 +5048,28 @@ function renderProgressChartsStandalone(){
  // This renderer is intentionally independent from renderDashboard so an unrelated Progress card cannot suppress the charts.
  try{
   const arr=completedWeekSeries(),weekLabels=arr.map((x,i)=>x.isRaceWeek?'Race':`W${i+1}`),cw=currentWeek();
-  progressSvgIntoMount('volumeChartMount',[{label:'Planned km',data:arr.map(x=>x.plannedForChart),color:'#67a7ff',dashed:true,points:false},{label:'Completed km',data:arr.map((x,i)=>i+1<=cw?x.actual:null),color:'#79d69b'}],{min:0,labels:weekLabels,aria:'Weekly planned and completed distance',empty:'No weekly distance data yet.'});
+  progressSvgIntoMount('volumeChartMount',[{label:'Planned km',data:arr.map(x=>x.plannedForChart),color:'#67a7ff',dashed:true,points:false},{label:'Completed km',data:arr.map((x,i)=>i+1<=cw?x.actual:null),color:'#79d69b'}],{nonNegative:true,labels:weekLabels,aria:'Weekly planned and completed distance',empty:'No weekly distance data yet.'});
  }catch(err){recordDiagnostic('Progress weekly distance chart',err)}
  try{
   const labels=Array.from({length:weeks()},(_,i)=>`W${i+1}`);
   const planned=Array.from({length:weeks()},(_,i)=>state.plan.find(x=>x.week===i+1&&['Long run','Specific long run','Race rehearsal','Progression'].includes(x.type))?.distance??null);
   const completed=Array.from({length:weeks()},(_,i)=>{const st=weekStart(i+1),en=new Date(st.getTime()+7*DAY),runs=completedRuns().filter(x=>['Long run','Specific long run','Race rehearsal'].includes(x.type)&&dte(x.date)>=st&&dte(x.date)<en);return runs.length?Math.max(...runs.map(x=>Number(x.distanceKm)||0)):null});
-  progressSvgIntoMount('longRunChartMount',[{label:'Planned long run',data:planned,color:'#67a7ff',dashed:true,points:false},{label:'Completed long run',data:completed,color:'#79d69b'}],{min:0,max:Math.max((Number(state.setup.peakLong)||0)*1.12,10),labels,aria:'Long-run progression',empty:'No planned or completed long-run data yet.'});
+  progressSvgIntoMount('longRunChartMount',[{label:'Planned long run',data:planned,color:'#67a7ff',dashed:true,points:false},{label:'Completed long run',data:completed,color:'#79d69b'}],{nonNegative:true,labels,aria:'Long-run progression',empty:'No planned or completed long-run data yet.'});
  }catch(err){recordDiagnostic('Progress long-run chart',err)}
  try{
   const predNow=prediction(),history=(state.predictionHistory||[]).filter(x=>Number.isFinite(Number(x.seconds))&&x.date<=iso(today())).slice().sort((a,b)=>a.date.localeCompare(b.date));
   const start=Number(state.programStartPrediction)||initialProgrammePrediction(state.setup)||predNow,target=Number(state.setup.targetTime),vals=[start,...history.map(x=>Number(x.seconds))],labels=['Start',...history.map(x=>dte(x.date).toLocaleDateString(undefined,{day:'numeric',month:'short'}))];
   if(Number.isFinite(Number(predNow))&&Math.abs((vals.at(-1)??0)-Number(predNow))>.5){vals.push(Number(predNow));labels.push('Today')}
   const all=[...vals,target].filter(Number.isFinite),lo=Math.min(...all),hi=Math.max(...all),min=Math.max(2*3600,Math.floor((lo-1800)/1800)*1800),max=Math.max(min+3600,Math.min(7*3600,Math.ceil((hi+1800)/1800)*1800));
-  progressSvgIntoMount('predictionChartMount',[{label:'Race estimate',data:vals,color:'#3dd6c6'},{label:`Target ${fmtTime(target)}`,data:[target],color:'#ff8585',dashed:true,points:false,horizontal:true}],{min,max,ticks:5,formatY:v=>fmtTime(v),labels,aria:'Race readiness trajectory',empty:'No race estimate is available yet.'});
+  progressSvgIntoMount('predictionChartMount',[{label:'Race estimate',data:vals,color:'#3dd6c6'},{label:`Target ${fmtTime(target)}`,data:[target],color:'#ff8585',dashed:true,points:false,horizontal:true}],{ticks:5,tickStep:15*60,formatY:v=>fmtTime(v),labels,aria:'Race readiness trajectory',empty:'No race estimate is available yet.'});
  }catch(err){recordDiagnostic('Progress prediction chart',err)}
  try{
   const rs=completedRuns().slice().sort((a,b)=>a.date.localeCompare(b.date)),runs=rs.filter(r=>Number.isFinite(metrics(r).efficiencyJ)),vals=runs.map(r=>metrics(r).efficiencyJ),labels=runs.map(r=>dte(r.date).toLocaleDateString(undefined,{day:'numeric',month:'short'}));
-  progressSvgIntoMount('efficiencyChartMount',metricSeries(runs,r=>metrics(r).efficiencyJ),{min:vals.length?Math.floor(Math.min(...vals)-5):80,max:vals.length?Math.ceil(Math.max(...vals)+5):140,zero:false,ticks:5,formatY:v=>Math.round(v)+' J',labels,allLabels:runs.length<=8,aria:'Efficiency factor trend',empty:'Log a run with average power and heart rate to build efficiency history.'});
+  progressSvgIntoMount('efficiencyChartMount',metricSeries(runs,r=>metrics(r).efficiencyJ),{ticks:5,formatY:v=>Math.round(v)+' J',labels,allLabels:runs.length<=8,aria:'Efficiency factor trend',empty:'Log a run with average power and heart rate to build efficiency history.'});
  }catch(err){recordDiagnostic('Progress efficiency chart',err)}
  try{
   const rs=completedRuns().slice().sort((a,b)=>a.date.localeCompare(b.date)),runs=rs.filter(r=>Number.isFinite(Number(r.powerDrift))),vals=runs.map(r=>Number(r.powerDrift)),labels=runs.map(r=>dte(r.date).toLocaleDateString(undefined,{day:'numeric',month:'short'}));
-  progressSvgIntoMount('driftChartMount',metricSeries(runs,r=>Number(r.powerDrift)),{min:vals.length?Math.min(0,Math.floor(Math.min(...vals)-2)):0,max:vals.length?Math.max(10,Math.ceil(Math.max(...vals)+2)):10,ticks:5,formatY:v=>Math.round(v)+'%',labels,allLabels:runs.length<=8,aria:'Aerobic durability trend',empty:'No suitable power-based cardiac-drift observation is available yet.'});
+  progressSvgIntoMount('driftChartMount',metricSeries(runs,r=>Number(r.powerDrift)),{includeZero:true,ticks:5,formatY:v=>`${Math.abs(v)<1?v.toFixed(1):Math.round(v)}%`,labels,allLabels:runs.length<=8,aria:'Aerobic durability trend',empty:'No suitable power-based cardiac-drift observation is available yet.'});
  }catch(err){recordDiagnostic('Progress durability chart',err)}
 }
 function renderAll(){[renderDashboard,renderToday,renderPlan,renderRuns,renderMetrics,renderAssessments,renderCoach,renderInjury,renderRecovery,renderRace,renderSettings,renderPlanHealth,renderMigrationReport].forEach(fn=>{try{fn()}catch(err){recordDiagnostic('Render failure in '+fn.name,err)}});try{renderProgressChartsStandalone()}catch(err){recordDiagnostic('Render failure in renderProgressChartsStandalone',err)}renderDiagnostics();ensureAccessibleForms();renderUndoButtons()}

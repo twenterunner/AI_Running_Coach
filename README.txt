@@ -1,4 +1,20 @@
-AI Running Coach v13.1.16 — Progress outlook visual parity — build 30116
+AI Running Coach v13.1.18 — Progress section 7 removed — build 30118
+
+v13.1.18
+- Removed Progress section 07: Recovery vs Training.
+- No changes to Today, Plan, Log, or Progress sections 01–06.
+
+AI Running Coach v13.1.17 — Progress chart autoscaling and pathway labels — build 30117
+
+v13.1.17 Progress chart autoscaling and pathway clarity
+--------------------------------------------------------
+- All Progress Y-axes now autoscale from the values actually displayed, including target/reference series.
+- Weekly distance and long-run charts use data-driven non-negative scales rather than fixed maxima.
+- Race-readiness time scale auto-ranges around race estimate plus target with runner-readable 15-minute ticks.
+- Efficiency factor auto-ranges around observed values; aerobic durability auto-ranges while retaining zero because drift sign is meaningful.
+- Full pathway history now auto-ranges around observed Pace & Power / Distance & Load factors and the 1.000 baseline instead of a fixed 0.94–1.06 window.
+- Adaptation decision history now writes Pace & Power and Distance & Load in full instead of the cryptic P and L abbreviations.
+- No calculation, scoring, prediction, pathway or data-model equations changed.
 
 v13.1.13 Progress canonical Today-style root fix
 ------------------------------------------------

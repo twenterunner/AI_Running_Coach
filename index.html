@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#07111D"><title>AI Running Coach</title>
-<link rel="manifest" href="manifest.webmanifest?v=30116"><link rel="stylesheet" href="styles.css?v=30116-visual">
+<link rel="manifest" href="manifest.webmanifest?v=30118"><link rel="stylesheet" href="styles.css?v=30118-visual">
 <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png?v=10320">
 <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png?v=10320">
 <link rel="icon" href="favicon.ico?v=10320">
@@ -15,7 +15,7 @@
 <body>
 <a class="skipLink" href="#mainContent">Skip to main content</a>
 <header class="topbar">
-  <div class="brand"><img class="logo" src="icon-192.png?v=10320" alt="AI Running Coach logo"><div class="brand-copy"><h1>AI Running Coach</h1><p>Race-specific adaptive planning · v13.1.16 · build 30116</p></div></div>
+  <div class="brand"><img class="logo" src="icon-192.png?v=10320" alt="AI Running Coach logo"><div class="brand-copy"><h1>AI Running Coach</h1><p>Race-specific adaptive planning · v13.1.18 · build 30118</p></div></div>
   <button id="installBtn" class="install hidden">Install</button>
 </header>
 <nav id="nav" aria-label="Primary navigation"></nav>
@@ -44,8 +44,6 @@
   <section class="progressSection"><div class="progressSectionHead"><span>05</span><div><small>WORKOUT EXECUTION</small><h3>Are you getting better at delivering the intended stimulus?</h3><p>Recent scored sessions aggregated over time.</p></div></div><div id="progressExecution"></div></section>
 
   <section class="progressSection"><div class="progressSectionHead"><span>06</span><div><small>ADAPTIVE LEARNING</small><h3>What is the model learning about you?</h3><p>Accumulated Pace & Power and Distance & Load evidence.</p></div></div><div id="progressAdaptationHome"></div><div id="personalResponseModel"></div><div id="modelValidation"></div><div id="decisionHistory"></div></section>
-
-  <section class="progressSection"><div class="progressSectionHead"><span>07</span><div><small>RECOVERY VS TRAINING</small><h3>Are you absorbing the training?</h3><p>Longitudinal recovery context only; today’s decision remains in Recovery.</p></div></div><div id="progressRecovery"></div></section>
 
   <div class="hidden" aria-hidden="true"><div id="currentPreparationScore"></div><div id="evidenceBadge"></div><div id="pillarCards"></div></div>
 </section>
@@ -173,7 +171,7 @@
   <article class="panel"><h3>Data</h3><div class="buttonRow"><button id="backupBtn">Download backup</button><label for="restoreFile" class="buttonLike">Restore backup</label><input id="restoreFile" type="file" accept=".json"><button id="undoRestoreBtn" type="button" class="secondary hidden">Undo last restore</button><button id="exportBtn">Export runs CSV</button><button id="resetBtn" class="danger">Reset app</button></div></article>
 </section>
 </main>
-<footer class="appFooter"><span>AI Running Coach</span><small>v13.1.16 · build 30116</small></footer>
+<footer class="appFooter"><span>AI Running Coach</span><small>v13.1.18 · build 30118</small></footer>
 
 <div id="modal" class="modal hidden" role="dialog" aria-modal="true" aria-label="AI Running Coach dialog" tabindex="-1"><div class="modalCard"><button id="closeModal" class="close" type="button" aria-label="Close dialog">×</button><div id="modalContent"></div></div></div>
 
@@ -202,5 +200,5 @@
     <button class="primary full" type="submit">Review and create my plan</button>
   </form>
 </div>
-<script src="app.js?v=30116-visual"></script>
+<script src="app.js?v=30118-visual"></script>
 </body></html>

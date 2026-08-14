@@ -3090,3 +3090,20 @@ body:has(#dashboard.progressPage.active),#mainContent:has(#dashboard.progressPag
 #dashboard.progressPage .outlookGain .targetMarginMetric.ahead > b,
 #dashboard.progressPage .outlookGain .targetMarginMetric.behind > b,
 #dashboard.progressPage .outlookGain .targetMarginMetric.on-target > b{color:#fff!important}
+/* v13.1.17 — Adaptation decision history uses full pathway names without crowding. */
+#dashboard.progressPage .decisionHistoryMeta>.hold{
+  display:flex!important;
+  flex-wrap:wrap!important;
+  align-items:baseline!important;
+  gap:3px 5px!important;
+  white-space:normal!important;
+}
+#dashboard.progressPage .decisionHistoryMeta>.hold>b{
+  font-size:inherit!important;
+  line-height:inherit!important;
+  color:var(--text)!important;
+}
+#dashboard.progressPage .decisionHistoryMeta>.hold>i{
+  font-style:normal!important;
+  color:var(--muted)!important;
+}
