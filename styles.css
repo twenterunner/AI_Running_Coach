@@ -3626,3 +3626,66 @@ body:has(#dashboard.progressPage.active),#mainContent:has(#dashboard.progressPag
  #race .raceEffortGrid{grid-template-columns:1fr}#race .raceCheckpointGrid{grid-template-columns:repeat(2,minmax(0,1fr))}
 }
 @media(max-width:360px){#race .raceDayHeroMetrics,#race .raceTargetGrid,#race .raceFuelGrid,#race .raceEvidenceGrid,#race .raceLearningGrid,#race .raceMetricPair{grid-template-columns:1fr}#race .racePhaseBar{display:grid;grid-template-columns:1fr;min-height:0}#race .racePhaseBar>div{min-height:64px}}
+
+/* v13.5.0 Settings redesign — strictly scoped to #settings. */
+#settings{overflow-x:hidden;padding-bottom:calc(94px + env(safe-area-inset-bottom));display:none;flex-direction:column;gap:12px}
+#settings.active{display:flex}
+#settings .settingsPageTitle{display:grid;grid-template-columns:58px minmax(0,1fr);gap:12px;align-items:center;margin-bottom:2px}
+#settings .settingsPictogram{width:54px;height:54px;border-radius:50%;display:grid;place-items:center;background:rgba(21,184,202,.13);border:1px solid rgba(45,218,224,.35);font-size:25px;color:#fff}
+#settings .settingsEyebrow,#settings .settingsSectionHead small,#settings .settingsGroupHead small,#settings .settingsAppInfo small{display:block;font-size:9px;font-weight:900;letter-spacing:.1em;color:#45e0e4}
+#settings .settingsPageTitle h2{margin:2px 0 0;font-size:27px;line-height:1.08;color:#fff}
+#settings .settingsPageTitle p{margin:4px 0 0;font-size:11px;line-height:1.4;color:#c8dce3}
+#settings .settingsSection{margin:0;padding:16px;background:linear-gradient(145deg,#075468 0%,#073c50 52%,#062c3d 100%);border:1px solid rgba(40,214,219,.42);border-radius:18px;box-shadow:none;overflow:hidden}
+#settings .settingsSectionHead{display:grid;grid-template-columns:42px minmax(0,1fr);gap:11px;align-items:start;margin-bottom:13px}
+#settings .settingsSectionHead>span{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;border:1px solid rgba(69,224,228,.45);background:rgba(4,34,46,.28);font-size:13px;font-weight:900;color:#fff}
+#settings .settingsSectionHead h3{margin:2px 0 0;font-size:20px;line-height:1.15;color:#fff}
+#settings .settingsSectionHead p{margin:4px 0 0;font-size:10px;line-height:1.4;color:#c6d9df}
+#settings .settingsGroups{display:grid;gap:10px}
+#settings .settingsGroup,#settings .settingsNested,#settings #daysGrid{background:rgba(5,18,24,.48);border:1px solid rgba(61,214,198,.15);border-radius:14px;padding:13px;min-width:0}
+#settings .settingsGroupHead{margin-bottom:10px}
+#settings .settingsGroupHead h4{margin:3px 0 0;font-size:15px;line-height:1.25;color:#fff}
+#settings .formGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+#settings .settingsField{min-width:0;margin:0}
+#settings .settingsField label{display:block;margin:0 0 5px;font-size:10px;line-height:1.3;font-weight:800;color:#c8dce3}
+#settings .settingsInputWrap{display:flex;align-items:stretch;min-width:0;background:#0c1923;border:1px solid rgba(136,161,177,.16);border-radius:11px;overflow:hidden}
+#settings .settingsInputWrap input{width:100%;min-width:0;margin:0;border:0!important;border-radius:0!important;background:transparent!important;color:#fff!important;padding:11px!important;font-size:14px!important}
+#settings .settingsInputWrap span{display:flex;align-items:center;padding:0 9px;border-left:1px solid rgba(136,161,177,.12);font-size:9px;font-weight:800;color:#a9c4ce;white-space:nowrap}
+#settings #raceDefaultsNote,#settings #raceDateRecommendation{margin-top:10px}
+#settings .settingsModelNote b{font-size:12px;color:#fff}#settings .settingsModelNote p{margin:4px 0 8px}
+#settings #saveSettings,#settings #undoSettingsBtn{margin-top:10px}
+#settings .trainingDayNote{margin:0 0 10px;background:#0c1923;border-color:rgba(136,161,177,.12)}
+#settings .trainingDayHeader,#settings .trainingDayRow{grid-template-columns:minmax(0,1fr) 70px 82px}
+#settings .settingsDataActions{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+#settings .settingsDataActions>*{width:100%;margin:0;box-sizing:border-box;text-align:center}
+#settings .settingsDangerZone{margin-top:12px;padding-top:12px;border-top:1px solid rgba(255,139,120,.18)}
+#settings .settingsDangerZone b{display:block;font-size:12px;color:#fff}.settingsDangerZone p{margin:4px 0 10px;font-size:10px;line-height:1.4;color:#c8dce3}
+#settings .settingsDangerZone .danger{width:100%}
+#settings .settingsAppInfo{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+#settings .settingsAppInfo>div{padding:10px;border-radius:11px;background:rgba(3,31,43,.25);border:1px solid rgba(87,219,224,.16);min-width:0}
+#settings .settingsAppInfo strong{display:block;margin-top:4px;font-size:14px;line-height:1.2;color:#fff;overflow-wrap:anywhere}
+@media(max-width:430px){#settings .formGrid{grid-template-columns:1fr}#settings .settingsDataActions{grid-template-columns:1fr}#settings .settingsAppInfo{grid-template-columns:1fr 1fr}#settings .settingsAppInfo>div:last-child{grid-column:1/-1}#settings .settingsSection{padding:14px}#settings .settingsSectionHead{grid-template-columns:42px minmax(0,1fr)}#settings .settingsSectionHead h3{font-size:19px}}
+
+/* v13.5.0 Daily Check-in redesign — scoped inside its own modal content wrapper. */
+.dailyCheckinRunner{display:flex;flex-direction:column;gap:10px;min-width:0}
+.dailyCheckinRunner .injuryCheckHeader{padding:14px;background:linear-gradient(145deg,#075468 0%,#073c50 52%,#062c3d 100%);border:1px solid rgba(40,214,219,.42);border-radius:18px}
+.dailyCheckinRunner .checkinEyebrow{display:block;font-size:9px;font-weight:900;letter-spacing:.1em;color:#45e0e4}
+.dailyCheckinRunner .injuryCheckHeader h3{margin:3px 0 0;font-size:23px;line-height:1.12;color:#fff}
+.dailyCheckinRunner .injuryCheckHeader p{margin:5px 0 0;font-size:11px;line-height:1.45;color:#c8dce3}
+.dailyCheckinRunner #icScheduledPlan{margin:0;padding:12px;background:rgba(5,18,24,.48);border:1px solid rgba(61,214,198,.15);border-radius:14px;color:#fff}
+.dailyCheckinRunner #icScheduledPlan b{font-size:12px}.dailyCheckinRunner #icScheduledPlan li,.dailyCheckinRunner #icScheduledPlan p{font-size:10px;line-height:1.45}
+.dailyCheckinRunner .injuryCheckSection{margin:0;padding:13px;background:linear-gradient(145deg,#075468 0%,#073c50 52%,#062c3d 100%);border:1px solid rgba(40,214,219,.42);border-radius:18px}
+.dailyCheckinRunner .checkinSectionHead{display:grid;grid-template-columns:38px minmax(0,1fr);gap:10px;align-items:start;margin-bottom:11px}
+.dailyCheckinRunner .checkinSectionHead>span{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;border:1px solid rgba(69,224,228,.45);background:rgba(4,34,46,.28);font-size:12px;font-weight:900;color:#fff}
+.dailyCheckinRunner .checkinSectionHead small{display:block;font-size:8px;font-weight:900;letter-spacing:.1em;color:#45e0e4}
+.dailyCheckinRunner .checkinSectionHead h4{margin:2px 0 0;font-size:17px;line-height:1.2;color:#fff}
+.dailyCheckinRunner .formGrid{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.dailyCheckinRunner .field{min-width:0;margin:0;padding:10px;background:rgba(5,18,24,.48);border:1px solid rgba(61,214,198,.15);border-radius:12px}
+.dailyCheckinRunner .field label{display:block;margin:0 0 6px;font-size:10px;line-height:1.35;font-weight:800;color:#c8dce3}
+.dailyCheckinRunner input,.dailyCheckinRunner select,.dailyCheckinRunner textarea{width:100%;box-sizing:border-box;margin:0;background:#0c1923!important;border:1px solid rgba(136,161,177,.16)!important;border-radius:10px!important;color:#fff!important;font-size:14px!important;line-height:1.3;padding:11px!important}
+.dailyCheckinRunner textarea{min-height:96px;resize:vertical}
+.dailyCheckinRunner .fieldWide{grid-column:1/-1}
+.dailyCheckinRunner .muted.compact{font-size:10px;line-height:1.45;color:#b8ced6}
+.dailyCheckinRunner #icConsistency{margin:0;padding:11px;background:#0c1923;border:1px solid rgba(136,161,177,.12);border-radius:12px}
+.dailyCheckinRunner #icConsistency b{font-size:11px;color:#fff}.dailyCheckinRunner #icConsistency p{margin:3px 0 0;font-size:10px;line-height:1.4;color:#b8ced6}
+.dailyCheckinRunner #saveCheck,.dailyCheckinRunner #deleteCheck{margin:0;min-height:48px;font-size:14px;font-weight:850}
+@media(max-width:430px){.dailyCheckinRunner .formGrid{grid-template-columns:1fr}.dailyCheckinRunner .fieldWide{grid-column:auto}.dailyCheckinRunner .injuryCheckSection{padding:12px}.dailyCheckinRunner .injuryCheckHeader h3{font-size:21px}}

@@ -1,4 +1,4 @@
-AI Running Coach v13.4.1 — Race Day execution redesign — build 30401
+AI Running Coach v13.5.0 — Settings and Daily Check-in redesign — build 30500
 
 - Removes the stale Injury-only CSS `order` rules that were overriding the visible section numbers.
 - Injury/Rehab sections are now explicitly sorted by the number displayed in each section-number circle, so the current numbering is the source of truth for tile order.
@@ -1127,3 +1127,9 @@ v13.4.1 Race Day execution redesign
 - Race Day styling is scoped under #race and follows the approved Today-led teal Level-1/2/3 visual language.
 - Removes unsupported standalone race-day claims and clearly distinguishes target, prediction, uncertainty range, learned factors and temporary recovery context.
 - Keeps Today, Plan, Log, Progress, Recovery and Injury & Rehab implementations frozen except for the required global version/build display update.
+
+
+v13.5.0 Settings and Daily Check-in redesign
+- Settings and Daily Check-in presentation rebuilt using Today-led scoped visual hierarchy.
+- Existing settings/check-in IDs, calculations, validation, storage and rehabilitation logic preserved.
+- Approved Today, Plan, Log, Progress, Recovery, Injury & Rehab and Race Day implementations were not intentionally changed.
