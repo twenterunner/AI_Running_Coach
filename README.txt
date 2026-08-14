@@ -1,4 +1,4 @@
-AI Running Coach v12.3.8 — Serious Runner Plan — build 20308
+AI Running Coach v12.3.9 — Serious Runner Plan — build 20309
 
 Deployment
 ----------
@@ -815,3 +815,11 @@ v12.3.8 — Programme Timeline alignment and label fit
 - Phase names and week ranges are forced to a single line.
 - Phase label font size is dynamically reduced only when needed to fit the proportional phase width.
 - No timeline duration, colour logic, Today UI, or model/data-engine calculations changed.
+
+
+v12.3.9 — Programme Timeline phase-label fit
+- Fixed dynamic phase-label sizing being overridden by !important CSS.
+- Phase names and week ranges now receive inline !important font sizing based on the actual rendered segment width.
+- Added last-resort horizontal compression for very short proportional phases.
+- Removed NOW and VIEW W... badges from inside phase blocks; current/viewed state remains communicated by segment highlighting.
+- No timeline duration or demand-colour calculations changed.

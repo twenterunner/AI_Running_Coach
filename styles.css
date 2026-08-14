@@ -1011,3 +1011,32 @@ canvas{display:block;width:100%!important;max-width:100%;height:auto!important;m
  #plan .proportionalPhaseRail .phaseSegment b{font-size:6.5px!important}
  #plan .proportionalPhaseRail .phaseSegment small{font-size:5.5px!important}
 }
+
+
+/* PLAN TAB — v12.3.9 guaranteed phase-label fit */
+#plan .proportionalPhaseRail .phaseSegment{
+  padding-left:1px!important;
+  padding-right:1px!important;
+  gap:3px!important;
+}
+#plan .proportionalPhaseRail .phaseSegment b,
+#plan .proportionalPhaseRail .phaseSegment small{
+  width:100%!important;
+  max-width:100%!important;
+  white-space:nowrap!important;
+  overflow:hidden!important;
+  text-overflow:clip!important;
+  overflow-wrap:normal!important;
+  word-break:normal!important;
+  text-align:center!important;
+  transform-origin:center center!important;
+}
+#plan .proportionalPhaseRail .phaseSegment em{
+  display:none!important;
+}
+@media(max-width:390px){
+ #plan .proportionalPhaseRail .phaseSegment{
+   padding-left:0!important;
+   padding-right:0!important;
+ }
+}

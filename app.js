@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '12.3.8';
-  const BUILD = 20308;
+  const VERSION = '12.3.9';
+  const BUILD = 20309;
   const SCHEMA = 10330;
   const PRIMARY_STORAGE_KEY = 'arc_v10330_web';
   const MIRROR_STORAGE_KEY = 'arc_v10330_mirror';
@@ -2718,7 +2718,7 @@ function planTimelineHtml(viewWeek=currentWeek()){
  const maxAvg=Math.max(1,...phaseStats.map(g=>g.avgKm));
  phaseStats.forEach(g=>{const demand=.68*(g.avgKm/maxAvg)+.32*Math.min(1,g.qualityShare/.30);g.demand=demand;g.tone=demand>=.82?'peak':demand>=.64?'high':demand>=.44?'moderate':'low'});
  const milestones=[futureLong?{label:'Next key long run',value:`${fmtDate(futureLong.date)} · ${futureLong.type} · ${Number(futureLong.distance).toFixed(1)} km`}:null,peakLong?{label:'Peak long run',value:`${fmtDate(peakLong.date)} · ${Number(peakLong.distance).toFixed(1)} km`}:null,taperStart?{label:'Taper begins',value:`Week ${taperStart.week} · ${fmtDate(taperStart.date)}`}:null,{label:'Race day',value:`${fmtDate(state.setup.raceDate)} · ${Number(state.setup.raceDistance).toFixed(1)} km`}].filter(Boolean);
- return`<section class="planTimelineCard"><div class="phaseRail proportionalPhaseRail" role="img" aria-label="Programme phases sized by duration and coloured by planned training demand">${phaseStats.map(g=>`<div class="phaseSegment demand-${g.tone} ${current>=g.start&&current<=g.end?'active':''} ${viewWeek>=g.start&&viewWeek<=g.end&&viewWeek!==current?'viewed':''}" style="flex:${g.duration} 1 0" title="${esc(g.name)} · ${g.duration} week${g.duration===1?'':'s'} · ${g.avgKm.toFixed(1)} km/week average"><b>${esc(g.name)}</b><small>W${g.start}${g.end!==g.start?`–${g.end}`:''}</small>${current>=g.start&&current<=g.end?'<em>NOW</em>':''}${viewWeek>=g.start&&viewWeek<=g.end&&viewWeek!==current?`<em class="viewedLabel">VIEW W${viewWeek}</em>`:''}</div>`).join('')}</div><div class="phaseDemandLegend"><span><i class="low"></i>Lower</span><span><i class="moderate"></i>Moderate</span><span><i class="high"></i>High</span><span><i class="peak"></i>Peak demand</span></div><div class="timelineProgressRow"><span>Plan start</span><div class="timelineProgressTrack"><i style="width:${programmePct}%"></i>${viewWeek!==current?`<b style="left:${viewPct}%" aria-label="Viewed week ${viewWeek}"></b>`:''}</div><span>Race</span></div><div class="planMilestones">${milestones.map(m=>`<div><span class="milestoneDot"></span><small>${m.label}</small><b>${esc(m.value)}</b></div>`).join('')}</div></section>`;
+ return`<section class="planTimelineCard"><div class="phaseRail proportionalPhaseRail" role="img" aria-label="Programme phases sized by duration and coloured by planned training demand">${phaseStats.map(g=>`<div class="phaseSegment demand-${g.tone} ${current>=g.start&&current<=g.end?'active':''} ${viewWeek>=g.start&&viewWeek<=g.end&&viewWeek!==current?'viewed':''}" style="flex:${g.duration} 1 0" title="${esc(g.name)} · ${g.duration} week${g.duration===1?'':'s'} · ${g.avgKm.toFixed(1)} km/week average"><b>${esc(g.name)}</b><small>W${g.start}${g.end!==g.start?`–${g.end}`:''}</small></div>`).join('')}</div><div class="phaseDemandLegend"><span><i class="low"></i>Lower</span><span><i class="moderate"></i>Moderate</span><span><i class="high"></i>High</span><span><i class="peak"></i>Peak demand</span></div><div class="timelineProgressRow"><span>Plan start</span><div class="timelineProgressTrack"><i style="width:${programmePct}%"></i>${viewWeek!==current?`<b style="left:${viewPct}%" aria-label="Viewed week ${viewWeek}"></b>`:''}</div><span>Race</span></div><div class="planMilestones">${milestones.map(m=>`<div><span class="milestoneDot"></span><small>${m.label}</small><b>${esc(m.value)}</b></div>`).join('')}</div></section>`;
 }
 function planIntensityDistributionHtml(w){
  const sessions=state.plan.filter(p=>p.week===w&&!['Rest','Race Day'].includes(p.type)),rows=intensityGroups(sessions,'distance'),total=sum(rows.map(x=>Number(x.value)||0));
@@ -2731,16 +2731,27 @@ function planIntensityDistributionHtml(w){
 function fitProgrammeTimelineLabels(){
  const root=document.getElementById('raceTimeline'); if(!root)return;
  root.querySelectorAll('.proportionalPhaseRail .phaseSegment').forEach(seg=>{
-   const label=seg.querySelector('b'), range=seg.querySelector('small');
-   [label,range].forEach(el=>{
+   const available=Math.max(8,seg.clientWidth-4);
+   [seg.querySelector('b'),seg.querySelector('small')].forEach((el,idx)=>{
      if(!el)return;
-     el.style.whiteSpace='nowrap';
-     el.style.transform='none';
-     el.style.fontSize='';
-     let size=parseFloat(getComputedStyle(el).fontSize)||7;
-     while(el.scrollWidth>seg.clientWidth-6 && size>4.5){
-       size-=0.25;
-       el.style.fontSize=size+'px';
+     el.style.setProperty('white-space','nowrap','important');
+     el.style.setProperty('overflow','hidden','important');
+     el.style.setProperty('text-overflow','clip','important');
+     el.style.setProperty('max-width','100%','important');
+     el.style.setProperty('width','100%','important');
+     let size=idx===0?7:6;
+     el.style.setProperty('font-size',size+'px','important');
+     while(el.scrollWidth>available && size>3.5){
+       size-=0.2;
+       el.style.setProperty('font-size',size+'px','important');
+     }
+     // Last-resort horizontal compression for the very shortest programme blocks.
+     if(el.scrollWidth>available){
+       const scale=Math.max(.72,available/Math.max(1,el.scrollWidth));
+       el.style.setProperty('transform',`scaleX(${scale})`,'important');
+       el.style.setProperty('transform-origin','center center','important');
+     }else{
+       el.style.setProperty('transform','none','important');
      }
    });
  });
