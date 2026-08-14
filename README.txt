@@ -1,4 +1,4 @@
-AI Running Coach v13.6.0 — full GUI QA and reliability pass — build 30600
+AI Running Coach v13.6.1 — full GUI QA and reliability pass — build 30601
 
 - Removes the stale Injury-only CSS `order` rules that were overriding the visible section numbers.
 - Injury/Rehab sections are now explicitly sorted by the number displayed in each section-number circle, so the current numbering is the source of truth for tile order.
@@ -1134,7 +1134,7 @@ v13.5.2 Settings and Daily Check-in redesign
 - Existing settings/check-in IDs, calculations, validation, storage and rehabilitation logic preserved.
 - Approved Today, Plan, Log, Progress, Recovery, Injury & Rehab and Race Day implementations were not intentionally changed.
 
-v13.6.0 Full GUI QA and reliability pass
+v13.6.1 Full GUI QA and reliability pass
 -----------------------------------------
 - Fixed two Progress runtime errors that could stop dashboard rendering: removed a stale programmeBlocks/currentBlockName path and replaced a stale pred reference with the current prediction source.
 - Normalised the Progress programme timeline to the existing detailed phase model without changing training calculations.
@@ -1145,3 +1145,13 @@ v13.6.0 Full GUI QA and reliability pass
 - Automated browser checks covered Today, Plan, Log, Progress, Recovery, Injury & Rehab, Race Day and Settings; no page-level horizontal overflow or JavaScript render errors remained in the tested baseline state.
 - Scenario checks covered fresh onboarding, empty run history, invalid Settings input, manual-run modal opening, active injury creation, activation of a rehab plan, Daily Check-in opening/saving and check-in history creation.
 - No calculation, prediction, adaptation, recovery, injury/rehab, import, matching or storage-schema logic changed.
+
+v13.6.1 Bottom navigation visibility hardening — build 30601
+------------------------------------------------------------
+- Mobile primary navigation now uses five `minmax(0,1fr)` tracks so no tab can force another tab beyond the viewport.
+- The fixed bar is explicitly contained to the full viewport width, with zero horizontal margin/transform and safe-area-aware bottom padding.
+- Every mobile navigation button is constrained to its grid track; labels cannot expand the bar horizontally.
+- Main content reserves bottom space beneath the fixed navigation on every tab.
+- The More menu is anchored above the fixed navigation with safe-area clearance.
+- Adds `interactive-widget=resizes-content` to the viewport declaration for browsers that support keyboard-aware viewport resizing.
+- No training, prediction, adaptation, recovery, injury/rehab, race-day, import, storage or scoring calculation was changed.
