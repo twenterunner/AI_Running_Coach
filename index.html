@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#07111D"><title>AI Running Coach</title>
-<link rel="manifest" href="manifest.webmanifest?v=18300"><link rel="stylesheet" href="styles.css?v=18300-visual">
+<link rel="manifest" href="manifest.webmanifest?v=20000"><link rel="stylesheet" href="styles.css?v=20000-visual">
 <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png?v=10320">
 <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png?v=10320">
 <link rel="icon" href="favicon.ico?v=10320">
@@ -15,7 +15,7 @@
 <body>
 <a class="skipLink" href="#mainContent">Skip to main content</a>
 <header class="topbar">
-  <div class="brand"><img class="logo" src="icon-192.png?v=10320" alt="AI Running Coach logo"><div class="brand-copy"><h1>AI Running Coach</h1><p>Race-specific adaptive planning · v11.3.0 · build 18300</p></div></div>
+  <div class="brand"><img class="logo" src="icon-192.png?v=10320" alt="AI Running Coach logo"><div class="brand-copy"><h1>AI Running Coach</h1><p>Race-specific adaptive planning · v12.0.0 · build 20000</p></div></div>
   <button id="installBtn" class="install hidden">Install</button>
 </header>
 <nav id="nav" aria-label="Primary navigation"></nav>
@@ -104,7 +104,7 @@
 </section>
 
 <section id="plan" class="page">
-  <div class="sectionTitle"><div><h2>Training plan</h2><p>Tap any workout for the full prescription.</p></div></div>
+  <div class="sectionTitle"><div><span class="pageEyebrow">PROGRAMME</span><h2>Training plan</h2><p>Your week first. Open one day at a time for the full prescription.</p></div></div>
   <div class="weekNav"><button id="prevWeek">‹</button><button id="thisWeek">Current week</button><button id="nextWeek">›</button></div>
   <div id="weekHeader" class="weekHeader"></div>
   <div class="planPrimaryHead"><span>THIS WEEK</span><p>Your scheduled sessions come first. Tap a workout for targets, rationale and execution detail.</p></div>
@@ -121,7 +121,7 @@
 </section>
 
 <section id="runs" class="page">
-  <div class="sectionTitle"><div><h2>Run log</h2><p>Efficiency Factor, cardiac drift and completed-run details.</p></div><button id="manualRunBtn" class="primary small">+ Manual</button></div>
+  <div class="sectionTitle"><div><span class="pageEyebrow">TRAINING HISTORY</span><h2>Run log</h2><p>Import, review and understand what each run changes.</p></div><button id="manualRunBtn" class="primary small">+ Manual</button></div>
   <article class="panel importBox">
     <div><h3>Import run file</h3><p class="muted">Select a Garmin or Stryd FIT activity, or a detailed Stryd CSV. The run is analysed before saving.</p></div>
     <label class="filePick" for="activityFile">Choose FIT or CSV</label>
@@ -158,14 +158,14 @@
 
 
 <section id="injury" class="page">
-  <div class="sectionTitle"><div><h2>Injury</h2><p>Daily exercises, adaptive guidance and criteria-based return-to-running tracking.</p></div><button id="addInjuryBtn" class="primary small">+ Add injury</button></div>
+  <div class="sectionTitle"><div><span class="pageEyebrow">RETURN TO RUN</span><h2>Injury & rehab</h2><p>Current stage, today’s rehabilitation and criteria-based progression.</p></div><button id="addInjuryBtn" class="primary small">+ Add injury</button></div>
   <div id="injuryIntro"></div>
   <div id="injuryList"></div>
   <details class="panel modelDetails"><summary>How the adaptive rehabilitation coach works</summary><div class="guideGrid"><div><b>Daily prescription</b><p>Exercises are selected from the current stage and broad injury location. Dosage is guidance, not a substitute for an individual clinical programme.</p></div><div><b>Trajectory comparison</b><p>Your recovery score combines pain, stiffness, walking, function, confidence, impact and next-morning response, then compares it with the original expectation.</p></div><div><b>Criteria before dates</b><p>Stages advance when functional and symptom-response criteria are met. A date alone never clears running or sprinting.</p></div><div><b>Clinical boundary</b><p>The app does not diagnose injury grade or medical readiness. Severe, worsening, recurrent or persistent symptoms require assessment by a qualified clinician.</p></div></div></details>
 </section>
 
 <section id="recovery" class="page">
-  <div class="sectionTitle"><div><h2>Recovery</h2><p>Your current readiness first, followed by the evidence and trend behind it.</p></div></div>
+  <div class="sectionTitle"><div><span class="pageEyebrow">READINESS</span><h2>Recovery</h2><p>Today’s recovery conclusion first, then the evidence and trend behind it.</p></div></div>
   <div id="recoveryStatus" class="recoveryStatus"></div>
   <article class="panel readinessCenter">
     <div class="panelHead"><div><h3>Readiness</h3><p class="muted compact">Temporary recovery overlay — separate from the two learned pathways</p></div><div id="readinessBadge" class="evidenceBadge"></div></div>
@@ -199,7 +199,7 @@
   <article class="panel"><h3>Data</h3><div class="buttonRow"><button id="backupBtn">Download backup</button><label for="restoreFile" class="buttonLike">Restore backup</label><input id="restoreFile" type="file" accept=".json"><button id="undoRestoreBtn" type="button" class="secondary hidden">Undo last restore</button><button id="exportBtn">Export runs CSV</button><button id="resetBtn" class="danger">Reset app</button></div></article>
 </section>
 </main>
-<footer class="appFooter"><span>AI Running Coach</span><small>v11.3.0 · build 18300</small></footer>
+<footer class="appFooter"><span>AI Running Coach</span><small>v12.0.0 · build 20000</small></footer>
 
 <div id="modal" class="modal hidden" role="dialog" aria-modal="true" aria-label="AI Running Coach dialog" tabindex="-1"><div class="modalCard"><button id="closeModal" class="close" type="button" aria-label="Close dialog">×</button><div id="modalContent"></div></div></div>
 
@@ -228,5 +228,5 @@
     <button class="primary full" type="submit">Review and create my plan</button>
   </form>
 </div>
-<script src="app.js?v=18300-visual"></script>
+<script src="app.js?v=20000-visual"></script>
 </body></html>
