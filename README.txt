@@ -1,4 +1,4 @@
-AI Running Coach v12.2.1 — Today self-explanatory status tiles — build 20201
+AI Running Coach v12.2.2 — Today rehab/race refinement — build 20202
 
 Deployment
 ----------
@@ -725,3 +725,9 @@ v12.2.1
 - Pain/Injury tile wording explicitly identifies the body region/status and that the displayed value is the highest recent pain signal.
 - Removed a regressed 'remains secondary' phrase.
 - Model/data engines unchanged.
+
+v12.2.2
+- Daily rehab check-in button now directly calls openInjuryCheck() for the active rehab-plan injury; removed unreliable DOM-search navigation.
+- Coach Briefing phase line now shows the phase-specific race priority beside the phase name, e.g. Foundation · durable easy running and safe consistency.
+- Race Context now includes the model's existing central 70% finish-time range and matching pace range.
+- No prediction, rehab, readiness or training-model calculations changed.

@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '12.2.1';
-  const BUILD = 20201;
+  const VERSION = '12.2.2';
+  const BUILD = 20202;
   const SCHEMA = 10330;
   const PRIMARY_STORAGE_KEY = 'arc_v10330_web';
   const MIRROR_STORAGE_KEY = 'arc_v10330_mirror';
@@ -2437,9 +2437,13 @@ function todayLatestSignalCard(){
 }
 function todayRaceCard(engine,report){
  const remaining=raceTimeRemaining(),prob=engine.currentModel.provisional?null:Math.round(engine.currentModel.probability),gap=engine.pred-state.setup.targetTime;
+ const rangeLow=engine.currentModel.rangeLow,rangeHigh=engine.currentModel.rangeHigh,provisional=engine.currentModel.provisional;
+ const timeRange=`${fmtEstimate(rangeLow,provisional)}–${fmtEstimate(rangeHigh,provisional)}`;
+ const paceRange=`${paceEstimate(rangeLow,provisional)}–${paceEstimate(rangeHigh,provisional)}`;
  return`<section class="todayRunnerCard todayRaceCard">
    <div class="runnerSectionHead"><span class="runnerCardIcon">${todayPictogram('race')}</span><div><small>RACE CONTEXT</small><h3>${esc(state.setup.raceName)}</h3><p>${Number(state.setup.raceDistance).toFixed(1)} km · ${esc(report.race.phase)} phase</p></div><span class="runnerStatus miniValue ${todayMiniValueClass('raceTime',remaining.days)}">${remaining.label}</span></div>
-   <div class="raceMetrics"><span><small>TARGET</small><b>${fmtTime(state.setup.targetTime)}</b></span><span><small>CURRENT ESTIMATE</small><b>${fmtEstimate(engine.pred,engine.currentModel.provisional)}</b></span><span><small>TARGET CHANCE</small><b>${prob===null?'Building':prob+'%'}</b></span></div>
+   <div class="raceMetrics"><span><small>TARGET</small><b>${fmtTime(state.setup.targetTime)}</b></span><span><small>CURRENT ESTIMATE</small><b>${fmtEstimate(engine.pred,provisional)}</b></span><span><small>TARGET CHANCE</small><b>${prob===null?'Building':prob+'%'}</b></span></div>
+   <div class="raceRangeStrip"><div><small>LIKELY 70% TIME RANGE</small><b>${timeRange}</b></div><div><small>LIKELY 70% PACE RANGE</small><b>${paceRange}</b></div></div>
    ${todayBulletList([gap<=0?`${fmtTime(Math.abs(gap))} inside current target estimate`:`${fmtTime(gap)} outside current target estimate`,report.race.priority],'runnerBullets compactBullets')}
  </section>`;
 }
@@ -2517,7 +2521,7 @@ function consolidatedTodayCoachBriefing(p){
        <div>
          <small>DAILY DECISION</small>
          <h3>Coach Briefing</h3>
-         <p>${esc(report.race.phase)} phase · ${remaining.label} to ${esc(state.setup.raceName)}</p>
+         <p class="briefingPhase"><b>${esc(report.race.phase)} phase · ${esc(report.race.priority)}</b><span>${remaining.label} to ${esc(state.setup.raceName)}</span></p>
        </div>
      </div>
      <div class="briefingGauges">
@@ -2556,14 +2560,9 @@ function renderToday(){
    btn.setAttribute('aria-expanded',opening?'true':'false');
  }));
  document.querySelectorAll('#today [data-rehab-checkin]').forEach(btn=>btn.addEventListener('click',()=>{
-   showPage('injury');
-   requestAnimationFrame(()=>{
-     const target=document.querySelector('#injury [data-today-checkin],#injury #dailyCheckin,#injury .dailyCheckin,#injury [data-action="checkin"]');
-     if(target){
-       if(typeof target.click==='function'&&target.matches('button,[role="button"],a'))target.click();
-       else target.scrollIntoView({behavior:'smooth',block:'start'});
-     }
-   });
+   const injury=(state.injuries||[]).find(x=>x.id===state.activeInjuryPlanId);
+   if(injury)openInjuryCheck(injury);
+   else showPage('injury');
  }));
  document.querySelectorAll('#today [data-go]').forEach(btn=>btn.addEventListener('click',()=>showPage(btn.dataset.go)));
 }
