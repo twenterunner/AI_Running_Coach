@@ -1,3 +1,14 @@
+AI Running Coach v13.7.10 — Shoes performance regression fix — build 30710
+
+- Fixes a performance regression introduced by forward rehabilitation-distance integration into the Shoes engine.
+- Future rehabilitation shoe exposure is now calculated once per relevant app state and reused across shoe recommendations instead of rebuilding up to 120 rehabilitation days inside each shoe/workout scoring pass.
+- Planned shoe assignment lookup is indexed rather than repeatedly scanning the complete assignment array.
+- Automatic future-shoe assignments are skipped when their relevant state has not changed.
+- The hidden Shoes page no longer rebuilds its large lifecycle DOM while another tab is active; it refreshes fully when Shoes is opened.
+- Shoe recommendation, mileage, rehabilitation-distance, lifecycle and race-day logic are unchanged; this release changes computation reuse only.
+- Existing training, prediction, pathway, recovery, injury, rehabilitation and scoring functions are unchanged.
+- Repository remains flat.
+
 AI Running Coach v13.7.9 — race-distance shoe choice + rehab shoe forecasting — build 30709
 
 - Removes the redundant purchase-plan tile from the Shoes page; future purchases remain represented in lifecycle planning/graph and the add-shoe proposal flow.
