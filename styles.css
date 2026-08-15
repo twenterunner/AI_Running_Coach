@@ -4043,3 +4043,29 @@ body:has(#dashboard.progressPage.active),#mainContent:has(#dashboard.progressPag
 .shoeRaceNowCard p,.shoeRaceNowCard>span{margin:0;font-size:11px;line-height:1.4;color:var(--text-2)}
 .shoePurchaseInline{margin:10px 0 0;padding:11px 12px;border-radius:12px;background:rgba(61,214,198,.055);border:1px solid rgba(61,214,198,.12);font-size:12px;line-height:1.45}
 @media(max-width:430px){.shoeRaceNowGrid{grid-template-columns:1fr}.shoeRaceNowCard{padding:13px}.shoeRaceNowCard h4{font-size:16px}}
+
+
+/* v13.7.13 — auditable lifecycle-curve drivers + distinct physical-pair colours */
+#shoes .shoeLegendItem{display:inline-flex;align-items:center;gap:8px;min-width:0;font-size:14px;line-height:1.35}
+#shoes .shoeLegendSwatch{width:28px;height:4px;flex:0 0 28px;border-radius:4px;background:var(--shoe-color)}
+#shoes .shoeLegendSwatch.dotted{height:0;background:none;border-top:4px dotted var(--shoe-color)}
+#shoes .shoeLegendSwatch.race{height:0;background:none;border-top:5px solid var(--shoe-color);box-shadow:0 0 0 1px rgba(255,255,255,.12)}
+#shoes .shoeNewPairLine{stroke-dasharray:3 6;stroke-width:3.1;opacity:1}
+#shoes .shoeRaceStrategyLine{fill:none;stroke:var(--shoe-color);stroke-width:5;stroke-dasharray:10 6;stroke-linecap:round;stroke-linejoin:round}
+#shoes .shoeRaceStrategyPoint{fill:var(--card);stroke:var(--shoe-color);stroke-width:4}
+#shoes .shoeAllocationRationale{display:grid;gap:9px;margin-top:16px}
+#shoes .shoeAllocationRationaleHead{display:grid;gap:3px;padding:0 2px 4px}
+#shoes .shoeAllocationRationaleHead small{font-size:10px;font-weight:850;letter-spacing:.1em;color:var(--teal-2)}
+#shoes .shoeAllocationRationaleHead>b{font-size:16px;color:var(--text)}
+#shoes .shoeAllocationRationaleHead p{margin:0;font-size:12px;color:var(--muted)}
+#shoes .shoeAllocationEvent{display:grid;gap:5px;padding:12px 13px;background:rgba(7,18,26,.52);border:1px solid rgba(136,161,177,.13);border-left:4px solid var(--teal);border-radius:var(--r1)}
+#shoes .shoeAllocationEvent>div{display:flex;align-items:center;justify-content:space-between;gap:10px}
+#shoes .shoeAllocationEvent .shoeDriverTag{display:inline-flex;width:max-content;padding:4px 7px;border-radius:999px;background:rgba(61,214,198,.09);border:1px solid rgba(61,214,198,.16);font-size:10px;font-weight:850;color:var(--teal-2)}
+#shoes .shoeAllocationEvent time{font-size:11px;color:var(--muted)}
+#shoes .shoeAllocationEvent>b{font-size:14px;line-height:1.3;color:var(--text)}
+#shoes .shoeAllocationEvent p{margin:0;font-size:12px;line-height:1.5;color:var(--text-2)}
+#shoes .shoeAllocationEvent.driver-rehab-plan{border-left-color:var(--blue)}
+#shoes .shoeAllocationEvent.driver-rehab-plan .shoeDriverTag{color:#9fc3ff;background:rgba(103,167,255,.09);border-color:rgba(103,167,255,.18)}
+#shoes .shoeAllocationEvent.driver-shoe-rotation{border-left-color:var(--amber)}
+#shoes .shoeAllocationEvent.driver-shoe-rotation .shoeDriverTag{color:var(--amber);background:rgba(241,197,106,.08);border-color:rgba(241,197,106,.18)}
+@media(max-width:600px){#shoes .shoeChartLegend{display:grid;grid-template-columns:1fr;gap:8px}#shoes .shoeLegendItem{font-size:14px}#shoes .shoeAllocationEvent p{font-size:13px}#shoes .shoeAllocationEvent>b{font-size:15px}}

@@ -1,3 +1,13 @@
+AI Running Coach v13.7.13 — auditable shoe-curve drivers — build 30713
+
+- Shoe lifecycle graph now classifies material allocation/slope changes as Training plan, Rehab plan, or Shoe rotation.
+- Adds concise rationale cards below the graph explaining the date, affected physical pair, and why its planned mileage rate changes.
+- Every physical-pair curve now has its own legend entry, including all owned pairs, future training replacements and any future Race Day pair.
+- Uses a deliberately high-contrast curve palette so physical pairs are visually distinguishable; future/replacement/race line styles remain distinct as a second cue.
+- Graph remains based on solid logged mileage through today and dashed/dotted planned mileage from today through Race Day.
+- No training-plan, rehabilitation, prediction, pathway, recovery, injury or scoring calculation changed.
+- Schema remains 10400; repository remains flat.
+
 AI Running Coach v13.7.12 — startup render hotfix — build 30712
 
 - Fixes the blank app shell introduced in v13.7.10.
