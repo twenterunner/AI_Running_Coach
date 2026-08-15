@@ -3963,3 +3963,17 @@ body:has(#dashboard.progressPage.active),#mainContent:has(#dashboard.progressPag
  .shoeChartKey{font-size:13px}
  .shoeChartRaceDate{align-items:flex-start;flex-direction:column}.shoeChartRaceDate b{text-align:left}
 }
+
+/* v13.7.4 Shoes lifecycle graph — one plan-driven strategy through Race Day */
+.shoeProgrammeChart .shoeGrid text,.shoeProgrammeChart .xLab,.shoeProgrammeChart .yTitle{font-size:18px!important;font-weight:800!important;fill:var(--text-2)!important}
+.shoeProgrammeChart .shoeReplacementMarker text,.shoeProgrammeChart .shoeRaceTargetBand text,.shoeProgrammeChart .shoeNewPairLabel,.shoeProgrammeChart .shoeRaceStrategyLabel{font-size:16px!important;font-weight:900!important}
+.shoeRaceStrategyLine{stroke:var(--purple)!important;stroke-width:5!important;stroke-dasharray:11 5!important;opacity:1!important}
+.shoeRaceStrategyPoint{fill:var(--card);stroke:var(--purple);stroke-width:4}
+.shoeRaceStrategyLabel{fill:#d8caff}
+.shoeChartKey i.raceshoe{border-top:4px dashed var(--purple)}
+.shoeRaceTargetBand rect{fill:rgba(185,163,255,.10);stroke:rgba(185,163,255,.70);stroke-width:2;stroke-dasharray:6 5}
+.shoeRaceTargetBand text{fill:#d8caff!important}
+.shoeRaceStrategyCard{display:grid;gap:4px;padding:13px 14px;margin:10px 0 14px;background:linear-gradient(145deg,rgba(185,163,255,.10),rgba(61,214,198,.055));border:1px solid rgba(185,163,255,.26);border-radius:var(--r1)}
+.shoeRaceStrategyCard small{font-size:10px;font-weight:900;letter-spacing:.09em;color:#d8caff}.shoeRaceStrategyCard b{font-size:17px}.shoeRaceStrategyCard span{font-size:13px;color:var(--text-2)}.shoeRaceStrategyCard strong{font-size:13px;color:var(--teal-2)}.shoeRaceStrategyCard em{font-size:12px;font-style:normal;color:var(--muted)}
+.shoeChartKey{font-size:12px!important;line-height:1.35}.shoeLegendToggle{font-size:12px!important}.shoeGraphRationale>summary{font-size:15px!important}.shoeGraphRationale p,.shoeGraphRationale li{font-size:14px!important;line-height:1.58!important}
+@media(max-width:600px){.shoeProgrammeChart svg{min-height:390px!important}.shoeProgrammeChart .shoeGrid text,.shoeProgrammeChart .xLab,.shoeProgrammeChart .yTitle{font-size:17px!important}.shoeProgrammeChart .shoeReplacementMarker text,.shoeProgrammeChart .shoeRaceTargetBand text,.shoeProgrammeChart .shoeNewPairLabel,.shoeProgrammeChart .shoeRaceStrategyLabel{font-size:15px!important}.shoeRaceStrategyCard b{font-size:16px}.shoeRaceStrategyCard span,.shoeRaceStrategyCard strong{font-size:12px}.shoeChartKey{font-size:12px!important}.shoeLegendToggle{font-size:12px!important}}

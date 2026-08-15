@@ -1,3 +1,14 @@
+AI Running Coach v13.7.4 — race-day shoe strategy lifecycle graph — build 30704
+
+- Replaces the competing plan-driven vs usage-rate markers in the Shoes lifecycle graph with one plan-driven replacement rule.
+- The lifecycle chart now always shows the intended race-day shoe strategy, including a future race shoe that has not yet been purchased.
+- Race-day target mileage is shown as a right-edge Race Day target zone rather than a misleading programme-wide horizontal band.
+- Current shoe lines stop at their planned replacement; proposed replacement pairs start at 0 km and inherit only later workouts.
+- Proposed race-shoe familiarisation is plotted through the configured Race Day, with projected race-day mileage and target window stated above the graph.
+- Graph labels/axes use larger mobile-readable type and replacement wording is simplified to “Planned replacement”.
+- No training, prediction, recovery, injury, rehabilitation, pathway, scoring, plan-generation or import calculations changed.
+- Schema remains 10400. Repository remains flat.
+
 AI Running Coach v13.7.3 — shoe lifecycle chart race-date + target clarity — build 30703
 
 - Makes the Shoes lifecycle chart explicitly end at the configured race date and prints the full race-day date including year.
