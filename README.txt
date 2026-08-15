@@ -1,4 +1,4 @@
-AI Running Coach v13.7.11 — startup render hotfix — build 30711
+AI Running Coach v13.7.12 — startup render hotfix — build 30712
 
 - Fixes the blank app shell introduced in v13.7.10.
 - Root cause: the new planned-shoe assignment cache used a block-scoped declaration below the startup save/reconciliation call; cache invalidation therefore hit the temporal dead zone and stopped JavaScript before navigation/Today rendering.
@@ -1358,3 +1358,11 @@ v13.6.1 Bottom navigation visibility hardening — build 30601
 - The More menu is anchored above the fixed navigation with safe-area clearance.
 - Adds `interactive-widget=resizes-content` to the viewport declaration for browsers that support keyboard-aware viewport resizing.
 - No training, prediction, adaptation, recovery, injury/rehab, race-day, import, storage or scoring calculation was changed.
+
+v13.7.12 build 30712 — shoe-plan clarity and evidence update
+- Race-day recommendation now labels the physical pair explicitly as EXISTING or PROPOSED FUTURE.
+- Familiarity is incorporated into the integrated decision instead of emitting a separate "theoretically suitable / insufficient verified use" warning.
+- Shoe graph legend labels all owned, future training-replacement and future race-day pairs.
+- Rehab shoe-distance assumptions updated to 10:00/km walking and 6:30/km rehabilitation running; estimates remain Shoes-only.
+- Added an optional link to the live official ASICS NL neutral range before purchase. Offline catalogue/recommendation remains the baseline because cross-origin live catalogue scraping is not dependable for this static offline-capable app.
+- Shoe evidence hierarchy clarified: manufacturer profile -> observed physical-pair data -> model-derived workout/lifecycle/race-day decision.
