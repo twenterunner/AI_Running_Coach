@@ -1,3 +1,15 @@
+AI Running Coach v13.6.3 — simplified pictogram system — build 30603
+
+- Replaces the v13.6.2 stick-figure / pseudo-anatomical pictograms with simple symbolic SVGs.
+- No human stick figures are used.
+- Uses immediately recognisable symbols such as running shoe, heart/ECG, medical cross, warning/pain mark, flag, calendar, recovery arrow and load bars.
+- Preserves the existing semantic colour/status behaviour: icon geometry identifies the subject; inherited colour communicates status.
+- Workout-type pictograms remain SVG-based but use simple symbols rather than human figures.
+- Navigation pictograms are simplified for fast recognition at 20–24 px.
+- Only pictogram artwork and minimal icon-centering CSS changed.
+- No calculations, data, thresholds, wording, hierarchy, card layout, charts, interactions, navigation behaviour, foldouts or responsive logic changed.
+- Repository remains flat.
+
 AI Running Coach v13.6.2 — realistic pictogram/icon refinement — build 30602
 
 - Reworked the shared SVG pictogram family to be more immediately recognisable at mobile size.

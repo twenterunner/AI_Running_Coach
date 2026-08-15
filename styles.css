@@ -3783,12 +3783,12 @@ body:has(#dashboard.progressPage.active),#mainContent:has(#dashboard.progressPag
 }
 
 
-/* v13.6.2 pictogram refinement — geometry/optical alignment only.
-   Semantic status colours continue to inherit from the existing card/status rules. */
-.realisticUiIcon,.realisticPic{overflow:visible}
-.realisticUiIcon{transform:translateZ(0)}
-.todayPic.realisticPic{shape-rendering:geometricPrecision}
+
+
+/* v13.6.3 simple pictogram refinement — icon geometry/centering only.
+   Existing semantic/status colour rules remain authoritative. */
+.simpleUiIcon,.simplePic{overflow:visible;shape-rendering:geometricPrecision}
 #nav .navIcon svg,.moreNav .navIcon svg,.planWorkoutIcon .todayPic,
 .runnerCardIcon .todayPic,.statusRing .todayPic,.recoveryHeroIcon .todayPic,
 .raceDayHeroIcon .todayPic{display:block;margin:auto}
-.workoutTypeIcon .realisticUiIcon{width:20px;height:20px}
+.workoutTypeIcon .simpleUiIcon{width:20px;height:20px}
