@@ -1,3 +1,21 @@
+AI Running Coach v13.7.0 — complete Shoes lifecycle and race-day planning module — build 30700
+
+- Adds an offline-first serious-runner Shoes module inside More while preserving the five-item primary bottom navigation.
+- Adds additive schema 10400 structures: shoes, shoeUsage, plannedShoeAssignments and plannedShoePurchases. Existing schema-10330 data migrates without renaming or reinterpreting existing fields.
+- Mileage is ledger-derived from starting mileage, linked run usage, rehabilitation walking/running usage and explicit manual adjustments; no mutable total is used as source of truth.
+- Run edits, deletions and shoe changes propagate through the ledger without duplicate mileage. Retired shoes retain historical dependencies and stop appearing in recommendations.
+- Injury/Rehab check-ins can record the shoe used. Explicit rehab distance is used when entered; otherwise walking is estimated at 4.8 km/h and slow rehab running at 7.5 km/h. Estimated values are labelled and remain Shoes-only data.
+- Built-in local ASICS neutral catalogue covers current and recent GEL-NIMBUS, GEL-CUMULUS, NOVABLAST, SUPERBLAST, MEGABLAST, SONICBLAST, MAGIC SPEED, METASPEED SKY/EDGE/RAY, NOOSA TRI, GEL-PULSE, EVORIDE and related neutral models plus relevant TR variants. Stability lines such as GEL-KAYANO, GT-2000 and GT-1000 are not classified as neutral.
+- Official ASICS positioning is stored separately from app-derived practical suitability scores and recommendation logic. Unknown shoes remain supported through user-entered surface/role/cushioning/ride information.
+- Adds workout-specific recommendation profiles, rotation balancing, recent-use/wear penalties, race-shoe preservation and race-only filtering for Race/Race Day recommendations.
+- Adds cumulative shoe-mileage history, replacement ranges, future-plan usage forecasts, condition feedback and replacement timing based first on planned assignments and then recent actual usage.
+- Adds a race-day lifecycle planner that works backward from race day: desired condition → familiarisation exposure → suitable existing workouts → first use → purchase window.
+- Race-shoe readiness is explicitly separate from athlete race readiness. The module can recommend no purchase, familiarisation of an existing shoe, or a model-derived future ASICS purchase with a purchase window and projected race-day mileage.
+- Future auto-assignments are recalculated chronologically so projected wear and specialised-shoe preservation influence later recommendations without changing the training plan.
+- Adds compact Shoes integration to Today, expanded Plan workouts, FIT/CSV/manual run review, logged-run detail and Injury/Rehab check-ins. Existing training, prediction, pathway, recovery, injury and scoring engines remain unchanged.
+- Mobile layouts are constrained to the existing teal Level-1/2/3 visual system and avoid page-level horizontal scrolling.
+- Repository remains completely flat.
+
 AI Running Coach v13.6.7 — Rest pictogram clarification — build 30607
 
 - Replaces the previous ambiguous Rest pictogram with a simple crescent-moon + Z/sleep symbol.
