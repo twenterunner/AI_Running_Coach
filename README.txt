@@ -1,3 +1,12 @@
+AI Running Coach v13.7.8 — proposed purchase catalogue + rehab-day shoe planning — build 30708
+
+- Add Running Shoe now lists every current lifecycle proposal in one dropdown: training replacements and the dedicated Race Day pair, not only saved race purchases.
+- Selecting a proposal pre-fills its ASICS model/generation and links the actual purchased pair to that proposal. Buying a different shoe remains supported and immediately recalculates the future rotation around what is actually owned.
+- Race Day planning includes a Future Purchases view covering proposed training replacements as well as the Race Day pair, with purchase timing, purpose and rationale.
+- Rehabilitation days that prescribe walking or running now show a Shoe selector in Today’s rehab focus and in the expanded 7-day rehabilitation calendar. The planned rehab shoe is copied into the daily check-in by default and remains changeable there.
+- Rehab shoe planning is equipment-only and does not alter injury stage, rehabilitation prescription, readiness, load, pathway or race prediction logic.
+- Schema remains 10400; repository remains flat.
+
 AI Running Coach v13.7.7 — shoe-plan synchronization and graph clarity — build 30707
 
 Changes in v13.7.7:
