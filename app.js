@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '13.7.30';
-  const BUILD = 30730;
+  const VERSION = '13.7.31';
+  const BUILD = 30731;
   const SCHEMA = 10400;
   const PRIMARY_STORAGE_KEY = 'arc_v10400_web';
   const MIRROR_STORAGE_KEY = 'arc_v10400_mirror';
@@ -5214,7 +5214,7 @@ function openInjuryCheck(i,existing=null){
  const runStatusField=$('icRunStatus'),runMinutesField=$('icRun'),runPainField=$('icRunPain'),gaitField=$('icGait'),walkMinutesField=$('icWalkMinutes'),locomotionField=$('icLocomotion'),exerciseField=$('icRehabExercises'),stretchField=$('icStretchGoal'),strengthField=$('icBridge'),impactField=$('icHop'),worseField=$('icWorse'),responseField=$('icResponse'),consistencyBox=$('icConsistency'),dateField=$('icDate');
  let activePlan=initialPlan,activeScheduled=initialScheduled,syncing=false;
  const showBlock=(id,show)=>{const el=$(id);if(el)el.classList.toggle('hidden',!show)};
- const applyScheduledQuestions=(date,preserve=true)=>{activePlan=planForDate(date);activeScheduled=scheduledMeta(activePlan);const planItems=(activePlan.items||[]).map(x=>`<li>${esc(x)}</li>`).join('');const plannedRehab=plannedRehabShoeForDay(i,activePlan);if($('icRehabShoe')&&plannedRehab)$('icRehabShoe').value=plannedRehab;$('icScheduledPlan').innerHTML=`<b>Plan for ${esc(fmtDate(date))}: ${esc(activePlan.title)}</b>${planItems?`<ul>${planItems}</ul>`:'<p>No rehabilitation activity is scheduled.</p>'}${activePlan.stretchGoalOffered===true?`<p><b>Optional progression:</b> ${esc(activePlan.stretchGoal||'')}</p>`:''}<p class="muted compact">This is the exact prescription shown on this date's seven-day plan card.</p>`;
+ const applyScheduledQuestions=(date,preserve=true)=>{activePlan=planForDate(date);activeScheduled=scheduledMeta(activePlan);const planItems=(activePlan.items||[]).map(x=>`<li>${esc(x)}</li>`).join('');const plannedRehab=plannedRehabShoeForDay(i,activePlan),shoeField=$('icRehabShoe');if(shoeField&&plannedRehab&&(!preserve||!shoeField.value))shoeField.value=plannedRehab;$('icScheduledPlan').innerHTML=`<b>Plan for ${esc(fmtDate(date))}: ${esc(activePlan.title)}</b>${planItems?`<ul>${planItems}</ul>`:'<p>No rehabilitation activity is scheduled.</p>'}${activePlan.stretchGoalOffered===true?`<p><b>Optional progression:</b> ${esc(activePlan.stretchGoal||'')}</p>`:''}<p class="muted compact">This is the exact prescription shown on this date's seven-day plan card.</p>`;
   showBlock('icExerciseExecutionBlock',activeScheduled.exercisePlanned);showBlock('icWalkingExecutionBlock',activeScheduled.walkingPlanned);showBlock('icStretchExecutionBlock',activeScheduled.stretchPlanned);showBlock('icStrengthToleranceBlock',activeScheduled.strengthPlanned);showBlock('icImpactToleranceBlock',activeScheduled.impactPlanned);showBlock('icRunningSection',activeScheduled.runningPlanned);
   if(!activeScheduled.exercisePlanned)exerciseField.value='not_planned';else if(exerciseField.value==='not_planned')exerciseField.value='';
   if(!activeScheduled.walkingPlanned)locomotionField.value='not_planned';else if(locomotionField.value==='not_planned')locomotionField.value='';
@@ -5301,7 +5301,7 @@ function openInjuryCheck(i,existing=null){
  stretchField.addEventListener('change',()=>normalizeCheckIn('stretch'));
  worseField.addEventListener('change',()=>normalizeCheckIn('worse'));
  responseField.addEventListener('change',()=>normalizeCheckIn('response'));
- dateField.addEventListener('change',()=>{applyScheduledQuestions(dateField.value);normalizeCheckIn('date')});
+ dateField.addEventListener('change',()=>{applyScheduledQuestions(dateField.value,false);normalizeCheckIn('date')});
  applyScheduledQuestions(dateField.value);
  normalizeCheckIn('initial');
  $('saveCheck').onclick=()=>{applyScheduledQuestions(dateField.value);normalizeCheckIn('save');let runStatus=activeScheduled.runningPlanned?runStatusField.value:'not_planned',runMinutes=nullableNumber(runMinutesField.value),rehabExerciseStatus=activeScheduled.exercisePlanned?(exerciseField.value||null):'not_planned',locomotionStatus=activeScheduled.walkingPlanned?(locomotionField.value||null):'not_planned',stretchGoalStatus=activeScheduled.stretchPlanned?(stretchField.value||null):'not_planned';
@@ -5638,31 +5638,17 @@ function shoePortfolioAllocationProfileScore(profile,plan){
  return total?Math.round(weighted/total):50;
 }
 function plannedReplacementEvents(){
- const base=(state.shoes||[]).filter(s=>s.status!=='retired').map(shoePlannedReplacementEvent).filter(Boolean).sort((a,b)=>a.date.localeCompare(b.date));
- // Portfolio optimisation: replacement slots are not planned independently. When two purchases would
- // fall close together, test whether the first new pair can safely absorb compatible mileage and delay
- // the second purchase without compromising workout fit or Race Day lifecycle.
- const out=base.map(e=>({...e,originalDate:e.date,divertedPlanIds:[],optimisation:null})),raceDate=state.setup?.raceDate||'9999-12-31';
- for(let i=0;i<out.length-1;i++){
-  const first=out[i],second=out[i+1];if(!first.replacement||!second.replacement)continue;
-  const p1=plannedTrainingPurchaseDate(first),p2=plannedTrainingPurchaseDate(second);if(!p1||!p2)continue;
-  const gap=(dte(p2)-dte(p1))/DAY;if(gap<0||gap>49)continue;
-  const firstProfile=first.replacement,secondProfile=shoeProfileForShoe(second.shoe),threshold=Number(shoeForecast(second.shoe).low)||Number(second.km)||0;
-  let projected=shoeMileage(second.shoe),diverted=0,lastDate=second.date,ids=[];
-  const plans=(state.plan||[]).filter(p=>p.type!=='Rest'&&p.date>=first.date&&p.date<=raceDate&&plannedAssignment(p.id)?.shoeId===second.shoe.id).slice().sort((a,b)=>a.date.localeCompare(b.date));
-  for(const plan of plans){
-   const fit1=shoePortfolioAllocationProfileScore(firstProfile,plan),fit2=shoePortfolioAllocationProfileScore(secondProfile,plan),km=Math.max(0,Number(plan.distance)||0);
-   // Only move mileage when the first replacement is a genuinely good substitute, not merely to spread purchases.
-   if(fit1>=72&&fit1>=fit2-8&&projected+km>=threshold-35){ids.push(plan.id);diverted+=km;continue}
-   projected+=km;if(projected>=threshold){lastDate=plan.date;break}
-   lastDate=plan.date;
-  }
-  const delay=(dte(lastDate)-dte(second.date))/DAY;
-  if(diverted>=12&&delay>=21){
-   second.date=lastDate;second.km=projected;second.method='portfolio-optimised';second.optimisation={absorbedBy:`ASICS ${firstProfile.family} ${firstProfile.version}`,divertedKm:diverted,delayDays:Math.round(delay),originalDate:second.originalDate};first.divertedPlanIds.push(...ids);
-  }
- }
- return out.sort((a,b)=>a.date.localeCompare(b.date));
+ // A physical pair is replaced at the first projected crossing of its conservative
+ // service-life threshold. Do not postpone the handover merely to consolidate purchases:
+ // workout allocation may optimise across the rotation, but physical-pair wear is a hard boundary.
+ const events=(state.shoes||[]).filter(s=>s.status!=='retired').map(shoePlannedReplacementEvent).filter(Boolean).map(e=>({
+  ...e,
+  originalDate:e.date,
+  divertedPlanIds:[],
+  optimisation:null,
+  lifecycleBoundary:true
+ }));
+ return events.sort((a,b)=>a.date.localeCompare(b.date));
 }
 function raceDayShoeTargetHtml(){const plan=raceShoePlan();if(plan.status==='no-race')return'';const proposed=plan.purchaseNeeded,shoe=proposed?null:plan.preferred,profile=proposed?plan.profile:(shoe?shoeProfileForShoe(shoe):null),window=plan.targetWindow||plan.condition?.opt;if(!profile||!window)return'';const name=shoe?shoeDisplayName(shoe):`ASICS ${profile.family} ${profile.version}`,projected=proposed?Math.round(plan.projectedNew||0):Math.round(plan.condition?.projected||0),familiarisation=plan.famSessions?.length||0;return`<article class="shoeRaceTarget"><small>${proposed?'PROPOSED FUTURE RACE-DAY SHOE':'EXISTING RACE-DAY SHOE'}</small><h4>${esc(name)}</h4><div class="shoeRaceTargetMetrics"><div><span>Ownership</span><b>${proposed?'Proposed purchase':'Owned now'}</b></div><div><span>Race-day target</span><b>${Math.round(window.minKm)}–${Math.round(window.maxKm)} km</b></div><div><span>Planned Race Day mileage</span><b>~${projected} km</b></div><div><span>Planned pre-race use</span><b>${familiarisation?`${familiarisation} selected session${familiarisation===1?'':'s'}`:'Existing use is sufficient'}</b></div></div></article>`}
 function shoeChartDate(value){if(!value)return '—';const d=dte(value);return d.toLocaleDateString(undefined,{day:'numeric',month:'short',year:'numeric'})}
@@ -5691,14 +5677,14 @@ function shoeProgrammeMileageChartHtml(){
  const enabled=new Set(shoes.map(s=>s.id));
  const raceDate=state.setup?.raceDate||iso(today()),todayStr=iso(today()),programStart=state.setup?.planStart||todayStr,rawEvents=plannedReplacementEvents().filter(e=>e.date<=raceDate),eventByShoe=new Map(rawEvents.map(e=>[e.shoe.id,e]));
  const divertedAwayByShoe=new Map();rawEvents.forEach(e=>{(e.divertedPlanIds||[]).forEach(planId=>{const p=(state.plan||[]).find(x=>x.id===planId),originalShoeId=p?plannedAssignment(p.id)?.shoeId:null;if(originalShoeId&&originalShoeId!==e.shoe.id){const set=divertedAwayByShoe.get(originalShoeId)||new Set();set.add(planId);divertedAwayByShoe.set(originalShoeId,set)}})});
- const series=shoes.filter(s=>enabled.has(s.id)).map(s=>{const physicalStart=shoePairStartDate(s),chartStart=physicalStart>programStart?physicalStart:programStart,actual=shoeActualProgrammeSeries(s,chartStart,todayStr).filter(p=>p.date>=physicalStart),divertedAway=divertedAwayByShoe.get(s.id)||new Set(),rawPlanned=shoePlannedMileageSeries(s).filter(p=>p.date>=physicalStart&&!divertedAway.has(p.planId)),event=eventByShoe.get(s.id),planned=event?rawPlanned.filter(p=>p.date<=event.date):rawPlanned;return{shoe:s,physicalStart,actual,planned}});
+ const series=shoes.filter(s=>enabled.has(s.id)).map(s=>{const physicalStart=shoePairStartDate(s),chartStart=physicalStart>programStart?physicalStart:programStart,actual=shoeActualProgrammeSeries(s,chartStart,todayStr).filter(p=>p.date>=physicalStart),divertedAway=divertedAwayByShoe.get(s.id)||new Set(),rawPlanned=shoePlannedMileageSeries(s).filter(p=>p.date>=physicalStart&&!divertedAway.has(p.planId)),event=eventByShoe.get(s.id),forecast=shoeForecast(s),limit=Math.max(shoeMileage(s),Number(forecast.low)||0);let planned=[];for(const p of rawPlanned){if(Number(p.km)<=limit+.001){planned.push(p);continue}const prev=planned.at(-1);if(prev&&Number(prev.km)<limit&&Number(p.km)>Number(prev.km)){const ratio=(limit-Number(prev.km))/(Number(p.km)-Number(prev.km)),t0=dte(prev.date).getTime(),t1=dte(p.date).getTime(),date=iso(new Date(t0+(t1-t0)*clamp(ratio,0,1)));planned.push({...p,date,km:limit,lifecycleCap:true})}break}if(event)planned=planned.filter(p=>p.date<=event.date||p.lifecycleCap);return{shoe:s,physicalStart,actual,planned}});
  const raceLifecycle=raceShoePlan(),targetWindow=raceLifecycle?.targetWindow||raceLifecycle?.condition?.opt||null;
  const replacementSeries=rawEvents.filter(e=>enabled.has(e.shoe.id)&&e.replacement).flatMap(e=>{
   const firstPurchaseDate=plannedTrainingPurchaseDate(e),usageEvents=[];
   (state.plan||[]).filter(p=>p.type!=='Rest'&&p.date>e.date&&p.date<=raceDate).forEach(p=>{const assigned=plannedAssignment(p.id)?.shoeId;if(assigned!==e.shoe.id&&!e.divertedPlanIds?.includes(p.id))return;usageEvents.push({date:p.date,deltaKm:Number(p.distance)||0,type:p.type,driver:'training',portfolioDiverted:e.divertedPlanIds?.includes(p.id)})});
   futureRehabShoeUsage(e.shoe.id,null).filter(x=>x.date>e.date&&x.date<=raceDate).forEach(x=>usageEvents.push({date:x.date,deltaKm:Number(x.distanceKm)||0,type:'Rehab',driver:'rehab'}));
   usageEvents.sort((a,b)=>a.date.localeCompare(b.date)||(a.driver==='training'?-1:1));
-  const profile=e.replacement||replacementProfileForShoe(e.shoe),retireKm=Math.max(250,Number(profile?.typicalReplacementLowKm)||Number(e.shoe?.replacementRangeKm?.low)||550),out=[];
+  const profile=e.replacement||replacementProfileForShoe(e.shoe),profileLow=Number(profile?.typicalReplacementLowKm)||550,userLow=Number(e.shoe?.replacementRangeKm?.low),retireKm=Math.max(250,Math.min(Number.isFinite(userLow)&&userLow>0?userLow:profileLow,Number(profile?.typicalReplacementHighKm)||profileLow*1.4)),out=[];
   let generation=1,purchaseDate=firstPurchaseDate,pts=[{date:purchaseDate,km:0,purchase:true,driver:'rotation'}],km=0;
   if(purchaseDate<e.date)pts.push({date:e.date,km:0,ready:true,driver:'rotation'});
   const finishGeneration=(endDate,reason='wear')=>{if(pts.at(-1)?.date!==endDate)pts.push({date:endDate,km,driver:reason});out.push({event:{...e,replacement:profile},purchaseDate,points:pts,finalKm:km,generation,retireKm});};
