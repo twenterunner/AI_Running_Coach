@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '13.6.3';
-  const BUILD = 30603;
+  const VERSION = '13.6.4';
+  const BUILD = 30604;
   const SCHEMA = 10330;
   const PRIMARY_STORAGE_KEY = 'arc_v10330_web';
   const MIRROR_STORAGE_KEY = 'arc_v10330_mirror';
@@ -2334,14 +2334,44 @@ function planTinyIcon(kind){
  };
  return`<svg class="uiIcon planTinyIcon" viewBox="0 0 24 24" aria-hidden="true">${paths[kind]||paths.distance}</svg>`;
 }
+function runTypePictogram(type,compact=false){
+ const t=String(type||'Easy');
+ const icons={
+  'Rest':'<path class="picBase" d="M7 42h50M14 42V27h36v15M20 27v-8M44 27v-8"/>',
+  'Recovery':'<path class="picBase" d="M18 31a14 14 0 1 0 4-10"/><path class="picAccent" d="M18 14v12h12"/><path class="picGood" d="M36 25c3-5 11-3 11 3 0 7-11 13-11 13S25 35 25 28c0-6 8-8 11-3z"/>',
+  'Shakeout':'<path class="picBase" d="M12 38c8 0 14-4 20-15l7 7c3 3 7 4 13 4v10H20c-5 0-8-2-8-6z"/><path class="picAccent" d="M19 19c4-4 9-5 14-3M16 14c6-6 14-8 21-5"/>',
+  'Easy':'<path class="picBase" d="M10 39c9 0 16-5 23-18l7 7c3 3 7 5 14 5v11H19c-6 0-9-2-9-5z"/><path class="picAccent" d="M26 29l7 5M19 34l8 6"/>',
+  'Easy + strides':'<path class="picBase" d="M10 39c9 0 16-5 23-18l7 7c3 3 7 5 14 5v11H19c-6 0-9-2-9-5z"/><path class="picAccent" d="M5 20h12M3 26h13M26 29l7 5"/>',
+  'Hills':'<path class="picBase" d="M7 47l14-24 8 11 8-17 20 30"/><path class="picAccent" d="M16 43l7-8 5 5 7-10"/><path class="picGood" d="M46 20h8v8"/>',
+  'Fartlek':'<path class="picBase" d="M8 44h48"/><path class="picAccent" d="M10 38h8V25h8v13h8V18h8v20h12"/><path class="picGood" d="M14 17h8M34 11h8"/>',
+  'Threshold':'<path class="picBase" d="M8 33h11l5-12 9 24 7-16 5 4h11"/><path class="picAccent" d="M13 15h38"/><path class="picGood" d="M46 11l5 4-5 4"/>',
+  'Threshold intervals':'<path class="picBase" d="M7 44h50"/><path class="picAccent" d="M9 37h8V20h8v17h8V20h8v17h8V20h8"/><path class="picGood" d="M10 14h14M34 14h14"/>',
+  'VO₂max intervals':'<path class="picBase" d="M31 17v29M31 22c-7-8-16-5-17 5-1 11 7 18 17 19M33 22c7-8 16-5 17 5 1 11-7 18-17 19"/><path class="picAccent" d="M24 14l7 8 7-8"/><path class="picGood" d="M9 10h12M43 10h12"/>',
+  'Race-pace intervals':'<path class="picBase" d="M10 44h44M13 35h8V22h8v13h8V22h8v13h8"/><path class="picAccent" d="M48 8v16M48 9h10l-3 4 3 4H48"/>',
+  'Repetition':'<path class="picBase" d="M10 45h44"/><path class="picAccent" d="M12 35l8-10 8 10 8-10 8 10 8-10"/><path class="picGood" d="M12 17h40"/>',
+  'Steady aerobic':'<path class="picBase" d="M8 38h48"/><path class="picAccent" d="M10 30c9-8 18-8 27 0s14 8 19 0"/><path class="picGood" d="M14 17h36"/>',
+  'Medium-long':'<path class="picBase" d="M9 40c9 0 16-5 23-18l7 7c3 3 7 5 15 5v10H18c-6 0-9-2-9-4z"/><path class="picAccent" d="M7 52h36M46 52h3M53 52h3"/>',
+  'Progression':'<path class="picBase" d="M8 47h48"/><path class="picAccent" d="M11 42V34h9v8M27 42V27h9v15M43 42V18h9v24"/><path class="picGood" d="M12 20l12-5 11 2 16-9"/>',
+  'Long run':'<circle class="picBase" cx="31" cy="31" r="21"/><path class="picAccent" d="M31 18v14l10 6"/><path class="picGood" d="M45 12h8v8"/><path class="picBase" d="M12 51h38"/>',
+  'Specific long run':'<circle class="picBase" cx="28" cy="31" r="20"/><path class="picAccent" d="M28 18v13l9 6"/><path class="picGood" d="M47 47V18M47 19h10l-3 4 3 4H47"/>',
+  'Race rehearsal':'<circle class="picBase" cx="27" cy="32" r="18"/><path class="picAccent" d="M27 21v11l8 5"/><path class="picGood" d="M45 45V16M45 17h12l-3 4 3 4H45"/><path class="picBase" d="M22 9h10"/>',
+  'Half-marathon-specific':'<path class="picBase" d="M10 44h44M15 37V22h8v15M28 37V17h8v20M41 37V12h8v25"/><path class="picAccent" d="M11 12h12l-3 4 3 4H11z"/><path class="picGood" d="M51 9v10"/>',
+  'Marathon-specific':'<path class="picBase" d="M9 44h46M14 37V28h8v9M27 37V22h8v15M40 37V15h8v22"/><path class="picAccent" d="M49 10v17M49 11h9l-3 4 3 4h-9"/><path class="picGood" d="M12 16h11"/>',
+  'Intervals':'<path class="picBase" d="M8 44h48"/><path class="picAccent" d="M10 37h8V18h8v19h8V18h8v19h8V18h6"/><path class="picGood" d="M12 12h12M32 12h12"/>',
+  'Tempo':'<path class="picBase" d="M8 38h48"/><path class="picAccent" d="M10 31h10l4-8 7 16 6-11 5 3h12"/><path class="picGood" d="M14 17h36"/>',
+  'Fitness assessment':'<rect class="picBase" x="14" y="10" width="36" height="44" rx="4"/><path class="picAccent" d="M23 25h18M23 34h12M23 43h16"/><path class="picGood" d="M39 34l4 4 8-10"/><path class="picBase" d="M25 10V7h14v3"/>',
+  'Marathon':'<path class="picBase" d="M10 42h44M15 35h8V26h8v9M36 35V19h8v16"/><path class="picAccent" d="M47 13v17M47 14h11l-3 4 3 4H47"/>',
+  'Race':'<path class="picBase" d="M18 54V9M19 11h30l-7 10 7 10H19"/><path class="picAccent" d="M20 12h8v8h-8M28 20h8v9h-8M36 12h8v8h-8"/>',
+  'Race Day':'<path class="picBase" d="M17 55V8M18 10h32v24H18"/><path class="picAccent" d="M19 11h8v8h-8M27 19h8v8h-8M35 11h8v8h-8M43 19h6v8h-6"/><path class="picGood" d="M13 55h42"/>'
+ };
+ const raw=icons[t]||icons[TYPE_ALIASES[t]]||icons['Easy'];
+ if(compact){
+   return `<svg class="uiIcon runTypeCompact" viewBox="0 0 64 64" aria-hidden="true">${raw.replaceAll('class="picBase"','class="rtBase"').replaceAll('class="picAccent"','class="rtAccent"').replaceAll('class="picGood"','class="rtGood"')}</svg>`;
+ }
+ return `<svg class="todayPic simplePic runTypePic" viewBox="0 0 64 64" aria-hidden="true">${raw}</svg>`;
+}
 function planWorkoutPictogram(type){
- const t=String(type||'').toLowerCase();
- if(/rest/.test(t))return todayPictogram('recovery');
- if(/race/.test(t))return todayPictogram('race');
- if(/recovery|shakeout/.test(t))return todayPictogram('recovery');
- if(/long|progression/.test(t))return todayPictogram('shoe');
- if(/interval|hill|fartlek|tempo|threshold|marathon-specific|half-marathon-specific|vo₂|race-pace|assessment/.test(t))return todayPictogram('training');
- return todayPictogram('shoe');
+ return runTypePictogram(type,false);
 }
 function planWorkoutStructureHtml(p){
  if(!p||p.type==='Rest')return'';
@@ -2390,8 +2420,7 @@ function coachVisualIcon(kind){
  return icons[kind]||icons.coach;
 }
 function workoutTypeIcon(type){
- const cls=workoutTypeClass(type);
- return uiIcon(cls==='quality'?'quality':cls==='threshold'?'threshold':cls==='long'?'long':cls==='recovery'?'recovery':cls==='rest'?'rest':cls==='race'?'race':'easy');
+ return runTypePictogram(type,true);
 }
 function workoutTypeClass(type){
  const t=String(type||'').toLowerCase();
@@ -4847,10 +4876,19 @@ function rehabTodayFocusHtml(i,p){
 }
 
 function injuryTrajectorySvg(i,p){
- const W=720,H=285,left=8,right=8,top=30,bottom=58,cw=W-left-right,ch=H-top-bottom,horizon=Math.max(7,p.nominalTotal,p.elapsed+p.remaining),x=d=>left+clamp(d/horizon,0,1)*cw,y=v=>top+(100-clamp(v,0,100))/100*ch,nominalPath=`M ${x(0)} ${y(0)} L ${x(p.nominalTotal)} ${y(100)}`;
- const phaseFractions=[0,.12,.28,.46,.64,.82,1],phaseX=f=>left+clamp(f,0,1)*cw,phaseRects=INJURY_STAGES.map((st,n)=>{const x0=phaseX(phaseFractions[n]),x1=phaseX(phaseFractions[n+1]),w=Math.max(0,x1-x0);return`<rect class="phaseBand phase${n}" x="${x0}" y="${top}" width="${w}" height="${ch}"/><text class="phaseNumber" x="${x0+w/2}" y="${top+12}" text-anchor="middle">${n+1}</text><text class="phaseLabel" x="${x0+w/2}" y="${top+24}" text-anchor="middle">${esc(st.name)}</text>`;}).join(''),phaseLines=phaseFractions.slice(1,-1).map(f=>`<line class="phaseBoundary" x1="${phaseX(f)}" y1="${top}" x2="${phaseX(f)}" y2="${top+ch}"/>`).join('');
- const pts=(p.checks||[]).map((c,idx)=>{const score=injuryCompletionForChecks(i,p.checks.slice(0,idx+1),p.diag,nullableNumber(i.initialPain),nullableNumber(i.initialWalkPain));return{day:Math.max(0,Math.round((dte(c.date)-dte(i.date))/DAY)),score,date:c.date};}).filter(q=>Number.isFinite(q.score));if(!pts.length&&Number.isFinite(p.completion))pts.push({day:p.elapsed,score:p.completion,date:iso(today())});const observed=pts.map((q,n)=>`${n?'L':'M'} ${x(q.day)} ${y(q.score)}`).join(' '),currentMarker=`<line class="currentDateLine" x1="${x(p.elapsed)}" y1="${top}" x2="${x(p.elapsed)}" y2="${top+ch}"/><text class="currentDateLabel" x="${x(p.elapsed)}" y="${H-36}" text-anchor="middle">Today</text>`;
- return `<div class="injuryTrajectoryWrap"><svg class="injuryTrajectory" viewBox="0 0 ${W} ${H}" role="img" aria-label="Observed rehabilitation completion, nominal recovery and rehabilitation phases">${phaseRects}${phaseLines}<line x1="${left}" y1="${y(25)}" x2="${W-right}" y2="${y(25)}"/><line x1="${left}" y1="${y(50)}" x2="${W-right}" y2="${y(50)}"/><line x1="${left}" y1="${y(75)}" x2="${W-right}" y2="${y(75)}"/>${currentMarker}<path class="nominalLine" d="${nominalPath}"/><path class="actualLine" d="${observed}"/>${pts.map(q=>`<circle cx="${x(q.day)}" cy="${y(q.score)}" r="5"><title>${fmtDate(q.date)} · ${q.score}%</title></circle>`).join('')}<text x="${left}" y="${H-12}">Injury</text><text x="${W-right}" y="${H-12}" text-anchor="end">Full unrestricted training</text><text x="${left+4}" y="${top+28}">Completion %</text></svg><div class="injuryTrajectoryLegend"><span class="actual">Observed completion</span><span class="nominal">Nominal recovery</span><span class="phase">Recovery phases</span></div></div>`;
+ const W=720,H=318,left=8,right=8,labelBand=54,top=62,bottom=58,cw=W-left-right,ch=H-top-bottom,horizon=Math.max(7,p.nominalTotal,p.elapsed+p.remaining),x=d=>left+clamp(d/horizon,0,1)*cw,y=v=>top+(100-clamp(v,0,100))/100*ch;
+ const phaseFractions=[0,.12,.28,.46,.64,.82,1],phaseX=f=>left+clamp(f,0,1)*cw;
+ const nominalPath=`M ${phaseX(0)} ${y(0)} L ${phaseX(1)} ${y(100)}`;
+ const phaseRects=INJURY_STAGES.map((st,n)=>{
+   const x0=phaseX(phaseFractions[n]),x1=phaseX(phaseFractions[n+1]),w=Math.max(0,x1-x0),cx=x0+w/2;
+   return `<rect class="phaseBand phase${n}" x="${x0}" y="${top}" width="${w}" height="${ch}"/><text class="phaseNumber" x="${cx}" y="18" text-anchor="middle">${n+1}</text><text class="phaseLabel" x="${cx}" y="38" text-anchor="middle">${esc(st.name)}</text>`;
+ }).join('');
+ const phaseLines=phaseFractions.slice(1,-1).map(f=>`<line class="phaseBoundary" x1="${phaseX(f)}" y1="${top}" x2="${phaseX(f)}" y2="${top+ch}"/>`).join('');
+ const pts=(p.checks||[]).map((c,idx)=>{const score=injuryCompletionForChecks(i,p.checks.slice(0,idx+1),p.diag,nullableNumber(i.initialPain),nullableNumber(i.initialWalkPain));return{day:Math.max(0,Math.round((dte(c.date)-dte(i.date))/DAY)),score,date:c.date};}).filter(q=>Number.isFinite(q.score));
+ if(!pts.length&&Number.isFinite(p.completion))pts.push({day:p.elapsed,score:p.completion,date:iso(today())});
+ const observed=pts.map((q,n)=>`${n?'L':'M'} ${x(q.day)} ${y(q.score)}`).join(' ');
+ const currentMarker=`<line class="currentDateLine" x1="${x(p.elapsed)}" y1="${top}" x2="${x(p.elapsed)}" y2="${top+ch}"/><text class="currentDateLabel" x="${x(p.elapsed)}" y="${H-36}" text-anchor="middle">Today</text>`;
+ return `<div class="injuryTrajectoryWrap"><svg class="injuryTrajectory" viewBox="0 0 ${W} ${H}" role="img" aria-label="Observed rehabilitation completion, nominal recovery and rehabilitation phases"><rect class="phaseLabelBand" x="${left}" y="0" width="${cw}" height="${labelBand}"/>${phaseRects}${phaseLines}<line x1="${left}" y1="${y(25)}" x2="${W-right}" y2="${y(25)}"/><line x1="${left}" y1="${y(50)}" x2="${W-right}" y2="${y(50)}"/><line x1="${left}" y1="${y(75)}" x2="${W-right}" y2="${y(75)}"/>${currentMarker}<path class="nominalLine" d="${nominalPath}"/><path class="actualLine" d="${observed}"/>${pts.map(q=>`<circle cx="${x(q.day)}" cy="${y(q.score)}" r="5"><title>${fmtDate(q.date)} · ${q.score}%</title></circle>`).join('')}<text x="${left}" y="${H-12}">Injury</text><text x="${W-right}" y="${H-12}" text-anchor="end">Full unrestricted training</text></svg><div class="injuryTrajectoryLegend"><span class="actual">Observed completion</span><span class="nominal">Nominal recovery</span><span class="phase">Recovery phases</span></div></div>`;
 }
 
 function clinicianAgreementBanner(diag){

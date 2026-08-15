@@ -1,3 +1,13 @@
+AI Running Coach v13.6.4 — unique run-type pictograms + rehab trajectory correction — build 30604
+
+- Every generated run/workout type now has its own dedicated simple SVG pictogram; run types no longer share a generic quality, shoe, recovery or race pictogram.
+- Pictograms remain simple symbols rather than stick figures and retain inherited semantic/status colour behaviour.
+- Rehabilitation trajectory labels now sit in a dedicated band above the plotting area so labels cannot overlap the nominal line, observed line or datapoints.
+- The nominal rehabilitation line now always runs from the start of phase 1 to the end of phase 6, independent of the observed/forecast horizon.
+- Existing rehabilitation observations, stage logic, trajectory calculations, status logic and all other model/data calculations are unchanged.
+- No approved card hierarchy, wording, interaction, navigation or responsive behaviour changed.
+- Repository remains flat.
+
 AI Running Coach v13.6.3 — simplified pictogram system — build 30603
 
 - Replaces the v13.6.2 stick-figure / pseudo-anatomical pictograms with simple symbolic SVGs.
