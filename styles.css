@@ -4069,3 +4069,15 @@ body:has(#dashboard.progressPage.active),#mainContent:has(#dashboard.progressPag
 #shoes .shoeAllocationEvent.driver-shoe-rotation{border-left-color:var(--amber)}
 #shoes .shoeAllocationEvent.driver-shoe-rotation .shoeDriverTag{color:var(--amber);background:rgba(241,197,106,.08);border-color:rgba(241,197,106,.18)}
 @media(max-width:600px){#shoes .shoeChartLegend{display:grid;grid-template-columns:1fr;gap:8px}#shoes .shoeLegendItem{font-size:14px}#shoes .shoeAllocationEvent p{font-size:13px}#shoes .shoeAllocationEvent>b{font-size:15px}}
+
+/* v13.7.14 — actionable per-pair purchase countdown */
+#shoes .shoePurchaseCountdown{margin-top:12px;padding:12px;border-radius:12px;background:rgba(3,31,43,.48);border:1px solid rgba(87,219,224,.18)}
+#shoes .shoePurchaseCountdownHead{display:flex;align-items:flex-end;justify-content:space-between;gap:10px;padding-bottom:9px;border-bottom:1px solid rgba(136,161,177,.12)}
+#shoes .shoePurchaseCountdownHead small,#shoes .shoePurchaseCountdownGrid small{display:block;font-size:9px;font-weight:850;letter-spacing:.08em;color:var(--teal-2)}
+#shoes .shoePurchaseCountdownHead b{font-size:14px;text-align:right}
+#shoes .shoePurchaseCountdownGrid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:9px}
+#shoes .shoePurchaseCountdownGrid>div{padding:10px;border-radius:10px;background:#0c1923;border:1px solid rgba(136,161,177,.10)}
+#shoes .shoePurchaseCountdownGrid strong{display:block;margin-top:2px;font-size:16px;line-height:1.2;color:var(--text)}
+#shoes .shoePurchaseCountdownGrid span{display:block;margin-top:4px;font-size:10px;line-height:1.35;color:var(--muted)}
+#shoes .shoePurchaseCountdown p{margin:9px 0 0;font-size:11px;line-height:1.45;color:var(--text-2)}
+@media(max-width:430px){#shoes .shoePurchaseCountdownGrid{grid-template-columns:1fr}#shoes .shoePurchaseCountdownHead{align-items:flex-start;flex-direction:column}#shoes .shoePurchaseCountdownHead b{text-align:left}}

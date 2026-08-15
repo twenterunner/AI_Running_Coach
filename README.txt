@@ -1,3 +1,12 @@
+AI Running Coach v13.7.15 — actionable shoe purchase countdown — build 30715
+
+- Each active shoe card now shows a concrete next-pair purchase recommendation: proposed replacement model, buy-by date, days remaining, and planned kilometres remaining until that purchase date.
+- Separates the acquisition deadline from the planned handover/replacement date so the runner has time to receive and introduce the new pair before the outgoing shoe reaches its programme-driven replacement range.
+- Uses programme-driven replacement timing when the remaining training/rehab plan crosses the shoe replacement range; otherwise falls back to the existing usage-based forecast with confidence shown.
+- Existing replacement-range, lifecycle graph, race-day planning, rehab shoe mileage and all locked training/recovery/injury calculations remain unchanged.
+- VERSION 13.7.15 · BUILD 30715 · SCHEMA 10400.
+- Repository remains flat.
+
 AI Running Coach v13.7.13 — auditable shoe-curve drivers — build 30713
 
 - Shoe lifecycle graph now classifies material allocation/slope changes as Training plan, Rehab plan, or Shoe rotation.
