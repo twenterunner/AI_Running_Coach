@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '13.6.4';
-  const BUILD = 30604;
+  const VERSION = '13.6.5';
+  const BUILD = 30605;
   const SCHEMA = 10330;
   const PRIMARY_STORAGE_KEY = 'arc_v10330_web';
   const MIRROR_STORAGE_KEY = 'arc_v10330_mirror';
@@ -4876,7 +4876,12 @@ function rehabTodayFocusHtml(i,p){
 }
 
 function injuryTrajectorySvg(i,p){
- const W=720,H=318,left=8,right=8,labelBand=54,top=62,bottom=58,cw=W-left-right,ch=H-top-bottom,horizon=Math.max(7,p.nominalTotal,p.elapsed+p.remaining),x=d=>left+clamp(d/horizon,0,1)*cw,y=v=>top+(100-clamp(v,0,100))/100*ch;
+ const W=720,H=318,left=8,right=8,labelBand=54,top=62,bottom=58,cw=W-left-right,ch=H-top-bottom;
+ /* The horizontal graph represents the ORIGINAL NOMINAL pathway.
+    Therefore nominalTotal, not the updated predicted total, defines 0–100% of the X-axis.
+    This guarantees that the plotted nominal value at Today is the same p.nominal used by
+    recoveryScoreInfo() and by the "percentage points ahead/behind" interpretation. */
+ const horizon=Math.max(7,Number(p.nominalTotal)||7),x=d=>left+clamp(d/horizon,0,1)*cw,y=v=>top+(100-clamp(v,0,100))/100*ch;
  const phaseFractions=[0,.12,.28,.46,.64,.82,1],phaseX=f=>left+clamp(f,0,1)*cw;
  const nominalPath=`M ${phaseX(0)} ${y(0)} L ${phaseX(1)} ${y(100)}`;
  const phaseRects=INJURY_STAGES.map((st,n)=>{
@@ -4887,8 +4892,10 @@ function injuryTrajectorySvg(i,p){
  const pts=(p.checks||[]).map((c,idx)=>{const score=injuryCompletionForChecks(i,p.checks.slice(0,idx+1),p.diag,nullableNumber(i.initialPain),nullableNumber(i.initialWalkPain));return{day:Math.max(0,Math.round((dte(c.date)-dte(i.date))/DAY)),score,date:c.date};}).filter(q=>Number.isFinite(q.score));
  if(!pts.length&&Number.isFinite(p.completion))pts.push({day:p.elapsed,score:p.completion,date:iso(today())});
  const observed=pts.map((q,n)=>`${n?'L':'M'} ${x(q.day)} ${y(q.score)}`).join(' ');
- const currentMarker=`<line class="currentDateLine" x1="${x(p.elapsed)}" y1="${top}" x2="${x(p.elapsed)}" y2="${top+ch}"/><text class="currentDateLabel" x="${x(p.elapsed)}" y="${H-36}" text-anchor="middle">Today</text>`;
- return `<div class="injuryTrajectoryWrap"><svg class="injuryTrajectory" viewBox="0 0 ${W} ${H}" role="img" aria-label="Observed rehabilitation completion, nominal recovery and rehabilitation phases"><rect class="phaseLabelBand" x="${left}" y="0" width="${cw}" height="${labelBand}"/>${phaseRects}${phaseLines}<line x1="${left}" y1="${y(25)}" x2="${W-right}" y2="${y(25)}"/><line x1="${left}" y1="${y(50)}" x2="${W-right}" y2="${y(50)}"/><line x1="${left}" y1="${y(75)}" x2="${W-right}" y2="${y(75)}"/>${currentMarker}<path class="nominalLine" d="${nominalPath}"/><path class="actualLine" d="${observed}"/>${pts.map(q=>`<circle cx="${x(q.day)}" cy="${y(q.score)}" r="5"><title>${fmtDate(q.date)} · ${q.score}%</title></circle>`).join('')}<text x="${left}" y="${H-12}">Injury</text><text x="${W-right}" y="${H-12}" text-anchor="end">Full unrestricted training</text></svg><div class="injuryTrajectoryLegend"><span class="actual">Observed completion</span><span class="nominal">Nominal recovery</span><span class="phase">Recovery phases</span></div></div>`;
+ const todayDay=clamp(Number(p.elapsed)||0,0,horizon),todayX=x(todayDay),nominalToday=clamp(Number(p.nominal)||0,0,100),observedToday=Number.isFinite(Number(p.completion))?clamp(Number(p.completion),0,100):null;
+ const currentMarker=`<line class="currentDateLine" x1="${todayX}" y1="${top}" x2="${todayX}" y2="${top+ch}"/><text class="currentDateLabel" x="${todayX}" y="${H-36}" text-anchor="middle">Today</text>`;
+ const gap=observedToday===null?'':`<line class="trajectoryGap" x1="${todayX}" y1="${y(nominalToday)}" x2="${todayX}" y2="${y(observedToday)}"/><circle class="nominalTodayPoint" cx="${todayX}" cy="${y(nominalToday)}" r="5"><title>Nominal today · ${Math.round(nominalToday)}%</title></circle>`;
+ return `<div class="injuryTrajectoryWrap"><svg class="injuryTrajectory" viewBox="0 0 ${W} ${H}" role="img" aria-label="Observed rehabilitation completion, nominal recovery and rehabilitation phases"><rect class="phaseLabelBand" x="${left}" y="0" width="${cw}" height="${labelBand}"/>${phaseRects}${phaseLines}<line x1="${left}" y1="${y(25)}" x2="${W-right}" y2="${y(25)}"/><line x1="${left}" y1="${y(50)}" x2="${W-right}" y2="${y(50)}"/><line x1="${left}" y1="${y(75)}" x2="${W-right}" y2="${y(75)}"/>${currentMarker}<path class="nominalLine" d="${nominalPath}"/>${gap}<path class="actualLine" d="${observed}"/>${pts.map(q=>`<circle cx="${x(q.day)}" cy="${y(q.score)}" r="5"><title>${fmtDate(q.date)} · ${q.score}%</title></circle>`).join('')}<text x="${left}" y="${H-12}">Injury</text><text x="${W-right}" y="${H-12}" text-anchor="end">Nominal unrestricted training</text></svg><div class="injuryTrajectoryLegend"><span class="actual">Observed completion</span><span class="nominal">Nominal recovery</span><span class="phase">Recovery phases</span></div></div>`;
 }
 
 function clinicianAgreementBanner(diag){

@@ -3807,3 +3807,17 @@ body:has(#dashboard.progressPage.active),#mainContent:has(#dashboard.progressPag
   #injury .injuryTrajectory .phaseNumber{font-size:15px!important}
   #injury .injuryTrajectory .phaseLabel{font-size:9px!important}
 }
+
+
+/* v13.6.5 rehabilitation trajectory consistency */
+#injury .injuryTrajectory .trajectoryGap{
+  stroke:var(--amber)!important;
+  stroke-width:2.2!important;
+  stroke-dasharray:3 3!important;
+  opacity:.9;
+}
+#injury .injuryTrajectory .nominalTodayPoint{
+  fill:#0c2530!important;
+  stroke:var(--amber)!important;
+  stroke-width:2.5!important;
+}

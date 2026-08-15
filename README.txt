@@ -1,3 +1,16 @@
+AI Running Coach v13.6.5 — rehabilitation trajectory calculation/visual alignment — build 30605
+
+- Corrects a visual inconsistency in Observed versus nominal progression.
+- The interpretation already compares observed completion against nominal completion at the current elapsed day: nominal = elapsed / nominalTotal × 100.
+- The graph had incorrectly scaled its X-axis to max(nominalTotal, updated predicted total). When the updated prognosis was longer than nominal, this lowered the plotted nominal line at Today and visually understated how far behind nominal the athlete was.
+- The rehabilitation trajectory X-axis now represents the original nominal recovery pathway from injury (0%) to nominal unrestricted training (100%).
+- The nominal line therefore reaches exactly the same nominal percentage at Today as the text/calculation uses.
+- Adds a small dashed vertical gap at Today plus a hollow nominal point, making the observed-versus-nominal separation directly visible without adding text over the data.
+- Phase headings remain in their dedicated label band and cannot interfere with plot lines or datapoints.
+- No injury completion, stage, diagnosis, prognosis, check-in, recovery or other model/data calculations changed.
+- Unique run-type pictograms from v13.6.4 are retained.
+- Repository remains flat.
+
 AI Running Coach v13.6.4 — unique run-type pictograms + rehab trajectory correction — build 30604
 
 - Every generated run/workout type now has its own dedicated simple SVG pictogram; run types no longer share a generic quality, shoe, recovery or race pictogram.
