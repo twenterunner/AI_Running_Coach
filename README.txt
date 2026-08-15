@@ -1,3 +1,33 @@
+AI Running Coach v13.7.11 — startup render hotfix — build 30711
+
+- Fixes the blank app shell introduced in v13.7.10.
+- Root cause: the new planned-shoe assignment cache used a block-scoped declaration below the startup save/reconciliation call; cache invalidation therefore hit the temporal dead zone and stopped JavaScript before navigation/Today rendering.
+- Changes the cache storage to startup-safe function-scope initialization while retaining the v13.7.10 performance optimizations.
+- No training, prediction, pathway, recovery, injury, rehabilitation, scoring, import or plan-generation calculations changed.
+- Schema remains 10400.
+- Repository remains flat.
+
+AI Running Coach v13.7.10 — Shoes performance regression fix — build 30710
+
+- Fixes a performance regression introduced by forward rehabilitation-distance integration into the Shoes engine.
+- Future rehabilitation shoe exposure is now calculated once per relevant app state and reused across shoe recommendations instead of rebuilding up to 120 rehabilitation days inside each shoe/workout scoring pass.
+- Planned shoe assignment lookup is indexed rather than repeatedly scanning the complete assignment array.
+- Automatic future-shoe assignments are skipped when their relevant state has not changed.
+- The hidden Shoes page no longer rebuilds its large lifecycle DOM while another tab is active; it refreshes fully when Shoes is opened.
+- Shoe recommendation, mileage, rehabilitation-distance, lifecycle and race-day logic are unchanged; this release changes computation reuse only.
+- Existing training, prediction, pathway, recovery, injury, rehabilitation and scoring functions are unchanged.
+- Repository remains flat.
+
+AI Running Coach v13.7.9 — race-distance shoe choice + rehab shoe forecasting — build 30709
+
+- Removes the redundant purchase-plan tile from the Shoes page; future purchases remain represented in lifecycle planning/graph and the add-shoe proposal flow.
+- Adds a Shoes section recommending which currently owned pair is best for a 5 km, 10 km, half marathon and marathon if raced today.
+- Future rehabilitation walking/running distance is estimated conservatively and included in shoe planned-mileage, replacement and lifecycle projections; it remains Shoes-only and does not affect rehabilitation or training calculations.
+- Rehab days with walking/running now propose an existing shoe automatically; that proposal pre-populates the daily rehabilitation check-in and remains user-changeable.
+- Existing logged rehab mileage remains authoritative for past dates; future rehab mileage is explicitly model-estimated.
+- VERSION/BUILD/cache identifiers updated; schema remains 10400.
+- Repository remains flat.
+
 AI Running Coach v13.7.8 — proposed purchase catalogue + rehab-day shoe planning — build 30708
 
 - Add Running Shoe now lists every current lifecycle proposal in one dropdown: training replacements and the dedicated Race Day pair, not only saved race purchases.
