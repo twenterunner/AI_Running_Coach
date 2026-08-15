@@ -1,3 +1,15 @@
+AI Running Coach v13.7.6 — physical-pair lifecycle graph + Today shoe simplification — build 30706
+
+- Mileage/lifecycle graph now represents physical pairs: owned shoes only appear from purchase/tracking start; proposed training and race pairs only appear from proposed purchase dates.
+- Prevents one physical pair from simultaneously appearing as a worn training shoe and a separate fresh Race Day shoe.
+- If the preferred owned race-capable pair is planned for replacement before Race Day, a new Race Day pair is planned instead.
+- Race Day pair familiarisation remains backward-planned from Race Day.
+- Graph typography enlarged and chart card now uses the approved Today Level-1 teal surface.
+- Removed the Today “Why this shoe?” disclosure; compact shoe recommendation remains.
+- Training, prediction, recovery, injury, pathway, scoring and plan-generation logic unchanged.
+- Schema remains 10400.
+- Repository remains flat.
+
 AI Running Coach v13.7.5 — optimal race-day shoe lifecycle strategy — build 30705
 
 - Corrects the race-day lifecycle graph so an owned race-capable shoe that is projected to be too worn is no longer shown as the intended Race Day pair.

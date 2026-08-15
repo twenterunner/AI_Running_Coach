@@ -3977,3 +3977,41 @@ body:has(#dashboard.progressPage.active),#mainContent:has(#dashboard.progressPag
 .shoeRaceStrategyCard small{font-size:10px;font-weight:900;letter-spacing:.09em;color:#d8caff}.shoeRaceStrategyCard b{font-size:17px}.shoeRaceStrategyCard span{font-size:13px;color:var(--text-2)}.shoeRaceStrategyCard strong{font-size:13px;color:var(--teal-2)}.shoeRaceStrategyCard em{font-size:12px;font-style:normal;color:var(--muted)}
 .shoeChartKey{font-size:12px!important;line-height:1.35}.shoeLegendToggle{font-size:12px!important}.shoeGraphRationale>summary{font-size:15px!important}.shoeGraphRationale p,.shoeGraphRationale li{font-size:14px!important;line-height:1.58!important}
 @media(max-width:600px){.shoeProgrammeChart svg{min-height:390px!important}.shoeProgrammeChart .shoeGrid text,.shoeProgrammeChart .xLab,.shoeProgrammeChart .yTitle{font-size:17px!important}.shoeProgrammeChart .shoeReplacementMarker text,.shoeProgrammeChart .shoeRaceTargetBand text,.shoeProgrammeChart .shoeNewPairLabel,.shoeProgrammeChart .shoeRaceStrategyLabel{font-size:15px!important}.shoeRaceStrategyCard b{font-size:16px}.shoeRaceStrategyCard span,.shoeRaceStrategyCard strong{font-size:12px}.shoeChartKey{font-size:12px!important}.shoeLegendToggle{font-size:12px!important}}
+
+/* v13.7.6 — physical-pair lifecycle chart and Today shoe simplification */
+#shoes .shoeChartCard{
+  background:linear-gradient(145deg,#075468 0%,#073c50 52%,#062c3d 100%);
+  border:1px solid rgba(40,214,219,.42);
+  border-radius:18px;
+  padding:16px;
+  overflow:hidden;
+}
+#shoes .shoeProgrammeChart{width:100%;max-width:100%;overflow:hidden}
+#shoes .shoeProgrammeChart svg{display:block;width:100%;height:auto;min-height:0!important;overflow:visible;margin:4px 0 2px}
+#shoes .shoeProgrammeChart .shoeGrid text,
+#shoes .shoeProgrammeChart .xLab,
+#shoes .shoeProgrammeChart .yTitle{font-size:27px!important;font-weight:850!important}
+#shoes .shoeProgrammeChart .shoeReplacementMarker text,
+#shoes .shoeProgrammeChart .shoeRaceTargetBand text,
+#shoes .shoeProgrammeChart .shoeNewPairLabel,
+#shoes .shoeProgrammeChart .shoeRaceStrategyLabel,
+#shoes .shoeProgrammeChart .shoePurchaseLabel{font-size:22px!important;font-weight:900!important;paint-order:stroke;stroke:#073c50;stroke-width:5px;stroke-linejoin:round}
+#shoes .shoeProgrammeChart .shoePurchaseLabel{fill:var(--teal-2)}
+#shoes .shoeProgrammeChart .shoePurchaseLabel.race{fill:#d8caff}
+#shoes .shoeChartKey{font-size:14px!important;gap:11px 16px;margin-top:8px}
+#shoes .shoeLegendToggle,#shoes .shoeLegendToggle span{font-size:14px!important}
+#shoes .shoeGraphRationale>summary{font-size:15px!important}
+#shoes .shoeGraphRationale p,#shoes .shoeGraphRationale li{font-size:14px!important;line-height:1.55!important}
+#today .todayShoeRow{grid-template-columns:52px minmax(0,1fr);gap:14px;align-items:center;padding:13px 15px;background:rgba(3,31,43,.28);border:1px solid rgba(87,219,224,.14)}
+#today .todayShoeRow>span{width:52px;height:52px;border-radius:13px}
+#today .todayShoeRow svg{width:32px;height:32px}
+#today .todayShoeRow small{font-size:9px}
+#today .todayShoeRow b{font-size:15px;line-height:1.2}
+#today .todayShoeRow p{font-size:11px;line-height:1.35}
+#today .todayShoeAlternative{display:block!important;margin-top:5px;color:var(--muted)!important;font-size:9px!important}
+@media(max-width:600px){
+ #shoes .shoeChartCard{padding:12px}
+ #shoes .shoeProgrammeChart .shoeGrid text,#shoes .shoeProgrammeChart .xLab,#shoes .shoeProgrammeChart .yTitle{font-size:26px!important}
+ #shoes .shoeProgrammeChart .shoeReplacementMarker text,#shoes .shoeProgrammeChart .shoeRaceTargetBand text,#shoes .shoeProgrammeChart .shoeNewPairLabel,#shoes .shoeProgrammeChart .shoeRaceStrategyLabel,#shoes .shoeProgrammeChart .shoePurchaseLabel{font-size:21px!important}
+ #shoes .shoeChartKey,#shoes .shoeLegendToggle,#shoes .shoeLegendToggle span{font-size:14px!important}
+}
