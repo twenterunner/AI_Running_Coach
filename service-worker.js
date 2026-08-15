@@ -1,10 +1,10 @@
 'use strict';
 
-const CACHE = 'arc-v1370-build-30700';
+const CACHE = 'arc-v1371-build-30701';
 const CACHE_PREFIX = 'arc-v';
 const APP_SHELL = './index.html';
 const ASSETS = [
-  './', './index.html', './styles.css?v=30700-shoes', './app.js?v=30700-shoes', './manifest.webmanifest?v=30700'
+  './', './index.html', './styles.css?v=30701-shoe-lifecycle-chart', './app.js?v=30701-shoe-lifecycle-chart', './manifest.webmanifest?v=30701'
 ];
 
 self.addEventListener('install', event => {

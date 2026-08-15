@@ -1,3 +1,16 @@
+AI Running Coach v13.7.1 — Shoes programme mileage + lifecycle timeline — build 30701
+
+- Replaces the Shoes mileage-history view with a programme-wide actual-versus-planned cumulative mileage chart through race day.
+- Solid lines show observed accumulated mileage through today; dashed lines start from each shoe’s current real mileage and add its current future plan assignments through race day.
+- Adds approximate replacement markers directly to the timeline. Planned threshold crossings are preferred; the existing usage-rate forecast is used only when planned assignments do not establish the crossing date.
+- Adds lifecycle callouts naming the shoe being replaced and proposing the most appropriate current/recent ASICS replacement model for the same role.
+- Proposed replacement pairs are also projected from their replacement point to race day using the future workouts that would transfer from the outgoing pair.
+- When the race-day lifecycle engine recommends an additional race shoe, its proposed familiarisation mileage is shown through race day as a separate planned line/callout.
+- Race day and Today are explicit timeline references. Individual shoe visibility toggles remain available.
+- Existing Shoes ledger, recommendations, race-day planning and purchase planning remain intact.
+- No schema change. Existing training, prediction, pathway, recovery, injury, rehabilitation, scoring and plan-generation engines are unchanged.
+- Repository remains flat.
+
 AI Running Coach v13.7.0 — complete Shoes lifecycle and race-day planning module — build 30700
 
 - Adds an offline-first serious-runner Shoes module inside More while preserving the five-item primary bottom navigation.
