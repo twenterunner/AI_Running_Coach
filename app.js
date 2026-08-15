@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '13.7.23';
-  const BUILD = 30723;
+  const VERSION = '13.7.24';
+  const BUILD = 30724;
   const SCHEMA = 10400;
   const PRIMARY_STORAGE_KEY = 'arc_v10400_web';
   const MIRROR_STORAGE_KEY = 'arc_v10400_mirror';
@@ -5495,7 +5495,7 @@ function shoeUsageRecordForRun(runId){return (state.shoeUsage||[]).find(u=>u.run
 function selectedShoeIdForRun(run){return shoeUsageRecordForRun(run.id)?.shoeId||run.shoeId||null}
 function rehabActivityKey(injuryId,date,kind){return `rehab-${injuryId}-${date}-${kind}`}
 function estimateRehabDistance(minutes,kind){const mins=Math.max(0,Number(minutes)||0),paceMinPerKm=kind==='walk'?10:kind==='run'?6.5:8.25,speed=60/paceMinPerKm;return{distanceKm:mins/paceMinPerKm,assumedSpeedKmh:speed,assumedPaceMinPerKm:paceMinPerKm,distanceMethod:'estimated'}}
-function rehabUsageFromCheck(injury,check,kind){const shoeId=check?.rehabShoeId;if(!shoeId)return null;const minutes=Number(kind==='walk'?check.walkMinutes:check.runMinutes);if(!Number.isFinite(minutes)||minutes<=0)return null;const explicit=Number(kind==='walk'?check.walkDistanceKm:check.runDistanceKm),estimated=estimateRehabDistance(minutes,kind),measured=Number.isFinite(explicit)&&explicit>=0;return{id:`shoe-use-${rehabActivityKey(injury.id,check.date,kind)}`,shoeId,sourceType:kind==='walk'?'rehab_walk':'rehab_run',sourceId:rehabActivityKey(injury.id,check.date,kind),rehabActivityId:rehabActivityKey(injury.id,check.date,kind),runId:null,date:check.date,distanceKm:measured?explicit:estimated.distanceKm,durationMin:minutes,distanceMethod:measured?'measured':'estimated',assumedSpeedKmh:measured?null:estimated.assumedSpeedKmh,activityType:kind==='walk'?'walking':'slow rehabilitation running',source:'rehab-check-in'} }
+function rehabUsageFromCheck(injury,check,kind){const shoeId=check?.rehabShoeId;if(!shoeId)return null;const minutes=Number(kind==='walk'?check.walkMinutes:check.runMinutes);if(!Number.isFinite(minutes)||minutes<=0)return null;const rawExplicit=kind==='walk'?check.walkDistanceKm:check.runDistanceKm,hasExplicit=rawExplicit!==null&&rawExplicit!==undefined&&rawExplicit!=='',explicit=hasExplicit?Number(rawExplicit):null,estimated=estimateRehabDistance(minutes,kind),measured=hasExplicit&&Number.isFinite(explicit)&&explicit>=0;return{id:`shoe-use-${rehabActivityKey(injury.id,check.date,kind)}`,shoeId,sourceType:kind==='walk'?'rehab_walk':'rehab_run',sourceId:rehabActivityKey(injury.id,check.date,kind),rehabActivityId:rehabActivityKey(injury.id,check.date,kind),runId:null,date:check.date,distanceKm:measured?explicit:estimated.distanceKm,durationMin:minutes,distanceMethod:measured?'measured':'estimated',assumedSpeedKmh:measured?null:estimated.assumedSpeedKmh,activityType:kind==='walk'?'walking':'slow rehabilitation running',source:'rehab-check-in'} }
 function reconcileShoeUsage(){
  if(!Array.isArray(state.shoes))state.shoes=[];if(!Array.isArray(state.shoeUsage))state.shoeUsage=[];if(!Array.isArray(state.plannedShoeAssignments))state.plannedShoeAssignments=[];if(!Array.isArray(state.plannedShoePurchases))state.plannedShoePurchases=[];
  const runMap=new Map((state.runs||[]).map(r=>[r.id,r])),shoeIds=new Set(state.shoes.map(s=>s.id)),seenRuns=new Set(),seenRehab=new Set(),next=[];
