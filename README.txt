@@ -1,4 +1,11 @@
-AI Running Coach v13.7.18 — linked shoe-graph lifecycle events — build 30718
+AI Running Coach v13.7.19 — completed-day rehab freeze + future-only shoe projection — build 30719
+
+- Once today's rehabilitation check-in exists, today's displayed rehabilitation prescription remains the pre-check-in prescription that was actually completed; recalculated rehabilitation prescriptions begin from tomorrow.
+- The Shoes forward rehabilitation projection likewise excludes today after today's check-in has been saved. Today's shoe exposure comes only from the completed check-in/ledger; future estimated rehab mileage starts tomorrow.
+- Future rehab days continue to update dynamically from the new rehabilitation state.
+- No training-plan, prediction, pathway, recovery, readiness or rehabilitation progression equations changed.
+
+AI Running Coach v13.7.19 — linked shoe-graph lifecycle events — build 30719
 
 - Adds numbered, colour-coded graph markers linked one-to-one with material Training plan, Rehab plan and Shoe rotation explanation cards.
 - Cause colours are independent from physical-pair curve colours: blue = rehab, teal = training, amber = rotation.
@@ -9,7 +16,7 @@ AI Running Coach v13.7.18 — linked shoe-graph lifecycle events — build 30718
 - Separates the acquisition deadline from the planned handover/replacement date so the runner has time to receive and introduce the new pair before the outgoing shoe reaches its programme-driven replacement range.
 - Uses programme-driven replacement timing when the remaining training/rehab plan crosses the shoe replacement range; otherwise falls back to the existing usage-based forecast with confidence shown.
 - Existing replacement-range, lifecycle graph, race-day planning, rehab shoe mileage and all locked training/recovery/injury calculations remain unchanged.
-- VERSION 13.7.18 · BUILD 30718 · SCHEMA 10400.
+- VERSION 13.7.19 · BUILD 30719 · SCHEMA 10400.
 - Repository remains flat.
 
 AI Running Coach v13.7.13 — auditable shoe-curve drivers — build 30713
