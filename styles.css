@@ -4091,3 +4091,13 @@ body:has(#dashboard.progressPage.active),#mainContent:has(#dashboard.progressPag
 #shoes .shoeAllocationEvent time{margin-left:auto}
 #shoes .shoeEventNumber{display:inline-grid;place-items:center;width:28px;height:28px;flex:0 0 28px;border-radius:50%;border:2px solid var(--event-color);background:#0b1b25;color:var(--event-color);font-size:13px;font-weight:950}
 @media(max-width:600px){#shoes .shoeCauseMarker circle{r:14px}#shoes .shoeCauseMarker text{font-size:14px}#shoes .shoeEventNumber{width:30px;height:30px;flex-basis:30px;font-size:14px}}
+
+
+/* v13.7.17 Shoes graph event disclosure */
+#shoes .shoeGraphEvents{margin-top:14px;background:rgba(7,24,33,.54);border:1px solid rgba(61,214,198,.14);border-radius:14px;overflow:hidden}
+#shoes .shoeGraphEvents>summary{padding:13px 14px;min-height:58px;background:rgba(61,214,198,.045)}
+#shoes .shoeGraphEvents>summary span{display:grid;gap:2px}
+#shoes .shoeGraphEvents>summary b{font-size:15px;line-height:1.25}
+#shoes .shoeGraphEvents>summary small{font-size:10px;line-height:1.35;color:var(--muted)}
+#shoes .shoeGraphEventsBody{padding:12px;display:grid;gap:10px}
+#shoes .shoeGraphEventsKey{margin:0 0 2px;font-size:11px;line-height:1.45;color:var(--muted)}
