@@ -3938,3 +3938,28 @@ body:has(#dashboard.progressPage.active),#mainContent:has(#dashboard.progressPag
  .shoeProgrammeChart .shoeReplacementMarker text,.shoeProgrammeChart .shoeNominalMarker text{font-size:10px}
  .shoeChartKey{font-size:10px}
 }
+
+/* v13.7.3 — Shoes lifecycle chart legibility + race-date clarity */
+.shoeChartRaceDate{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 0 8px;padding:10px 12px;border-radius:12px;background:rgba(61,214,198,.06);border:1px solid rgba(61,214,198,.13)}
+.shoeChartRaceDate small{font-size:10px;font-weight:900;letter-spacing:.08em;color:var(--teal-2)}
+.shoeChartRaceDate b{font-size:14px;text-align:right}
+.shoeProgrammeChart svg{min-height:350px;overflow:visible}
+.shoeProgrammeChart .shoeGrid text,.shoeProgrammeChart .xLab,.shoeProgrammeChart .yTitle{font-size:16px;font-weight:750;fill:var(--text-2)}
+.shoeProgrammeChart .shoeReplacementMarker text,.shoeProgrammeChart .shoeNominalMarker text{font-size:14px;font-weight:900}
+.shoeRaceTargetBand rect{fill:rgba(61,214,198,.075);stroke:rgba(61,214,198,.35);stroke-width:1;stroke-dasharray:5 5}
+.shoeRaceTargetBand text{fill:var(--teal-2);font-size:14px;font-weight:900}
+.shoeNewPairLine{stroke:var(--shoe-color,var(--teal-2))!important;stroke-dasharray:2 7!important;stroke-width:3!important;opacity:.95}
+.shoeNewPairLabel,.shoeRacePurchaseLabel{fill:var(--text);font-size:14px;font-weight:900;paint-order:stroke;stroke:#102633;stroke-width:4px;stroke-linejoin:round}
+.shoeRacePurchaseLine{stroke:var(--teal-2)!important;stroke-width:4!important;stroke-dasharray:10 5!important}
+.shoeChartKey{font-size:13px;line-height:1.35;gap:10px 16px;margin-top:12px}
+.shoeChartKey i.raceband{width:22px;height:10px;border:1px dashed var(--teal-2);background:rgba(61,214,198,.08)}
+.shoeChartLegend{margin-top:12px}.shoeLegendToggle span{font-size:13px}
+.shoeGraphRationale>summary{font-size:14px!important}.shoeGraphRationale p,.shoeGraphRationale li{font-size:13px;line-height:1.55}
+.shoeLifecycleEvents small{font-size:10px}.shoeLifecycleEvents b{font-size:14px}.shoeLifecycleEvents span{font-size:12px}.shoeLifecycleEvents strong{font-size:13px}
+@media(max-width:600px){
+ .shoeProgrammeChart svg{min-height:335px}
+ .shoeProgrammeChart .shoeGrid text,.shoeProgrammeChart .xLab,.shoeProgrammeChart .yTitle{font-size:15px}
+ .shoeProgrammeChart .shoeReplacementMarker text,.shoeProgrammeChart .shoeNominalMarker text,.shoeRaceTargetBand text,.shoeNewPairLabel,.shoeRacePurchaseLabel{font-size:13px}
+ .shoeChartKey{font-size:13px}
+ .shoeChartRaceDate{align-items:flex-start;flex-direction:column}.shoeChartRaceDate b{text-align:left}
+}
