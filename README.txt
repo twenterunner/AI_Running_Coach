@@ -1,3 +1,13 @@
+AI Running Coach v13.6.6 — Plan race-range labels + mobile rebuild modal — build 30606
+
+- Plan race-context labels changed from “Likely 70% time range” and “Likely 70% pace range” to “Likely time range” and “Likely pace range”.
+- Underlying range calculations and displayed values are unchanged.
+- Plan rebuild preview modal is now constrained to the actual dynamic mobile viewport (100dvh), scrolls internally when needed, respects the bottom safe area, and keeps actions within screen width.
+- On very narrow or short screens the action buttons stack vertically to prevent clipping.
+- No plan-generation logic, calculations, approved Plan hierarchy, charts or other app behaviour changed.
+- All previous pictogram and rehabilitation-trajectory corrections retained.
+- Repository remains flat.
+
 AI Running Coach v13.6.5 — rehabilitation trajectory calculation/visual alignment — build 30605
 
 - Corrects a visual inconsistency in Observed versus nominal progression.

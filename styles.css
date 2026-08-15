@@ -3821,3 +3821,46 @@ body:has(#dashboard.progressPage.active),#mainContent:has(#dashboard.progressPag
   stroke:var(--amber)!important;
   stroke-width:2.5!important;
 }
+
+
+/* v13.6.6 — mobile plan-rebuild preview fit */
+@media(max-width:700px){
+  .modal{
+    align-items:flex-end;
+    padding:12px;
+    overflow:hidden;
+  }
+  .modalCard{
+    width:100%;
+    max-width:none;
+    max-height:calc(100dvh - 24px);
+    overflow-y:auto;
+    overscroll-behavior:contain;
+    -webkit-overflow-scrolling:touch;
+    box-sizing:border-box;
+    padding:22px 18px calc(18px + env(safe-area-inset-bottom));
+    border-radius:24px 24px 18px 18px;
+  }
+  .modalCard h2{font-size:clamp(24px,7vw,34px);line-height:1.08;padding-right:48px}
+  .modalCard p{font-size:16px;line-height:1.45}
+  .modalCard .modalActions,
+  .modalCard .actions{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:10px;
+    width:100%;
+  }
+  .modalCard .modalActions button,
+  .modalCard .actions button{
+    width:100%;
+    min-width:0;
+    white-space:normal;
+  }
+}
+@media(max-width:380px),(max-height:650px){
+  .modalCard{padding:18px 14px calc(14px + env(safe-area-inset-bottom))}
+  .modalCard h2{font-size:25px}
+  .modalCard p{font-size:15px}
+  .modalCard .modalActions,
+  .modalCard .actions{grid-template-columns:1fr}
+}

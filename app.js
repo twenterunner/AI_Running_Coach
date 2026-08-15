@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '13.6.5';
-  const BUILD = 30605;
+  const VERSION = '13.6.6';
+  const BUILD = 30606;
   const SCHEMA = 10330;
   const PRIMARY_STORAGE_KEY = 'arc_v10330_web';
   const MIRROR_STORAGE_KEY = 'arc_v10330_mirror';
@@ -2590,7 +2590,7 @@ function todayRaceCard(engine,report){
  return`<section class="todayRunnerCard todayRaceCard">
    <div class="runnerSectionHead"><span class="runnerCardIcon">${todayPictogram('race')}</span><div><small>RACE CONTEXT</small><h3>${esc(state.setup.raceName)}</h3><p>${Number(state.setup.raceDistance).toFixed(1)} km</p></div><span class="runnerStatus miniValue ${todayMiniValueClass('raceTime',remaining.days)}">${remaining.label}</span></div>
    <div class="raceMetrics"><span><small>TARGET</small><b>${fmtTime(state.setup.targetTime)}</b></span><span><small>CURRENT ESTIMATE</small><b>${fmtEstimate(engine.pred,provisional)}</b></span><span><small>TARGET CHANCE</small><b>${prob===null?'Building':prob+'%'}</b></span></div>
-   <div class="raceRangeStrip"><div><small>LIKELY 70% TIME RANGE</small><b>${timeRange}</b></div><div><small>LIKELY 70% PACE RANGE</small><b>${paceRange}</b></div></div>
+   <div class="raceRangeStrip"><div><small>LIKELY TIME RANGE</small><b>${timeRange}</b></div><div><small>LIKELY PACE RANGE</small><b>${paceRange}</b></div></div>
    ${todayBulletList([gap<=0?`${fmtTime(Math.abs(gap))} inside current target estimate`:`${fmtTime(gap)} outside current target estimate`],'runnerBullets compactBullets')}
  </section>`;
 }
@@ -2756,7 +2756,7 @@ function planProgrammeHeaderHtml(){
  return`<section class="planRaceContextCard">
    <div class="planRaceHead"><span class="planRaceIcon">${todayPictogram('race')}</span><div><small>RACE CONTEXT</small><h3>${esc(state.setup.raceName)}</h3><p>${Number(state.setup.raceDistance).toFixed(1)} km · ${esc(detailedPhase(w))} · ${esc(priority)}</p></div><span class="planRaceCountdown miniValue ${todayMiniValueClass('raceTime',remaining.days)}">${remaining.label}</span></div>
    <div class="planRaceMetrics"><span><small>TARGET</small><b>${fmtTime(state.setup.targetTime)}</b><em>${pace(state.setup.targetTime/state.setup.raceDistance)}</em></span><span><small>CURRENT ESTIMATE</small><b>${fmtEstimate(engine.pred,provisional)}</b><em>${paceEstimate(engine.pred,provisional)}</em></span><span><small>TARGET CHANCE</small><b>${prob===null?'Building':prob+'%'}</b><em>${provisional?'Provisional model':'Current model'}</em></span></div>
-   <div class="planRaceRanges"><div><small>LIKELY 70% TIME RANGE</small><b>${timeRange}</b></div><div><small>LIKELY 70% PACE RANGE</small><b>${paceRange}</b></div></div>
+   <div class="planRaceRanges"><div><small>LIKELY TIME RANGE</small><b>${timeRange}</b></div><div><small>LIKELY PACE RANGE</small><b>${paceRange}</b></div></div>
    <p class="planRaceGap">${gap<=0?`${fmtTime(Math.abs(gap))} inside current target estimate`:`${fmtTime(gap)} outside current target estimate`}</p>
  </section>`;
 }
