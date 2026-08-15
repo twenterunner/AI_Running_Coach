@@ -1,4 +1,4 @@
-AI Running Coach v13.7.17 — linked shoe-graph lifecycle events — build 30717
+AI Running Coach v13.7.18 — linked shoe-graph lifecycle events — build 30718
 
 - Adds numbered, colour-coded graph markers linked one-to-one with material Training plan, Rehab plan and Shoe rotation explanation cards.
 - Cause colours are independent from physical-pair curve colours: blue = rehab, teal = training, amber = rotation.
@@ -9,7 +9,7 @@ AI Running Coach v13.7.17 — linked shoe-graph lifecycle events — build 30717
 - Separates the acquisition deadline from the planned handover/replacement date so the runner has time to receive and introduce the new pair before the outgoing shoe reaches its programme-driven replacement range.
 - Uses programme-driven replacement timing when the remaining training/rehab plan crosses the shoe replacement range; otherwise falls back to the existing usage-based forecast with confidence shown.
 - Existing replacement-range, lifecycle graph, race-day planning, rehab shoe mileage and all locked training/recovery/injury calculations remain unchanged.
-- VERSION 13.7.17 · BUILD 30717 · SCHEMA 10400.
+- VERSION 13.7.18 · BUILD 30718 · SCHEMA 10400.
 - Repository remains flat.
 
 AI Running Coach v13.7.13 — auditable shoe-curve drivers — build 30713

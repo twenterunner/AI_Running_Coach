@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '13.7.17';
-  const BUILD = 30717;
+  const VERSION = '13.7.18';
+  const BUILD = 30718;
   const SCHEMA = 10400;
   const PRIMARY_STORAGE_KEY = 'arc_v10400_web';
   const MIRROR_STORAGE_KEY = 'arc_v10400_mirror';
@@ -5645,25 +5645,53 @@ function shoeProgrammeMileageChartHtml(){
  if(raceStrategy&&!raceStrategy.owned)allocationEvents.push({date:raceStrategy.purchaseDate,driver:'Shoe rotation',markerKm:0,title:`${raceStrategy.name} enters as the Race Day pair`,text:`This pair enters late by design. It receives only selected race-relevant sessions so it reaches Race Day near ${Math.round(raceStrategy.finalKm)} km rather than accumulating general training mileage.`});
  function weekStartIso(date){const d=dte(date),day=(d.getDay()+6)%7;d.setDate(d.getDate()-day);return iso(d)}
 
+ function shoeAllocationProfileScore(profile,plan){
+  if(!profile||!plan)return 0;
+  const req=SHOE_REQ[plan.type]||SHOE_REQ.Easy;
+  let weighted=0,total=0;
+  const add=(value,w)=>{weighted+=clamp(Number(value)||0,0,100)*w;total+=w};
+  add(profile.workoutSuitability?.[plan.type]??shoeProfileWorkoutSuitability(profile,plan.type),3.4);
+  add(shoeDistanceScore(profile,plan.distance),1.2);
+  add(shoeSurfaceScore(profile,plan),1.6);
+  const metric=(key,score)=>{if(req[key])add((Number(score)||0)/5*100,req[key]/6)};
+  metric('cushioning',profile.cushioning);metric('protection',profile.protection);metric('responsiveness',profile.responsiveness);
+  metric('efficiency',profile.efficiency);metric('grip',profile.grip);metric('stability',profile.stability);
+  metric('durability',profile.durability);metric('comfort',profile.comfort);
+  if(req.weight)add(({'ultra-light':5,'very-light':5,light:4,'medium-light':4,medium:3,'medium-heavy':2,heavy:1,unknown:3}[profile.weightClass]||3)/5*100,req.weight/6);
+  return total?Math.round(weighted/total):50;
+ }
+ function shoeAllocationTarget(label){
+  const text=String(label||'').replace(/^future\s+/i,'').trim();
+  const owned=(state.shoes||[]).find(sh=>shoeDisplayName(sh).toLowerCase()===text.toLowerCase());
+  if(owned)return{label:shoeDisplayName(owned),profile:shoeProfileForShoe(owned),shoe:owned};
+  const m=/^(?:ASICS\s+)?(.+?)\s+(\d+)$/.exec(text);
+  if(m){const profile=knownShoeProfile('ASICS',m[1],m[2]);if(profile)return{label:`ASICS ${profile.family} ${profile.version}`,profile,shoe:null}}
+  return null;
+ }
  function shoeAllocationPreferenceRationale(label,typesText,date){
   const types=String(typesText||'').split(',').map(x=>x.trim()).filter(Boolean);
-  const target=(state.shoes||[]).find(sh=>shoeDisplayName(sh).toLowerCase()===String(label||'').toLowerCase());
-  if(!target||!types.length)return'';
-  const relevant=(state.plan||[]).filter(p=>p.type!=='Rest'&&types.includes(p.type)&&(!date||p.date>=date)).slice(0,8);
-  const comparisons=[];
+  const target=shoeAllocationTarget(label);
+  if(!target||!types.length)return' The selected pair best matches the affected workout mix based on its workout-role, cushioning/protection, responsiveness and distance profile.';
+  const relevant=(state.plan||[]).filter(p=>p.type!=='Rest'&&types.includes(p.type)&&(!date||p.date>=date)).slice(0,10);
+  if(!relevant.length)return` ${target.label} is preferred for this allocation because its profile better matches the affected workout mix than the other available pairs.`;
+  let best=null;
   relevant.forEach(plan=>{
-   const ranked=shoeRecommendation(plan).ranked||[];
-   const chosen=ranked.find(r=>r.shoe?.id===target.id);
-   if(!chosen)return;
-   const alternative=ranked.find(r=>r.shoe?.id!==target.id);
-   if(!alternative)return;
-   comparisons.push({plan,chosen,alternative});
+    const targetScore=shoeAllocationProfileScore(target.profile,plan);
+    const alternatives=(state.shoes||[]).filter(sh=>sh.status!=='retired'&&(!target.shoe||sh.id!==target.shoe.id)).map(sh=>({label:shoeDisplayName(sh),score:shoeAllocationProfileScore(shoeProfileForShoe(sh),plan)})).sort((a,b)=>b.score-a.score);
+    const alt=alternatives[0]||null,margin=alt?targetScore-alt.score:targetScore;
+    const candidate={plan,targetScore,alt,margin};
+    if(!best||candidate.margin>best.margin)best=candidate;
   });
-  if(!comparisons.length)return'';
-  comparisons.sort((a,b)=>(b.chosen.score-b.alternative.score)-(a.chosen.score-a.alternative.score));
-  const best=comparisons[0],reasonList=(best.chosen.reasons||[]).filter(r=>!/km accumulated|service-life/i.test(r)).slice(0,3);
-  const why=reasonList.length?reasonList.join(', '):'better overall workout suitability';
-  return ` For ${best.plan.type}, ${shoeDisplayName(target)} ranks ${best.chosen.score}/100 versus ${best.alternative.score}/100 for ${shoeDisplayName(best.alternative.shoe)}, mainly because of ${why}.`;
+  if(!best)return` ${target.label} is preferred because its profile better matches the affected workout mix than the other available pairs.`;
+  const p=target.profile,reasons=[];
+  if((p.workoutSuitability?.[best.plan.type]??shoeProfileWorkoutSuitability(p,best.plan.type))>=80)reasons.push(`strong ${best.plan.type.toLowerCase()} suitability`);
+  if((p.cushioning||0)>=4||(p.protection||0)>=4)reasons.push('cushioning/protection');
+  if((p.responsiveness||0)>=4)reasons.push('responsiveness');
+  if((p.efficiency||0)>=4)reasons.push('efficiency');
+  if(shoeSurfaceScore(p,best.plan)>=90)reasons.push('surface fit');
+  const why=(reasons.slice(0,3).join(', ')||'better overall workout fit');
+  if(best.alt)return` For ${best.plan.type}, ${target.label} scores about ${best.targetScore}/100 on the equipment-fit factors versus ${best.alt.score}/100 for ${best.alt.label}, mainly because of ${why}.`;
+  return` For ${best.plan.type}, ${target.label} is the strongest available match, mainly because of ${why}.`;
  }
  function addSlopeShift(label,points,ignoreDates=[]){const ordered=(points||[]).filter(p=>p.date>=todayStr&&p.date<=raceDate).slice().sort((a,b)=>a.date.localeCompare(b.date)),weeks=new Map();let prev=null;ordered.forEach(p=>{if(prev){const delta=Math.max(0,Number(p.km)-Number(prev.km));if(delta>.01){const w=weekStartIso(p.date),row=weeks.get(w)||{training:0,rehab:0,types:[]};if(p.rehab||p.driver==='rehab')row.rehab+=delta;else row.training+=delta;if(p.type&&!row.types.includes(p.type))row.types.push(p.type);weeks.set(w,row)}}prev=p});const keys=[...weeks.keys()].sort();let best=null;for(let i=1;i<keys.length;i++){const a=weeks.get(keys[i-1])||{training:0,rehab:0,types:[]},b=weeks.get(keys[i])||{training:0,rehab:0,types:[]},ta=a.training+a.rehab,tb=b.training+b.rehab,change=Math.abs(tb-ta);if(change<8)continue;if(ignoreDates.some(d=>Math.abs(dte(keys[i]).getTime()-dte(d).getTime())<10*DAY))continue;if(!best||change>best.change)best={date:keys[i],a,b,ta,tb,change}}if(!best)return;const rehabDelta=Math.abs(best.b.rehab-best.a.rehab),trainingDelta=Math.abs(best.b.training-best.a.training),driver=rehabDelta>trainingDelta?'Rehab plan':'Training plan',types=best.b.types.slice(0,3).join(','),markerPoint=ordered.filter(p=>p.date<=best.date).at(-1)||ordered.find(p=>p.date>=best.date)||null;const preferenceWhy=driver==='Training plan'?shoeAllocationPreferenceRationale(label,types,best.date):'';allocationEvents.push({date:best.date,driver,markerKm:Number(markerPoint?.km)||0,title:`Mileage allocation changes for ${label}`,text:driver==='Rehab plan'?`Expected rehabilitation walking/running exposure on this pair changes from about ${best.a.rehab.toFixed(1)} to ${best.b.rehab.toFixed(1)} km/week. This is driven by the rehab schedule, not by shoe wear.`:`Planned use of this pair changes from about ${best.ta.toFixed(1)} to ${best.tb.toFixed(1)} km/week as the training programme changes the sessions assigned to it${types?` (${types})`:''}.${preferenceWhy}`})}
  series.forEach(s=>addSlopeShift(shoeDisplayName(s.shoe),s.planned,rawEvents.map(e=>e.date)));
@@ -5673,7 +5701,7 @@ function shoeProgrammeMileageChartHtml(){
  const driverColor=driver=>driver==='Rehab plan'?'#73A7FF':driver==='Training plan'?'#35E2D0':'#F4C95D';
  uniqueEvents.forEach((e,i)=>{e.markerNo=i+1;e.markerColor=driverColor(e.driver)});
  const eventMarkers=uniqueEvents.map(e=>{const xx=x(e.date),yy=y(Math.min(maxY,Math.max(0,Number(e.markerKm)||0)));return`<g class="shoeCauseMarker" style="--event-color:${e.markerColor}" aria-label="${esc(e.driver)} event ${e.markerNo}"><line x1="${xx}" y1="${Math.max(T,yy-22)}" x2="${xx}" y2="${Math.min(H-B,yy+22)}"/><circle cx="${xx}" cy="${yy}" r="13"/><text x="${xx}" y="${yy+5}" text-anchor="middle">${e.markerNo}</text></g>`}).join('');
- const allocationHtml=uniqueEvents.length?`<details class="shoeGraphEvents"><summary><span><b>Explain graph events</b><small>${uniqueEvents.length} numbered ${uniqueEvents.length===1?'event':'events'} · training, rehab and shoe rotation</small></span></summary><div class="shoeGraphEventsBody"><p class="shoeGraphEventsKey">The numbered markers on the graph match the explanations below. Blue = rehab plan, teal = training plan, amber = shoe rotation.</p>${uniqueEvents.map(e=>`<article class="shoeAllocationEvent driver-${e.driver.toLowerCase().replace(/[^a-z]+/g,'-')}" style="--event-color:${e.markerColor}"><div><span class="shoeEventNumber">${e.markerNo}</span><span class="shoeDriverTag">${esc(e.driver)}</span><time>${esc(shoeChartDate(e.date))}</time></div><b>${esc(e.title)}</b><p>${esc(e.text)}</p></article>`).join('')}</div></details>`:'';
+ const allocationHtml=uniqueEvents.length?`<div class="shoeGraphEvents"><div class="shoeGraphEventsHead"><small>GRAPH EVENTS</small><b>Tap a number to explain it</b><p>Each foldout matches the same numbered marker on the graph. Blue = rehab plan, teal = training plan, amber = shoe rotation.</p></div><div class="shoeGraphEventsBody">${uniqueEvents.map(e=>`<details class="shoeGraphEventDetail driver-${e.driver.toLowerCase().replace(/[^a-z]+/g,'-')}" style="--event-color:${e.markerColor}"><summary><span class="shoeGraphEventSummary"><span class="shoeEventNumber">${e.markerNo}</span><span><b>${esc(e.driver)}</b><small>${esc(shoeChartDate(e.date))} · ${esc(e.title)}</small></span></span></summary><div class="shoeGraphEventExplanation"><p>${esc(e.text)}</p></div></details>`).join('')}</div></div>`:'';
  const raceStrategyCard=raceStrategy?`<div class="shoeRaceStrategyCard"><small>RACE-DAY TARGET</small><b>${esc(raceStrategy.name)}</b><span>~${Math.round(raceStrategy.finalKm)} km planned on ${esc(shoeChartDate(raceDate))} · target ${Math.round(raceStrategy.window?.minKm||0)}–${Math.round(raceStrategy.window?.maxKm||0)} km</span></div>`:'';
  return`<div class="shoeChartWrap shoeProgrammeChart"><div class="shoeChartRaceDate"><small>PHYSICAL-PAIR PLAN THROUGH RACE DAY</small><b>Race day · ${esc(shoeChartDate(raceDate))}</b></div>${raceStrategyCard}<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Physical shoe pairs, purchase dates, planned replacements and race-day pair mileage through race day">${targetBand}<g class="shoeGrid">${grid}</g><line class="shoeTodayLine" x1="${todayX}" y1="${T}" x2="${todayX}" y2="${H-B}"/><line class="shoeRaceLine" x1="${raceX}" y1="${T}" x2="${raceX}" y2="${H-B}"/>${paths}${replacementProjection}${raceStrategyPath}${replacementMarkers}${eventMarkers}${xlabels}<text class="yTitle" transform="translate(32 ${H/2}) rotate(-90)" text-anchor="middle">Accumulated km</text></svg><div class="shoeChartKey"><span><i class="actual"></i>Logged mileage</span><span><i class="planned"></i>Future plan</span><span><i class="raceshoe"></i>Race-day pair</span></div><div class="shoeChartLegend">${legend}</div>${allocationHtml}</div>`
 }
