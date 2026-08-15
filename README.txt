@@ -1,3 +1,14 @@
+AI Running Coach v13.7.2 — shoe plan visibility + race-day target + lifecycle chart clarity — build 30702
+
+- Adds the planned/proposed shoe directly to every non-rest daily Plan tile, visible before expanding the workout. Manual selections are labelled Selected shoe; automatic assignments Planned shoe; immediate model-only suggestions Proposed shoe.
+- Adds a prominent Desired race-day situation card in Shoes showing the target shoe/model, desired race-day mileage window, current projected race-day mileage and familiarisation intent.
+- Reworks the Shoes lifecycle chart so outgoing shoes stop accumulating planned mileage once their plan-driven replacement point is reached; the proposed replacement pair then inherits the remaining assigned mileage. This avoids double-counting the outgoing and replacement pair on the visual forecast.
+- Adds distinct nominal replacement-date markers from the usage-rate forecast alongside the plan-driven replacement markers. Dates after race day are explicitly labelled as after race.
+- Increases graph axis, marker and legend typography for phone readability and adds a Why does this graph look like this? foldout with shoe-specific dynamic rationale.
+- Fixes Today shoe-card spacing so the shoe pictogram no longer intrudes into the shoe name/copy and aligns the equipment row with the existing tile hierarchy.
+- No training, plan-generation, prediction, pathway, recovery, injury, rehabilitation or workout-scoring calculation was changed. Schema remains 10400.
+- Repository remains flat.
+
 AI Running Coach v13.7.1 — Shoes programme mileage + lifecycle timeline — build 30701
 
 - Replaces the Shoes mileage-history view with a programme-wide actual-versus-planned cumulative mileage chart through race day.

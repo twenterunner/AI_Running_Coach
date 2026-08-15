@@ -3888,3 +3888,53 @@ body:has(#dashboard.progressPage.active),#mainContent:has(#dashboard.progressPag
 .shoeProgrammeChart svg{min-height:250px}.shoePlannedLine{stroke-dasharray:8 7;stroke-width:2.5;opacity:.9}.shoeActualLine{stroke-width:3.2}.shoeTodayLine{stroke:rgba(245,251,255,.35);stroke-width:1;stroke-dasharray:3 5}.shoeRaceLine{stroke:var(--teal-2);stroke-width:1.5;stroke-dasharray:4 4;opacity:.8}.shoeReplacementMarker line{stroke:var(--amber);stroke-width:1.2;stroke-dasharray:3 4;opacity:.8}.shoeReplacementMarker circle{fill:var(--card);stroke:var(--amber);stroke-width:2.4}.shoeReplacementMarker text{fill:var(--amber);font-size:8px;font-weight:850}.shoeChartKey{display:flex;flex-wrap:wrap;gap:7px 12px;margin:8px 0 0;font-size:9px;color:var(--muted)}.shoeChartKey span{display:flex;align-items:center;gap:6px}.shoeChartKey i{display:block;width:22px;height:0;border-top:3px solid var(--teal);border-radius:2px}.shoeChartKey i.planned{border-top-style:dashed;border-top-width:2px}.shoeChartKey i.replace{width:8px;height:8px;border:2px solid var(--amber);border-radius:50%}.shoeLifecycleEvents{display:grid;gap:8px;margin-top:12px}.shoeLifecycleEvents article{display:grid;gap:3px;padding:11px 12px;background:var(--nested);border:1px solid rgba(136,161,177,.11);border-radius:var(--r1)}.shoeLifecycleEvents small{font-size:8px;letter-spacing:.07em;color:var(--amber)}.shoeLifecycleEvents b{font-size:12px}.shoeLifecycleEvents span{font-size:10px;color:var(--muted)}.shoeLifecycleEvents strong{font-size:11px;color:var(--teal-2)}.shoeEmpty.compact{padding:11px 12px;margin-top:10px;font-size:10px;color:var(--muted)}
 @media(max-width:600px){.shoeProgrammeChart svg{min-height:205px}.shoeReplacementMarker text{font-size:7px}.shoeChartKey{display:grid;grid-template-columns:1fr}.shoeLifecycleEvents article{padding:10px}}
 .shoeNewPairLine{stroke:var(--teal-2);stroke-width:2;stroke-dasharray:2 7;opacity:.8}.shoeRacePurchaseLine{stroke:var(--purple);stroke-width:2.4;stroke-dasharray:10 6;opacity:.9}.shoeChartKey i.newpair{border-top-width:2px;border-top-style:dotted;border-top-color:var(--teal-2)}.racePurchaseEvent article{border-color:rgba(185,163,255,.22)}.racePurchaseEvent small{color:var(--purple)}
+
+/* v13.7.2 — plan-tile shoe visibility + race-day target + chart readability */
+#plan .planShoeSummary{display:flex;align-items:center;gap:6px;margin-top:6px;padding:5px 7px;border-radius:8px;background:rgba(3,28,39,.24);border:1px solid rgba(61,214,198,.12);width:max-content;max-width:100%}
+#plan .planShoeSummaryIcon{width:20px;height:20px;flex:0 0 20px;display:grid;place-items:center;color:var(--teal-2)}
+#plan .planShoeSummaryIcon .todayPic{width:19px!important;height:19px!important}
+#plan .planShoeSummary>span:last-child{display:grid;gap:0;min-width:0}
+#plan .planShoeSummary small{font-size:6.5px;line-height:1.1;text-transform:uppercase;letter-spacing:.07em;color:#8fb5bf}
+#plan .planShoeSummary b{font-size:8.5px;line-height:1.2;color:#f4fbfd;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+
+#today .todayShoeRow{grid-template-columns:48px minmax(0,1fr);column-gap:14px;padding:12px 13px;align-items:start}
+#today .todayShoeRow>span{width:48px;height:48px;border-radius:12px;overflow:hidden}
+#today .todayShoeRow>span .todayPic{width:34px!important;height:34px!important}
+#today .todayShoeRow>div{padding-top:1px;min-width:0}
+#today .todayShoeRow b{font-size:14px;line-height:1.2;overflow-wrap:anywhere}
+#today .todayShoeRow p{font-size:10px;line-height:1.3;margin-top:4px}
+#today .todayShoeRow details{grid-column:2;margin-top:6px!important}
+
+.shoeRaceTarget{padding:14px;background:linear-gradient(145deg,#103845,#102833 65%);border:1px solid rgba(61,214,198,.22);border-radius:var(--r1);display:grid;gap:9px}
+.shoeRaceTarget>small{font-size:9px;font-weight:900;letter-spacing:.09em;color:var(--teal-2)}
+.shoeRaceTarget h4{font-size:20px;line-height:1.15;margin:0}
+.shoeRaceTarget p{margin:0;font-size:11px;line-height:1.45;color:var(--text-2)}
+.shoeRaceTargetMetrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.shoeRaceTargetMetrics>div{padding:10px;background:rgba(4,24,33,.42);border:1px solid rgba(136,161,177,.11);border-radius:10px}
+.shoeRaceTargetMetrics span{display:block;font-size:8px;line-height:1.2;color:var(--muted)}
+.shoeRaceTargetMetrics b{display:block;margin-top:3px;font-size:12px;line-height:1.25}
+
+.shoeProgrammeChart svg{min-height:300px}
+.shoeProgrammeChart .shoeGrid text,.shoeProgrammeChart .xLab,.shoeProgrammeChart .yTitle{font-size:13px;font-weight:650}
+.shoeProgrammeChart .shoeReplacementMarker text,.shoeProgrammeChart .shoeNominalMarker text{font-size:11px;font-weight:850}
+.shoeNominalMarker line{stroke:rgba(103,167,255,.65);stroke-width:1.2;stroke-dasharray:2 5}
+.shoeNominalMarker path{fill:var(--blue);opacity:.95}
+.shoeNominalMarker text{fill:#9dc4ff}
+.shoeNominalMarker.afterRace line{opacity:.25}
+.shoeChartKey{font-size:11px;line-height:1.35;gap:9px 14px}
+.shoeChartKey i.nominal{width:9px;height:9px;border:0;background:var(--blue);clip-path:polygon(0 0,100% 0,50% 100%)}
+.shoeGraphRationale{margin-top:12px!important;background:#0c1923!important;border-color:rgba(61,214,198,.13)!important}
+.shoeGraphRationale>summary{font-size:12px!important;color:var(--text)!important}
+.shoeGraphRationale>div{padding:2px 0 0}
+.shoeGraphRationale p,.shoeGraphRationale li{font-size:11px;line-height:1.5;color:var(--text-2)}
+.shoeGraphRationale ul{padding-left:18px;margin:8px 0}
+
+@media(max-width:600px){
+ #plan .planShoeSummary{max-width:100%;padding:4px 6px;margin-top:5px}
+ #plan .planShoeSummary b{font-size:8px}
+ .shoeRaceTargetMetrics{grid-template-columns:1fr}
+ .shoeProgrammeChart svg{min-height:285px}
+ .shoeProgrammeChart .shoeGrid text,.shoeProgrammeChart .xLab,.shoeProgrammeChart .yTitle{font-size:12px}
+ .shoeProgrammeChart .shoeReplacementMarker text,.shoeProgrammeChart .shoeNominalMarker text{font-size:10px}
+ .shoeChartKey{font-size:10px}
+}
