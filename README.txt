@@ -1,3 +1,17 @@
+AI Running Coach v13.6.2 — realistic pictogram/icon refinement — build 30602
+
+- Reworked the shared SVG pictogram family to be more immediately recognisable at mobile size.
+- Running-related icons now use runner/shoe/body geometry rather than abstract arrows, diamonds, clocks or text glyphs where practical.
+- Injury/pain uses a two-arm/two-leg human figure with a localised pain marker.
+- Rehabilitation combines a recognisable lower-limb rehabilitation form with the existing medical/recovery cue.
+- Recovery/rest uses a resting-athlete/bench form; race uses runner + finish flag; training load combines runner + load bars.
+- Heart/readiness retains physiological ECG context.
+- Replaced text-symbol workout-type markers with SVGs from the same visual family.
+- Refined navigation icons for Log, Progress, Recovery, Injury and Race Day.
+- Existing semantic status colour logic is preserved; SVGs continue to inherit the existing status/card classes.
+- Only icon artwork and minimal icon-specific optical-alignment CSS changed. No calculations, data, thresholds, wording, hierarchy, layout, charts, interactions, navigation behaviour, foldouts or responsive logic changed.
+- Repository remains flat.
+
 AI Running Coach v13.6.1 — full GUI QA and reliability pass — build 30601
 
 - Removes the stale Injury-only CSS `order` rules that were overriding the visible section numbers.

@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '13.6.1';
-  const BUILD = 30601;
+  const VERSION = '13.6.2';
+  const BUILD = 30602;
   const SCHEMA = 10330;
   const PRIMARY_STORAGE_KEY = 'arc_v10330_web';
   const MIRROR_STORAGE_KEY = 'arc_v10330_mirror';
@@ -2381,24 +2381,17 @@ function coachVisualIcon(kind){
   coach:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a7 7 0 0 0-4 12.7V20l4-2 4 2v-4.3A7 7 0 0 0 12 3z"/><path d="M9 10h.01M15 10h.01M9.5 13c1.7 1.3 3.3 1.3 5 0"/></svg>',
   briefing:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5.5h14a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2h-8l-5 3v-3H5a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2z"/><path d="M8 10h5M8 13h8"/><path d="M17.5 3.5v3M16 5h3"/></svg>',
   race:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 21V3M5 4h12l-3 4 3 4H5"/></svg>',
-  recovery:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12a7 7 0 1 0 2-5"/><path d="M5 4v5h5"/></svg>',
+  recovery:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 16h10a4 4 0 0 0 4-4v-2H9a4 4 0 0 0-4 4z"/><path d="M8 10V7M12 10V6M16 10V7M4 20h16"/></svg>',
   trend:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 17l5-5 4 3 7-8"/><path d="M15 7h5v5"/></svg>',
-  injury:'<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v10M7 12h10"/></svg>',
+  injury:'<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="4.5" r="1.7"/><path d="M9 6.5l1.5 6M9.5 8L6 11M10 8l3.5 2.5M10.5 12.5L7.5 20M10.5 12.5l4 7"/><path d="M16 10l3 2-2 2 2 1-4 4 1-3-2-1z"/></svg>',
   plan:'<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M8 3v4M16 3v4M4 9h16M8 13h3M13 13h3M8 16h3"/></svg>',
-  load:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 18h16M6 18v-5M11 18V8M16 18V4"/></svg>'
+  load:'<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="8" cy="6" r="1.7"/><path d="M7 8l-3 4 3 2 2-3 2 2 3-1M7 14l-3 5H1M8 14l3 4 3-1"/><path d="M17 19V8M20 19V4"/></svg>'
  };
  return icons[kind]||icons.coach;
 }
 function workoutTypeIcon(type){
- const t=String(type||'').toLowerCase();
- if(/race/.test(t))return'⚑';
- if(/hill/.test(t))return'⌁';
- if(/interval|vo2|vo₂|fartlek|repetition/.test(t))return'⚡';
- if(/threshold|tempo/.test(t))return'◆';
- if(/long/.test(t))return'◒';
- if(/recovery/.test(t))return'↻';
- if(/rest/.test(t))return'○';
- return'↗';
+ const cls=workoutTypeClass(type);
+ return uiIcon(cls==='quality'?'quality':cls==='threshold'?'threshold':cls==='long'?'long':cls==='recovery'?'recovery':cls==='rest'?'rest':cls==='race'?'race':'easy');
 }
 function workoutTypeClass(type){
  const t=String(type||'').toLowerCase();
@@ -2407,21 +2400,21 @@ function workoutTypeClass(type){
 }
 function uiIcon(kind){
  const paths={
-  easy:'<path d="M5 17c4-7 7-8 14-10"/><path d="M14 5l5 2-2 5"/>',
-  quality:'<path d="M13 2L5 13h6l-1 9 9-13h-6z"/>',
-  threshold:'<path d="M12 3l7 7-7 11-7-11z"/>',
-  long:'<path d="M4 13a8 8 0 1 0 8-8"/><path d="M12 5v8l5 3"/>',
-  recovery:'<path d="M5 12a7 7 0 1 0 2-5"/><path d="M5 4v5h5"/>',
-  race:'<path d="M5 21V3"/><path d="M5 4h12l-3 4 3 4H5"/>',
-  rest:'<path d="M7 7h10M7 12h10M9 17h6"/>',
-  pace:'<path d="M4 17l5-5 4 3 7-8"/><path d="M15 7h5v5"/>',
-  load:'<path d="M4 18h16M6 18v-5M11 18V8M16 18V4"/>',
-  heart:'<path d="M12 20s-7-4.3-7-10a4 4 0 0 1 7-2 4 4 0 0 1 7 2c0 5.7-7 10-7 10z"/>',
-  pain:'<path d="M12 3a9 9 0 1 0 9 9"/><path d="M12 7v6M12 17h.01"/>',
+  easy:'<circle cx="14.7" cy="5.2" r="2.1"/><path d="M12.8 8.1l-3.2 4.4 3.4 2.2 2.6-3.5 2.4 2.6 3.1-1.2"/><path d="M12.7 14.7l-3.1 5.1H5.5M13.3 14.8l3.8 3.8 3.4-.7"/>',
+  quality:'<circle cx="14.8" cy="4.9" r="2"/><path d="M12.8 7.8l-3.7 4.4 3.8 2.1 2.5-3.3 2.8 2.4 3-1.4"/><path d="M12.8 14.2l-3.7 5.5H5M13.5 14.4l4.1 3.7 3.5-.8"/><path d="M3 7h4M2 10h5M4 13h3"/>',
+  threshold:'<circle cx="14.8" cy="4.9" r="2"/><path d="M12.9 7.8l-3.4 4.2 3.4 2.1 2.5-3.1 2.7 2.3 3-1.3"/><path d="M12.9 14.2l-3.4 5.5H5M13.5 14.3l4 3.8 3.4-.8"/><path d="M3 6v12M3 12h4"/>',
+  long:'<circle cx="14.8" cy="5" r="2"/><path d="M12.9 7.9l-3.3 4.3 3.4 2.1 2.5-3.2 2.6 2.4 3-1.3"/><path d="M12.9 14.4l-3.4 5.3H5M13.5 14.5l4 3.7 3.4-.8"/><path d="M3 4v5M1 6.5h4M3 15a7 7 0 0 0 3 5"/>',
+  recovery:'<path d="M7 8.5a7.2 7.2 0 1 0 2-2.2"/><path d="M7 3.8v5h5"/><path d="M13 10.2c1.1-1.7 4.1-1.1 4.1 1.3 0 2.7-4.1 5-4.1 5s-4.1-2.3-4.1-5c0-2.4 3-3 4.1-1.3z"/>',
+  race:'<circle cx="8.2" cy="7" r="1.8"/><path d="M7.3 9.2l-2.4 3.4 2.7 1.7 2-2.5 2.2 2 2.4-1"/><path d="M7.5 14.2l-2.3 4H2.4M8 14.3l2.8 2.7 2.6-.5"/><path d="M16 20V4M16 5h6l-1.7 2 1.7 2h-6"/>',
+  rest:'<path d="M5 17h9a4 4 0 0 0 4-4v-2H8a3 3 0 0 0-3 3z"/><path d="M7 11V8M11 11V7M15 11V8"/><path d="M4 20h16"/>',
+  pace:'<circle cx="7.2" cy="15.5" r="2.2"/><circle cx="16.8" cy="8.5" r="2.2"/><path d="M9.2 14.5l5.6-4.8M11.8 9.2h4.9v4.9"/>',
+  load:'<path d="M3 19h18"/><circle cx="8" cy="7" r="1.8"/><path d="M7.3 9l-2.1 3 2.5 1.5 1.8-2.2 2.1 1.7 2.1-.9M7.5 13.5l-2.2 4H2.5M8 13.6l2.7 2.7 2.5-.5"/><path d="M16 17V7M19 17V4"/>',
+  heart:'<path d="M12 20s-7-4.3-7-10a4 4 0 0 1 7-2 4 4 0 0 1 7 2c0 5.7-7 10-7 10z"/><path d="M6.8 12h3l1.3-3 2.1 6 1.5-3H18"/>',
+  pain:'<circle cx="9.5" cy="4.5" r="1.8"/><path d="M9.5 6.5l1.4 6M10 8l-4 3.2M10.5 8.2l4 2.5M10.9 12.5l-3.4 7M10.9 12.5l4.1 6.7"/><path d="M16 10.5l3 1.7-2 2.1 2 1.3-4 4 .8-3-2-1.5z"/>',
   compare:'<path d="M4 7h12M13 4l3 3-3 3M20 17H8M11 14l-3 3 3 3"/>',
-  rehab:'<circle cx="12" cy="12" r="9"/><path d="M12 7v10M7 12h10"/>'
+  rehab:'<path d="M8 4h4v4h4v4h-4v4H8v-4H4V8h4z"/><path d="M15 14c2.5.4 4 2 4 4.2M14 18h7M6 19c2-2.8 4.2-3.8 7-3"/>'
  };
- return`<svg class="uiIcon" viewBox="0 0 24 24" aria-hidden="true">${paths[kind]||paths.easy}</svg>`;
+ return`<svg class="uiIcon realisticUiIcon" viewBox="0 0 24 24" aria-hidden="true">${paths[kind]||paths.easy}</svg>`;
 }
 function circularGauge(value,label=''){
  const v=clamp(Number(value)||0,0,100);
@@ -2447,19 +2440,16 @@ function visualStatusIcon(kind){
 
 function todayPictogram(kind){
  const svg={
-  training:`<svg class="todayPic" viewBox="0 0 64 64" aria-hidden="true"><circle class="picSkin" cx="38" cy="10" r="6"/><path class="picBase" d="M31 19l-8 13 8 5 7-10 6 8 10-4"/><path class="picBase" d="M30 36l-7 14H11M32 37l11 10 10-2"/><path class="picAccent" d="M19 31l7-11 11-2"/><path class="picWarm" d="M16 48h12"/></svg>`,
-  readiness:`<svg class="todayPic" viewBox="0 0 64 64" aria-hidden="true"><path class="picBase" d="M32 53S11 40 11 23c0-8 6-13 13-13 4 0 7 2 8 5 2-3 5-5 9-5 7 0 13 5 13 13 0 17-22 30-22 30z"/><path class="picGood" d="M8 34h13l5-10 7 20 6-13 4 3h13"/></svg>`,
-  pain:`<svg class="todayPic" viewBox="0 0 64 64" aria-hidden="true"><circle class="picSkin" cx="28" cy="9" r="5"/><path class="picBase" d="M28 15l4 17"/><path class="picBase" d="M30 20l-11 10M31 21l12 7"/><path class="picBase" d="M32 32l-10 19M32 32l11 18"/><path class="picWarn" d="M39 29l7 4-5 5 5 3-9 8 2-7-5-3z"/></svg>`,
-  shoe:`<svg class="todayPic" viewBox="0 0 64 64" aria-hidden="true"><path class="picBase" d="M10 41c8-2 13-9 17-20l8 4c2 7 7 11 17 13 4 1 6 4 5 8-1 4-4 6-9 6H18c-7 0-11-4-8-11z"/><path class="picAccent" d="M27 25l8 5M23 31l9 5M18 37l9 5"/><path class="picWarm" d="M12 46h43"/></svg>`,
-  week:`<svg class="todayPic" viewBox="0 0 64 64" aria-hidden="true"><rect class="picBase" x="10" y="14" width="44" height="38" rx="5"/><path class="picAccent" d="M10 24h44M20 9v10M44 9v10"/><path class="picGood" d="M18 35h8M30 35h8M42 35h5M18 43h8M30 43h8"/></svg>`,
-  signal:`<svg class="todayPic" viewBox="0 0 64 64" aria-hidden="true"><path class="picBase" d="M9 48h46M13 44l10-10 9 6 17-22"/><path class="picAccent" d="M43 18h8v8"/><circle class="picGood" cx="23" cy="34" r="3"/><circle class="picGood" cx="32" cy="40" r="3"/></svg>`,
-  race:`<svg class="todayPic" viewBox="0 0 64 64" aria-hidden="true"><path class="picBase" d="M17 55V9M18 12h28l-7 9 7 9H18"/><path class="picAccent" d="M20 14h8v8h-8zM28 22h8v8h-8zM36 14h8v8h-8z"/></svg>`,
-  rehab:`<svg class="todayPic rehabCrossPic" viewBox="0 0 64 64" aria-hidden="true">
-    <path class="picGood rehabCross" d="M27 14h10v13h13v10H37v13H27V37H14V27h13z"/>
-    <path class="picAccent rehabArc" d="M14 18a24 24 0 0 1 33-3M50 46a24 24 0 0 1-34 2"/>
-  </svg>`,
-  recovery:`<svg class="todayPic" viewBox="0 0 64 64" aria-hidden="true"><path class="picBase" d="M43 45A20 20 0 1 1 31 9a17 17 0 0 0 12 36z"/><path class="picAccent" d="M45 12v8M41 16h8M52 26v6M49 29h6"/></svg>`,
-  action:`<svg class="todayPic" viewBox="0 0 64 64" aria-hidden="true"><rect class="picBase" x="17" y="10" width="30" height="44" rx="4"/><path class="picGood" d="M25 23l3 3 6-7M25 35l3 3 6-7M25 47l3 3 6-7"/><path class="picBase" d="M37 24h5M37 36h5M37 48h5M26 10V7h12v3"/></svg>`
+  training:`<svg class="todayPic realisticPic" viewBox="0 0 64 64" aria-hidden="true"><circle class="picSkin" cx="39" cy="10" r="5.5"/><path class="picBase" d="M35 17l-8 11 8 6 6-9 6 7 9-4"/><path class="picBase" d="M34 34l-8 15-12 3M36 35l10 11 10-2"/><path class="picAccent" d="M28 27l6-9 9-1"/><path class="picWarm" d="M12 53h18"/></svg>`,
+  readiness:`<svg class="todayPic realisticPic" viewBox="0 0 64 64" aria-hidden="true"><path class="picBase" d="M32 53S12 41 12 24c0-8 5-13 12-13 4 0 7 2 8 6 2-4 5-6 9-6 7 0 12 5 12 13 0 17-21 29-21 29z"/><path class="picGood" d="M9 34h12l5-11 7 21 6-14 4 4h12"/><path class="picAccent" d="M46 15l4 4-8 8"/></svg>`,
+  pain:`<svg class="todayPic realisticPic" viewBox="0 0 64 64" aria-hidden="true"><circle class="picSkin" cx="27" cy="9" r="5"/><path class="picBase" d="M27 15l4 17M29 20L18 30M30 20l12 8M31 32L21 51M31 32l12 18"/><circle class="picWarn" cx="39" cy="34" r="5"/><path class="picWarn" d="M39 27v4M39 37v4M32 34h4M42 34h4M34 29l3 3M44 29l-3 3M34 39l3-3M44 39l-3-3"/></svg>`,
+  shoe:`<svg class="todayPic realisticPic" viewBox="0 0 64 64" aria-hidden="true"><path class="picBase" d="M9 42c8-2 13-9 18-21l8 4c2 7 7 11 17 13 5 1 7 4 6 8-1 4-5 6-10 6H18c-7 0-12-4-9-10z"/><path class="picAccent" d="M27 26l8 5M23 32l9 5M18 38l9 5"/><path class="picWarm" d="M12 47h43"/></svg>`,
+  week:`<svg class="todayPic realisticPic" viewBox="0 0 64 64" aria-hidden="true"><rect class="picBase" x="10" y="14" width="44" height="38" rx="5"/><path class="picAccent" d="M10 24h44M20 9v10M44 9v10"/><path class="picGood" d="M18 34l3 3 5-6M31 34l3 3 5-6M44 34l3 3 4-5M18 44h8M31 44h8"/></svg>`,
+  signal:`<svg class="todayPic realisticPic" viewBox="0 0 64 64" aria-hidden="true"><circle class="picSkin" cx="17" cy="18" r="4"/><path class="picBase" d="M15 23l-6 9 7 4 5-7 5 6 7-3M16 36L10 48H3M18 36l8 9 8-2"/><path class="picAccent" d="M34 47l7-8 6 4 10-15M51 28h6v6"/><circle class="picGood" cx="41" cy="39" r="2.5"/></svg>`,
+  race:`<svg class="todayPic realisticPic" viewBox="0 0 64 64" aria-hidden="true"><circle class="picSkin" cx="18" cy="16" r="4"/><path class="picBase" d="M16 21l-6 9 7 4 5-7 5 6 7-3M17 34l-6 12H4M19 34l8 9 8-2"/><path class="picBase" d="M43 55V10M44 12h14l-4 6 4 6H44"/><path class="picAccent" d="M45 13h6v6h-6M51 19h6v5h-6"/></svg>`,
+  rehab:`<svg class="todayPic realisticPic rehabCrossPic" viewBox="0 0 64 64" aria-hidden="true"><path class="picBase" d="M18 13c5 1 9 5 10 11l2 11c1 6 5 10 11 12"/><path class="picBase" d="M18 13l-3 17 7 18M22 48h18"/><path class="picAccent" d="M28 29c5-3 10-3 15 0M31 36c4-2 8-2 12 0"/><path class="picGood" d="M44 10h7v8h8v7h-8v8h-7v-8h-8v-7h8z"/></svg>`,
+  recovery:`<svg class="todayPic realisticPic" viewBox="0 0 64 64" aria-hidden="true"><path class="picBase" d="M14 39h27c7 0 11-5 11-11v-5H23c-6 0-9 4-9 9z"/><path class="picBase" d="M18 23v-8M28 23V12M38 23v-8M11 49h43"/><path class="picAccent" d="M48 10v8M44 14h8"/></svg>`,
+  action:`<svg class="todayPic realisticPic" viewBox="0 0 64 64" aria-hidden="true"><rect class="picBase" x="17" y="10" width="30" height="44" rx="4"/><path class="picGood" d="M24 23l4 4 7-8M24 35l4 4 7-8M24 47l4 4 7-8"/><path class="picBase" d="M38 24h5M38 36h5M38 48h5M26 10V7h12v3"/></svg>`
  };
  return svg[kind]||svg.training;
 }
@@ -5343,13 +5333,13 @@ function navIcon(page){
  const icons={
   today:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 13h4l2-6 4 12 2-6h4"/><path d="M5 4h14v16H5z" opacity=".15"/></svg>',
   plan:'<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M7 3v4M17 3v4M4 9h16M8 13h3M13 13h3M8 16h3"/></svg>',
-  runs:'<svg class="logNavPic" viewBox="0 0 24 24" aria-hidden="true"><path class="logNavBase" d="M3 14c3 0 5-1 7-4l2 2c2 2 4 3 8 3h1v3H6c-2 0-3-1-3-4z"/><path class="logNavAccent" d="M13 4v6M17 6v4M21 3v7M13 8l3-2 2 1 3-3"/><path class="logNavGood" d="M16 20l2 2 4-5"/></svg>',
-  dashboard:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19V10M10 19V5M16 19v-7M22 19H2"/><path d="M4 8l6-4 6 6 5-5"/></svg>',
+  runs:'<svg class="logNavPic" viewBox="0 0 24 24" aria-hidden="true"><path class="logNavBase" d="M3 14c3 0 5-1 7-4l2 2c2 2 4 3 8 3h1v3H6c-2 0-3-1-3-4z"/><path class="logNavAccent" d="M11 11l3 2M8 13l3 2"/><path class="logNavGood" d="M16 20l2 2 4-5"/></svg>',
+  dashboard:'<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="16" r="1.5"/><circle cx="12" cy="11" r="1.5"/><circle cx="18" cy="6" r="1.5"/><path d="M7.3 15l3.4-3M13.3 10l3.4-3M3 20h18"/></svg>',
   more:'<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg>',
-  assessments:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h14v16H5zM8 8h8M8 12h5M8 16h7"/></svg>',
-  recovery:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2-5.3"/><path d="M4 4v6h6"/></svg>',
-  injury:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v18M3 12h18"/><circle cx="12" cy="12" r="9"/></svg>',
-  race:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 21V3M5 4h12l-3 4 3 4H5"/></svg>',
+  assessments:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h14v16H5zM8 8h8M8 12h5M8 16h7"/><path d="M15 12l1.5 1.5L20 10"/></svg>',
+  recovery:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 16h10a4 4 0 0 0 4-4v-2H9a4 4 0 0 0-4 4z"/><path d="M8 10V7M12 10V6M16 10V7M4 20h16"/></svg>',
+  injury:'<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="4.5" r="1.7"/><path d="M9 6.5l1.5 6M9.5 8L6 11M10 8l3.5 2.5M10.5 12.5L7.5 20M10.5 12.5l4 7"/><path d="M16 10l3 2-2 2 2 1-4 4 1-3-2-1z"/></svg>',
+  race:'<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="7" r="1.5"/><path d="M5.5 9l-2 3 2.4 1.4 1.7-2.2 1.8 1.8 2-.8M5.7 13.4L3.5 18H1M6.3 13.5L9 16l2.3-.5"/><path d="M15 21V3M15 4h7l-2 2.5 2 2.5h-7"/></svg>',
   settings:'<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/></svg>'
  };
  return icons[page]||icons.more;
