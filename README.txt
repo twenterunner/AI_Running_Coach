@@ -1,3 +1,12 @@
+AI Running Coach v13.6.7 — Rest pictogram clarification — build 30607
+
+- Replaces the previous ambiguous Rest pictogram with a simple crescent-moon + Z/sleep symbol.
+- The same Rest concept is used consistently for both the larger workout pictogram and compact workout-type icon.
+- Existing semantic/status colour inheritance is preserved.
+- No calculations, wording, layout, chart, interaction, navigation, plan or rehab logic changed.
+- All previous fixes are retained.
+- Repository remains flat.
+
 AI Running Coach v13.6.6 — Plan race-range labels + mobile rebuild modal — build 30606
 
 - Plan race-context labels changed from “Likely 70% time range” and “Likely 70% pace range” to “Likely time range” and “Likely pace range”.

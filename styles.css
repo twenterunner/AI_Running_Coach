@@ -3864,3 +3864,7 @@ body:has(#dashboard.progressPage.active),#mainContent:has(#dashboard.progressPag
   .modalCard .modalActions,
   .modalCard .actions{grid-template-columns:1fr}
 }
+
+
+/* v13.6.7 — Rest pictogram clarification
+   Crescent moon + sleep marks; existing semantic/status colours remain inherited. */

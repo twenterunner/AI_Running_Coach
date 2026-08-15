@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '13.6.6';
-  const BUILD = 30606;
+  const VERSION = '13.6.7';
+  const BUILD = 30607;
   const SCHEMA = 10330;
   const PRIMARY_STORAGE_KEY = 'arc_v10330_web';
   const MIRROR_STORAGE_KEY = 'arc_v10330_mirror';
@@ -2337,7 +2337,7 @@ function planTinyIcon(kind){
 function runTypePictogram(type,compact=false){
  const t=String(type||'Easy');
  const icons={
-  'Rest':'<path class="picBase" d="M7 42h50M14 42V27h36v15M20 27v-8M44 27v-8"/>',
+  'Rest':'<path class="picBase" d="M39 12a20 20 0 1 0 10 36c-13 0-23-10-23-23 0-5 2-10 5-13 2-1 5-1 8 0z"/><path class="picAccent" d="M39 17h11l-11 11h11M45 32h9l-9 9h9"/>',
   'Recovery':'<path class="picBase" d="M18 31a14 14 0 1 0 4-10"/><path class="picAccent" d="M18 14v12h12"/><path class="picGood" d="M36 25c3-5 11-3 11 3 0 7-11 13-11 13S25 35 25 28c0-6 8-8 11-3z"/>',
   'Shakeout':'<path class="picBase" d="M12 38c8 0 14-4 20-15l7 7c3 3 7 4 13 4v10H20c-5 0-8-2-8-6z"/><path class="picAccent" d="M19 19c4-4 9-5 14-3M16 14c6-6 14-8 21-5"/>',
   'Easy':'<path class="picBase" d="M10 39c9 0 16-5 23-18l7 7c3 3 7 5 14 5v11H19c-6 0-9-2-9-5z"/><path class="picAccent" d="M26 29l7 5M19 34l8 6"/>',
@@ -2435,7 +2435,7 @@ function uiIcon(kind){
   long:'<path d="M12 3a9 9 0 1 0 9 9"/><path d="M12 7v5l4 2"/><path d="M18 4h3v3"/>',
   recovery:'<path d="M5 12a7 7 0 1 0 2-5"/><path d="M5 4v5h5"/>',
   race:'<path d="M5 21V3M5 4h12l-3 4 3 4H5"/>',
-  rest:'<path d="M4 17h16M7 17v-6h10v6M9 11V8M15 11V8"/>',
+  rest:'<path d="M15.5 4.5a7.5 7.5 0 1 0 4 13.8 7 7 0 0 1-4-13.8z"/><path d="M15 8h4l-4 4h4M18 13h3l-3 3h3"/>',
   pace:'<path d="M4 17l5-5 4 3 7-8"/><path d="M15 7h5v5"/>',
   load:'<path d="M4 18h16M6 18v-4M11 18V9M16 18V5"/>',
   heart:'<path d="M12 20s-7-4.3-7-10a4 4 0 0 1 7-2 4 4 0 0 1 7 2c0 5.7-7 10-7 10z"/><path d="M6.5 12h3l1.2-3 2.2 6 1.4-3H18"/>',
