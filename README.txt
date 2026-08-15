@@ -1,4 +1,13 @@
-AI Running Coach v13.7.6 — physical-pair lifecycle graph + Today shoe simplification — build 30706
+AI Running Coach v13.7.7 — shoe-plan synchronization and graph clarity — build 30707
+
+Changes in v13.7.7:
+- Simplified lifecycle graph: solid past from logged/observed shoe mileage, dashed future from today using current training-plan shoe assignments.
+- Removed per-curve enable/disable controls and reduced graph annotation clutter.
+- Proposed purchases can be selected directly when adding a shoe; matching purchases are integrated into the existing plan, while a different purchase causes the plan to recalculate around the actual shoe.
+- Plan workout expansion now explains why the suggested shoe is recommended.
+- Active Rotation cards now state what each shoe is best at.
+- Shoes tab surfaces aligned to the approved Today teal card hierarchy.
+
 
 - Mileage/lifecycle graph now represents physical pairs: owned shoes only appear from purchase/tracking start; proposed training and race pairs only appear from proposed purchase dates.
 - Prevents one physical pair from simultaneously appearing as a worn training shoe and a separate fresh Race Day shoe.

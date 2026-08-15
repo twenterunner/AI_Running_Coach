@@ -4015,3 +4015,15 @@ body:has(#dashboard.progressPage.active),#mainContent:has(#dashboard.progressPag
  #shoes .shoeProgrammeChart .shoeReplacementMarker text,#shoes .shoeProgrammeChart .shoeRaceTargetBand text,#shoes .shoeProgrammeChart .shoeNewPairLabel,#shoes .shoeProgrammeChart .shoeRaceStrategyLabel,#shoes .shoeProgrammeChart .shoePurchaseLabel{font-size:21px!important}
  #shoes .shoeChartKey,#shoes .shoeLegendToggle,#shoes .shoeLegendToggle span{font-size:14px!important}
 }
+
+/* v13.7.7 — Shoes clarity and Today-card visual alignment */
+#shoes .shoeSection,#shoes .shoeSection:not(.level1){background:linear-gradient(145deg,#075468 0%,#073c50 52%,#062c3d 100%);border:1px solid rgba(40,214,219,.42);border-radius:18px;padding:16px}
+#shoes .shoeNextCard,#shoes .shoeRotationCard,#shoes .shoeChartCard,#shoes .shoeOutlookRow,#shoes .shoePlanTableWrap,#shoes .shoeRaceTarget,#shoes .shoeSavedPurchase{background:rgba(3,31,43,.34);border-color:rgba(87,219,224,.16)}
+#shoes .shoeBestAt{margin-top:11px;padding:10px 12px;border-radius:10px;background:rgba(61,214,198,.07);border:1px solid rgba(61,214,198,.13)}
+#shoes .shoeBestAt small{display:block;font-size:9px;letter-spacing:.08em;color:var(--teal-2);font-weight:850}#shoes .shoeBestAt b{display:block;margin-top:2px;font-size:13px}
+#shoes .shoeChartLegend{display:flex;flex-wrap:wrap;gap:8px 14px;margin-top:8px}.shoeLegendItem{display:inline-flex;align-items:center;gap:7px;font-size:13px}.shoeLegendSwatch{width:20px;height:3px;border-radius:3px;background:var(--shoe-color)}
+#shoes .shoeProgrammeChart .shoeGrid text,#shoes .shoeProgrammeChart .xLab,#shoes .shoeProgrammeChart .yTitle{font-size:30px!important}
+#shoes .shoeChartKey{display:flex;flex-wrap:wrap;gap:8px 14px;font-size:14px!important}
+#shoes .shoeRaceStrategyCard{padding:11px 13px;margin-bottom:8px}.shoePlanPurchasePicker{padding:12px;border-radius:12px;background:rgba(61,214,198,.07);border:1px solid rgba(61,214,198,.15)}
+.planShoeWhy{margin-top:8px}.planShoeWhy summary{font-size:11px;font-weight:850;color:var(--teal-2);cursor:pointer}.planShoeWhy ul{margin:7px 0 0;padding-left:17px}.planShoeWhy li,.planShoeWhy p{font-size:11px;line-height:1.4;color:var(--text-2)}
+@media(max-width:600px){#shoes .shoeSection{padding:14px}#shoes .shoeProgrammeChart .shoeGrid text,#shoes .shoeProgrammeChart .xLab,#shoes .shoeProgrammeChart .yTitle{font-size:29px!important}}
