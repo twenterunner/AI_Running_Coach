@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '13.7.22';
-  const BUILD = 30722;
+  const VERSION = '13.7.23';
+  const BUILD = 30723;
   const SCHEMA = 10400;
   const PRIMARY_STORAGE_KEY = 'arc_v10400_web';
   const MIRROR_STORAGE_KEY = 'arc_v10400_mirror';
@@ -5597,6 +5597,21 @@ function shoeMileageSeries(shoe){const start=shoeTrackingStartDate(shoe),events=
 function shoeActualProgrammeSeries(shoe,startDate,endDate){const raw=shoeMileageSeries(shoe).slice().sort((a,b)=>a.date.localeCompare(b.date)),start=startDate||state.setup?.planStart||iso(today()),end=endDate||iso(today());if(!raw.length)return[];let prior=null;raw.forEach(p=>{if(p.date<=start)prior=p});const out=[];if(prior)out.push({...prior,date:start,programmeBaseline:true});raw.filter(p=>p.date>start&&p.date<=end).forEach(p=>out.push(p));if(!out.length&&raw[0].date<=end)out.push(raw[0]);return out}
 function shoePlannedMileageSeries(shoe){const now=iso(today()),raceDate=state.setup?.raceDate||now,current=shoeMileage(shoe),events=[];(state.plan||[]).filter(p=>p.type!=='Rest'&&p.date>=now&&p.date<=raceDate).forEach(p=>{const a=plannedAssignment(p.id);if(a?.shoeId===shoe.id)events.push({date:p.date,km:Number(p.distance)||0,planId:p.id,type:p.type})});futureRehabShoeUsage(shoe.id,null).filter(x=>x.date>=now&&x.date<=raceDate).forEach(x=>events.push({date:x.date,km:Number(x.distanceKm)||0,type:'Rehab',rehab:true}));events.sort((a,b)=>a.date.localeCompare(b.date));const points=[{date:now,km:current,projected:true}];let km=current;events.forEach(e=>{km+=e.km;points.push({date:e.date,km,projected:true,planId:e.planId,type:e.type,rehab:e.rehab})});if(points.at(-1)?.date!==raceDate)points.push({date:raceDate,km,projected:true,raceDay:true});return points}
 function shoePlannedReplacementEvent(shoe){const f=shoeForecast(shoe),series=shoePlannedMileageSeries(shoe),already=shoeMileage(shoe)>=Number(f.low),cross=series.find((p,i)=>i>0&&Number(p.km)>=Number(f.low));const date=already?iso(today()):(cross?.date||null),method=already?'current mileage':cross?'planned assignments':null;if(!date)return null;const replacement=replacementProfileForShoe(shoe);return{shoe,date,km:cross?.km||shoeMileage(shoe),replacement,method,range:`${Math.round(f.low)}–${Math.round(f.high)} km`}}
+function shoePortfolioAllocationProfileScore(profile,plan){
+ if(!profile||!plan)return 0;
+ const req=SHOE_REQ[plan.type]||SHOE_REQ.Easy;
+ let weighted=0,total=0;
+ const add=(value,w)=>{weighted+=clamp(Number(value)||0,0,100)*w;total+=w};
+ add(profile.workoutSuitability?.[plan.type]??shoeProfileWorkoutSuitability(profile,plan.type),3.4);
+ add(shoeDistanceScore(profile,plan.distance),1.2);
+ add(shoeSurfaceScore(profile,plan),1.6);
+ const metric=(key,score)=>{if(req[key])add((Number(score)||0)/5*100,req[key]/6)};
+ metric('cushioning',profile.cushioning);metric('protection',profile.protection);metric('responsiveness',profile.responsiveness);
+ metric('efficiency',profile.efficiency);metric('grip',profile.grip);metric('stability',profile.stability);
+ metric('durability',profile.durability);metric('comfort',profile.comfort);
+ if(req.weight)add(({'ultra-light':5,'very-light':5,light:4,'medium-light':4,medium:3,'medium-heavy':2,heavy:1,unknown:3}[profile.weightClass]||3)/5*100,req.weight/6);
+ return total?Math.round(weighted/total):50;
+}
 function plannedReplacementEvents(){
  const base=(state.shoes||[]).filter(s=>s.status!=='retired').map(shoePlannedReplacementEvent).filter(Boolean).sort((a,b)=>a.date.localeCompare(b.date));
  // Portfolio optimisation: replacement slots are not planned independently. When two purchases would
@@ -5611,7 +5626,7 @@ function plannedReplacementEvents(){
   let projected=shoeMileage(second.shoe),diverted=0,lastDate=second.date,ids=[];
   const plans=(state.plan||[]).filter(p=>p.type!=='Rest'&&p.date>=first.date&&p.date<=raceDate&&plannedAssignment(p.id)?.shoeId===second.shoe.id).slice().sort((a,b)=>a.date.localeCompare(b.date));
   for(const plan of plans){
-   const fit1=shoeAllocationProfileScore(firstProfile,plan),fit2=shoeAllocationProfileScore(secondProfile,plan),km=Math.max(0,Number(plan.distance)||0);
+   const fit1=shoePortfolioAllocationProfileScore(firstProfile,plan),fit2=shoePortfolioAllocationProfileScore(secondProfile,plan),km=Math.max(0,Number(plan.distance)||0);
    // Only move mileage when the first replacement is a genuinely good substitute, not merely to spread purchases.
    if(fit1>=72&&fit1>=fit2-8&&projected+km>=threshold-35){ids.push(plan.id);diverted+=km;continue}
    projected+=km;if(projected>=threshold){lastDate=plan.date;break}
