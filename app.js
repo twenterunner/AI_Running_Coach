@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '13.7.40';
-  const BUILD = 30740;
+  const VERSION = '13.7.41';
+  const BUILD = 30741;
   const SCHEMA = 10400;
   const PRIMARY_STORAGE_KEY = 'arc_v10400_web';
   const MIRROR_STORAGE_KEY = 'arc_v10400_mirror';
@@ -5583,24 +5583,43 @@ function shoeObservedWeeks(shoeId){const us=shoeDistanceUsage(shoeId).slice().so
 function shoeWeeklyActual(shoeId){const km=shoeRecentKm(shoeId,28);return km>0?km/4:0}
 function shoeConditionModifier(shoe){const c=shoe.condition||shoe.conditionFeedback||'Feels normal';return c==='Feels normal'?0:c==='Slightly worn'?-0.05:c==='Noticeably flat'?-0.16:c==='Grip deteriorating'?-0.12:c==='Upper damaged'?-0.14:c==='Causing discomfort'?-0.20:0}
 
-const ASICS_LIVE_CATEGORY_URLS=['https://www.asics.com/nl/en-nl/mens-running-shoes/c/as10201000/','https://www.asics.com/nl/en-nl/mens-fast-running-shoes/c/as10201030/','https://www.asics.com/nl/en-nl/metaspeed/c/as93010000/'];
+const ASICS_LIVE_CATEGORY_URLS=[
+ 'https://www.asics.com/nl/en-nl/novablast/c/as88000005/',
+ 'https://www.asics.com/nl/en-nl/superblast/c/as93800000/',
+ 'https://www.asics.com/nl/en-nl/gel-nimbus/c/as60300000/',
+ 'https://www.asics.com/nl/en-nl/gel-cumulus/c/as60700000/',
+ 'https://www.asics.com/nl/en-nl/metaspeed/c/as93010000/',
+ 'https://www.asics.com/nl/en-nl/mens-fast-running-shoes/c/as10201030/'
+];
 const ASICS_READER_PREFIX='https://r.jina.ai/';
 let asicsLiveRefreshInFlight=null;
 function asicsLiveCatalog(){return Array.isArray(state.asicsLiveCatalog)?state.asicsLiveCatalog:[]}
 function asicsLiveMeta(){return state.asicsLiveCatalogMeta&&typeof state.asicsLiveCatalogMeta==='object'?state.asicsLiveCatalogMeta:{}}
 function cleanAsicsProductName(v){return String(v||'').replace(/(?:Men'?s|Women'?s|Unisex)?\s*Running Shoes.*$/i,'').replace(/€.*$/,'').replace(/\s+/g,' ').trim().replace(/™/g,'')}
-function parseAsicsCategoryProducts(text){
+function parseAsicsCategoryProducts(text,sourceUrl=''){
  const out=[],seen=new Set(),src=String(text||'');
- const add=(rawName,rawUrl)=>{
-  const name=cleanAsicsProductName(rawName),url=String(rawUrl||'').startsWith('http')?String(rawUrl):`https://www.asics.com${String(rawUrl||'').startsWith('/')?'':'/'}${rawUrl||''}`;
-  if(!name||!url.includes('/p/')||seen.has(name.toUpperCase())||!/running|metaspeed|novablast|superblast|gel-|magic|noosa|evoride|megablast|sonicblast|kayano|gt-/i.test(name))return;
-  seen.add(name.toUpperCase());out.push({name,url});
+ const normaliseName=raw=>cleanAsicsProductName(String(raw||'')
+   .replace(/^(?:Next slide|Previous slide|Next slide Previous slide|Previous slide Next slide)\s*/i,'')
+   .replace(/\b(?:Men'?s|Women'?s|Unisex)\s+Running Shoes.*$/i,'')
+   .replace(/\b(?:Hardloopschoenen voor heren|Hardloopschoenen voor dames|Unisex hardloopschoenen).*$/i,'')
+   .replace(/€.*$/,'').trim());
+ const add=(rawName,rawUrl=null)=>{
+  const name=normaliseName(rawName);
+  if(!name||seen.has(name.toUpperCase()))return;
+  if(!/^(?:NOVABLAST|SUPERBLAST|GEL-NIMBUS|GEL-CUMULUS|MAGIC SPEED|METASPEED|MEGABLAST|SONICBLAST|NOOSA TRI|GEL-PULSE|EVORIDE)\b/i.test(name))return;
+  const url=rawUrl?(String(rawUrl).startsWith('http')?String(rawUrl):`https://www.asics.com${String(rawUrl).startsWith('/')?'':'/'}${rawUrl}`):null;
+  seen.add(name.toUpperCase());out.push({name,url,sourceUrl,availabilitySource:'ASICS collection page'});
  };
  let m;
- const md=/\[([^\]]{3,140})\]\((https?:\/\/www\.asics\.com\/[^)\s]+\/p\/[^)\s]+|\/nl\/[^)\s]+\/p\/[^)\s]+)\)/gi;
+ const md=/\[([^\]]{3,160})\]\((https?:\/\/www\.asics\.com\/[^)\s]+\/p\/[^)\s]+|\/nl\/[^)\s]+\/p\/[^)\s]+)\)/gi;
  while((m=md.exec(src)))add(m[1],m[2]);
- const html=/<a[^>]+href=["']([^"']*\/p\/[^"']+)["'][^>]*>([\s\S]{0,300}?)<\/a>/gi;
+ const html=/<a[^>]+href=["']([^"']*\/p\/[^"']+)["'][^>]*>([\s\S]{0,350}?)<\/a>/gi;
  while((m=html.exec(src)))add(m[2].replace(/<[^>]+>/g,' ').replace(/&[^;]+;/g,' '),m[1]);
+
+ // ASICS catalogue/Reader views often expose product names but suppress the link target.
+ // Treat those names as live availability evidence rather than rejecting the page.
+ const productLine=/(NOVABLAST\s+\d+(?:\s+PLATINUM)?|SUPERBLAST\s+\d+(?:\s+EKIDEN)?|GEL-NIMBUS\s+\d+(?:\s+(?:PLATINUM|ATC|TOKYO|PARIS|TR|IRN|WIDE|SUNNY SIZZLE))?|GEL-CUMULUS\s+\d+(?:\s+\w+)?|MAGIC SPEED\s+\d+|METASPEED\s+(?:SKY|EDGE)(?:\s+TOKYO)?|METASPEED\s+RAY|MEGABLAST(?:\s+\d+)?|SONICBLAST(?:\s+\d+)?|NOOSA TRI\s+\d+|GEL-PULSE\s+\d+|EVORIDE\s+\d+)/gi;
+ while((m=productLine.exec(src)))add(m[1],null);
  return out
 }
 function parseAsicsProductPage(text,url=''){const src=String(text||''),h=(src.match(/^#\s+(.+)$/m)||[])[1],name=cleanAsicsProductName(h||''),field=label=>{const r=new RegExp(`(?:^|\\n)${label}\\s*\\n([^\\n]+)`,'i').exec(src);return r?r[1].trim():null},weightRaw=field('Weight'),dropRaw=field('Heel Drop'),support=field('Support')||field('Ondersteuning'),surface=field('Surface')||field('Ondergrond'),cushion=field('Cushion')||field('Demping'),goal=field('Goal')||field('Doel'),weightG=weightRaw?(Number((weightRaw.match(/(\d+(?:\.\d+)?)\s*g/i)||[])[1])||null):null,dropMm=dropRaw?(Number((dropRaw.match(/(\d+(?:\.\d+)?)\s*mm/i)||[])[1])||null):null;return{name:name||cleanAsicsProductName((url.match(/\/([^/]+)\/p\//)||[])[1]?.replace(/-/g,' ')),url,surface,cushion,support,goal,weightG,dropMm,official:true,manufacturer:'ASICS'}}
@@ -5616,13 +5635,17 @@ async function refreshAsicsLiveCatalog({manual=false}={}){
  asicsLiveRefreshInFlight=(async()=>{
   const discovered=[],sourceErrors=[];
   for(const url of ASICS_LIVE_CATEGORY_URLS){
-   try{const text=await fetchAsicsOfficialText(url),found=parseAsicsCategoryProducts(text);discovered.push(...found);if(!found.length)sourceErrors.push(`No products parsed from ${url}`)}
+   try{const text=await fetchAsicsOfficialText(url),found=parseAsicsCategoryProducts(text,url);discovered.push(...found);if(!found.length)sourceErrors.push(`No products parsed from ${url}`)}
    catch(err){sourceErrors.push(String(err?.message||err))}
   }
   const dedup=[...new Map(discovered.map(x=>[x.name.toUpperCase(),x])).values()].slice(0,24),details=[];
   for(const item of dedup){
-   try{const p=parseAsicsProductPage(await fetchAsicsOfficialText(item.url),item.url);if(p.name)details.push(p)}
-   catch(_){details.push({...item,official:true,manufacturer:'ASICS'})}
+   if(item.url){
+    try{const p=parseAsicsProductPage(await fetchAsicsOfficialText(item.url),item.url);if(p.name){details.push({...item,...p,sourceUrl:item.sourceUrl||p.url});continue}}catch(_){}
+   }
+   // Collection-page evidence is still a valid live confirmation of current availability.
+   // Local profile supplies model-derived recommendation attributes; manufacturer claims remain separate.
+   details.push({...item,official:true,manufacturer:'ASICS',liveValidated:true,url:item.url||item.sourceUrl||null});
   }
   if(!details.length)throw Error(sourceErrors[0]||'No current ASICS running models could be validated.');
   state.asicsLiveCatalog=details;
@@ -5643,8 +5666,8 @@ async function refreshAsicsLiveCatalog({manual=false}={}){
  return asicsLiveRefreshInFlight
 }
 function maybeRefreshAsicsLiveCatalog(){if(!navigator.onLine)return;const meta=asicsLiveMeta(),age=meta.lastChecked?Date.now()-new Date(meta.lastChecked).getTime():Infinity;if(age>7*DAY&&!asicsLiveRefreshInFlight)refreshAsicsLiveCatalog()}
-function asicsLiveStatusHtml(){const meta=asicsLiveMeta(),list=asicsLiveCatalog(),when=meta.lastChecked?fmtDate(iso(new Date(meta.lastChecked))):'Not checked yet',status=meta.error?`Last live check failed · ${esc(meta.error)}`:meta.lastChecked?`Last checked ${when}`:'Refresh when online to validate current models and specifications.';return`<div class="asicsLiveStatus"><div><small>LIVE ASICS CATALOGUE</small><b>${list.length?`${list.length} current models cached`:'Local catalogue active'}</b><span>${status}</span></div><button id="refreshAsicsLive" class="secondary small" type="button">Refresh ASICS live</button></div>`}
-function liveAsicsProfileForItem(item){const parsed=splitModelVersion(item.name),known=findAsicsProfile('ASICS',parsed.model,parsed.version);if(known)return{...known,liveItem:item,evidenceSource:`ASICS live · ${item.url}`,profileConfidence:'manufacturer/live'};const supportive=/overpron|stability|support/i.test(item.support||''),neutral=/neutral/i.test(item.support||'')||!supportive,faster=/faster|fast/i.test(item.goal||''),high=/high|hoog/i.test(item.cushion||'');return{brand:'ASICS',family:parsed.model||item.name,version:Number(parsed.version)||'',neutral,supportType:supportive?'stability':'neutral',surfaces:[/trail/i.test(item.surface||'')?'trail':'road'],roles:faster?['tempo','intervals','race','daily']:['daily','easy','recovery','long'],cushioning:high?5:3,responsiveness:faster?5:3,stability:supportive?5:3,protection:high?5:3,grip:3,efficiency:faster?5:3,durability:4,comfort:high?5:3,weightClass:item.weightG&&item.weightG<230?'light':item.weightG&&item.weightG<270?'medium-light':'medium',plated:/METASPEED/i.test(item.name),plateType:/METASPEED/i.test(item.name)?'carbon':null,preferredDistanceMinKm:0,preferredDistanceMaxKm:100,workoutSuitability:{},typicalReplacementLowKm:/METASPEED/i.test(item.name)?400:600,typicalReplacementHighKm:/METASPEED/i.test(item.name)?800:900,evidenceSource:`ASICS live · ${item.url}`,profileConfidence:'manufacturer/live',liveItem:item}}
+function asicsLiveStatusHtml(){const meta=asicsLiveMeta(),list=asicsLiveCatalog(),when=meta.lastChecked?fmtDate(iso(new Date(meta.lastChecked))):'Not checked yet',status=meta.error?`Last live check failed · ${esc(meta.error)}`:meta.lastChecked?`Last checked ${when}`:'Refresh when online to validate current models and specifications.';return`<div class="asicsLiveStatus"><div><small>LIVE ASICS CATALOGUE</small><b>${list.length?`${list.length} current models live-validated`:'Local catalogue active'}</b><span>${status}</span></div><button id="refreshAsicsLive" class="secondary small" type="button">Refresh ASICS live</button></div>`}
+function liveAsicsProfileForItem(item){const parsed=splitModelVersion(item.name),known=findAsicsProfile('ASICS',parsed.model,parsed.version);if(known)return{...known,liveItem:item,evidenceSource:`ASICS live availability · ${item.url||item.sourceUrl||'ASICS NL collection'}`,profileConfidence:'manufacturer/live'};const supportive=/overpron|stability|support/i.test(item.support||''),neutral=/neutral/i.test(item.support||'')||!supportive,faster=/faster|fast/i.test(item.goal||''),high=/high|hoog/i.test(item.cushion||'');return{brand:'ASICS',family:parsed.model||item.name,version:Number(parsed.version)||'',neutral,supportType:supportive?'stability':'neutral',surfaces:[/trail/i.test(item.surface||'')?'trail':'road'],roles:faster?['tempo','intervals','race','daily']:['daily','easy','recovery','long'],cushioning:high?5:3,responsiveness:faster?5:3,stability:supportive?5:3,protection:high?5:3,grip:3,efficiency:faster?5:3,durability:4,comfort:high?5:3,weightClass:item.weightG&&item.weightG<230?'light':item.weightG&&item.weightG<270?'medium-light':'medium',plated:/METASPEED/i.test(item.name),plateType:/METASPEED/i.test(item.name)?'carbon':null,preferredDistanceMinKm:0,preferredDistanceMaxKm:100,workoutSuitability:{},typicalReplacementLowKm:/METASPEED/i.test(item.name)?400:600,typicalReplacementHighKm:/METASPEED/i.test(item.name)?800:900,evidenceSource:`ASICS live availability · ${item.url||item.sourceUrl||'ASICS NL collection'}`,profileConfidence:'manufacturer/live',liveItem:item}}
 function runnerFootMechanics(){return state.setup?.footMechanics||'unknown'}
 function gaitPurchaseAdjustment(profile){const gait=runnerFootMechanics(),support=String(profile.supportType||profile.liveItem?.support||'').toLowerCase(),neutral=profile.neutral!==false&&!/stability|overpron|support/.test(support);if(gait==='pronation')return /stability|overpron|support/.test(support)?22:neutral?-18:0;if(gait==='supination')return neutral?10:-16;if(gait==='neutral')return neutral?12:-15;return 0}
 const SHOE_ENGINE_STRATEGIES={balanced:{label:'Balanced · recommended',desc:'Balances workout fit, rotation, service life, injury-aware cushioning/protection and race-day preparation.'},fewer:{label:'Minimise new pairs',desc:'Uses versatile existing shoes for longer where condition remains acceptable and reduces overlapping purchases.'},protection:{label:'Prioritise protection',desc:'Favors cushioning, protection and earlier replacement.'},quality:{label:'Dedicated quality shoes',desc:'Favors a separate responsive pair for intervals, threshold, race-specific and other quality sessions.'},fit:{label:'Best workout fit',desc:'Chooses the strongest model match for each session type, accepting a larger rotation when it materially improves suitability.'}};function shoeEngineStrategy(){return SHOE_ENGINE_STRATEGIES[state.shoeEngineStrategy]||SHOE_ENGINE_STRATEGIES.balanced}function shoeEngineStrategyHtml(){const cur=state.shoeEngineStrategy||'balanced';return`<div class="shoeApproachControl"><label for="shoeEngineStrategySelect">Shoe engine approach</label><select id="shoeEngineStrategySelect">${Object.entries(SHOE_ENGINE_STRATEGIES).map(([k,v])=>`<option value="${k}" ${cur===k?'selected':''}>${esc(v.label)}</option>`).join('')}</select><small>${esc(shoeEngineStrategy().desc)}</small></div>`}
