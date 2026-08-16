@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,interactive-widget=resizes-content">
 <meta name="theme-color" content="#07111D"><title>AI Running Coach</title>
-<link rel="manifest" href="manifest.webmanifest?v=40100"><link rel="stylesheet" href="styles.css?v=40100-session-suitability">
+<link rel="manifest" href="manifest.webmanifest?v=40101"><link rel="stylesheet" href="styles.css?v=40101-session-suitability">
 <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png?v=10320">
 <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png?v=10320">
 <link rel="icon" href="favicon.ico?v=10320">
@@ -19,56 +19,42 @@
 
 
 
-<style id="shoe-session-v1410">
-/* v14.1.0 — Plan session shoe card: force one-dimensional flow at every nesting level.
-   This overrides legacy Plan grids that were still placing header, scores and disclosures in columns. */
-.planShoeRow.sessionShoeCard{
- display:flex!important;flex-direction:column!important;align-items:stretch!important;
- gap:10px!important;width:100%!important;max-width:100%!important;min-width:0!important;
- padding:12px!important;box-sizing:border-box!important;overflow:hidden!important;
- border:1px solid rgba(61,214,198,.16)!important;border-radius:14px!important;background:rgba(5,18,24,.46)!important
-}
-.sessionShoeCard>*{width:100%!important;max-width:100%!important;min-width:0!important;box-sizing:border-box!important;grid-column:1/-1!important}
+
+
+
+<style id="shoe-session-v1411">
+.planShoeRow.sessionShoeCard{display:flex!important;flex-direction:column!important;align-items:stretch!important;gap:10px!important;width:100%!important;max-width:100%!important;min-width:0!important;padding:12px!important;box-sizing:border-box!important;overflow:hidden!important;border:1px solid rgba(61,214,198,.16)!important;border-radius:14px!important;background:rgba(5,18,24,.46)!important}
+.sessionShoeCard,.sessionShoeCard *{box-sizing:border-box}
+.sessionShoeCard>*{width:100%!important;max-width:100%!important;min-width:0!important}
 .sessionShoeHead{display:grid!important;grid-template-columns:38px minmax(0,1fr)!important;gap:10px!important;align-items:center!important}
-.sessionShoeIcon{width:38px!important;height:38px!important;display:grid!important;place-items:center!important;border-radius:11px!important;background:rgba(61,214,198,.08)!important;color:#79eee0!important}
 .sessionShoeHead>div{display:grid!important;grid-template-columns:minmax(0,1fr) max-content!important;gap:3px 8px!important;align-items:center!important;min-width:0!important}
-.sessionShoeHead small{grid-column:1/-1!important;display:block!important}
-.sessionShoeHead b{display:block!important;min-width:0!important;font-size:13px!important;line-height:1.35!important;white-space:normal!important;word-break:normal!important;overflow-wrap:anywhere!important}
-.sessionShoeHead span{display:block!important;font-size:13px!important;font-weight:850!important;color:#79eee0!important;white-space:nowrap!important}
-.sessionShoeScores{display:flex!important;flex-direction:column!important;gap:0!important;padding:9px 11px!important;border:1px solid rgba(61,214,198,.13)!important;border-radius:11px!important;background:rgba(5,25,33,.38)!important}
-.sessionShoeScores>small{display:block!important;margin-bottom:3px!important;color:#70dcd5!important;font-weight:850!important;letter-spacing:.07em!important}
-.sessionShoeScores>div{display:grid!important;grid-template-columns:minmax(0,1fr) max-content!important;gap:10px!important;align-items:center!important;width:100%!important;min-width:0!important;padding:7px 0!important}
-.sessionShoeScores>div+div{border-top:1px solid rgba(255,255,255,.06)!important}
-.sessionShoeScores span{display:block!important;min-width:0!important;font-size:12px!important;line-height:1.3!important;white-space:normal!important;word-break:normal!important;overflow-wrap:anywhere!important}
-.sessionShoeScores b{display:block!important;font-size:12px!important;white-space:nowrap!important}
-.sessionShoeScores .selected span,.sessionShoeScores .selected b{color:#79eee0!important}
-.sessionShoeCard details{display:block!important;position:static!important;float:none!important;clear:both!important;margin:0!important}
-.sessionShoeCard details>summary{display:flex!important;align-items:center!important;justify-content:space-between!important;gap:10px!important;width:100%!important;min-width:0!important;box-sizing:border-box!important}
-.sessionShoeCard .shoeSuitabilityPanel{display:flex!important;flex-direction:column!important;gap:9px!important;width:100%!important;max-width:100%!important;min-width:0!important;box-sizing:border-box!important;overflow:hidden!important}
-.sessionShoeCard .shoeSuitabilityTitle{display:flex!important;flex-direction:column!important;align-items:flex-start!important;gap:4px!important;width:100%!important}
-.sessionShoeCard .shoeSuitabilityPair{width:100%!important;max-width:100%!important;min-width:0!important}
-.sessionShoeCard .shoeSuitabilityPair>summary{display:grid!important;grid-template-columns:minmax(0,1fr) max-content!important;gap:8px!important;align-items:center!important}
-.sessionShoeCard .shoeSuitabilityPair>summary span{display:block!important;min-width:0!important;white-space:normal!important;word-break:normal!important;overflow-wrap:anywhere!important;line-height:1.3!important}
-.sessionShoeCard .shoeSuitabilityPair>summary b{display:block!important;white-space:nowrap!important;font-size:11px!important}
-.sessionShoeCard .shoeSuitabilityComponents{display:flex!important;flex-direction:column!important;width:100%!important;min-width:0!important}
-.sessionShoeCard .shoeSuitabilityComponents>div{display:grid!important;grid-template-columns:minmax(0,1fr) max-content!important;gap:8px!important;width:100%!important;min-width:0!important}
-.sessionShoeCard .shoeSuitabilityNote,.sessionShoeCard .shoeScoreFormula{width:100%!important;max-width:100%!important;white-space:normal!important;overflow-wrap:anywhere!important}
-.sessionShoeCard .planShoeWhy{width:100%!important}
-.sessionShoeChoose{display:block!important;width:100%!important;min-width:0!important;margin:0!important}
+.sessionShoeHead small{grid-column:1/-1!important}.sessionShoeHead b{min-width:0!important;font-size:13px!important;line-height:1.35!important;white-space:normal!important;overflow-wrap:anywhere!important}.sessionShoeHead span{font-size:13px!important;font-weight:850!important;color:#79eee0!important;white-space:nowrap!important}
+.sessionShoeScores{display:flex!important;flex-direction:column!important;width:100%!important;min-width:0!important;padding:9px 11px!important;border:1px solid rgba(61,214,198,.13)!important;border-radius:11px!important;background:rgba(5,25,33,.38)!important}
+.sessionShoeScores>div{display:grid!important;grid-template-columns:minmax(0,1fr) max-content!important;gap:10px!important;align-items:center!important;width:100%!important;min-width:0!important;padding:7px 0!important}.sessionShoeScores span{min-width:0!important;white-space:normal!important;overflow-wrap:anywhere!important}.sessionShoeScores b{white-space:nowrap!important}
+.sessionShoeCard details,.sessionShoeCard details[open]{display:block!important;position:static!important;float:none!important;width:100%!important;max-width:100%!important;min-width:0!important;margin:0!important;overflow:hidden!important}
+.sessionShoeCard details>summary{width:100%!important;max-width:100%!important;min-width:0!important}
+.sessionShoeCard .shoeSuitabilityPanel{display:flex!important;flex-direction:column!important;width:100%!important;max-width:100%!important;min-width:0!important;overflow:hidden!important;padding:0!important}
+.sessionShoeCard .shoeSuitabilityTitle{display:flex!important;flex-direction:column!important;align-items:flex-start!important;width:100%!important;max-width:100%!important;min-width:0!important;padding:12px!important}
+.sessionShoeCard .shoeSuitabilityPair{display:block!important;width:100%!important;max-width:100%!important;min-width:0!important;margin:0!important;border-radius:12px!important;overflow:hidden!important}
+.sessionShoeCard .shoeSuitabilityPair>summary{display:grid!important;grid-template-columns:minmax(0,1fr) max-content!important;gap:8px!important;align-items:center!important;width:100%!important;max-width:100%!important;min-width:0!important;padding:12px!important}
+.sessionShoeCard .shoeSuitabilityPair>summary span{min-width:0!important;white-space:normal!important;overflow-wrap:anywhere!important;word-break:normal!important;line-height:1.3!important}
+.sessionShoeCard .shoeSuitabilityPair>summary b{max-width:45vw!important;white-space:normal!important;text-align:right!important;font-size:11px!important;line-height:1.2!important}
+.sessionShoeCard .shoeSuitabilityComponents{display:flex!important;flex-direction:column!important;width:100%!important;max-width:100%!important;min-width:0!important;padding:0 12px 10px!important;overflow:hidden!important}
+.sessionShoeCard .shoeSuitabilityComponents>div{display:grid!important;grid-template-columns:minmax(0,1fr) 62px!important;gap:8px!important;align-items:start!important;width:100%!important;max-width:100%!important;min-width:0!important;padding:8px 0!important}
+.sessionShoeCard .shoeSuitabilityComponents>div span{min-width:0!important;white-space:normal!important;overflow-wrap:anywhere!important;line-height:1.25!important}
+.sessionShoeCard .shoeSuitabilityComponents>div b{width:62px!important;max-width:62px!important;white-space:nowrap!important;text-align:right!important;overflow:visible!important;font-size:12px!important}
+.sessionShoeCard .shoeSuitabilityNote,.sessionShoeCard .shoeScoreFormula{display:block!important;width:100%!important;max-width:100%!important;min-width:0!important;padding:0 12px 12px!important;white-space:normal!important;overflow-wrap:anywhere!important}
+.sessionShoeCard .planShoeWhy,.sessionShoeChoose{width:100%!important;max-width:100%!important;min-width:0!important}
 .planShoeSummary{display:grid!important;grid-template-columns:28px minmax(0,1fr) max-content!important;gap:8px!important;align-items:center!important;width:100%!important;min-width:0!important;margin-top:8px!important;padding:8px 10px!important}
-.planShoeSummaryText{min-width:0!important}.planShoeSummaryText small,.planShoeSummaryText b{display:block!important}.planShoeSummaryText b{white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;font-size:11px!important}.planShoeSummaryScore{white-space:nowrap!important;color:#79eee0!important;font-size:12px!important}
-@media(max-width:430px){
- .planShoeRow.sessionShoeCard{padding:11px!important}
- .sessionShoeHead>div{grid-template-columns:minmax(0,1fr)!important}
- .sessionShoeHead span{grid-column:1!important}
-}
+.planShoeSummaryText{min-width:0!important}.planShoeSummaryText b{display:block!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;font-size:11px!important}.planShoeSummaryScore{white-space:nowrap!important;color:#79eee0!important;font-size:12px!important}
+@media(max-width:430px){.sessionShoeCard .shoeSuitabilityPair>summary b{max-width:40vw!important}.sessionShoeCard .shoeSuitabilityComponents>div{grid-template-columns:minmax(0,1fr) 58px!important}.sessionShoeCard .shoeSuitabilityComponents>div b{width:58px!important;max-width:58px!important}}
 </style>
 
 </head>
 <body>
 <a class="skipLink" href="#mainContent">Skip to main content</a>
 <header class="topbar">
-  <div class="brand"><img class="logo" src="icon-192.png?v=40100" alt="AI Running Coach logo"><div class="brand-copy"><h1>AI Running Coach</h1><p>Race-specific adaptive planning · v14.1.0 · build 40100</p></div></div>
+  <div class="brand"><img class="logo" src="icon-192.png?v=40101" alt="AI Running Coach logo"><div class="brand-copy"><h1>AI Running Coach</h1><p>Race-specific adaptive planning · v14.1.1 · build 40101</p></div></div>
   <button id="installBtn" class="install hidden">Install</button>
 </header>
 <nav id="nav" aria-label="Primary navigation"></nav>
@@ -308,10 +294,10 @@
   <article class="settingsSection"><div class="settingsSectionHead"><span>02</span><div><small>TRAINING STRUCTURE</small><h3>When can you train?</h3><p>Availability and the long-run day used when the plan is rebuilt.</p></div></div><div id="daysGrid"></div></article>
   <article class="settingsSection"><div class="settingsSectionHead"><span>03</span><div><small>ADAPTIVE MODEL</small><h3>Is the configured plan structurally sound?</h3><p>Plan Health validates the programme structure without duplicating Progress.</p></div></div><div class="settingsNested"><div class="panelHead"><div><h3>Plan Health</h3><p class="muted compact">Structure score, calculation and recommendations for the configured plan.</p></div><button id="planHealthBtn" class="secondary">Validate plan</button></div><div id="planHealthContent"></div></div></article>
   <article class="settingsSection"><div class="settingsSectionHead"><span>04</span><div><small>DATA & IMPORTS</small><h3>Manage your local training data</h3><p>Back up, restore or export data. Destructive actions remain clearly separated.</p></div></div><div class="settingsNested"><div class="buttonRow settingsDataActions"><button id="backupBtn">Download backup</button><label for="restoreFile" class="buttonLike">Restore backup</label><input id="restoreFile" type="file" accept=".json"><button id="undoRestoreBtn" type="button" class="secondary hidden">Undo last restore</button><button id="exportBtn">Export runs CSV</button></div><div class="settingsDangerZone"><b>Reset local app data</b><p>Use only when you intend to remove the current local programme and history.</p><button id="resetBtn" class="danger">Reset app</button></div></div></article>
-  <article class="settingsSection"><div class="settingsSectionHead"><span>05</span><div><small>APP & MODEL INFORMATION</small><h3>Which version is running?</h3><p>Reference information for this local build.</p></div></div><div class="settingsNested settingsAppInfo"><div><small>APP VERSION</small><strong>v14.1.0</strong></div><div><small>BUILD</small><strong>40100</strong></div><div><small>DATA</small><strong>Stored locally</strong></div></div></article>
+  <article class="settingsSection"><div class="settingsSectionHead"><span>05</span><div><small>APP & MODEL INFORMATION</small><h3>Which version is running?</h3><p>Reference information for this local build.</p></div></div><div class="settingsNested settingsAppInfo"><div><small>APP VERSION</small><strong>v14.1.1</strong></div><div><small>BUILD</small><strong>40101</strong></div><div><small>DATA</small><strong>Stored locally</strong></div></div></article>
 </section>
 </main>
-<footer class="appFooter"><span>AI Running Coach</span><small>v14.1.0 · build 40100</small></footer>
+<footer class="appFooter"><span>AI Running Coach</span><small>v14.1.1 · build 40101</small></footer>
 
 <div id="modal" class="modal hidden" role="dialog" aria-modal="true" aria-label="AI Running Coach dialog" tabindex="-1"><div class="modalCard"><button id="closeModal" class="close" type="button" aria-label="Close dialog">×</button><div id="modalContent"></div></div></div>
 
@@ -340,5 +326,5 @@
     <button class="primary full" type="submit">Review and create my plan</button>
   </form>
 </div>
-<script src="app.js?v=40100-session-suitability"></script>
+<script src="app.js?v=40101-session-suitability"></script>
 </body></html>

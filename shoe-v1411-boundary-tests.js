@@ -1,0 +1,16 @@
+'use strict';
+const assert=require('assert'),fs=require('fs');
+const app=fs.readFileSync('app.js','utf8'),html=fs.readFileSync('index.html','utf8'),css=fs.readFileSync('styles.css','utf8'),sw=fs.readFileSync('service-worker.js','utf8');
+assert(app.includes('const SHOE_ENGINE_RULES=Object.freeze'));
+assert(app.includes('purchasesNeedDrivenOnly:true'));
+assert(app.includes('dedicatedRacePairOnlyAsLastResort:true'));
+assert(app.includes('weeklyShareIssues.forEach(x=>adv'));
+assert(!app.includes("weeklyShareIssues.forEach(x=>add('available-shoe-below-25pct-weekly-mileage'"));
+assert(app.includes('HARD BOUNDARY: purchasing is never an inventory-count objective.'));
+assert(app.includes('HARD BOUNDARY: never maintain duplicate future ordinary pairs with the same profile'));
+assert(app.includes('function shoeNonFlatSvgSegments'));
+assert(html.includes('grid-template-columns:minmax(0,1fr) 62px!important'));
+assert(html.includes('overflow:hidden!important'));
+assert(css.includes('linear-gradient(145deg,#075468 0%,#073c50 52%,#062c3d 100%)'));
+assert(sw.includes("arc-v1411-build-40101"));
+console.log(JSON.stringify({passed:12,failed:0}));

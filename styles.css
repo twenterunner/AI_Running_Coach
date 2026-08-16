@@ -4758,3 +4758,10 @@ body:has(#dashboard.progressPage.active),#mainContent:has(#dashboard.progressPag
  border-radius:18px!important;
  box-shadow:none!important
 }
+
+/* v14.1.1 — Shoes visual boundary: exact Today L1 gradient, no independent shoe gradient. */
+#shoes .shoeSection,#shoes .shoeSection.level1,#shoes .shoeSection:not(.level1){
+ background:linear-gradient(145deg,#075468 0%,#073c50 52%,#062c3d 100%)!important;
+ border:1px solid rgba(40,214,219,.42)!important;border-radius:18px!important;box-shadow:none!important
+}
+#shoes .shoeSection *,#plan .sessionShoeCard *{max-width:100%;box-sizing:border-box}
