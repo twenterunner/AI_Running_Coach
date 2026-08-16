@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '13.7.49';
-  const BUILD = 30749;
+  const VERSION = '13.7.50';
+  const BUILD = 30750;
   const SCHEMA = 10400;
   const PRIMARY_STORAGE_KEY = 'arc_v10400_web';
   const MIRROR_STORAGE_KEY = 'arc_v10400_mirror';
@@ -5863,23 +5863,33 @@ function lifecyclePairAssignmentScore(pair,plan){
  return{fit,score,remaining}
 }
 function lifecyclePurchaseDate(firstUseDate,leadDays){
- const candidate=iso(new Date(dte(firstUseDate).getTime()-leadDays*DAY));
- return candidate<iso(today())?iso(today()):candidate
+ // A planned physical pair is bought when it first becomes genuinely needed.
+ // The UI may describe this as a purchase window, but the graph must never show
+ // a newly bought pair sitting unused for weeks or months.
+ return firstUseDate||iso(today())
 }
 function lifecycleCreatePair(ctx,plan,role='training',preferredProfile=null){
  const cfg=lifecycleStrategyConfig(),{pairs,purchases,events}=ctx,distance=Math.max(0,Number(plan.distance)||0);
- const reusable=pairs.filter(p=>!p.owned&&p.availableDate<=plan.date&&p.km+distance<=p.retireKm).map(p=>({p,...lifecyclePairAssignmentScore(p,plan)})).filter(x=>x.fit>=cfg.minFit-4).sort((a,b)=>b.score-a.score)[0]?.p;
+ const isRace=role==='race';
+ // Reuse a future physical pair only when it genuinely covers the requested role.
+ // A request for a Race Day pair must never silently reuse an ordinary daily trainer.
+ const reusable=pairs.filter(p=>!p.owned&&p.availableDate<=plan.date&&p.km+distance<=p.retireKm)
+  .filter(p=>!isRace||lifecycleRoles(p.profile).has('race'))
+  .filter(p=>!preferredProfile||!isRace||lifecycleProfileKey(p.profile)===lifecycleProfileKey(preferredProfile))
+  .map(p=>({p,...lifecyclePairAssignmentScore(p,plan)})).filter(x=>x.fit>=cfg.minFit-4).sort((a,b)=>b.score-a.score)[0]?.p;
  if(reusable)return reusable;
  const recent=purchases.filter(p=>Math.abs(dte(plan.date)-dte(p.firstUseDate))<cfg.minPurchaseGapDays*DAY);
  const avoid=new Set(recent.filter(p=>p.role===role||role!=='race').map(p=>lifecycleProfileKey(p.profile)));
  const profile=preferredProfile||lifecycleChoosePurchaseProfile(plan,role,avoid);if(!profile)return null;
- const recentReusable=recent.map(p=>pairs.find(x=>x.id===p.pairId)).filter(Boolean).map(p=>({p,...lifecyclePairAssignmentScore(p,plan)})).filter(x=>x.p.km+distance<=x.p.retireKm&&x.fit>=cfg.minFit-6).sort((a,b)=>b.score-a.score)[0]?.p;
+ const recentReusable=recent.map(p=>pairs.find(x=>x.id===p.pairId)).filter(Boolean)
+  .filter(p=>!isRace||lifecycleRoles(p.profile).has('race'))
+  .map(p=>({p,...lifecyclePairAssignmentScore(p,plan)})).filter(x=>x.p.km+distance<=x.p.retireKm&&x.fit>=cfg.minFit-6).sort((a,b)=>b.score-a.score)[0]?.p;
  if(recentReusable)return recentReusable;
  const purchaseDate=lifecyclePurchaseDate(plan.date,cfg.purchaseLeadDays),id=`future:${purchases.length+1}:${lifecycleProfileKey(profile)}`;
  const pair={id,owned:false,shoe:null,profile,currentKm:0,km:0,availableDate:plan.date,purchaseDate,retireKm:lifecycleRetireKmForProfile(profile),assignments:[],points:[{date:purchaseDate,km:0,purchase:true}],role};
  pairs.push(pair);
- purchases.push({id:`purchase:${id}`,pairId:id,profile,purchaseDate,firstUseDate:plan.date,role,reason:role==='race'?'A dedicated Race Day pair is only introduced because no owned or already-required future pair can reach Race Day with suitable fit, familiarity and wear.':role==='quality'?'The fixed programme contains quality work that is not covered well enough by the available physical pairs under the Performance-focused approach.':'The existing physical pairs no longer provide enough suitable service-life capacity for the fixed programme.',replacesPairId:null});
- events.push({date:plan.date,type:'pair-entry',pairId:id,text:`${futureProfileDisplayName(profile)} enters the rotation.`});
+ purchases.push({id:`purchase:${id}`,pairId:id,profile,purchaseDate,firstUseDate:plan.date,role,reason:role==='race'?'A dedicated Race Day pair is introduced only because no owned or already-required race-suitable pair can be kept inside its target Race Day mileage window.':role==='quality'?'The fixed programme contains quality work that is not covered well enough by the available physical pairs under the Performance-focused approach.':'The existing physical pairs no longer provide enough suitable service-life capacity for the fixed programme.',replacesPairId:null});
+ events.push({date:plan.date,type:'pair-entry',pairId:id,text:`${futureProfileDisplayName(profile)} enters the rotation and is used immediately.`});
  return pair
 }
 function lifecycleAssign(pair,plan,assignments,why,extra={}){
@@ -5904,6 +5914,68 @@ function lifecycleRaceFit(pair,racePlan){
  const windowBonus=preRaceKm>=window.minKm&&preRaceKm<=window.maxKm?30:preRaceKm<window.minKm?Math.max(-15,15-(window.minKm-preRaceKm)*.3):-Math.min(55,(preRaceKm-window.maxKm)*.35);
  return{pair,fit,window,preRaceKm,score:fit+windowBonus}
 }
+function lifecycleRaceEligiblePair(pair,racePlan){
+ if(!pair||!lifecycleRoles(pair.profile).has('race'))return false;
+ if(pair.availableDate>racePlan.date||pair.km>=pair.retireKm+1)return false;
+ return lifecycleWorkoutFit(pair.profile,racePlan)>=62
+}
+function lifecycleRaceTargetKm(window){
+ // Aim below the middle of the window: enough proof/familiarity without needless wear.
+ return Math.round(window.minKm+(window.maxKm-window.minKm)*0.35)
+}
+function lifecycleCanMoveRowToRacePair(row,racePair,plan,manual){
+ if(!row||!racePair||!plan||row.pairId===racePair.id)return false;
+ if(manual?.has(plan.id))return false;
+ if(racePair.km+row.km>racePair.retireKm)return false;
+ if(racePair.km+row.km>lifecycleRaceTargetWindow(racePair.profile,Number(state.setup?.raceDistance)||42.195).maxKm)return false;
+ const fit=lifecycleWorkoutFit(racePair.profile,plan);
+ if(fit<58)return false;
+ // Prefer race-specific/quality/long work. Easy running is allowed only when needed
+ // to reach the minimum familiarisation window and the shoe is also a training-capable race shoe.
+ if(lifecycleRaceRelevant(plan))return true;
+ const roles=lifecycleRoles(racePair.profile);
+ return fit>=66&&(roles.has('daily')||roles.has('long')||roles.has('steady'))
+}
+function lifecycleTuneRacePair(pair,window,fixed,assignments,pairs,manual,events){
+ if(!pair||!window)return null;
+ const target=lifecycleRaceTargetKm(window);
+ if(pair.km>window.maxKm){
+  const movable=pair.assignments.filter(a=>!a.rehab&&!manual?.has(a.planId)&&!lifecycleRaceRelevant({type:a.type})).slice().sort((a,b)=>b.date.localeCompare(a.date));
+  for(const row of movable){
+   if(pair.km<=target)break;
+   const plan=fixed.find(p=>p.id===row.planId);if(!plan)continue;
+   const alt=pairs.filter(p=>p.id!==pair.id&&p.availableDate<=row.date&&p.km+row.km<=p.retireKm+1)
+    .map(p=>({p,...lifecyclePairAssignmentScore(p,plan)})).filter(x=>x.fit>=lifecycleStrategyConfig().minFit-5).sort((a,b)=>b.score-a.score)[0]?.p;
+   if(!alt)continue;
+   lifecycleReassign(row,alt,pairs);
+   events.push({date:row.date,type:'race-preservation',pairId:pair.id,text:`${plan.type} moves to ${lifecyclePairLabel(alt)} so ${lifecyclePairLabel(pair)} stays inside its intended Race Day mileage window.`});
+  }
+ }
+ if(pair.km<window.minKm){
+  const candidates=assignments.filter(row=>row.pairId!==pair.id&&!row.rehab).map(row=>({row,plan:fixed.find(p=>p.id===row.planId)})).filter(x=>x.plan&&x.plan.date<state.setup.raceDate&&lifecycleCanMoveRowToRacePair(x.row,pair,x.plan,manual));
+  candidates.sort((a,b)=>{
+   const ar=lifecycleRaceRelevant(a.plan)?1:0,br=lifecycleRaceRelevant(b.plan)?1:0;
+   return br-ar||b.plan.date.localeCompare(a.plan.date)||lifecycleWorkoutFit(pair.profile,b.plan)-lifecycleWorkoutFit(pair.profile,a.plan)
+  });
+  for(const {row,plan} of candidates){
+   if(pair.km>=target)break;
+   if(pair.km+row.km>window.maxKm)continue;
+   lifecycleReassign(row,pair,pairs);
+   row.why='This existing workout is assigned to the Race Day pair to reach a deliberate familiarisation window; no extra training is created.';
+   row.raceFamiliarisation=true;
+  }
+ }
+ return lifecycleRaceFit(pair,{id:'race-day-equipment',date:state.setup?.raceDate,type:'Race Day',distance:Number(state.setup?.raceDistance)||42.195,surface:'road'})
+}
+function lifecycleSynchronizeFuturePairTiming(pairs,purchases){
+ // Final timing is derived from the first assignment after all optimisation/reallocation.
+ // This prevents a purchase marker from appearing before a pair is actually used.
+ pairs.filter(p=>!p.owned).forEach(pair=>{
+  const first=pair.assignments.slice().sort((a,b)=>a.date.localeCompare(b.date))[0];if(!first)return;
+  pair.availableDate=first.date;pair.purchaseDate=first.date;
+  const purchase=purchases.find(x=>x.pairId===pair.id);if(purchase){purchase.purchaseDate=first.date;purchase.firstUseDate=first.date}
+ })
+}
 function lifecycleRebuildPoints(pair,now,raceDate){
  let km=pair.owned?pair.currentKm:0;
  const points=[{date:pair.owned?now:pair.purchaseDate,km,purchase:!pair.owned}];
@@ -5923,6 +5995,8 @@ function lifecycleValidatePlan(result){
   if(days<cfg.minPurchaseGapDays&&a.role===b.role)issues.push({code:'close-duplicate-purchases',a:a.pairId,b:b.pairId});
  }
  result.pairs.forEach(pair=>{if(pair.km>pair.retireKm+1)issues.push({code:'service-life-exceeded',pairId:pair.id,km:pair.km,limit:pair.retireKm})});
+ result.purchases.forEach(p=>{const pair=result.pairs.find(x=>x.id===p.pairId),first=pair?.assignments.slice().sort((a,b)=>a.date.localeCompare(b.date))[0];if(first&&p.purchaseDate!==first.date)issues.push({code:'purchase-before-first-use',pairId:p.pairId,purchaseDate:p.purchaseDate,firstUse:first.date})});
+ if(result.racePair&&result.raceWindow&&(result.racePair.km<result.raceWindow.minKm||result.racePair.km>result.raceWindow.maxKm))issues.push({code:'race-pair-outside-target-window',pairId:result.racePair.id,km:result.racePair.km,min:result.raceWindow.minKm,max:result.raceWindow.maxKm});
  return issues
 }
 function freshShoeLifecyclePlan(){
@@ -5961,40 +6035,46 @@ function freshShoeLifecyclePlan(){
  }
 
  const racePlan={id:'race-day-equipment',date:raceDate,type:'Race Day',distance:Number(state.setup?.raceDistance)||42.195,surface:'road'};
- let raceCandidates=pairs.filter(p=>p.availableDate<=raceDate&&p.km<p.retireKm+1).map(p=>lifecycleRaceFit(p,racePlan)).filter(x=>x.fit>=58).sort((a,b)=>b.score-a.score);
+ let raceCandidates=pairs.filter(p=>lifecycleRaceEligiblePair(p,racePlan)).map(p=>lifecycleRaceFit(p,racePlan)).sort((a,b)=>b.score-a.score);
  let raceChoice=raceCandidates.find(x=>x.preRaceKm>=x.window.minKm&&x.preRaceKm<=x.window.maxKm)||raceCandidates[0]||null;
 
- if(raceChoice&&raceChoice.preRaceKm>raceChoice.window.maxKm&&raceChoice.fit>=65){
-  const target=Math.round((raceChoice.window.minKm+raceChoice.window.maxKm)/2),pair=raceChoice.pair;
-  const movable=pair.assignments.filter(a=>!a.rehab&&!lifecycleRaceRelevant({type:a.type})).slice().sort((a,b)=>b.date.localeCompare(a.date));
-  for(const row of movable){
-   if(pair.km<=target)break;
-   const plan=fixed.find(p=>p.id===row.planId);if(!plan)continue;
-   const alt=pairs.filter(p=>p.id!==pair.id&&p.availableDate<=row.date&&p.km+row.km<=p.retireKm+1).map(p=>({p,...lifecyclePairAssignmentScore(p,plan)})).filter(x=>x.fit>=cfg.minFit-5).sort((a,b)=>b.score-a.score)[0]?.p;
-   if(!alt)continue;
-   lifecycleReassign(row,alt,pairs);
-   events.push({date:row.date,type:'race-preservation',pairId:pair.id,text:`${plan.type} moves to ${lifecyclePairLabel(alt)} so ${lifecyclePairLabel(pair)} is not unnecessarily worn before Race Day.`});
-  }
-  raceChoice=lifecycleRaceFit(pair,racePlan);
+ // First try to keep an owned/already-required race-capable physical pair inside its target window.
+ if(raceChoice){
+  raceChoice=lifecycleTuneRacePair(raceChoice.pair,raceChoice.window,fixed,assignments,pairs,manual,events);
  }
 
- const needsDedicated=!raceChoice||raceChoice.fit<65||raceChoice.preRaceKm>raceChoice.window.maxKm||(cfg.key==='quality'&&raceChoice.fit<76-cfg.raceDedicatedBias);
- if(needsDedicated){
+ // If no existing/planned race-capable pair can be tuned into its target window, create one
+ // and allocate enough suitable existing workouts to reach the window before Race Day.
+ const raceChoiceValid=raceChoice&&raceChoice.preRaceKm>=raceChoice.window.minKm&&raceChoice.preRaceKm<=raceChoice.window.maxKm;
+ if(!raceChoiceValid){
   const profile=lifecycleChoosePurchaseProfile(racePlan,'race');
   if(profile){
-   const window=lifecycleRaceTargetWindow(profile,racePlan.distance),target=Math.round((window.minKm+window.maxKm)/2);
-   let sessions=fixed.filter(p=>p.date<raceDate&&lifecycleRaceRelevant(p)&&lifecycleWorkoutFit(profile,p)>=60).slice().sort((a,b)=>b.date.localeCompare(a.date)),chosenSessions=[],km=0;
-   for(const plan of sessions){chosenSessions.push(plan);km+=Number(plan.distance)||0;if(km>=target&&chosenSessions.length>=2)break}
-   chosenSessions=chosenSessions.sort((a,b)=>a.date.localeCompare(b.date));
-   const firstUse=chosenSessions[0]?.date||iso(new Date(dte(raceDate).getTime()-28*DAY));
-   const racePair=lifecycleCreatePair(ctx,{...racePlan,date:firstUse,distance:Number(chosenSessions[0]?.distance)||Math.min(10,target)},'race',profile);
-   if(racePair){
-    chosenSessions.forEach(plan=>{const row=assignments.find(a=>a.planId===plan.id);if(!row||row.pairId===racePair.id)return;if(racePair.km+row.km>Math.min(racePair.retireKm,window.maxKm))return;lifecycleReassign(row,racePair,pairs);row.why='Selected existing workout is used for Race Day shoe familiarisation; no extra training is created.';row.raceFamiliarisation=true});
-    raceChoice=lifecycleRaceFit(racePair,racePlan);
+   const window=lifecycleRaceTargetWindow(profile,racePlan.distance),target=lifecycleRaceTargetKm(window);
+   const candidates=fixed.filter(p=>p.date<raceDate&&!manual.has(p.id)&&lifecycleWorkoutFit(profile,p)>=58)
+    .sort((a,b)=>{const ar=lifecycleRaceRelevant(a)?1:0,br=lifecycleRaceRelevant(b)?1:0;return br-ar||b.date.localeCompare(a.date)});
+   // Choose backwards from Race Day until the planned exposure reaches the target.
+   let selected=[],km=0;
+   for(const plan of candidates){
+    const d=Math.max(0,Number(plan.distance)||0);if(!d||km+d>window.maxKm)continue;
+    selected.push(plan);km+=d;if(km>=target)break
+   }
+   selected=selected.sort((a,b)=>a.date.localeCompare(b.date));
+   if(km>=window.minKm&&selected.length){
+    const firstUse=selected[0].date;
+    const racePair=lifecycleCreatePair(ctx,{...racePlan,date:firstUse,distance:Number(selected[0].distance)||0},'race',profile);
+    if(racePair){
+     for(const plan of selected){
+      const row=assignments.find(a=>a.planId===plan.id);if(!row||row.pairId===racePair.id)continue;
+      if(racePair.km+row.km>window.maxKm)continue;
+      lifecycleReassign(row,racePair,pairs);row.why='This existing workout is deliberately used to familiarise the Race Day pair and place it inside the target mileage window; no extra training is added.';row.raceFamiliarisation=true;
+     }
+     raceChoice=lifecycleRaceFit(racePair,racePlan);
+    }
    }
   }
  }
 
+ lifecycleSynchronizeFuturePairTiming(pairs,purchases);
  pairs.forEach(pair=>lifecycleRebuildPoints(pair,now,raceDate));
  let finalPairs=pairs.filter(p=>p.owned||p.assignments.length),usedIds=new Set(finalPairs.map(p=>p.id)),finalPurchases=purchases.filter(p=>usedIds.has(p.pairId)).sort((a,b)=>a.purchaseDate.localeCompare(b.purchaseDate));
 
@@ -6008,9 +6088,9 @@ function freshShoeLifecyclePlan(){
    }
   }
  }
- finalPairs=finalPairs.filter(p=>p.owned||p.assignments.length);usedIds=new Set(finalPairs.map(p=>p.id));finalPurchases=finalPurchases.filter(p=>usedIds.has(p.pairId));finalPairs.forEach(pair=>lifecycleRebuildPoints(pair,now,raceDate));
- raceCandidates=finalPairs.filter(p=>p.availableDate<=raceDate&&p.km<p.retireKm+1).map(p=>lifecycleRaceFit(p,racePlan)).filter(x=>x.fit>=58).sort((a,b)=>b.score-a.score);
- raceChoice=raceCandidates.find(x=>x.preRaceKm>=x.window.minKm&&x.preRaceKm<=x.window.maxKm)||raceCandidates[0]||raceChoice;
+ finalPairs=finalPairs.filter(p=>p.owned||p.assignments.length);usedIds=new Set(finalPairs.map(p=>p.id));finalPurchases=finalPurchases.filter(p=>usedIds.has(p.pairId));lifecycleSynchronizeFuturePairTiming(finalPairs,finalPurchases);finalPairs.forEach(pair=>lifecycleRebuildPoints(pair,now,raceDate));
+ raceCandidates=finalPairs.filter(p=>lifecycleRaceEligiblePair(p,racePlan)).map(p=>lifecycleRaceFit(p,racePlan)).sort((a,b)=>b.score-a.score);
+ raceChoice=raceCandidates.find(x=>x.preRaceKm>=x.window.minKm&&x.preRaceKm<=x.window.maxKm)||raceChoice;
 
  const result={strategy:cfg.key,now,raceDate,fixed,pairs:finalPairs,assignments,purchases:finalPurchases,events,racePair:raceChoice?.pair||null,raceWindow:raceChoice?.window||null,catalogueSource:'offline',catalogueVersion:OFFLINE_ASICS_CATALOGUE_VERSION,footMechanics:runnerFootMechanics()};
  result.validationIssues=lifecycleValidatePlan(result);
