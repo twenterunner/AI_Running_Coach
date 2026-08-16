@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '13.7.51';
-  const BUILD = 30751;
+  const VERSION = '13.7.52';
+  const BUILD = 30752;
   const SCHEMA = 10400;
   const PRIMARY_STORAGE_KEY = 'arc_v10400_web';
   const MIRROR_STORAGE_KEY = 'arc_v10400_mirror';
@@ -5858,6 +5858,44 @@ function lifecycleChoosePurchaseProfile(plan,role='training',avoidKeys=new Set()
  }).map(profile=>({profile,score:lifecyclePurchaseScore(profile,plan,role)})).sort((a,b)=>b.score-a.score);
  return(candidates.find(x=>!avoidKeys.has(lifecycleProfileKey(x.profile)))||candidates[0]||{}).profile||candidatePurchaseProfiles()[0]||null
 }
+
+function lifecycleAcceptableFit(plan){
+ const key=lifecycleStrategyConfig().key,quality=lifecycleIsQuality(plan?.type);
+ if(key==='fewer')return 30;
+ if(key==='quality')return quality?54:44;
+ if(key==='protection')return 44;
+ return 46
+}
+function lifecycleMeaningfulQualityNeed(plan,fixed){
+ if(!lifecycleIsQuality(plan?.type))return false;
+ const remaining=(fixed||[]).filter(p=>p.date>=plan.date&&lifecycleIsQuality(p.type));
+ const km=remaining.reduce((n,p)=>n+(Number(p.distance)||0),0);
+ return remaining.length>=3&&km>=18
+}
+function lifecycleCompactRotation(ctx,fixed){
+ const cfg=lifecycleStrategyConfig(),{pairs,purchases,events}=ctx;
+ if(!['fewer','balanced','protection'].includes(cfg.key))return;
+ const future=pairs.filter(p=>!p.owned&&p.role!=='race').slice().sort((a,b)=>(a.availableDate||'').localeCompare(b.availableDate||''));
+ for(const target of future){
+  const rows=target.assignments.slice().sort((a,b)=>a.date.localeCompare(b.date));if(!rows.length)continue;
+  const virtual=new Map(pairs.map(p=>[p.id,p.km-(p.id===target.id?rows.reduce((n,r)=>n+r.km,0):0)]));
+  const choices=[];let feasible=true;
+  for(const row of rows){
+   const plan=(fixed||[]).find(p=>p.id===row.planId)||{id:row.planId,date:row.date,type:row.type,distance:row.km,surface:'road'};
+   const best=pairs.filter(p=>p.id!==target.id&&p.availableDate<=row.date&&(virtual.get(p.id)||0)+row.km<=p.retireKm+1)
+    .map(p=>({p,fit:lifecycleWorkoutFit(p.profile,plan),score:lifecyclePairAssignmentScore(p,plan).score+(p.owned?20:0)}))
+    .filter(x=>x.fit>=lifecycleAcceptableFit(plan)).sort((a,b)=>b.score-a.score)[0]?.p;
+   if(!best){feasible=false;break}
+   choices.push([row,best]);virtual.set(best.id,(virtual.get(best.id)||0)+row.km)
+  }
+  if(!feasible)continue;
+  choices.forEach(([row,best])=>lifecycleReassign(row,best,pairs));
+  if(!target.assignments.length){
+   const pi=purchases.findIndex(p=>p.pairId===target.id);if(pi>=0)purchases.splice(pi,1);
+   events.push({date:target.availableDate,type:'purchase-avoided',pairId:target.id,text:`${lifecyclePairLabel(target)} is not purchased because physical pairs already in the rotation have enough acceptable remaining capacity.`})
+  }
+ }
+}
 function lifecycleRecentKm(pair,date,days=7){
  return pair.assignments.filter(a=>{const diff=(dte(date)-dte(a.date))/DAY;return diff>=0&&diff<days}).reduce((n,a)=>n+(Number(a.km)||0),0)
 }
@@ -5917,7 +5955,7 @@ function lifecycleCreatePair(ctx,plan,role='training',preferredProfile=null){
  const reusable=pairs.filter(p=>!p.owned&&p.availableDate<=plan.date&&p.km+distance<=p.retireKm)
   .filter(p=>!isRace||lifecycleRoles(p.profile).has('race'))
   .filter(p=>!preferredProfile||!isRace||lifecycleProfileKey(p.profile)===lifecycleProfileKey(preferredProfile))
-  .map(p=>({p,...lifecyclePairAssignmentScore(p,plan)})).filter(x=>x.fit>=cfg.minFit-4).sort((a,b)=>b.score-a.score)[0]?.p;
+  .map(p=>({p,...lifecyclePairAssignmentScore(p,plan)})).filter(x=>x.fit>=Math.max(28,lifecycleAcceptableFit(plan)-4)).sort((a,b)=>b.score-a.score)[0]?.p;
  if(reusable)return reusable;
  const recent=purchases.filter(p=>Math.abs(dte(plan.date)-dte(p.firstUseDate))<cfg.minPurchaseGapDays*DAY);
  const avoid=new Set(recent.filter(p=>p.role===role||role!=='race').map(p=>lifecycleProfileKey(p.profile)));
@@ -5925,7 +5963,7 @@ function lifecycleCreatePair(ctx,plan,role='training',preferredProfile=null){
  const profile=preferredProfile||lifecycleContextualPurchaseProfile(plan,role,referencePair,avoid);if(!profile)return null;
  const recentReusable=recent.map(p=>pairs.find(x=>x.id===p.pairId)).filter(Boolean)
   .filter(p=>!isRace||lifecycleRoles(p.profile).has('race'))
-  .map(p=>({p,...lifecyclePairAssignmentScore(p,plan)})).filter(x=>x.p.km+distance<=x.p.retireKm&&x.fit>=cfg.minFit-6).sort((a,b)=>b.score-a.score)[0]?.p;
+  .map(p=>({p,...lifecyclePairAssignmentScore(p,plan)})).filter(x=>x.p.km+distance<=x.p.retireKm&&x.fit>=Math.max(26,lifecycleAcceptableFit(plan)-6)).sort((a,b)=>b.score-a.score)[0]?.p;
  if(recentReusable)return recentReusable;
  const purchaseDate=lifecyclePurchaseDate(plan.date,cfg.purchaseLeadDays),id=`future:${purchases.length+1}:${lifecycleProfileKey(profile)}`;
  const pair={id,owned:false,shoe:null,profile,currentKm:0,km:0,availableDate:plan.date,purchaseDate,retireKm:lifecycleRetireKmForProfile(profile),assignments:[],points:[{date:purchaseDate,km:0,purchase:true}],role};
@@ -6088,6 +6126,13 @@ function lifecycleValidatePlan(result){
   if(u.maxGapDays>42)issues.push({code:'future-pair-long-idle-gap',pairId:pair.id,maxGapDays:u.maxGapDays});
  });
  result.purchases.forEach(p=>{const pair=result.pairs.find(x=>x.id===p.pairId),first=pair?.assignments.slice().sort((a,b)=>a.date.localeCompare(b.date))[0];if(first&&p.purchaseDate!==first.date)issues.push({code:'purchase-before-first-use',pairId:p.pairId,purchaseDate:p.purchaseDate,firstUse:first.date})});
+ if(cfg.key==='fewer'){
+  result.purchases.filter(p=>p.role!=='race').forEach(p=>{
+   const pair=result.pairs.find(x=>x.id===p.pairId);if(!pair)return;
+   const avoidable=pair.assignments.every(row=>result.pairs.some(other=>other.id!==pair.id&&other.availableDate<=row.date&&other.km+row.km<=other.retireKm+1&&lifecycleWorkoutFit(other.profile,{type:row.type,distance:row.km,surface:'road'})>=30));
+   if(avoidable)issues.push({code:'minimum-pairs-avoidable-purchase',pairId:p.pairId})
+  })
+ }
  if(result.racePair&&result.raceWindow&&(result.racePair.km<result.raceWindow.minKm||result.racePair.km>result.raceWindow.maxKm))issues.push({code:'race-pair-outside-target-window',pairId:result.racePair.id,km:result.racePair.km,min:result.raceWindow.minKm,max:result.raceWindow.maxKm});
  return issues
 }
@@ -6104,13 +6149,13 @@ function freshShoeLifecyclePlan(){
   if(manualShoeId){const p=pairs.find(x=>x.owned&&x.shoe.id===manualShoeId&&x.availableDate<=plan.date);if(p&&p.km+distance<=p.retireKm+1){chosen=p;why='Manual planned shoe choice retained.'}}
   if(!chosen){
    const available=pairs.filter(p=>p.availableDate<=plan.date&&p.km+distance<=p.retireKm+1).map(p=>({p,...lifecyclePairAssignmentScore(p,plan)})).sort((a,b)=>b.score-a.score);
-   chosen=available.find(x=>x.fit>=cfg.minFit)?.p||null;
-   if(chosen)why=`Best available physical pair for ${plan.type} after workout fit, runner context, wear and future-role preservation.`;
+   chosen=available.find(x=>x.fit>=lifecycleAcceptableFit(plan))?.p||null;
+   if(chosen)why=`Best acceptable physical pair already available for ${plan.type}; a small suitability-score advantage cannot justify buying another shoe.`;
   }
   if(!chosen){
-   const role=cfg.key==='quality'&&lifecycleIsQuality(plan.type)?'quality':'training';
+   const role=cfg.key==='quality'&&lifecycleMeaningfulQualityNeed(plan,fixed)?'quality':'training';
    chosen=lifecycleCreatePair(ctx,plan,role);
-   why=role==='quality'?'Performance-focused rotation introduces a quality pair because no available pair meets the quality-session fit threshold.':'A new pair is required because existing suitable service-life capacity is exhausted.';
+   why=role==='quality'?'Performance-focused rotation introduces a specialist only because a repeated quality block has a genuine uncovered role.':'A new pair is required because no already-available physical pair has both acceptable workout compatibility and remaining service-life capacity.';
   }
   if(chosen)lifecycleAssign(chosen,plan,assignments,why);
  });
@@ -6125,6 +6170,10 @@ function freshShoeLifecyclePlan(){
    if(pair){const row={planId:rehabPlan.id,date:day.date,type:'Rehab',km,pairId:pair.id,ownedShoeId:pair.owned?pair.shoe.id:null,why:'Expected rehabilitation walking/running shoe exposure.',fit:lifecycleWorkoutFit(pair.profile,rehabPlan),rehab:true};pair.km+=km;pair.assignments.push(row)}
   })
  }
+
+ // Portfolio-first sanity pass: eliminate any future training purchase whose entire
+ // workload can still be covered by physical pairs already in the rotation.
+ lifecycleCompactRotation(ctx,fixed);
 
  const racePlan={id:'race-day-equipment',date:raceDate,type:'Race Day',distance:Number(state.setup?.raceDistance)||42.195,surface:'road'};
  let raceCandidates=pairs.filter(p=>lifecycleRaceEligiblePair(p,racePlan)).map(p=>lifecycleRaceFit(p,racePlan)).sort((a,b)=>b.score-a.score);
@@ -6226,7 +6275,7 @@ function shoeProgrammeMileageChartHtml(){
  const slopeMarkers=slopeEvents.map(e=>{const pair=pairs.find(p=>p.id===e.pairId);if(!pair)return'';const col=colorById.get(pair.id)||'#dffcff',xx=x(e.date),yy=y(e.km);return`<g class="shoeSlopeMarker" style="--shoe-color:${col}"><circle cx="${xx}" cy="${yy}" r="13"/><text x="${xx}" y="${yy+5}" text-anchor="middle">${e.number}</text></g>`}).join('');
  const raceX=x(raceDate),todayX=x(todayStr),targetBand=window&&life.racePair?(()=>{const yy1=y(window.maxKm),yy2=y(window.minKm),bx=Math.max(L,raceX-120);return`<g class="shoeRaceTargetBand"><rect x="${bx}" y="${yy1}" width="${raceX-bx}" height="${Math.max(5,yy2-yy1)}"/><text x="${raceX-8}" y="${Math.max(T+20,yy1-10)}" text-anchor="end">Race target · ${Math.round(window.minKm)}–${Math.round(window.maxKm)} km</text></g>`})():'';
  const legend=pairs.map(pair=>`<span class="shoeLegendItem ${pair.owned?'':'future'} ${pair===life.racePair?'race':''}"><span class="shoeLegendSwatch ${pair.owned?'':'dotted'}" style="--shoe-color:${colorById.get(pair.id)}"></span><b>${pair.owned?'OWNED':pair===life.racePair?'FUTURE RACE':'FUTURE'}</b> ${esc(lifecyclePairLabel(pair))}</span>`).join('');
- const purchaseCards=life.purchases.length?`<div class="freshPurchaseSummary"><small>PURCHASE PLAN</small>${life.purchases.map((p,n)=>{const pair=life.pairs.find(x=>x.id===p.pairId),role=p.role==='race'?'Race Day / familiarisation':p.role==='quality'?'Quality sessions':'Training replacement';return`<div class="purchasePlanRow"><div class="purchasePlanHead"><b>${n+1}. BUY ${esc(lifecyclePairLabel(pair))}</b><strong>${esc(fmtDate(p.purchaseDate))}</strong></div><p><b>Why:</b> ${esc(p.reason)}</p><p><b>Role:</b> ${esc(role)}</p><p><b>Replaces / complements:</b> ${esc('the existing physical rotation')}</p><p><b>Expected first use:</b> ${esc(fmtDate(p.firstUseDate))}</p><p><b>Race Day role:</b> ${p.role==='race'?'Planned Race Day pair':'Only if it remains the best suitable pair after future mileage is accumulated.'}</p></div>`}).join('')}</div>`:`<div class="freshPurchaseSummary none"><small>PURCHASE PLAN</small><b>No new pair currently required before Race Day</b><p>The existing physical rotation can cover the fixed programme within the selected approach and realistic service-life limits.</p></div>`; const rationale=`<details class="shoeGraphRationale"><summary>Why this shoe plan?</summary><div><p>The running programme is treated as fixed. The engine first uses the physical pairs you already own, respects each pair’s remaining service-life capacity, then introduces a new physical pair only when the remaining programme cannot be covered appropriately. ${life.strategy==='balanced'?'Smart rotation avoids overlapping near-term purchases unless they serve genuinely different roles.':life.strategy==='fewer'?'Keep it simple favours versatile pairs and delays new purchases until a real capacity gap exists.':life.strategy==='quality'?'Performance rotation allows specialist quality/race pairs where they materially improve workout fit.':'Protection first uses more conservative wear limits and favours cushioning/protection.'}</p><p><b>User shoe context:</b> ${esc(footMechanicsLabel())}. <b>ASICS source:</b> curated offline ASICS catalogue snapshot.</p></div></details>`;
+ const purchaseCards=life.purchases.length?`<div class="freshPurchaseSummary"><small>PURCHASE PLAN</small>${life.purchases.map((p,n)=>{const pair=life.pairs.find(x=>x.id===p.pairId),role=p.role==='race'?'Race Day / familiarisation':p.role==='quality'?'Quality sessions':'Training replacement';return`<div class="purchasePlanRow"><div class="purchasePlanHead"><b>${n+1}. BUY ${esc(lifecyclePairLabel(pair))}</b><strong>${esc(fmtDate(p.purchaseDate))}</strong></div><p><b>Why:</b> ${esc(p.reason)}</p><p><b>Role:</b> ${esc(role)}</p><p><b>Replaces / complements:</b> ${esc('the existing physical rotation')}</p><p><b>Expected first use:</b> ${esc(fmtDate(p.firstUseDate))}</p><p><b>Race Day role:</b> ${p.role==='race'?'Planned Race Day pair':'Only if it remains the best suitable pair after future mileage is accumulated.'}</p></div>`}).join('')}</div>`:`<div class="freshPurchaseSummary none"><small>PURCHASE PLAN</small><b>No new pair currently required before Race Day</b><p>The existing physical rotation can cover the fixed programme within the selected approach and realistic service-life limits.</p></div>`; const rationale=`<details class="shoeGraphRationale"><summary>Why this shoe plan?</summary><div><p>The running programme is treated as fixed. The engine first uses the physical pairs you already own, respects each pair’s remaining service-life capacity, then introduces a new physical pair only when the remaining programme cannot be covered appropriately. ${life.strategy==='balanced'?'Smart rotation ranks the shoes already available first; a modestly better model never triggers a purchase. New pairs require an uncovered role or genuine service-life capacity gap.':life.strategy==='fewer'?'Minimum pairs exhausts acceptable remaining capacity in already-owned or earlier physical pairs before another training pair can be created. A better score alone can never trigger a purchase.':life.strategy==='quality'?'Performance focused permits a specialist only for a repeated meaningful quality block; isolated workouts or small score gains do not justify another pair.':'Protection & comfort uses more conservative wear limits and favours cushioning/comfort, but still reuses suitable physical pairs before creating duplicates.'}</p><p><b>User shoe context:</b> ${esc(footMechanicsLabel())}. <b>ASICS source:</b> curated offline ASICS catalogue snapshot.</p></div></details>`;
  return`<div class="shoeChartWrap shoeProgrammeChart"><div class="shoeChartRaceDate"><small>PHYSICAL-PAIR PLAN THROUGH RACE DAY</small><b>Race day · ${esc(shoeChartDate(raceDate))}</b></div>${life.racePair?`<div class="shoeRaceStrategyCard"><small>RACE-DAY PAIR</small><b>${esc(lifecyclePairLabel(life.racePair))}</b><span>~${Math.round(life.racePair.km)} km projected · target ${Math.round(window?.minKm||0)}–${Math.round(window?.maxKm||0)} km</span></div>`:`<div class="shoeRaceStrategyCard invalid"><small>RACE-DAY PAIR</small><b>Plan requires recalculation</b><span>No shoe is shown as the Race Day proposal until the engine can place it inside a valid target-mileage window.</span></div>`}<div class="shoeGraphStrategy">${shoeEngineStrategyHtml()}</div><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Owned and future physical shoe pairs through Race Day">${targetBand}<g class="shoeGrid">${grid}</g><line class="shoeTodayLine" x1="${todayX}" y1="${T}" x2="${todayX}" y2="${H-B}"/><line class="shoeRaceLine" x1="${raceX}" y1="${T}" x2="${raceX}" y2="${H-B}"/>${actual}${future}${purchaseMarkers}${slopeMarkers}<text class="xLab" x="${todayX}" y="${H-26}" text-anchor="start">Today · ${esc(shoeChartDate(todayStr))}</text><text class="xLab" x="${raceX}" y="${H-26}" text-anchor="end">Race day · ${esc(shoeChartDate(raceDate))}</text><text class="yTitle" transform="translate(32 ${H/2}) rotate(-90)" text-anchor="middle">Accumulated km</text></svg><div class="shoeChartKey"><span><i class="actual"></i>Logged mileage</span><span><i class="planned"></i>Future plan</span><span><i class="raceshoe"></i>Race-day pair</span></div><div class="shoeChartLegend">${legend}</div>${purchaseCards}${freshSlopeEventsHtml(slopeEvents)}${rationale}</div>`
 }
 function shoeMileageChartHtml(){return shoeProgrammeMileageChartHtml()}
