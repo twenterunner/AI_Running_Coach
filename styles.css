@@ -4466,8 +4466,8 @@ body:has(#dashboard.progressPage.active),#mainContent:has(#dashboard.progressPag
 .logDetailModal .runMetricV3>span{font-size:10px!important;font-weight:800!important;letter-spacing:.05em!important;color:#9fc1ca!important}.logDetailModal .runMetricV3>strong{font-size:18px!important;line-height:1.2!important;color:#fff!important}.logDetailModal .runMetricV3>small{font-size:11px!important;color:#b7d0d7!important}
 .logDetailModal .runDataQualityV3{display:flex!important;flex-direction:column!important;gap:6px!important;margin-top:10px!important;padding:12px!important;border-radius:12px!important;background:rgba(3,31,43,.44)!important;border:1px solid rgba(80,210,219,.16)!important}.logDetailModal .runDataQualityV3>strong{font-size:13px!important;color:#fff!important}.logDetailModal .runDataQualityV3>p{margin:0!important;font-size:11px!important;line-height:1.45!important;color:#b7d0d7!important}
 .logDetailModal .logEvidenceGaugeRowV3{display:grid!important;grid-template-columns:86px minmax(0,1fr)!important;gap:12px!important}.logDetailModal .pathMetricGridV3{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:8px!important}.logDetailModal .pathMetricGridV3>div,.logDetailModal .factorGridV3>div{display:flex!important;flex-direction:column!important;gap:6px!important;padding:10px!important;border-radius:12px!important;background:rgba(3,31,43,.44)!important;border:1px solid rgba(80,210,219,.16)!important}.logDetailModal .pathMetricGridV3 span,.logDetailModal .factorGridV3 span{font-size:8px!important;font-weight:800!important;color:#9cbac4!important}.logDetailModal .pathMetricGridV3 strong,.logDetailModal .factorGridV3 strong{font-size:14px!important;color:#fff!important}.logDetailModal .factorGridV3{display:grid!important;grid-template-columns:1fr 24px 1fr!important;gap:8px!important;margin-top:12px!important}.logDetailModal .factorGridV3>i{display:grid!important;place-items:center!important;font-style:normal!important;color:#46dce0!important}.logDetailModal .factorGridV3 small{font-size:10px!important;color:#83deda!important}
-#shoes .asicsLiveStatus{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;margin-top:12px;padding-top:12px;border-top:1px solid rgba(153,224,232,.18)}#shoes .asicsLiveStatus>div{display:flex;flex-direction:column;gap:3px}#shoes .asicsLiveStatus small{font-size:8px;font-weight:900;letter-spacing:.08em;color:#45e0e4}#shoes .asicsLiveStatus b{font-size:12px;color:#fff}#shoes .asicsLiveStatus span{font-size:10px;line-height:1.35;color:#b7d0d7}
-@media(max-width:420px){.logDetailModal .pathMetricGridV3,.logDetailModal .logEvidenceGaugeRowV3,.logDetailModal .factorGridV3{grid-template-columns:1fr!important}.logDetailModal .factorGridV3>i{transform:rotate(90deg)!important}#shoes .asicsLiveStatus{grid-template-columns:1fr!important}}
+
+@media(max-width:420px){.logDetailModal .pathMetricGridV3,.logDetailModal .logEvidenceGaugeRowV3,.logDetailModal .factorGridV3{grid-template-columns:1fr!important}.logDetailModal .factorGridV3>i{transform:rotate(90deg)!important}}
 
 /* v13.7.39 — exact scheduled rehab exercises in check-in */
 .checkinExactExercises{
@@ -4550,23 +4550,13 @@ body:has(#dashboard.progressPage.active),#mainContent:has(#dashboard.progressPag
 }
 
 /* v13.7.44 */
-#shoes .asicsLiveStatus button:disabled{opacity:.65;cursor:wait}
-#shoes .asicsLiveStatus span{overflow-wrap:anywhere}
+
+
 
 /* v13.7.45 — live ASICS confirmation + graph-adjacent strategy */
-#shoes .asicsLiveStatus.success{
-  border-color:rgba(72,220,139,.42)!important;
-  background:rgba(10,71,62,.34)!important;
-}
-#shoes .asicsLiveStatus.success b{
-  color:#8ff0b8!important;
-}
-#shoes .asicsPlanApplied{
-  display:block!important;
-  margin-top:3px!important;
-  font-weight:700!important;
-  color:#c7e9e5!important;
-}
+
+
+
 #shoes .shoeProgrammeChart>.shoeGraphStrategy{
   margin:14px 0 8px!important;
   padding:0!important;
@@ -4618,3 +4608,12 @@ body:has(#dashboard.progressPage.active),#mainContent:has(#dashboard.progressPag
 #shoes .shoeSlopeEvents summary small{color:#9db9c0}
 #shoes .shoeSlopeEvents details>p{padding:0 12px 12px;margin:0;color:#d1e3e5;line-height:1.48}
 #shoes .slopeEventNo{width:30px;height:30px;display:grid;place-items:center;flex:0 0 30px;border-radius:50%;border:2px solid #58e4df;color:#58e4df;font-weight:900}
+
+/* v13.7.48 — rational offline shoe lifecycle plan */
+#shoes .purchasePlanRow{display:block!important;padding:12px 0!important;border-top:1px solid rgba(160,220,226,.14)!important}
+#shoes .purchasePlanHead{display:flex!important;justify-content:space-between!important;gap:10px!important;align-items:flex-start!important}
+#shoes .purchasePlanHead b{color:#fff!important}
+#shoes .purchasePlanHead strong{color:#58e4df!important;white-space:nowrap!important}
+#shoes .purchasePlanRow p{margin:5px 0 0!important;color:#c4d9dd!important;line-height:1.4!important}
+#shoes .freshPurchaseSummary.none p{margin:6px 0 0;color:#aec7cc;line-height:1.4}
+@media(max-width:420px){#shoes .purchasePlanHead{display:grid!important;grid-template-columns:1fr!important}#shoes .purchasePlanHead strong{white-space:normal!important}}
