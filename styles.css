@@ -4652,3 +4652,8 @@ body:has(#dashboard.progressPage.active),#mainContent:has(#dashboard.progressPag
 #shoes .shoePurchaseMarker .shoePurchaseLine{stroke:var(--shoe-color);stroke-width:2.4;stroke-dasharray:7 5;opacity:.9}
 #shoes .shoePurchaseMarker circle{fill:#08202b;stroke:var(--shoe-color);stroke-width:2.5}
 #shoes .shoePurchaseMarker .shoePurchaseLabel{fill:var(--shoe-color);font-size:13px;font-weight:900;paint-order:stroke;stroke:#07303b;stroke-width:3px}
+
+/* v13.7.63 shoe lifecycle graph: purchase/retirement are explicit physical-pair boundaries */
+.shoeRetirementLine{stroke:var(--shoe-color);stroke-width:2;stroke-dasharray:5 5;opacity:.8}
+.shoeRetirementMarker circle{fill:#082633;stroke:var(--shoe-color);stroke-width:3}
+.shoeRetirementLabel{fill:var(--shoe-color);font-size:14px;font-weight:800;paint-order:stroke;stroke:#07303b;stroke-width:4px;stroke-linejoin:round}
