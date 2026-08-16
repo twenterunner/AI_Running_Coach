@@ -1,4 +1,17 @@
-AI Running Coach v13.8.8 · build 30808
+AI Running Coach v13.8.9 · build 30809
+
+Balanced shoe strategy refinement
+- Planned non-race retirements are staggered by at least eight weeks.
+- RETIRE is reserved for a true lifecycle-boundary event.
+- Flat/synthetic graph continuations are removed; repeated-mileage points are suppressed and gaps >21 days are not connected.
+- Race Day mileage is shown with a separate endpoint marker.
+- Condition feedback has a materially larger impact on remaining planned mileage while retaining the 80% full-life floor.
+- Session allocation prioritises shoe/workout fit first; the 25% weekly-share constraint no longer overpowers suitability once feasible.
+- Stronger foot-mechanics compatibility is used in session matching.
+- Existing rehab shoe preselection fix from v13.8.8 is retained.
+- Training, prediction, recovery, rehab progression, pathway, scoring and import calculations are unchanged.
+
+AI Running Coach v13.8.9 · build 30809
 
 Rehabilitation shoe preselection fix
 - The shoe shown on the daily rehabilitation card is now populated from the same authoritative rehab/lifecycle proposal used by the check-in.
@@ -9,7 +22,7 @@ Rehabilitation shoe preselection fix
 - Retired shoes are never auto-selected.
 - No rehabilitation progression, training-plan, prediction, pathway, scoring or mileage logic was changed.
 
-AI Running Coach v13.8.8 · build 30808
+AI Running Coach v13.8.9 · build 30809
 
 Daily rehab shoe prepopulation
 - The daily rehabilitation check-in now preselects the exact active physical shoe proposed for that rehabilitation day.
