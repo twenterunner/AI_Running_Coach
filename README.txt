@@ -1,3 +1,21 @@
+AI Running Coach v13.8.4 · build 30804
+
+Shoe purchase/graph consistency update
+- A final purchase-necessity gate removes late or low-use non-race future pairs when every assigned workout can be covered by the remaining rotation.
+- A valid Race Day shoe within its mileage window prevents additional pre-race purchases unless those shoes fill a genuinely material training role.
+- Performance mode may retain a late specialist only when it has at least two meaningful quality-session assignments and a material fit advantage.
+- Ordinary training-shoe curves no longer get synthetic horizontal extensions to Race Day.
+- A retired pair's curve ends at retirement; no post-retirement horizontal plotting is generated.
+- Only the selected Race Day pair is carried visually to Race Day so its target mileage can be compared directly with the Race Day band.
+- Validation flags any surviving late low-use non-race purchase.
+- Existing training, prediction, recovery, rehabilitation progression, pathway, scoring and import calculations are unchanged.
+
+AI Running Coach v13.8.4 · build 30804
+Revision/header/cache synchronization release.
+- Header fallback and runtime header both use v13.8.4 build 30804.
+- app.js CORE.VERSION/BUILD, manifest and service-worker cache use the same revision.
+- CSS/JS/manifest asset query strings are cache-busted to build 30804.
+
 AI Running Coach v13.8.2 — coach-first shoe strategy + rebuilt optimiser — build 30802
 
 - Rebuilt lifecycle optimiser retained from v13.8.0 verification baseline.
