@@ -1,51 +1,74 @@
 {
-  "release": "14.0.1",
-  "build": 40001,
-  "suite": "SESSION SUITABILITY",
-  "scenarios": 54,
-  "passed": 54,
-  "hardInvariantFailures": 0,
-  "failures": [],
+  "release": "14.0.2",
+  "build": 40002,
+  "scenarioSuite": {
+    "suite": "SESSION SUITABILITY",
+    "scenarios": 54,
+    "passed": 54,
+    "hardInvariantFailures": 0,
+    "failures": []
+  },
+  "scoreIntegration": {
+    "passed": 4,
+    "failed": 0,
+    "hillsSuperblast": 90,
+    "hillsNovablast": 79,
+    "finalKm": {
+      "SUPERBLAST 3": 166.3,
+      "NOVABLAST 4": 298
+    },
+    "racePair": "SUPERBLAST 3"
+  },
   "releaseChecks": [
     {
       "name": "JavaScript syntax",
       "status": "PASS"
     },
     {
-      "name": "Hard validation repair pass present",
+      "name": "54-scenario hard-invariant suite",
       "status": "PASS"
     },
     {
-      "name": "Blocked-plan release UI removed",
+      "name": "Score reconciliation integration tests",
       "status": "PASS"
     },
     {
-      "name": "Per-session training suitability ranking UI",
+      "name": "Current-like 46 km / 298 km state produces feasible Race Day pair",
       "status": "PASS"
     },
     {
-      "name": "Per-session rehabilitation suitability ranking UI",
+      "name": "No generic blocked/unavailable lifecycle release state",
       "status": "PASS"
     },
     {
-      "name": "Today suitability-score drilldown",
+      "name": "Capacity overflow repair present",
       "status": "PASS"
     },
     {
-      "name": "Plan suitability-score drilldown",
+      "name": "Deterministic fallback lifecycle present",
       "status": "PASS"
     },
     {
-      "name": "Rehab/check-in authoritative assignment integration",
+      "name": "One authoritative score object",
       "status": "PASS"
     },
     {
-      "name": "Legacy 25% weekly-share rule absent",
+      "name": "Visible score weights and formula",
       "status": "PASS"
     },
     {
-      "name": "Version/cache integrity v14.0.1 build 40001",
+      "name": "Today/Plan/Rehab use authoritative score",
+      "status": "PASS"
+    },
+    {
+      "name": "Value-add footwear-plan summary",
+      "status": "PASS"
+    },
+    {
+      "name": "Legacy mode-dependent fit branches removed",
       "status": "PASS"
     }
-  ]
+  ],
+  "totalAutomatedTests": 58,
+  "hardInvariantFailures": 0
 }
