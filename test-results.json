@@ -1,0 +1,7 @@
+{
+  "suite": "SESSION SUITABILITY",
+  "scenarios": 54,
+  "passed": 54,
+  "hardInvariantFailures": 0,
+  "failures": []
+}

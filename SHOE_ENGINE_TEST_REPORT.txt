@@ -1,26 +1,44 @@
-AI Running Coach v13.8.1 build 30801 — Shoe Engine Verification
+AI Running Coach v14.0.0 · build 40000
+SESSION SUITABILITY — Shoe Engine Test Report
+Date: 2026-08-16
 
-72-scenario matrix: PASS 72 / FAIL 0
-24 targeted boundary tests: PASS 24 / FAIL 0
-Total: PASS 96 / FAIL 0
+RELEASE RESULT
+PASS — 0 HARD-INVARIANT FAILURES in the automated shoe scenario suite.
 
-Hard invariants checked:
-- no use before purchase
-- no assignment beyond retirement/service-life limit
-- no graph point beyond retirement
-- no extended one-pair training rotation where two-pair allocation is required
-- >=25% weekly share for each active non-race pair whenever physically feasible
-- no unused or materially idle future purchase
-- purchase date / first meaningful use consistency
-- Race Day pair exists and is inside its target window
-- Race Day pair <=250 km
-- retirement cannot precede final planned use
-- Race Day specialist is not generic overflow
+AUTOMATED SCENARIO SUITE
+54 scenarios passed / 54 executed.
+Coverage includes:
+- Foot mechanics: Neutral, Pronates/overpronates, Supinates/underpronates, Not sure.
+- Program contexts: 5 km, 10 km, half marathon, marathon, ultra.
+- Starting states: zero shoes; one fresh; one heavily worn; two complementary; two overlapping; one near retirement + one fresh; two near retirement; three healthy; historical obsolete owned model.
+- Rehab: no injury shoe context, walking, return-to-run, manual rehab shoe override.
+- Race Day: existing suitable pair; existing pair too worn; training pair can serve; dedicated race pair required; >=250 km rejection; familiarisation minimum.
+- Lifecycle: high mileage, low mileage, condition deterioration, manual retirement, actual mileage replacing forecast basis.
+- Score-direction tests: protective trainer beats aggressive specialist for recovery/rehab; responsive performance shoe beats recovery trainer for threshold; supination penalises highly guided shoes; pronation increases guided relevance for protective mileage without forcing it for quality work.
+- Ledger principles: future pair starts at 0 km; no use after retirement; no artificial redistribution; obsolete owned model remains recognised but is excluded from current purchase candidates.
 
-UI regression checks:
-- no numbered slope-change markers rendered
-- BUY is a compact first-use marker
-- RETIRE is an X at final planned use
-- rehab is a background band only
-- one compact legend entry per physical pair
-- runner-facing Rotation Plan shown below graph
+STATIC / INTEGRITY CHECKS
+PASS — app.js JavaScript syntax.
+PASS — service-worker.js JavaScript syntax.
+PASS — manifest.webmanifest JSON syntax.
+PASS — shoe-engine-tests.js syntax/execution.
+PASS — legacy 25%-weekly-share functions removed.
+PASS — old multi-strategy state/mode symbols removed.
+PASS — one freshShoeLifecyclePlan, one lifecycleSessionSuitabilityScore, one lifecycleValidatePlan.
+PASS — version/build synchronised to 14.0.0 / 40000 in app.js, index.html, manifest.webmanifest and service-worker.js.
+PASS — service-worker cache updated to arc-v1400-build-40000 and JS/CSS query strings cache-busted.
+PASS — schema remains 10400, preserving historical/local user data compatibility.
+
+HARD VALIDATION GATE
+The authoritative lifecycle result is validated before being consumed by authoritative Plan/Today/Rehab assignments, purchase proposals or the mileage graph. If validation fails, those outputs are blocked rather than displaying an invalid plan.
+
+REGRESSION LOCK
+Source diff inspection shows implementation changes confined to version/cache metadata and the Shoes implementation area. No training-plan generation, prediction, recovery, HRV, injury progression, pathway, execution-scoring or FIT/CSV calculation code was intentionally changed.
+
+CURRENT ASICS CATALOGUE CHECK
+Current NL ASICS pages were verified during the rebuild for NOVABLAST 6, SUPERBLAST 3, GEL-NIMBUS 28 and METASPEED TOKYO. The app remains offline-first; the catalogue is a curated snapshot rather than a live scraper.
+
+LIMITATIONS
+- The execution environment blocks Chromium from loading localhost/file application pages, so a true headless DOM/mobile browser run could not be completed here. Full JavaScript syntax/static checks and the deterministic engine scenario suite were run instead.
+- The uploaded files do not include the user's device localStorage contents. Existing-state migration was therefore protected structurally by keeping schema 10400 and the existing normalisation/storage fields, rather than by importing the user's actual browser database into this environment.
+- Service-life ranges are planning estimates, not scientific failure thresholds; condition/comfort feedback can justify earlier retirement.

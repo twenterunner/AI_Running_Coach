@@ -1,3 +1,13 @@
+AI Running Coach v14.0.0 · build 40000
+
+SESSION SUITABILITY shoe-engine rebuild
+- One authoritative physical-pair engine for running and rehabilitation shoe planning.
+- Highest appropriate serviceable suitability score wins; runner overrides remain authoritative while feasible.
+- Need-driven purchases only; no modes, weekly-share rules, artificial mileage redistribution, or independent graph lifecycle calculations.
+- Race Day is backward-planned with <250 km projected mileage and prior familiarisation.
+- Historical owned shoes and historical run/rehab assignments are preserved under schema 10400.
+- Non-shoe engines remain regression locked.
+
 AI Running Coach v13.9.0 · build 30900
 
 Score-driven shoe engine
