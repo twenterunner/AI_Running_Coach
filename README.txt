@@ -1,3 +1,12 @@
+AI Running Coach v13.8.7 · build 30807
+
+Daily rehab shoe prepopulation
+- The daily rehabilitation check-in now preselects the exact active physical shoe proposed for that rehabilitation day.
+- Priority is: saved check-in shoe, same-day logged-run shoe, then the lifecycle rehab proposal.
+- Retired/unavailable shoes are never preselected.
+- Manual user selection remains authoritative once saved.
+- Existing training, prediction, recovery, rehabilitation progression, pathway, scoring and import calculations are unchanged.
+
 AI Running Coach v13.8.6 · build 30806
 
 Balanced-only shoe engine
