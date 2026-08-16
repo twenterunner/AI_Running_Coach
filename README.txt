@@ -1,4 +1,4 @@
-AI Running Coach v14.0.7 · build 40007
+AI Running Coach v14.0.8 · build 40008
 
 Shoe lifecycle corrective release
 - 25% weekly minimum solved using whole-session constrained allocation whenever feasible.
@@ -9,7 +9,7 @@ Shoe lifecycle corrective release
 - Race Day planning retains sub-250 km and close-to-race familiarisation rules.
 - Non-shoe engines remain regression locked.
 
-AI Running Coach v14.0.7 · build 40007
+AI Running Coach v14.0.8 · build 40008
 
 SESSION SUITABILITY shoe-engine rebuild
 - One authoritative physical-pair engine for running and rehabilitation shoe planning.

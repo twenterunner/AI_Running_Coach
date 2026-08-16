@@ -1,6 +1,6 @@
 {
-  "release": "14.0.5",
-  "build": 40005,
+  "release": "14.0.8",
+  "build": 40008,
   "core": {
     "suite": "SESSION SUITABILITY",
     "scenarios": 54,
@@ -8,51 +8,31 @@
     "hardInvariantFailures": 0,
     "failures": []
   },
-  "checks": {
-    "syntax app.js": true,
-    "syntax service-worker.js": true,
-    "syntax shoe-engine-tests.js": true,
-    "syntax shoe-score-integration-tests.js": true,
-    "syntax shoe-first-use-regression-tests.js": true,
-    "syntax shoe-rotation-race-tests.js": true,
-    "syntax shoe-weekly-share-regression-tests.js": true,
-    "weekly 25 allocator active": true,
-    "weekly shortfall advisory only": true,
-    "old hard weekly failure removed": true,
-    "race close exposure retained": true,
-    "graph hard gate still exists": true
+  "scoreIntegration": {
+    "passed": 4,
+    "failed": 0,
+    "hillsSuperblast": 90,
+    "hillsNovablast": 79,
+    "finalKm": {
+      "SUPERBLAST 3": 166.3,
+      "NOVABLAST 4": 298
+    },
+    "racePair": "SUPERBLAST 3"
   },
-  "suites": {
-    "shoe-engine-tests.js": {
-      "suite": "SESSION SUITABILITY",
-      "scenarios": 54,
-      "passed": 54,
-      "hardInvariantFailures": 0,
-      "failures": []
-    },
-    "shoe-score-integration-tests.js": {
-      "passed": 4,
-      "failed": 0,
-      "hillsSuperblast": 90,
-      "hillsNovablast": 79,
-      "finalKm": {
-        "SUPERBLAST 3": 166.3,
-        "NOVABLAST 4": 298
-      },
-      "racePair": "SUPERBLAST 3"
-    },
-    "shoe-first-use-regression-tests.js": {
-      "passed": 4,
-      "failed": 0,
-      "authoritativeFirstUse": "2026-08-18"
-    },
-    "shoe-rotation-race-tests.js": {
-      "passed": 4,
-      "failed": 0
-    },
-    "shoe-weekly-share-regression-tests.js": {
-      "passed": 4,
-      "failed": 0
-    }
-  }
+  "firstUse": {
+    "passed": 4,
+    "failed": 0,
+    "authoritativeFirstUse": "2026-08-18"
+  },
+  "raceRotation": {
+    "passed": 4,
+    "failed": 0
+  },
+  "v1408Regression": {
+    "passed": 10,
+    "failed": 0
+  },
+  "hardInvariantFailures": 0,
+  "syntax": "PASS",
+  "versionCacheIntegrity": "PASS"
 }

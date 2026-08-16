@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '14.0.7';
-  const BUILD = 40007;
+  const VERSION = '14.0.8';
+  const BUILD = 40008;
   const SCHEMA = 10400;
   const PRIMARY_STORAGE_KEY = 'arc_v10400_web';
   const MIRROR_STORAGE_KEY = 'arc_v10400_mirror';
@@ -5758,19 +5758,29 @@ function plannedShoeForRunDraft(run){const planId=run.planId||suggestedPlanId(ru
 function shoeEquipmentForRunHtml(r){const sid=selectedShoeIdForRun(r),shoe=(state.shoes||[]).find(s=>s.id===sid);if(!shoe)return'';const u=shoeUsageRecordForRun(r.id);if(!u)return'';const events=shoeUsageFor(shoe.id).filter(x=>String(x.date||'')<=r.date).slice().sort((a,b)=>String(a.date||'').localeCompare(String(b.date||''))),after=Number(shoe.startingKm||0)+events.reduce((a,x)=>a+(x.sourceType==='manual_adjustment'||x.source==='manual-adjustment'?Number(x.adjustmentKm)||0:Number(x.distanceKm)||0),0);return`<section class="logEquipmentCard"><div class="logDetailSectionHead"><span>${todayPictogram('shoe')}</span><div><small>EQUIPMENT</small><h3>Shoe used</h3></div></div><div class="shoeRunEquipment"><div><small>SHOE USED</small><b>${esc(shoeDisplayName(shoe))}</b></div><div><small>RUN CONTRIBUTION</small><b>${Number(u.distanceKm).toFixed(1)} km</b></div><div><small>SHOE TOTAL AFTER THIS RUN</small><b>${Math.max(0,after).toFixed(1)} km</b></div></div></section>`}
 function shoeSuitabilityComponents(profile,plan,options={}){return shoeSuitabilityAssessment(profile,plan,options).components}
 function authoritativeShoeRanking(plan,{rehab=false}={}){
- const life=freshShoeLifecyclePlan(),row=life.assignments.find(a=>a.planId===plan.id&&Boolean(a.rehab)===Boolean(rehab));
- const seenPairIds=new Set();
- const candidates=life.pairs.filter(pair=>{
-  if(!pair||seenPairIds.has(pair.id))return false; seenPairIds.add(pair.id);
-  if(pair.role==='race'&&!/Race/.test(plan.type||''))return false;
-  const availableOn=pair.owned?(pair.availableDate||'0000-00-00'):(pair.purchaseDate||pair.availableDate||'9999-12-31');
-  if(availableOn>plan.date)return false;
-  const before=lifecyclePairKmBeforeDate(pair,plan.date),km=Math.max(0,Number(plan.distance)||0);
-  return before+km<=Number(pair.retireKm)+1e-6
- }).map(pair=>{
-  const shoe=lifecyclePairAsDisplayShoe(pair),before=lifecyclePairKmBeforeDate(pair,plan.date),assessment=shoeSuitabilityAssessment(pair.profile,plan,{rehab,shoe:pair.owned?pair.shoe:null,projectedKm:before+Math.max(0,Number(plan.distance)||0),retireKm:pair.retireKm});
-  return{pair,shoe,score:assessment.score,selected:row?.pairId===pair.id,components:assessment.components}
- }).sort((a,b)=>b.score-a.score||Number(b.selected)-Number(a.selected));
+ const life=freshShoeLifecyclePlan(),row=life.assignments.find(a=>a.planId===plan.id&&Boolean(a.rehab)===Boolean(rehab)),km=Math.max(0,Number(plan.distance)||0);
+ const candidates=[],seen=new Set();
+ // Owned physical pairs are runner inventory. They remain comparison candidates until actually
+ // retired/unavailable; forecast non-selection must never make an owned pair disappear from the UI.
+ for(const shoe of (state.shoes||[]).filter(sh=>sh.status!=='retired')){
+  const id=`owned:${shoe.id}`;if(seen.has(id))continue;seen.add(id);
+  const pair=life.pairs.find(p=>p.id===id)||{id,owned:true,shoe,profile:shoeProfileForShoe(shoe),currentKm:shoeMileage(shoe),km:shoeMileage(shoe),availableDate:shoePairStartDate(shoe)||life.now,retireKm:lifecycleRetireKmForProfile(shoeProfileForShoe(shoe),shoe),assignments:[],role:'owned'};
+  const availableOn=shoePairStartDate(shoe)||pair.availableDate||'0000-00-00';if(availableOn>plan.date)continue;
+  const before=lifecyclePairKmBeforeDate(pair,plan.date);
+  if(before+km>Number(pair.retireKm)+1e-6)continue;
+  const assessment=shoeSuitabilityAssessment(pair.profile,plan,{rehab,shoe,projectedKm:before+km,retireKm:pair.retireKm});
+  candidates.push({pair,shoe,score:assessment.score,selected:row?.pairId===pair.id,components:assessment.components})
+ }
+ // Future physical pairs become comparable only after their authoritative purchase / first-use date.
+ for(const pair of life.pairs.filter(p=>!p.owned)){
+  if(seen.has(pair.id))continue;seen.add(pair.id);
+  if(pair.role==='race'&&!/Race/.test(String(plan.type||'')))continue;
+  const availableOn=pair.purchaseDate||pair.availableDate||'9999-12-31';if(availableOn>plan.date)continue;
+  const before=lifecyclePairKmBeforeDate(pair,plan.date);if(before+km>Number(pair.retireKm)+1e-6)continue;
+  const shoe=lifecyclePairAsDisplayShoe(pair),assessment=shoeSuitabilityAssessment(pair.profile,plan,{rehab,shoe:null,projectedKm:before+km,retireKm:pair.retireKm});
+  candidates.push({pair,shoe,score:assessment.score,selected:row?.pairId===pair.id,components:assessment.components})
+ }
+ candidates.sort((a,b)=>b.score-a.score||Number(b.selected)-Number(a.selected));
  return{life,row,ranked:candidates}
 }
 function shoeAvailableScoresInlineHtml(plan,{rehab=false}={}){
@@ -5784,7 +5794,18 @@ function shoeSuitabilityDetailsHtml(plan,{rehab=false}={}){
 }
 function planShoeSummaryHtml(plan){if(!plan||plan.type==='Rest'||!(state.shoes||[]).some(s=>s.status!=='retired'))return'';const assignment=plannedAssignment(plan.id),rec=shoeRecommendationForPlan(plan);if(!rec?.best)return'';const label=assignment?.source==='user'?'Selected shoe':rec.future?'Planned future shoe':rec.planner?'Shoe plan':'Shoe';return`<div class="planShoeSummary"><span class="planShoeSummaryIcon">${todayPictogram('shoe')}</span><span class="planShoeSummaryText"><small>${esc(label)}</small><b>${esc(shoeDisplayName(rec.best.shoe))}</b></span><strong class="planShoeSummaryScore">${Math.round(rec.best.score)}/100</strong></div>`}
 function todayShoeRowHtml(plan){if(!plan||(state.shoes||[]).filter(s=>s.status!=='retired').length===0)return'';const rec=shoeRecommendationForPlan(plan);if(!rec.best)return'';return`<div class="todayShoeRow"><span>${todayPictogram('shoe')}</span><div><small>SHOE</small><b>${esc(shoeDisplayName(rec.best.shoe))} · ${Math.round(rec.best.score)}/100</b><p>Recommended for today’s ${esc(plan.type)}</p>${shoeAvailableScoresInlineHtml(plan)}${shoeSuitabilityDetailsHtml(plan)}${rec.alternative?`<small class="todayShoeAlternative">Alternative · ${esc(shoeDisplayName(rec.alternative.shoe))}</small>`:''}</div></div>`}
-function planShoeRowHtml(plan){if(!plan||plan.type==='Rest'||(state.shoes||[]).filter(s=>s.status!=='retired').length===0)return'';const rec=shoeRecommendationForPlan(plan);if(!rec.best)return'';const reasons=(rec.best.reasons||[]).slice(0,4);return`<div class="planShoeRow todayShoeRow sessionShoeCard"><span>${todayPictogram('shoe')}</span><div class="sessionShoeBody"><small>SHOE</small><b>${rec.manual?'Runner override':'Recommended'}: ${esc(shoeDisplayName(rec.best.shoe))} · ${Math.round(rec.best.score)}/100</b><p>${rec.manual?'Your manual physical-pair choice is retained.':`Coach recommendation for this ${esc(plan.type||'session')}.`}</p>${shoeAvailableScoresInlineHtml(plan)}${shoeSuitabilityDetailsHtml(plan)}<details class="planShoeWhy"><summary>Why this shoe?</summary><ul>${reasons.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>${rec.best.warning?`<p>${esc(rec.best.warning)}</p>`:''}</details><button type="button" class="secondary small sessionShoeChoose" data-choose-plan-shoe="${esc(plan.id)}">Choose another shoe</button></div></div>`}
+function planShoeRowHtml(plan){
+ if(!plan||plan.type==='Rest'||(state.shoes||[]).filter(s=>s.status!=='retired').length===0)return'';
+ const rec=shoeRecommendationForPlan(plan);if(!rec.best)return'';
+ const reasons=(rec.best.reasons||[]).slice(0,4),rank=authoritativeShoeRanking(plan).ranked;
+ return`<div class="planShoeRow sessionShoeCard">
+  <div class="sessionShoeHead"><span class="sessionShoeIcon">${todayPictogram('shoe')}</span><div><small>SHOE</small><b>${rec.manual?'Runner override':'Recommended'} · ${esc(shoeDisplayName(rec.best.shoe))}</b><span>${Math.round(rec.best.score)}/100</span></div></div>
+  <div class="sessionShoeScores"><small>AVAILABLE SHOES</small>${rank.map(x=>`<div class="${x.selected?'selected':''}"><span>${esc(shoeDisplayName(x.shoe))}</span><b>${x.score}/100${x.selected?' ✓':''}</b></div>`).join('')}</div>
+  ${shoeSuitabilityDetailsHtml(plan)}
+  <details class="planShoeWhy"><summary>Why this shoe?</summary><ul>${reasons.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></details>
+  <button type="button" class="secondary small sessionShoeChoose" data-choose-plan-shoe="${esc(plan.id)}">Choose another shoe</button>
+ </div>`
+}
 function shoeMileageSeries(shoe){const start=shoeTrackingStartDate(shoe),events=shoeUsageFor(shoe.id).slice().sort((a,b)=>String(a.date||start).localeCompare(String(b.date||start))),points=[{date:start,km:Number(shoe.startingKm)||0,baseline:true}];let km=Number(shoe.startingKm)||0;events.forEach(e=>{if(e.source==='manual-adjustment')km+=Number(e.adjustmentKm)||0;else km+=Number(e.distanceKm)||0;points.push({date:e.date||start,km:Math.max(0,km),source:e.source,sourceType:e.sourceType,distanceMethod:e.distanceMethod})});return points}
 function shoeActualProgrammeSeries(shoe,startDate,endDate){const raw=shoeMileageSeries(shoe).slice().sort((a,b)=>a.date.localeCompare(b.date)),start=startDate||state.setup?.planStart||iso(today()),end=endDate||iso(today());if(!raw.length)return[];let prior=null;raw.forEach(p=>{if(p.date<=start)prior=p});const out=[];if(prior)out.push({...prior,date:start,programmeBaseline:true});raw.filter(p=>p.date>start&&p.date<=end).forEach(p=>out.push(p));if(!out.length&&raw[0].date<=end)out.push(raw[0]);return out}
 function shoePlannedMileageSeries(shoe){const now=iso(today()),raceDate=state.setup?.raceDate||now,current=shoeMileage(shoe),events=[];(state.plan||[]).filter(p=>p.type!=='Rest'&&p.date>=now&&p.date<=raceDate).forEach(p=>{const a=plannedAssignment(p.id);if(a?.shoeId===shoe.id)events.push({date:p.date,km:Number(p.distance)||0,planId:p.id,type:p.type})});futureRehabShoeUsage(shoe.id,null).filter(x=>x.date>=now&&x.date<=raceDate).forEach(x=>events.push({date:x.date,km:Number(x.distanceKm)||0,type:'Rehab',rehab:true}));events.sort((a,b)=>a.date.localeCompare(b.date));const points=[{date:now,km:current,projected:true}];let km=current;events.forEach(e=>{km+=e.km;points.push({date:e.date,km,projected:true,planId:e.planId,type:e.type,rehab:e.rehab})});if(points.at(-1)?.date!==raceDate)points.push({date:raceDate,km,projected:true,raceDay:true});return points}
@@ -6029,6 +6050,13 @@ function lifecycleContextualRaceProfile(racePlan,pairs){
 function lifecycleCreatePair(ctx,plan,role='training',preferredProfile=null){
  const cfg=shoeLifecycleConfig(),{pairs,purchases,events}=ctx,distance=Math.max(0,Number(plan.distance)||0);
  const isRace=role==='race';
+ if(!isRace){
+  const existingFuture=pairs.filter(p=>!p.owned&&p.role!=='race'&&p.availableDate<=plan.date)
+   .map(p=>({p,...lifecyclePairAssignmentScore(p,plan)}))
+   .filter(x=>lifecyclePairKmBeforeDate(x.p,plan.date)+distance<=x.p.retireKm+1e-6&&x.fit>=Math.max(24,lifecycleAcceptableFit(plan)-8))
+   .sort((a,b)=>b.score-a.score)[0]?.p;
+  if(existingFuture)return existingFuture;
+ }
  if(!isRace){
   const activeNow=pairs.filter(p=>p.role!=='race'&&p.availableDate<=plan.date&&lifecyclePairKmBeforeDate(p,plan.date)<p.retireKm-1);
   if(activeNow.length>=cfg.targetActivePairs){
@@ -6582,7 +6610,7 @@ function freshShoeLifecyclePlan(){
  const fixed=(state.plan||[]).filter(p=>p.type!=='Rest'&&p.date>=now&&p.date<=raceDate).slice().sort((a,b)=>a.date.localeCompare(b.date));
  const injury=(state.injuries||[]).find(x=>x.id===state.activeInjuryPlanId);
  const rehabStamp=injury?JSON.stringify({id:injury.id,plannedRehabShoes:injury.plannedRehabShoes||{},checks:(injury.checkIns||[]).map(c=>[c.date,c.walkMinutes,c.runMinutes,c.rehabShoeId,c.pain,c.hop,c.bridge]),updatedAt:injury.updatedAt||injury.lastUpdated||''}):'';
- const stamp=['score-v6-capacity-prune-ui',state.storageRevision||0,runnerFootMechanics(),raceDate,OFFLINE_ASICS_CATALOGUE_VERSION,fixed.map(p=>`${p.id}:${p.date}:${p.type}:${p.distance}:${p.surface||''}`).join(';'),(state.shoes||[]).map(sh=>`${sh.id}:${sh.status}:${shoeMileage(sh).toFixed(2)}:${sh.condition||sh.conditionFeedback||''}`).join(';'),[...manual].join(';'),rehabStamp].join('|');
+ const stamp=['score-v7-physical-pair-min-purchase',state.storageRevision||0,runnerFootMechanics(),raceDate,OFFLINE_ASICS_CATALOGUE_VERSION,fixed.map(p=>`${p.id}:${p.date}:${p.type}:${p.distance}:${p.surface||''}`).join(';'),(state.shoes||[]).map(sh=>`${sh.id}:${sh.status}:${shoeMileage(sh).toFixed(2)}:${sh.condition||sh.conditionFeedback||''}`).join(';'),[...manual].join(';'),rehabStamp].join('|');
  if(freshShoePlanCache.stamp===stamp)return freshShoePlanCache.value;
 
  const pairs=(state.shoes||[]).filter(sh=>sh.status!=='retired').map(sh=>{const profile=shoeProfileForShoe(sh),km=shoeMileage(sh);return{id:`owned:${sh.id}`,owned:true,shoe:sh,profile,currentKm:km,km,availableDate:now,purchaseDate:shoePairStartDate(sh),retireKm:lifecycleRetireKmForProfile(profile,sh),lifeKm:lifecycleRetireKmForProfile(profile,sh),assignments:[],points:[{date:now,km}],role:'owned'}});
@@ -6592,16 +6620,10 @@ function freshShoeLifecyclePlan(){
  const scorePair=(pair,plan,rehab=false)=>shoeSuitabilityAssessment(pair.profile,plan,{rehab,shoe:pair.owned?pair.shoe:null,projectedKm:lifecyclePairKmBeforeDate(pair,plan.date)+Math.max(0,Number(plan.distance)||0),retireKm:pair.retireKm}).score;
 
  function ensureTrainingInventory(plan){
-  let active=pairs.filter(p=>serviceable(p,plan,0));
-  // Target 2–3 serviceable physical pairs. Buy only when fewer than two remain.
-  while(active.length<2){
-   const before=pairs.length,np=lifecycleCreatePair(ctx,plan,'training');
-   if(!np||pairs.length===before&&active.includes(np))break;
-   np.availableDate=plan.date;np.purchaseDate=plan.date;
-   const pur=purchases.find(x=>x.pairId===np.id);if(pur){pur.purchaseDate=plan.date;pur.firstUseDate=plan.date}
-   active=pairs.filter(p=>serviceable(p,plan,0));
-  }
-  return active.slice().sort((a,b)=>scorePair(b,plan)-scorePair(a,plan)).slice(0,3)
+  // Existing physical inventory is always exhausted intelligently before buying anything.
+  // "2–3 pairs" is a rotation target, never a purchase trigger.
+  return pairs.filter(p=>serviceable(p,plan,0))
+   .slice().sort((a,b)=>scorePair(b,plan)-scorePair(a,plan)).slice(0,3)
  }
 
  for(const plan of fixed){
@@ -6643,7 +6665,12 @@ function freshShoeLifecyclePlan(){
  const racePlan={id:'race-day-equipment',date:raceDate,type:'Race Day',distance:Number(state.setup?.raceDistance)||42.195,surface:'road'};
  let raceCandidates=pairs.filter(p=>lifecycleRoles(p.profile).has('race')&&p.km<250&&p.availableDate<=raceDate)
   .map(p=>lifecycleRaceFit(p,racePlan))
-  .filter(x=>x.preRaceKm<250).sort((a,b)=>b.score-a.score);
+  .filter(x=>x.preRaceKm<250).sort((a,b)=>{
+   // Prefer an already-owned or already-required training pair when Race Day fit is close;
+   // a dedicated purchase must earn a material benefit.
+   const aExisting=(a.pair.owned||a.pair.role!=='race')?6:0,bExisting=(b.pair.owned||b.pair.role!=='race')?6:0;
+   return (b.score+bExisting)-(a.score+aExisting)
+  });
  let raceChoice=raceCandidates[0]||null;
  if(!raceChoice)raceChoice=lifecycleBuildDedicatedRacePair(ctx,racePlan,fixed,assignments,manual);
  if(!raceChoice)raceChoice=lifecycleEmergencyRacePair(ctx,racePlan,fixed,assignments,manual);
