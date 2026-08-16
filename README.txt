@@ -1,4 +1,14 @@
-AI Running Coach v13.7.54 — continuous active rotation — build 30754
+AI Running Coach v13.7.55 — fixed three-mode shoe strategy engine — build 30755
+
+- Shoes now exposes exactly three runner-facing strategies: Balanced, Performance, and Protection / injury-conscious.
+- All modes target two active physical pairs without making two a hard limit.
+- Balanced plans retirement at about 85% of model-specific planning lifetime.
+- Performance and Protection normally plan retirement at about 75% of model-specific planning lifetime.
+- New purchases are suppressed when the two available pairs can suitably cover the session; every purchase begins use immediately.
+- Race Day mileage is capped at 250 km for every proposed Race Day pair.
+- Legacy Minimum Pairs saved state migrates safely to Balanced.
+
+AI Running Coach v13.7.55 — continuous active rotation — build 30755
 
 - Fixes the loophole where the 25% weekly-share rule only applied to shoes already receiving mileage; a serviceable shoe could therefore disappear from the rotation at 0%.
 - Every available, non-retired, non-Race-Day physical pair is now treated as active. In every week with running, each active non-race pair must receive at least 25% of that week's running volume.
@@ -11,7 +21,7 @@ AI Running Coach v13.7.54 — continuous active rotation — build 30754
 - Existing training, prediction, recovery, injury progression, pathway, scoring and plan generation logic remains unchanged.
 - Schema remains 10400.
 
-AI Running Coach v13.7.54 — retirement-bounded graph + 25% active-rotation floor — build 30754
+AI Running Coach v13.7.55 — retirement-bounded graph + 25% active-rotation floor — build 30755
 
 - A physical pair's graph curve now stops at its final planned use / projected retirement point. No horizontal extension is drawn after the pair leaves the rotation.
 - No workout may be assigned after a pair reaches its model/condition/strategy-specific retirement mileage.
@@ -24,7 +34,7 @@ AI Running Coach v13.7.54 — retirement-bounded graph + 25% active-rotation flo
 - Existing training, prediction, recovery, injury progression, pathway, scoring and plan generation logic remains unchanged.
 - Schema remains 10400.
 
-AI Running Coach v13.7.54 — portfolio-first evidence-informed shoe engine — build 30754
+AI Running Coach v13.7.55 — portfolio-first evidence-informed shoe engine — build 30755
 
 - Minimum Pairs now treats purchase minimisation as a hard objective: acceptable remaining capacity in owned/earlier physical pairs is consumed before another training pair may be created.
 - Separates ideal workout fit (ranking) from acceptable fit (purchase gating). A small score advantage can no longer trigger a purchase.
@@ -37,7 +47,7 @@ AI Running Coach v13.7.54 — portfolio-first evidence-informed shoe engine — 
 - Existing training, prediction, recovery, injury progression, pathways, scoring and plan generation remain unchanged.
 - Schema remains 10400.
 
-AI Running Coach v13.7.54 — lifecycle consistency + Race Day hard target — build 30754
+AI Running Coach v13.7.55 — lifecycle consistency + Race Day hard target — build 30755
 
 - Today rehab card now reflects today's saved check-in and changes to a completed/review state after the check-in is saved.
 - Owned-shoe cards no longer show an empty "Buy next pair by" when no replacement is needed before Race Day.
@@ -50,7 +60,7 @@ AI Running Coach v13.7.54 — lifecycle consistency + Race Day hard target — b
 - Existing training, prediction, recovery, injury progression, pathway, scoring and import logic remains unchanged.
 - Schema remains 10400.
 
-AI Running Coach v13.7.54 — shoe purchase/use + Race Day target integrity — build 30754
+AI Running Coach v13.7.55 — shoe purchase/use + Race Day target integrity — build 30755
 
 - Future physical pairs are now purchased on their first actual planned-use date; the graph can no longer show a new pair sitting unused for an extended period.
 - Race Day candidates must be explicitly race-suitable profiles; ordinary recovery/daily trainers cannot silently become the Race Day pair merely because they score reasonably on comfort.
@@ -60,7 +70,7 @@ AI Running Coach v13.7.54 — shoe purchase/use + Race Day target integrity — 
 - Added validation for purchase-before-first-use and Race Day mileage outside the target window.
 - Training, recovery, injury progression, pathway, scoring and import logic remain unchanged. Schema remains 10400.
 
-AI Running Coach v13.7.54 — offline ASICS catalogue + rational physical-pair lifecycle planner — build 30754
+AI Running Coach v13.7.55 — offline ASICS catalogue + rational physical-pair lifecycle planner — build 30755
 
 - Adds a curated offline current-purchase ASICS catalogue snapshot covering neutral, guidance/support, maximum-cushion, daily, performance and race roles.
 - Historical ASICS generations remain recognised for physical pairs already owned; future purchases are restricted to explicit current profiles.
@@ -78,7 +88,7 @@ AI Running Coach v13.7.54 — offline ASICS catalogue + rational physical-pair l
 - Existing training-plan, prediction, recovery, injury progression, pathway, scoring and import logic is unchanged.
 - Schema remains 10400.
 
-AI Running Coach v13.7.54 — differentiated shoe strategies, current-model purchasing, slope explanations, 3-back/4-ahead rehab — build 30754
+AI Running Coach v13.7.55 — differentiated shoe strategies, current-model purchasing, slope explanations, 3-back/4-ahead rehab — build 30755
 
 - Rehab timeline now shows three calendar days before today, today, and four days after today (8 cards total when the rehab plan spans the full window).
 - Future shoe purchases no longer consider every historical ASICS generation. Owned historical models remain valid, but purchase proposals use the newest supported generation per family; a successfully loaded live ASICS portfolio overrides the offline snapshot.
@@ -90,7 +100,7 @@ AI Running Coach v13.7.54 — differentiated shoe strategies, current-model purc
 - Existing training, prediction, recovery, injury progression, pathway and scoring logic remains untouched.
 - Schema remains 10400.
 
-AI Running Coach v13.7.54 — fresh physical-pair lifecycle planner + date-anchored rehab Today — build 30754
+AI Running Coach v13.7.55 — fresh physical-pair lifecycle planner + date-anchored rehab Today — build 30755
 
 - Rehab Today is now anchored to the actual calendar date. After today's check-in is saved, the Today card keeps showing today's saved prescription and marks it checked-in/completed; adaptive changes apply only to future rehab dates.
 - Replaces the prior shoe-purchase projection logic with a fresh physical-pair lifecycle planner. The running plan is immutable input.
@@ -103,7 +113,7 @@ AI Running Coach v13.7.54 — fresh physical-pair lifecycle planner + date-ancho
 - No training-plan, injury progression, readiness, prediction, recovery, pathway or scoring calculations are changed.
 - Schema remains 10400.
 
-AI Running Coach v13.7.54 — graph-adjacent shoe strategy + verified live ASICS plan context — build 30754
+AI Running Coach v13.7.55 — graph-adjacent shoe strategy + verified live ASICS plan context — build 30755
 
 - Moves Shoe Engine Approach inside the lifecycle chart, immediately above the plotted SVG graph.
 - A successful live refresh now displays a green confirmation: live ASICS data confirmed, number of current models loaded, transport used, and the runner's saved pronation/foot-mechanics plus race distance.
@@ -114,7 +124,7 @@ AI Running Coach v13.7.54 — graph-adjacent shoe strategy + verified live ASICS
 - Schema remains 10400.
 
 
-- Corrects runtime and visible revision to v13.7.54 build 30754.
+- Corrects runtime and visible revision to v13.7.55 build 30755.
 - Removes Shoes sections 03–06; Shoes now focuses on Active Rotation and the mileage/lifecycle graph.
 - Keeps the runner-facing shoe approach selector immediately above the graph.
 - Live refresh always exits its checking state; failed refreshes retain the local catalogue.
@@ -142,7 +152,7 @@ AI Running Coach v13.7.54 — graph-adjacent shoe strategy + verified live ASICS
 - No training, prediction, recovery, rehab, pathway, scoring or shoe-mileage source-of-truth calculations changed.
 - Schema remains 10400.
 
-AI Running Coach v13.7.54 — rehab check-in prescription consistency — build 30754
+AI Running Coach v13.7.55 — rehab check-in prescription consistency — build 30755
 
 - Fixes rehabilitation check-ins showing an exercise set that can differ from the exercises scheduled on that day.
 - Root cause: the check-in inferred “scheduled exercises” from the generic rehab day items, while the visible exercise cards are generated from guideExercises.
@@ -153,7 +163,7 @@ AI Running Coach v13.7.54 — rehab check-in prescription consistency — build 
 - No rehabilitation progression, injury prediction, training, readiness, recovery, pathway, scoring or shoe-mileage calculations changed.
 - Schema remains 10400.
 
-AI Running Coach v13.7.54 — live ASICS catalogue + gait-aware shoe planning — build 30754
+AI Running Coach v13.7.55 — live ASICS catalogue + gait-aware shoe planning — build 30755
 
 - Live ASICS NL catalogue refresh added to the shoe graph area. Direct ASICS fetch is attempted first; a Reader transport fallback is used where browser CORS blocks direct access. Results are cached; local profiles remain the offline fallback.
 - Settings now includes Foot mechanics / pronation: Not sure, Neutral, Pronates / overpronates, Supinates / underpronates. This affects Shoes purchase/equipment ranking only.
@@ -164,7 +174,7 @@ AI Running Coach v13.7.54 — live ASICS catalogue + gait-aware shoe planning �
 - No training, prediction, recovery, rehab, pathway, scoring or shoe-mileage source-of-truth calculations changed.
 - Schema remains 10400.
 
-AI Running Coach v13.7.54 — Shoes graph strategy control + Today visual lock — build 30754
+AI Running Coach v13.7.55 — Shoes graph strategy control + Today visual lock — build 30755
 
 - Moves the Shoe Engine Approach selector directly into the Mileage & Lifecycle graph card.
 - Changing the approach recalculates future shoe assignments and redraws the shoe graph immediately, keeping the user at the graph section.
@@ -174,7 +184,7 @@ AI Running Coach v13.7.54 — Shoes graph strategy control + Today visual lock �
 - No training, rehabilitation, prediction, recovery, pathway, scoring or shoe-mileage source-of-truth logic changed.
 - Schema remains 10400.
 
-AI Running Coach v13.7.54 — hard run-detail spacing + Today teal visual lock — build 30754
+AI Running Coach v13.7.55 — hard run-detail spacing + Today teal visual lock — build 30755
 
 - Run-summary and pathway labels/values now contain explicit structural line breaks in the HTML, so narrow-screen text cannot collapse into strings such as DISTANCE11.00 km or RUN SIGNAL-0.04 even if CSS is temporarily stale.
 - Logged-run detail Level-1 cards now use the exact approved Today teal gradient/border system.
@@ -183,7 +193,7 @@ AI Running Coach v13.7.54 — hard run-detail spacing + Today teal visual lock �
 - Service-worker same-origin assets are now network-first with offline cache fallback, preventing an older cached stylesheet/app script from being served ahead of a newly deployed build.
 - No training, prediction, recovery, injury, pathway, scoring or shoe-mileage calculations changed.
 
-AI Running Coach v13.7.54 — run duration input + log popup spacing — build 30754
+AI Running Coach v13.7.55 — run duration input + log popup spacing — build 30755
 
 - Run duration is now a text field rather than numeric-keypad-only, so Android users can type ':' directly (for example 34:25 or 1:04:25).
 - Digit-only shorthand is also normalized on blur/save: 3425 becomes 34:25 and 10425 becomes 1:04:25.
@@ -192,7 +202,7 @@ AI Running Coach v13.7.54 — run duration input + log popup spacing — build 3
 - Run-detail summary, data-quality, pathway evidence and factor-flow layouts now enforce explicit gaps/blocks so labels and values cannot run together on narrow phones.
 - No training, prediction, recovery, injury, pathway, scoring or shoe mileage calculations changed.
 
-AI Running Coach v13.7.54 — authoritative shoe reassignment for logged runs and rehab — build 30754
+AI Running Coach v13.7.55 — authoritative shoe reassignment for logged runs and rehab — build 30755
 
 - Fixes edited shoe selections reverting or failing to move mileage between physical pairs.
 - Saved activity fields are now authoritative over stale shoe-ledger entries: run.shoeId for logged runs and rehabShoeId for rehabilitation check-ins.
@@ -204,7 +214,7 @@ AI Running Coach v13.7.54 — authoritative shoe reassignment for logged runs an
 - No training, rehabilitation progression, prediction, readiness, recovery, pathway or scoring equations changed.
 - Schema remains 10400.
 
-AI Running Coach v13.7.54 — permanent shoe deletion — build 30754
+AI Running Coach v13.7.55 — permanent shoe deletion — build 30755
 
 - Adds a visible Delete shoe action in both Shoe Detail and Edit Running Shoe.
 - Unused shoes can be permanently deleted immediately after confirmation.
@@ -215,7 +225,7 @@ AI Running Coach v13.7.54 — permanent shoe deletion — build 30754
 - No training, rehabilitation progression, prediction, readiness, recovery, pathway or scoring equations changed.
 - Schema remains 10400.
 
-AI Running Coach v13.7.54 — rehab shoe persistence + hard shoe lifecycle boundaries — build 30754
+AI Running Coach v13.7.55 — rehab shoe persistence + hard shoe lifecycle boundaries — build 30755
 
 - Fixes the remaining rehab shoe edit bug at its actual source: Save called applyScheduledQuestions(), which re-applied the planned/default rehab shoe immediately before reading the form. The user's selected shoe is now preserved on save.
 - Changing the check-in date intentionally loads that date's planned shoe; saving/editing the current date does not overwrite the user's choice.
@@ -226,7 +236,7 @@ AI Running Coach v13.7.54 — rehab shoe persistence + hard shoe lifecycle bound
 - No training, rehabilitation progression, prediction, readiness, recovery, pathway or scoring equations changed.
 - Schema remains 10400.
 
-AI Running Coach v13.7.54 — rehab shoe selection persistence fix — build 30754
+AI Running Coach v13.7.55 — rehab shoe selection persistence fix — build 30755
 
 - Fixes edited rehab shoe selections appearing to revert to the planned/default pair.
 - Root cause 1: opening today's rehab check-in from Today or the generic Injury check-in action opened a fresh form instead of today's already-saved check-in, so the shoe selector was pre-populated from the planned recommendation again.
@@ -238,14 +248,14 @@ AI Running Coach v13.7.54 — rehab shoe selection persistence fix — build 307
 - No training, rehabilitation progression, prediction, readiness, recovery, pathway or scoring equations changed.
 - Schema remains 10400.
 
-AI Running Coach v13.7.54 — shoe lifecycle + rehab mileage integrity — build 30754
+AI Running Coach v13.7.55 — shoe lifecycle + rehab mileage integrity — build 30755
 
 - A matching logged run is now authoritative for the entire rehab locomotion session. The rehab check-in adds zero duplicate shoe mileage, preventing one physical session from being split across two shoes.
 - Portfolio-optimised mileage diverted to another physical pair is removed from the original pair projection.
 - The graph rationale now explicitly enforces a hard physical-pair lifecycle rule: no pair may be intentionally planned beyond its model-specific replacement threshold; optimisation can reallocate workouts but cannot extend wear life.
 - With the user-entered baselines of 298 km Novablast 4 and 42 km Superblast 3, a single 4 km logged session assigned to the Superblast resolves to 298 km and 46 km respectively, provided there are no other logged activities/manual adjustments.
 
-AI Running Coach v13.7.54 — physical-pair lifecycle rollover — build 30754
+AI Running Coach v13.7.55 — physical-pair lifecycle rollover — build 30755
 
 - Fixes the lifecycle bug that could project a proposed future training pair beyond 1,350 km.
 - Every future graph curve now represents one physical pair.
@@ -254,7 +264,7 @@ AI Running Coach v13.7.54 — physical-pair lifecycle rollover — build 30754
 - The separate Race Day pair remains protected by its target mileage/familiarisation window.
 - No training, rehabilitation progression, readiness, prediction, pathway, or scoring equations changed.
 
-AI Running Coach v13.7.54 — cross-source rehab/run mileage deduplication — build 30754
+AI Running Coach v13.7.55 — cross-source rehab/run mileage deduplication — build 30755
 
 - Fixes a remaining shoe-ledger integrity gap where the same physical rehab running exposure could be represented once in a rehab check-in and again as a normal logged/imported run.
 - Same-day rehab running is matched conservatively against logged runs using duration and/or distance agreement. When matched, the run component is counted only through the logged run; the rehab check-in contributes only any separate walking component.
@@ -264,7 +274,7 @@ AI Running Coach v13.7.54 — cross-source rehab/run mileage deduplication — b
 - No training, rehabilitation progression, prediction, readiness, recovery, pathway or scoring equations changed.
 - Schema remains 10400.
 
-AI Running Coach v13.7.54 — atomic rehab shoe usage — build 30754
+AI Running Coach v13.7.55 — atomic rehab shoe usage — build 30755
 
 - A completed rehabilitation check-in now creates exactly one shoe-usage record for exactly one selected physical pair.
 - Walking and running components remain separately auditable inside that record, but their combined distance is credited to the same shoe.
@@ -274,7 +284,7 @@ AI Running Coach v13.7.54 — atomic rehab shoe usage — build 30754
 - No training, rehabilitation progression, prediction, readiness, recovery, pathway or scoring equations changed.
 - Schema remains 10400.
 
-AI Running Coach v13.7.54 — rehab shoe-mileage estimation fix — build 30754
+AI Running Coach v13.7.55 — rehab shoe-mileage estimation fix — build 30755
 
 - Fixes rehab sessions with minutes but no explicit distance incorrectly contributing 0 km to shoe mileage.
 - Root cause: Number(null) was interpreted as 0 and then treated as a measured distance.
@@ -284,7 +294,7 @@ AI Running Coach v13.7.54 — rehab shoe-mileage estimation fix — build 30754
 - No training, rehab progression, prediction, readiness, recovery, pathway or scoring equations changed.
 - Schema remains 10400.
 
-AI Running Coach v13.7.54 — shoe planner render hotfix — build 30754
+AI Running Coach v13.7.55 — shoe planner render hotfix — build 30755
 
 - Fixes the blank/unresponsive app introduced in v13.7.22.
 - Root cause: the new portfolio shoe-purchase optimiser called a workout-fit scoring helper that was scoped only inside the shoe-chart renderer, causing a runtime ReferenceError during normal rendering.
@@ -293,7 +303,7 @@ AI Running Coach v13.7.54 — shoe planner render hotfix — build 30754
 - No training, rehabilitation, prediction, readiness, recovery, pathway or scoring equations changed.
 - Schema remains 10400.
 
-AI Running Coach v13.7.54 — portfolio-optimised shoe purchasing — build 30754
+AI Running Coach v13.7.55 — portfolio-optimised shoe purchasing — build 30755
 
 - Future shoe replacements are now optimised across the whole rotation rather than independently per shoe.
 - When two proposed purchases fall within 49 days, the engine tests whether the first replacement pair is a strong equipment-fit substitute for compatible workouts assigned to the second rotation slot.
@@ -303,7 +313,7 @@ AI Running Coach v13.7.54 — portfolio-optimised shoe purchasing — build 3075
 - Race Day lifecycle planning remains separate and protected; training purchases are not delayed at the expense of the Race Day target window.
 - No training, rehab, prediction, readiness, pathway, scoring or recovery calculations changed.
 
-AI Running Coach v13.7.54 — visible shoe-mileage confirmation — build 30754
+AI Running Coach v13.7.55 — visible shoe-mileage confirmation — build 30755
 
 - After saving a rehabilitation check-in with a selected shoe, the app immediately confirms the shoe name, previous mileage, new mileage and net contribution from that rehab session.
 - The same immediate mileage confirmation is shown after manual runs, imported runs and edited runs when a shoe is selected.
@@ -311,7 +321,7 @@ AI Running Coach v13.7.54 — visible shoe-mileage confirmation — build 30754
 - Shoe totals, graph history, replacement timing and race-day projections continue to refresh immediately from the new actual mileage.
 - No training, prediction, pathway, recovery, readiness or rehabilitation progression equations changed.
 
-AI Running Coach v13.7.54 — immediate shoe-mileage refresh after activity save — build 30754
+AI Running Coach v13.7.55 — immediate shoe-mileage refresh after activity save — build 30755
 
 - Saving or editing a logged run immediately reconciles the shoe-usage ledger and invalidates all Shoes projections/caches.
 - Saving or editing a rehabilitation check-in immediately records measured/estimated walking/running shoe mileage and refreshes the shoe engine.
@@ -319,14 +329,14 @@ AI Running Coach v13.7.54 — immediate shoe-mileage refresh after activity save
 - Future shoe assignments, replacement timing, race-day planning and the lifecycle graph therefore restart from the new actual accumulated mileage on the next render.
 - No training-plan, prediction, pathway, recovery, readiness or rehabilitation progression equations changed.
 
-AI Running Coach v13.7.54 — completed-day rehab freeze + future-only shoe projection — build 30754
+AI Running Coach v13.7.55 — completed-day rehab freeze + future-only shoe projection — build 30755
 
 - Once today's rehabilitation check-in exists, today's displayed rehabilitation prescription remains the pre-check-in prescription that was actually completed; recalculated rehabilitation prescriptions begin from tomorrow.
 - The Shoes forward rehabilitation projection likewise excludes today after today's check-in has been saved. Today's shoe exposure comes only from the completed check-in/ledger; future estimated rehab mileage starts tomorrow.
 - Future rehab days continue to update dynamically from the new rehabilitation state.
 - No training-plan, prediction, pathway, recovery, readiness or rehabilitation progression equations changed.
 
-AI Running Coach v13.7.54 — linked shoe-graph lifecycle events — build 30754
+AI Running Coach v13.7.55 — linked shoe-graph lifecycle events — build 30755
 
 - Adds numbered, colour-coded graph markers linked one-to-one with material Training plan, Rehab plan and Shoe rotation explanation cards.
 - Cause colours are independent from physical-pair curve colours: blue = rehab, teal = training, amber = rotation.
@@ -337,7 +347,7 @@ AI Running Coach v13.7.54 — linked shoe-graph lifecycle events — build 30754
 - Separates the acquisition deadline from the planned handover/replacement date so the runner has time to receive and introduce the new pair before the outgoing shoe reaches its programme-driven replacement range.
 - Uses programme-driven replacement timing when the remaining training/rehab plan crosses the shoe replacement range; otherwise falls back to the existing usage-based forecast with confidence shown.
 - Existing replacement-range, lifecycle graph, race-day planning, rehab shoe mileage and all locked training/recovery/injury calculations remain unchanged.
-- VERSION 13.7.54 · BUILD 30754 · SCHEMA 10400.
+- VERSION 13.7.55 · BUILD 30755 · SCHEMA 10400.
 - Repository remains flat.
 
 AI Running Coach v13.7.13 — auditable shoe-curve drivers — build 30713
