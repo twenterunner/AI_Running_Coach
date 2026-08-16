@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '13.7.45';
-  const BUILD = 30745;
+  const VERSION = '13.7.46';
+  const BUILD = 30746;
   const SCHEMA = 10400;
   const PRIMARY_STORAGE_KEY = 'arc_v10400_web';
   const MIRROR_STORAGE_KEY = 'arc_v10400_mirror';
@@ -4929,10 +4929,23 @@ function rehabExerciseMuscles(name,family='generic'){
  if(family==='foot'||family==='ankle')return['Foot/ankle','Calves','Stabilisers'];
  return['Target tissue','Supporting muscles'];
 }
+function rehabTodayDisplayPlan(i,p){
+ const todayStr=iso(today()),check=(i.checkIns||[]).find(c=>c.date===todayStr),calendar=buildRehabCalendar(i,p);
+ let day=calendar.find(d=>d.date===todayStr)||null;
+ if(check?.planSnapshot){
+  const execution=rehabExecutionMeta(check);
+  day={...JSON.parse(JSON.stringify(check.planSnapshot)),date:todayStr,checkInCompleted:true,execution,executionImpact:check?.hop,executionStrength:check?.bridge,updated:false};
+ }else if(!day){
+  const old=(Array.isArray(i.rehabCalendar)?i.rehabCalendar:[]).find(d=>d.date===todayStr);
+  day=old?{...old,checkInCompleted:!!check,execution:rehabExecutionMeta(check)}:{...rehabCalendarDay(i,p,todayStr,rehabPlanDayIndex(i,todayStr)),checkInCompleted:!!check,execution:rehabExecutionMeta(check)};
+ }
+ return day
+}
 function rehabTodayFocusHtml(i,p){
- const todayPlan=buildRehabCalendar(i,p)[0],prescription=todayPlan.items.map(x=>`<li>${esc(x)}</li>`).join(''),family=p.diag.family||'generic';
- const guides=(todayPlan.guideExercises||[]).map(x=>{const muscles=rehabExerciseMuscles(x.name,family),muscleChips=`<span class="exerciseMuscles">${muscles.map(m=>`<i>${esc(m)}</i>`).join('')}</span>`;return`<details class="exerciseDetail textExercise uiLevel2"><summary><span class="exerciseSummaryCopy"><b>${esc(x.name)}</b><small>${esc(x.dose)}</small>${muscleChips}</span><em class="exerciseChevron">How to do it</em></summary><div class="exerciseGuide"><p class="exercisePurpose">${esc(x.purpose)}</p><div class="exerciseInstructionBlock"><b>How to do it</b><ol>${x.steps.map(y=>`<li>${esc(y)}</li>`).join('')}</ol></div><div class="exerciseRules"><div><b>Pain rule</b><p>${p.safetyHold?'Do not test impact or progress loading until assessed.':'Keep pain at 0–2/10. Stop for sharp pain, altered movement, or symptoms that worsen later or next morning.'}</p></div><div><b>Progress when</b><p>${esc(x.progress)}</p></div></div></div></details>`}).join('');
- return`<section class="injuryTopicCard rehabTodayFocus uiLevel1"><div class="injurySectionHead"><div><small class="eyebrow">TODAY’S FOCUS</small><h4>${esc(todayPlan.title)}</h4><p class="muted compact">${todayPlan.weekday||dte(todayPlan.date).toLocaleDateString(undefined,{weekday:'long'})} · ${fmtDate(todayPlan.date)}</p></div><span class="status today">Stage ${p.stage+1}</span></div><div class="todayFocus"><strong>${esc(todayPlan.rationale)}</strong></div><div class="todayPlanGrid"><div><b>Today’s dose</b><ul>${prescription}</ul></div>${todayPlan.stretchGoalOffered?`<div class="rehabStretchGoal"><b>Optional progression</b><p>${esc(todayPlan.stretchGoal)}</p></div>`:''}<details class="rehabDayDetails uiLevel3"><summary>Safety & progression</summary><div class="rehabDayRule"><b>Adjustment rule</b><p>${esc(todayPlan.rule)}</p></div><div class="rehabEvidenceMeter ${esc(todayPlan.evidence?.className||'low')}"><b>Evidence: ${esc(todayPlan.evidence?.level||'Low')}</b><p>${esc(todayPlan.evidence?.text||'More check-in evidence is needed.')}</p></div></details></div>${rehabShoePlanHtml(i,todayPlan)}<div class="rehabStatusPair">${todayPlan.checkInCompleted?`<span class="executionBadge ${todayPlan.execution.className}">✓ ${Number.isFinite(todayPlan.execution.score)?`${todayPlan.execution.score}% execution`:'Check-in complete'}</span>`:'<span class="checkinBadge pending">Check-in pending</span>'}</div>${guides?`<div class="todayExerciseGuides"><h5>${uiIcon('rehab')} Exercise cards</h5>${guides}</div>`:''}</section>`;
+ const todayPlan=rehabTodayDisplayPlan(i,p),prescription=(todayPlan.items||[]).map(x=>`<li>${esc(x)}</li>`).join(''),family=p.diag.family||'generic',completed=!!todayPlan.checkInCompleted;
+ const guides=(todayPlan.guideExercises||[]).map(x=>{const muscles=rehabExerciseMuscles(x.name,family),muscleChips=`<span class="exerciseMuscles">${muscles.map(m=>`<i>${esc(m)}</i>`).join('')}</span>`;return`<details class="exerciseDetail textExercise uiLevel2"><summary><span class="exerciseSummaryCopy"><b>${esc(x.name)}</b><small>${esc(x.dose)}</small>${muscleChips}</span><em class="exerciseChevron">How to do it</em></summary><div class="exerciseGuide"><p class="exercisePurpose">${esc(x.purpose)}</p><div class="exerciseInstructionBlock"><b>How to do it</b><ol>${(x.steps||[]).map(y=>`<li>${esc(y)}</li>`).join('')}</ol></div><div class="exerciseRules"><div><b>Pain rule</b><p>${p.safetyHold?'Do not test impact or progress loading until assessed.':'Keep pain at 0–2/10. Stop for sharp pain, altered movement, or symptoms that worsen later or next morning.'}</p></div><div><b>Progress when</b><p>${esc(x.progress||'Progress only when the prescribed response criteria remain satisfied.')}</p></div></div></div></details>`}).join('');
+ const eyebrow=completed?'TODAY’S SESSION · CHECKED IN':'TODAY’S FOCUS',status=completed?`✓ ${Number.isFinite(todayPlan.execution?.score)?`${todayPlan.execution.score}% execution`:'Check-in complete'}`:'Check-in pending';
+ return`<section class="injuryTopicCard rehabTodayFocus uiLevel1 ${completed?'completed':''}"><div class="injurySectionHead"><div><small class="eyebrow">${eyebrow}</small><h4>${esc(todayPlan.title)}</h4><p class="muted compact">${todayPlan.weekday||dte(todayPlan.date).toLocaleDateString(undefined,{weekday:'long'})} · ${fmtDate(todayPlan.date)}</p></div><span class="status today">Stage ${p.stage+1}</span></div>${completed?`<div class="rehabTodayCompleted"><b>${esc(status)}</b><p>Today’s recorded session remains shown here. Any check-in-driven rehabilitation update applies to future rehabilitation days, not back onto today.</p></div>`:`<div class="todayFocus"><strong>${esc(todayPlan.rationale||'')}</strong></div>`}<div class="todayPlanGrid"><div><b>Today’s dose</b><ul>${prescription}</ul></div>${todayPlan.stretchGoalOffered?`<div class="rehabStretchGoal"><b>Optional progression</b><p>${esc(todayPlan.stretchGoal)}</p></div>`:''}<details class="rehabDayDetails uiLevel3"><summary>Safety & progression</summary><div class="rehabDayRule"><b>Adjustment rule</b><p>${esc(todayPlan.rule||'')}</p></div><div class="rehabEvidenceMeter ${esc(todayPlan.evidence?.className||'low')}"><b>Evidence: ${esc(todayPlan.evidence?.level||'Low')}</b><p>${esc(todayPlan.evidence?.text||'More check-in evidence is needed.')}</p></div></details></div>${rehabShoePlanHtml(i,todayPlan)}<div class="rehabStatusPair">${completed?`<span class="executionBadge ${todayPlan.execution?.className||'unknown'}">${esc(status)}</span>`:'<span class="checkinBadge pending">Check-in pending</span>'}</div>${guides?`<div class="todayExerciseGuides"><h5>${uiIcon('rehab')} Exercise cards</h5>${guides}</div>`:''}</section>`;
 }
 
 function injuryTrajectorySvg(i,p){
@@ -5593,6 +5606,8 @@ const ASICS_ALLORIGINS_RAW='https://api.allorigins.win/raw?url=';
 const ASICS_ALLORIGINS_GET='https://api.allorigins.win/get?url=';
 const ASICS_CORSPROXY='https://corsproxy.io/?url=';
 const ASICS_CODETABS='https://api.codetabs.com/v1/proxy?quest=';
+const ASICS_ISOMORPHIC='https://cors.isomorphic-git.org/';
+const ASICS_RJINA_HTTP='https://r.jina.ai/http://';
 let asicsLiveRefreshInFlight=null;
 let asicsLiveLastTransport='';
 function asicsLiveCatalog(){return Array.isArray(state.asicsLiveCatalog)?state.asicsLiveCatalog:[]}
@@ -5640,37 +5655,20 @@ function fetchAsicsViaJsonp(url,timeoutMs=12000){
  });
 }
 async function fetchAsicsOfficialText(url){
- const attempts=[];
- const tryFetch=async(label,requestUrl,options={},timeoutMs=6500)=>{
-  const ctrl=new AbortController(),timer=setTimeout(()=>ctrl.abort(),timeoutMs);
-  try{
-   const r=await fetch(requestUrl,{cache:'no-store',signal:ctrl.signal,...options});
-   if(!r.ok)throw Error(`HTTP ${r.status}`);
-   const text=await r.text();
-   if(!text||text.length<120)throw Error('empty response');
-   asicsLiveLastTransport=label;
-   return text;
-  }catch(err){
-   attempts.push(`${label}: ${err?.name==='AbortError'?'timeout':String(err?.message||err)}`);
-   return null;
-  }finally{clearTimeout(timer)}
- };
- const encoded=encodeURIComponent(url);
- let text=await tryFetch('Jina Reader',`${ASICS_READER_PREFIX}${url}`,{headers:{Accept:'text/plain'}});
- if(text)return text;
- text=await tryFetch('AllOrigins raw',`${ASICS_ALLORIGINS_RAW}${encoded}`);
- if(text)return text;
- text=await tryFetch('CORSProxy',`${ASICS_CORSPROXY}${encoded}`);
- if(text)return text;
- text=await tryFetch('CodeTabs',`${ASICS_CODETABS}${encoded}`);
- if(text)return text;
- text=await tryFetch('Direct ASICS',url,{mode:'cors'},5000);
- if(text)return text;
- try{
-  text=await fetchAsicsViaJsonp(url,6500);
-  if(text){asicsLiveLastTransport='AllOrigins JSONP';return text}
- }catch(err){attempts.push(`AllOrigins JSONP: ${String(err?.message||err)}`)}
- throw Error(`Live catalogue unavailable. ${attempts.join(' · ')}`);
+ const attempts=[],tryFetch=async(label,requestUrl,options={},timeoutMs=5000)=>{const ctrl=new AbortController(),timer=setTimeout(()=>ctrl.abort(),timeoutMs);try{const r=await fetch(requestUrl,{cache:'no-store',signal:ctrl.signal,...options});if(!r.ok)throw Error(`HTTP ${r.status}`);const text=await r.text();if(!text||text.length<120)throw Error('empty response');asicsLiveLastTransport=label;return text}catch(err){attempts.push(`${label}: ${err?.name==='AbortError'?'timeout':String(err?.message||err)}`);return null}finally{clearTimeout(timer)}};
+ const encoded=encodeURIComponent(url),httpUrl=url.replace(/^https:\/\//,'');
+ const transports=[
+  ['Jina HTTPS',`${ASICS_READER_PREFIX}${url}`,{headers:{Accept:'text/plain'}}],
+  ['Jina HTTP mirror',`${ASICS_RJINA_HTTP}${httpUrl}`,{headers:{Accept:'text/plain'}}],
+  ['AllOrigins raw',`${ASICS_ALLORIGINS_RAW}${encoded}`,{}],
+  ['CORSProxy',`${ASICS_CORSPROXY}${encoded}`,{}],
+  ['CodeTabs',`${ASICS_CODETABS}${encoded}`,{}],
+  ['Isomorphic CORS',`${ASICS_ISOMORPHIC}${url}`,{}],
+  ['Direct ASICS',url,{mode:'cors'}]
+ ];
+ for(const [label,requestUrl,options] of transports){const text=await tryFetch(label,requestUrl,options);if(text)return text}
+ try{const text=await fetchAsicsViaJsonp(url,5000);if(text){asicsLiveLastTransport='AllOrigins JSONP';return text}}catch(err){attempts.push(`AllOrigins JSONP: ${String(err?.message||err)}`)}
+ throw Error(`Live catalogue unavailable after ${transports.length+1} browser-safe routes.`);
 }
 
 function asicsLiveCatalogIsActive(){
@@ -5739,11 +5737,11 @@ async function refreshAsicsLiveCatalog({manual=false}={}){
  });
  return asicsLiveRefreshInFlight
 }
-function maybeRefreshAsicsLiveCatalog(){if(!navigator.onLine)return;const meta=asicsLiveMeta(),last=meta.lastChecked||meta.lastAttempt,age=last?Date.now()-new Date(last).getTime():Infinity;if(age>24*60*60*1000&&!asicsLiveRefreshInFlight)refreshAsicsLiveCatalog()}
+function maybeRefreshAsicsLiveCatalog(){const meta=asicsLiveMeta();if(!navigator.onLine||asicsLiveRefreshInFlight||!meta.lastChecked)return;const age=Date.now()-new Date(meta.lastChecked).getTime();if(age>7*DAY)refreshAsicsLiveCatalog()}
 function asicsLiveStatusHtml(){
  const meta=asicsLiveMeta(),list=asicsLiveCatalog(),active=asicsLiveCatalogIsActive(),when=meta.lastChecked?fmtDate(iso(new Date(meta.lastChecked))):'Not checked yet';
  if(active)return`<div class="asicsLiveStatus success"><div><small>ASICS LIVE PORTFOLIO</small><b>✓ Live data confirmed · ${list.length} current models</b><span>Checked ${when}${meta.transport?` · via ${esc(meta.transport)}`:''}</span><span class="asicsPlanApplied">Used in shoe plan · ${esc(asicsLivePlanContextText())}</span></div><button id="refreshAsicsLive" class="secondary small" type="button">Refresh ASICS live</button></div>`;
- const fallback=meta.error?'Live check unavailable. The local ASICS catalogue is being used.':'Refresh to validate the current ASICS portfolio online.';
+ const fallback=meta.error?'Live ASICS could not be reached from this browser after all configured routes. Local validated catalogue is active; no live data is claimed.':'Refresh to validate the current ASICS portfolio online.';
  return`<div class="asicsLiveStatus"><div><small>ASICS LIVE PORTFOLIO</small><b>Local catalogue active</b><span>${esc(fallback)}</span><span class="asicsPlanApplied">Current shoe-plan context · ${esc(asicsLivePlanContextText())}</span></div><button id="refreshAsicsLive" class="secondary small" type="button">Refresh ASICS live</button></div>`
 }
 function liveAsicsProfileForItem(item){const parsed=splitModelVersion(item.name),known=findAsicsProfile('ASICS',parsed.model,parsed.version);if(known)return{...known,liveItem:item,evidenceSource:`ASICS live availability · ${item.url||item.sourceUrl||'ASICS NL collection'}`,profileConfidence:'manufacturer/live'};const supportive=/overpron|stability|support/i.test(item.support||'')||/GEL-KAYANO|GT-2000|GT-1000/i.test(item.name||''),neutral=/neutral/i.test(item.support||'')||!supportive,faster=/faster|fast/i.test(item.goal||''),high=/high|hoog/i.test(item.cushion||'');return{brand:'ASICS',family:parsed.model||item.name,version:Number(parsed.version)||'',neutral,supportType:supportive?'stability':'neutral',surfaces:[/trail/i.test(item.surface||'')?'trail':'road'],roles:faster?['tempo','intervals','race','daily']:['daily','easy','recovery','long'],cushioning:high?5:3,responsiveness:faster?5:3,stability:supportive?5:3,protection:high?5:3,grip:3,efficiency:faster?5:3,durability:4,comfort:high?5:3,weightClass:item.weightG&&item.weightG<230?'light':item.weightG&&item.weightG<270?'medium-light':'medium',plated:/METASPEED/i.test(item.name),plateType:/METASPEED/i.test(item.name)?'carbon':null,preferredDistanceMinKm:0,preferredDistanceMaxKm:100,workoutSuitability:{},typicalReplacementLowKm:/METASPEED/i.test(item.name)?400:600,typicalReplacementHighKm:/METASPEED/i.test(item.name)?800:900,evidenceSource:`ASICS live availability · ${item.url||item.sourceUrl||'ASICS NL collection'}`,profileConfidence:'manufacturer/live',liveItem:item}}
@@ -5786,7 +5784,14 @@ function shoeRecommendation(plan,{excludeId=null}={}){
  }).sort((a,b)=>b.score-a.score||shoeRecentKm(a.shoe.id,7)-shoeRecentKm(b.shoe.id,7));if(ranked[0]){const margin=ranked[1]?ranked[0].score-ranked[1].score:20,known=ranked[0].profile.profileConfidence!=='user-entered';ranked[0].confidence=ranked[0].score>=78&&margin>=7&&known?'High':ranked[0].score>=65?'Medium':'Low'}return{ranked,best:ranked[0]||null,alternative:ranked[1]||null};
 }
 function shoeRecommendationForPlan(plan){const manual=plannedAssignment(plan.id);if(manual?.source==='user'){const chosen=(state.shoes||[]).find(s=>s.id===manual.shoeId&&s.status!=='retired');if(chosen){const base=shoeRecommendation(plan).ranked.find(x=>x.shoe.id===chosen.id);const alt=shoeRecommendation(plan,{excludeId:chosen.id}).best;return{best:base||{shoe:chosen,score:50,label:'Selected',reasons:['manually selected for this workout'],wear:shoeWearState(chosen),familiarity:shoeFamiliarity(chosen,plan.type)},alternative:alt,manual:true}}}return shoeRecommendation(plan)}
-function shoeAutoAssignments(){if(!(state.shoes||[]).some(s=>s.status!=='retired'))return;const todayStr=iso(today()),future=(state.plan||[]).filter(p=>p.type!=='Rest'&&p.date>=todayStr).slice().sort((a,b)=>a.date.localeCompare(b.date)),futureIds=new Set(future.map(p=>p.id));const user=new Map((state.plannedShoeAssignments||[]).filter(a=>a.source==='user').map(a=>[a.planId,a]));state.plannedShoeAssignments=(state.plannedShoeAssignments||[]).filter(a=>a.source==='user'||!futureIds.has(a.planId));invalidateShoeAssignmentCache();future.forEach(p=>{if(user.has(p.id))return;const rec=shoeRecommendation(p);if(rec.best)setPlannedShoe(p.id,rec.best.shoe.id,'auto')})}
+function shoeAutoAssignments(){
+ if(!(state.shoes||[]).some(s=>s.status!=='retired'))return;
+ const todayStr=iso(today()),future=(state.plan||[]).filter(p=>p.type!=='Rest'&&p.date>=todayStr),futureIds=new Set(future.map(p=>p.id)),user=new Map((state.plannedShoeAssignments||[]).filter(a=>a.source==='user').map(a=>[a.planId,a]));
+ state.plannedShoeAssignments=(state.plannedShoeAssignments||[]).filter(a=>a.source==='user'||!futureIds.has(a.planId));invalidateShoeAssignmentCache();
+ freshShoePlanCache={stamp:null,value:null};
+ const lifecycle=freshShoeLifecyclePlan();
+ lifecycle.assignments.forEach(a=>{if(user.has(a.planId)||!a.ownedShoeId)return;setPlannedShoe(a.planId,a.ownedShoeId,'auto')});
+}
 function shoePlannedUsage(shoeId,days=null){const now=iso(today()),end=days?iso(new Date(today().getTime()+days*DAY)):state.setup.raceDate;let km=0;(state.plan||[]).filter(p=>p.type!=='Rest'&&p.date>=now&&p.date<=end).forEach(p=>{const a=plannedAssignment(p.id);if(a?.shoeId===shoeId)km+=Number(p.distance)||0});km+=sum(futureRehabShoeUsage(shoeId,days).map(x=>Number(x.distanceKm)||0));return km}
 function shoeForecast(shoe){const base=shoeWearState(shoe),future28=shoePlannedUsage(shoe.id,28),futureProgram=shoePlannedUsage(shoe.id,null),actual=shoeWeeklyActual(shoe.id),usage=shoeRunUsage(shoe.id),longKm=sum(usage.filter(u=>{const r=(state.runs||[]).find(x=>x.id===u.runId);return r&&/Long|Marathon|Specific|rehearsal/.test(r.type)}).map(u=>Number(u.distanceKm)||0)),totalKm=sum(usage.map(u=>Number(u.distanceKm)||0)),longShare=totalKm>0?longKm/totalKm:0,profile=shoeProfileForShoe(shoe);let low=base.low,high=base.high;const condition=shoe.condition||shoe.conditionFeedback||'Feels normal';if(condition==='Slightly worn'){low*=.96;high*=.96}else if(condition==='Noticeably flat'){low*=.88;high*=.90}else if(condition==='Grip deteriorating'){low*=.90;high*=.92}else if(condition==='Upper damaged'){low*=.88;high*=.90}else if(condition==='Causing discomfort'){low=Math.min(low,base.km);high=Math.min(high,Math.max(base.km,low+30))}let weekly=0,source='insufficient evidence',confidence='Low';if(future28>=5){weekly=future28/4;source='planned future assignments';confidence=future28>=20?'High':'Medium'}else if(actual>0){weekly=actual;source='recent actual usage';confidence=shoeObservedWeeks(shoe.id)>=3?'Medium':'Low'}const uncertainty=[];const bodyMass=Number(state.setup?.bodyWeight);if(Number.isFinite(bodyMass)&&bodyMass>=90)uncertainty.push('body-mass wear uncertainty');if((profile.surfaces||[]).includes('mixed'))uncertainty.push('mixed-surface use');if(longShare>=.35)uncertainty.push('high long-run share');if(uncertainty.length){low*=.97;high*=1.03;if(confidence==='High')confidence='Medium'}const lowRemain=Math.max(0,low-base.km),highRemain=Math.max(0,high-base.km);let lowDate=null,highDate=null;if(weekly>0){lowDate=iso(new Date(today().getTime()+lowRemain/weekly*7*DAY));highDate=iso(new Date(today().getTime()+highRemain/weekly*7*DAY))}return{...base,low,high,remainingLow:lowRemain,remainingHigh:highRemain,weekly,source,confidence,lowDate,highDate,future28,futureProgram,uncertainty,longShare}}
 function shoePlannedUsageThrough(shoeId,date){const now=iso(today()),end=date||state.setup.raceDate;let km=0;(state.plan||[]).filter(p=>p.type!=='Rest'&&p.date>=now&&p.date<=end).forEach(p=>{const a=plannedAssignment(p.id);if(a?.shoeId===shoeId)km+=Number(p.distance)||0});km+=sum(futureRehabShoeUsage(shoeId,null).filter(x=>x.date<=end).map(x=>Number(x.distanceKm)||0));return km}
@@ -5816,30 +5821,9 @@ function purchaseProfileScore(p){
 }
 function recommendedPurchaseProfile(){return candidatePurchaseProfiles().sort((a,b)=>purchaseProfileScore(b)-purchaseProfileScore(a))[0]||null}
 function raceShoePlan(){
- const active=(state.shoes||[]).filter(s=>s.status!=='retired'),raceDate=state.setup?.raceDate;if(!raceDate)return{status:'no-race',confidence:'Low'};
- const racePlan={id:'race-shoe-eval',type:'Race Day',date:raceDate,distance:Number(state.setup?.raceDistance)||0,surface:'road'};
- const ranked=shoeRecommendation(racePlan).ranked.filter(x=>(x.profile.roles||[]).includes('race'));
- let preferred=ranked[0]?.shoe||null,condition=preferred?raceShoeCondition(preferred):null;
- const preferredReplacement=preferred?shoePlannedReplacementEvent(preferred):null;
- const preferredRetiresBeforeRace=Boolean(preferredReplacement&&preferredReplacement.date<=raceDate);
- let purchaseNeeded=!preferred||preferredRetiresBeforeRace||['replace','high-wear','unsuitable'].includes(condition?.code),reason='';
- if(!preferred)reason='No owned active shoe is sufficiently race-suitable.';
- else if(preferredRetiresBeforeRace)reason=`The current ${shoeDisplayName(preferred)} is planned to be replaced before Race Day, so it cannot also be treated as the Race Day pair.`;
- else if(condition.code==='replace'||condition.code==='high-wear')reason='The best owned race shoe is projected to be too worn or close to its expected service range by race day.';
- else if(condition.code==='unsuitable')reason='The current rotation does not contain an appropriate race-day shoe.';
- const profile=purchaseNeeded?(preferredRetiresBeforeRace?replacementProfileForShoe(preferred):recommendedPurchaseProfile()):null;
- const targetWindow=profile?raceOptimalWindow(profile,state.setup.raceDistance):condition?.opt;
- const ownedTarget=condition&&!purchaseNeeded&&['too-new','familiarise'].includes(condition.code)?Math.max(0,condition.opt.minKm-condition.fam.km):0;
- const targetKm=purchaseNeeded?Math.max(20,((Number(targetWindow?.minKm)||25)+(Number(targetWindow?.maxKm)||75))/2):ownedTarget;
- const virtual=purchaseNeeded?{id:'planned-race-pair',brand:'ASICS',model:profile?.family,version:profile?.version,characteristics:{roles:profile?.roles}}:preferred;
- const famSessions=virtual?raceFamiliarisationSessions(virtual,targetKm):[];
- const first=famSessions[0]?.date||null;let purchaseStart=null,purchaseEnd=null;
- if(purchaseNeeded&&first){purchaseEnd=iso(new Date(dte(first).getTime()-3*DAY));purchaseStart=iso(new Date(dte(first).getTime()-21*DAY));if(purchaseStart<iso(today()))purchaseStart=iso(today())}
- else if(purchaseNeeded){const rd=dte(raceDate);purchaseEnd=iso(new Date(rd.getTime()-28*DAY));purchaseStart=iso(new Date(rd.getTime()-49*DAY));if(purchaseStart<iso(today()))purchaseStart=iso(today())}
- const plannedKm=famSessions.reduce((a,x)=>a+Number(x.plannedShoeKm||0),0),projectedNew=plannedKm;
- let confidence=preferred&&!purchaseNeeded&&condition?.fam.runs>=3?'High':'Medium';if(state.activeInjuryPlanId)confidence=confidence==='High'?'Medium':'Low';if(purchaseNeeded&&!famSessions.length)confidence='Low';
- const existingPlanned=(state.plannedShoePurchases||[]).find(x=>x.status==='planned'&&x.intendedRole==='race')||null;
- return{status:'ok',preferred,condition,ranked,purchaseNeeded,reason,profile,targetWindow,targetKm,famSessions,plannedKm,projectedNew,purchaseStart,purchaseEnd,confidence,existingPlanned,preferredReplacement,preferredRetiresBeforeRace}
+ const life=freshShoeLifecyclePlan(),pair=life.racePair;if(!pair)return{status:'no-race',confidence:'Low'};
+ const profile=pair.profile,window=life.raceWindow||raceOptimalWindow(profile,state.setup?.raceDistance),projected=pair.km,preferred=pair.owned?pair.shoe:null,purchase=life.purchases.find(p=>p.pairId===pair.id)||null;
+ return{status:'ok',preferred,condition:preferred?{...raceShoeCondition(preferred),projected,opt:window}:{projected,opt:window,code:projected>=window.minKm&&projected<=window.maxKm?'optimal':'planned',label:'Planned race-day pair'},ranked:[],purchaseNeeded:!pair.owned,reason:purchase?.reason||'Lifecycle planner selected this physical pair for Race Day.',profile:pair.owned?profile:profile,targetWindow:window,targetKm:Math.round((window.minKm+window.maxKm)/2),famSessions:pair.assignments.filter(a=>a.raceFamiliarisation).map(a=>({...a,plannedShoeKm:a.km})),plannedKm:pair.assignments.reduce((a,x)=>a+Number(x.km||0),0),projectedNew:projected,purchaseStart:purchase?.purchaseDate||null,purchaseEnd:purchase?.firstUseDate||null,confidence:life.liveApplied?'High':'Medium',existingPlanned:null,preferredReplacement:null,preferredRetiresBeforeRace:false}
 }
 function saveRacePurchasePlan(plan){if(!plan?.purchaseNeeded||!plan.profile)return;state.plannedShoePurchases=(state.plannedShoePurchases||[]).filter(x=>!(x.status==='planned'&&x.intendedRole==='race'));state.plannedShoePurchases.push({id:`shoe-purchase-${Date.now()}`,brand:'ASICS',model:plan.profile.family,version:String(plan.profile.version),plannedPurchase:true,recommendedPurchaseStart:plan.purchaseStart,recommendedPurchaseEnd:plan.purchaseEnd,targetFirstUseDate:plan.famSessions[0]?.date||null,targetRaceDayMileage:plan.projectedNew,intendedRole:'race',rationale:plan.reason||'Model-derived race-day lifecycle recommendation.',status:'planned',createdAt:new Date().toISOString()})}
 function racePlanHtml(){const plan=raceShoePlan();if(plan.status!=='ok')return'<div class="shoeEmpty">Race-day shoe planning needs a valid race date.</div>';const preferred=plan.preferred,cond=plan.condition,proposed=plan.purchaseNeeded&&plan.profile;const label=proposed?'PROPOSED FUTURE RACE-DAY PAIR':'EXISTING PAIR SELECTED FOR RACE DAY';const name=proposed?`ASICS ${plan.profile.family} ${plan.profile.version}`:(preferred?shoeDisplayName(preferred):'No suitable pair yet');const projected=proposed?Math.round(plan.projectedNew||0):Math.round(cond?.projected||0);const window=plan.targetWindow||cond?.opt;const sessions=plan.famSessions||[];const timing=proposed?(plan.purchaseStart&&plan.purchaseEnd?`${fmtDate(plan.purchaseStart)}–${fmtDate(plan.purchaseEnd)}`:'Timing will be set from the remaining programme'):'Already owned';return`<article class="raceShoeHero ${proposed?'planned':'owned'}"><div><small>${label}</small><h4>${esc(name)}</h4><p>${projected} km projected on Race Day${window?` · target ${Math.round(window.minKm)}–${Math.round(window.maxKm)} km`:''}</p></div><div><small>PURCHASE STATUS</small><b>${proposed?'Not yet owned':'Owned now'}</b><span>${esc(timing)}</span></div><div><small>PLAN DECISION</small><b>${proposed?'Purchase and introduce this pair':'Retain this pair for Race Day'}</b><span>${proposed?esc(plan.reason||'The lifecycle plan requires a fresh Race Day pair.'):'The full lifecycle, wear and planned-use model keeps this pair inside the Race Day target.'}</span></div></article>${sessions.length?`<div class="raceFamiliarisation"><small>PLANNED USE BEFORE RACE DAY</small>${sessions.map(x=>`<div><span>${fmtDate(x.date)} · ${esc(x.type)}</span><b>~${Number(x.plannedShoeKm).toFixed(1)} km</b></div>`).join('')}</div>`:''}<p class="shoeEvidenceNote"><b>Evidence hierarchy:</b> official ASICS model positioning/specifications define the shoe profile; observed mileage and condition define the physical pair; the app then optimises workout fit, lifecycle and Race Day exposure. Familiarity is incorporated into the decision rather than shown as a separate warning.</p><p class="shoeEvidenceNote"><a href="https://www.asics.com/nl/en-nl/collection-neutral/c/as91000000/" target="_blank" rel="noopener noreferrer">Check the current ASICS neutral range</a> before purchase. The app remains fully functional offline; this live manufacturer check is optional because direct automatic catalogue scraping is not reliable from an offline-capable browser app.</p>`}
@@ -5890,18 +5874,229 @@ function raceDayShoeTargetHtml(){const plan=raceShoePlan();if(plan.status==='no-
 function shoeChartDate(value){if(!value)return '—';const d=dte(value);return d.toLocaleDateString(undefined,{day:'numeric',month:'short',year:'numeric'})}
 function shoePairStartDate(shoe){return [shoe.purchaseDate,shoe.firstUseDate,shoe.trackingStartDate,shoeTrackingStartDate(shoe)].filter(Boolean).sort()[0]||iso(today())}
 function plannedTrainingPurchaseDate(event){if(!event?.date)return null;const candidate=iso(new Date(dte(event.date).getTime()-14*DAY));return candidate<iso(today())?iso(today()):candidate}
-function shoeNextPurchasePlan(shoe){
- const f=shoeForecast(shoe),event=plannedReplacementEvents().find(e=>e.shoe.id===shoe.id)||shoePlannedReplacementEvent(shoe),replacement=event?.replacement||replacementProfileForShoe(shoe);
- let handoverDate=event?.date||f.lowDate||null,purchaseDate=event?plannedTrainingPurchaseDate(event):(handoverDate?iso(new Date(dte(handoverDate).getTime()-14*DAY)):null),basis=event?'Programme-driven':'Usage forecast';
- if(purchaseDate&&purchaseDate<iso(today()))purchaseDate=iso(today());
- const daysRemaining=purchaseDate?Math.max(0,Math.ceil((dte(purchaseDate)-today())/DAY)):null;
- let kmUntilPurchase=null;
- if(purchaseDate){
-  if(purchaseDate<=(state.setup?.raceDate||purchaseDate))kmUntilPurchase=Math.max(0,shoePlannedUsageThrough(shoe.id,purchaseDate));
-  else if(f.weekly>0&&daysRemaining!=null)kmUntilPurchase=Math.max(0,f.weekly*daysRemaining/7);
+
+/* v13.7.46 fresh physical-pair lifecycle planner.
+   The training plan is immutable input. The planner decides only equipment:
+   1) owned physical pairs and capacity,
+   2) future physical pairs only when capacity/role coverage requires them,
+   3) race-pair reservation/familiarisation,
+   4) workout-to-pair assignment.
+*/
+let freshShoePlanCache={stamp:null,value:null};
+
+function lifecycleStrategyConfig(){
+ const k=SHOE_ENGINE_STRATEGIES[state.shoeEngineStrategy]?state.shoeEngineStrategy:'balanced';
+ return{
+  key:k,
+  wearFraction:k==='protection'?.78:k==='fewer'?.96:k==='quality'?.88:.90,
+  purchaseLeadDays:k==='protection'?28:k==='quality'?28:k==='fewer'?14:21,
+  minFit:k==='quality'?58:k==='protection'?55:50,
+  varietyPenalty:k==='fewer'?15:k==='quality'?2:6,
+  duplicatePurchaseGapDays:k==='quality'?35:56
  }
- const handoverKm=event?Number(event.km)||Number(f.low):Number(f.low);
- return{purchaseDate,handoverDate,daysRemaining,kmUntilPurchase,handoverKm,replacement,basis,confidence:event?'High':f.confidence};
+}
+function lifecycleRetireKmForProfile(profile,shoe=null){
+ const cfg=lifecycleStrategyConfig(),low=Number(shoe?.replacementRangeKm?.low)||Number(profile?.typicalReplacementLowKm)||600,high=Number(shoe?.replacementRangeKm?.high)||Number(profile?.typicalReplacementHighKm)||Math.max(low+150,850),condition=shoe?.condition||shoe?.conditionFeedback||'Feels normal';
+ let target=low+(high-low)*cfg.wearFraction;
+ if(condition==='Slightly worn')target-=Math.min(60,(high-low)*.18);
+ if(['Noticeably flat','Grip deteriorating','Upper damaged'].includes(condition))target=Math.min(target,low);
+ if(condition==='Causing discomfort')target=Math.min(target,shoeMileage(shoe));
+ return Math.max(Number(shoe?shoeMileage(shoe):0),Math.round(target))
+}
+function lifecycleWorkoutFit(profile,plan){
+ if(!profile||!plan)return 0;
+ const req=SHOE_REQ[plan.type]||SHOE_REQ.Easy;
+ let weighted=0,total=0;
+ const add=(v,w)=>{weighted+=clamp(Number(v)||0,0,100)*w;total+=w};
+ add(profile.workoutSuitability?.[plan.type]??shoeProfileWorkoutSuitability(profile,plan.type),4);
+ add(shoeDistanceScore(profile,plan.distance),1.4);
+ add(shoeSurfaceScore(profile,plan),1.6);
+ const metric=(key,val)=>{if(req[key])add((Number(val)||0)/5*100,req[key]/6)};
+ metric('cushioning',profile.cushioning);metric('protection',profile.protection);metric('responsiveness',profile.responsiveness);metric('efficiency',profile.efficiency);metric('grip',profile.grip);metric('stability',profile.stability);metric('durability',profile.durability);metric('comfort',profile.comfort);
+ let score=total?weighted/total:50;
+ const strategy=lifecycleStrategyConfig().key,quality=/interval|Threshold|Specific|Race|Fartlek|Progression|Hills|VO₂|rehearsal/i.test(plan.type||'');
+ if(strategy==='quality')score+=quality?((profile.responsiveness||3)+(profile.efficiency||3))*3:((profile.durability||3)+(profile.comfort||3))*2;
+ if(strategy==='protection')score+=((profile.cushioning||3)+(profile.protection||3)+(profile.stability||3))*2.5;
+ if(strategy==='fewer')score+=new Set(profile.roles||[]).size*3+(profile.durability||3)*3;
+ if((profile.roles||[]).includes('race')&&!quality)score-=strategy==='quality'?20:28;
+ score+=gaitPurchaseAdjustment(profile);
+ return clamp(Math.round(score),0,100)
+}
+function lifecycleProfileKey(profile){return`${normalizeShoeFamily(profile?.family||'shoe')}|${String(profile?.version||'')}`}
+function lifecyclePairLabel(pair){return pair.owned?shoeDisplayName(pair.shoe):`ASICS ${pair.profile.family} ${pair.profile.version||''}`.trim()}
+function lifecycleProfilesForPurchase(plan,intendedRole='training'){
+ const currentLive=asicsLiveCatalogIsActive();
+ return candidatePurchaseProfiles().filter(p=>{
+  if(!p||p.neutral===false&&runnerFootMechanics()!=='pronation')return runnerFootMechanics()==='pronation';
+  if(intendedRole==='race'&&!(p.roles||[]).includes('race'))return false;
+  return shoeDistanceScore(p,plan?.distance||state.setup?.raceDistance||10)>=45;
+ }).map(p=>({profile:p,fit:lifecycleWorkoutFit(p,plan||{type:'Easy',distance:10,surface:'road'}),live:!!p.liveItem&&currentLive})).sort((a,b)=>(b.fit+(b.live?4:0))-(a.fit+(a.live?4:0)))
+}
+function lifecycleChoosePurchaseProfile(plan,intendedRole='training',avoidKeys=new Set()){
+ const candidates=lifecycleProfilesForPurchase(plan,intendedRole);
+ return(candidates.find(x=>!avoidKeys.has(lifecycleProfileKey(x.profile)))||candidates[0]||{profile:replacementProfileForShoe((state.shoes||[])[0])}).profile
+}
+function freshShoeLifecyclePlan(){
+ const now=iso(today()),raceDate=state.setup?.raceDate||now,cfg=lifecycleStrategyConfig(),manual=new Map((state.plannedShoeAssignments||[]).filter(a=>a.source==='user').map(a=>[a.planId,a.shoeId]));
+ const fixed=(state.plan||[]).filter(p=>p.type!=='Rest'&&p.date>=now&&p.date<=raceDate).slice().sort((a,b)=>a.date.localeCompare(b.date));
+ const stamp=[state.storageRevision||0,state.shoeEngineStrategy||'balanced',state.setup?.footMechanics||'unknown',raceDate,asicsLiveMeta().lastChecked||'',fixed.map(p=>`${p.id}:${p.date}:${p.type}:${p.distance}`).join(';'),(state.shoes||[]).map(sh=>`${sh.id}:${sh.status}:${shoeMileage(sh).toFixed(2)}:${sh.condition||sh.conditionFeedback||''}`).join(';'),[...manual].join(';')].join('|');
+ if(freshShoePlanCache.stamp===stamp)return freshShoePlanCache.value;
+
+ const pairs=(state.shoes||[]).filter(sh=>sh.status!=='retired').map(sh=>{const profile=shoeProfileForShoe(sh),km=shoeMileage(sh);return{id:`owned:${sh.id}`,owned:true,shoe:sh,profile,currentKm:km,km,availableDate:now,purchaseDate:shoePairStartDate(sh),retireKm:lifecycleRetireKmForProfile(profile,sh),points:[{date:now,km}],assignments:[],role:'owned'}});
+ const purchases=[],assignments=[],events=[];
+ const activeAt=date=>pairs.filter(pair=>pair.availableDate<=date&&pair.km<pair.retireKm-.01);
+ const roleOverlap=(a,b)=>{const A=new Set(a?.roles||[]),B=new Set(b?.roles||[]),shared=[...A].filter(x=>B.has(x)).length;return shared/Math.max(1,Math.min(A.size||1,B.size||1))};
+
+ const makeFuturePair=(plan,role='training',preferredProfile=null)=>{
+  const recentPurchases=purchases.filter(x=>Math.abs(dte(x.purchaseDate)-dte(plan.date))<=cfg.duplicatePurchaseGapDays*DAY);
+  const avoid=new Set();
+  if(cfg.key!=='quality')recentPurchases.forEach(x=>avoid.add(lifecycleProfileKey(x.profile)));
+  const profile=preferredProfile||lifecycleChoosePurchaseProfile(plan,role,avoid);
+  // Reuse a near-term planned physical pair when role overlap is high and it has capacity.
+  const reusable=pairs.filter(p=>!p.owned&&p.availableDate<=plan.date&&p.km+(Number(plan.distance)||0)<=p.retireKm&&roleOverlap(p.profile,profile)>=.67).sort((a,b)=>b.availableDate.localeCompare(a.availableDate))[0];
+  if(reusable)return reusable;
+  let purchaseDate=iso(new Date(dte(plan.date).getTime()-cfg.purchaseLeadDays*DAY));
+  if(purchaseDate<now)purchaseDate=now;
+  const pair={id:`future:${purchases.length+1}:${lifecycleProfileKey(profile)}`,owned:false,shoe:null,profile,currentKm:0,km:0,availableDate:plan.date,purchaseDate,retireKm:lifecycleRetireKmForProfile(profile,null),points:[{date:purchaseDate,km:0,purchase:true}],assignments:[],role};
+  pairs.push(pair);purchases.push({id:`purchase:${pair.id}`,pairId:pair.id,profile,purchaseDate,firstUseDate:plan.date,role,reason:role==='race'?'Fresh race-day pair required to reach Race Day with adequate familiarisation and controlled wear.':'Existing physical pairs cannot cover this workout role through their planned service-life capacity without compromising fit.',replacesPairId:null});
+  events.push({date:purchaseDate,type:'purchase',pairId:pair.id,text:`Purchase ${lifecyclePairLabel(pair)}`});
+  return pair
+ };
+
+ // Fixed-plan assignment to physical pairs.
+ fixed.forEach(plan=>{
+  const distance=Math.max(0,Number(plan.distance)||0),manualShoeId=manual.get(plan.id);
+  let chosen=null,why='';
+  if(manualShoeId){
+   chosen=pairs.find(p=>p.owned&&p.shoe.id===manualShoeId&&p.availableDate<=plan.date)||null;
+   if(chosen)why='Manual shoe choice';
+  }
+  if(!chosen){
+   const candidates=activeAt(plan.date).map(pair=>{
+    const fit=lifecycleWorkoutFit(pair.profile,plan),remaining=Math.max(0,pair.retireKm-pair.km),wearPressure=remaining>0?Math.max(0,1-remaining/Math.max(1,pair.retireKm))*18:40,recentKm=pair.assignments.filter(a=>dte(plan.date)-dte(a.date)<=6*DAY).reduce((a,x)=>a+x.km,0),specialistPenalty=(pair.profile.roles||[]).includes('race')&&!/Race|Specific|rehearsal|interval|Threshold|VO₂/.test(plan.type)?18:0;
+    return{pair,fit,score:fit-wearPressure-Math.min(12,recentKm/4)-specialistPenalty,remaining}
+   }).filter(x=>x.remaining>=Math.min(distance,Math.max(3,distance*.75))).sort((a,b)=>b.score-a.score);
+   chosen=candidates.find(x=>x.fit>=cfg.minFit)?.pair||candidates[0]?.pair||null;
+   if(chosen)why=`Best available physical pair for ${plan.type}`;
+  }
+  if(!chosen||chosen.km+distance>chosen.retireKm+.01){
+   const role=/Race|Specific|rehearsal|Threshold|interval|VO₂|Fartlek|Progression/.test(plan.type)?'quality':'training';
+   chosen=makeFuturePair(plan,role);
+   why='New physical pair introduced because existing suitable capacity is exhausted';
+  }
+  chosen.km+=distance;chosen.assignments.push({planId:plan.id,date:plan.date,type:plan.type,km:distance});chosen.points.push({date:plan.date,km:chosen.km,type:plan.type,planId:plan.id});
+  assignments.push({planId:plan.id,date:plan.date,type:plan.type,km:distance,pairId:chosen.id,ownedShoeId:chosen.owned?chosen.shoe.id:null,why,fit:lifecycleWorkoutFit(chosen.profile,plan)});
+ });
+
+ // Future rehab exposure is additive to Shoes only. Keep it on already owned/recommended familiar pairs.
+ const injury=(state.injuries||[]).find(x=>x.id===state.activeInjuryPlanId);
+ if(injury){
+  const futureDays=buildRehabCalendar(injury,injuryPrediction(injury)).filter(d=>d.date>now&&d.date<=raceDate&&rehabDayNeedsShoe(d));
+  futureDays.forEach(day=>{
+   const exp=rehabExpectedDistance(day),km=Number(exp.totalKm)||0;if(km<=0)return;
+   let pair=activeAt(day.date).filter(p=>p.owned).sort((a,b)=>{const ap=(a.profile.comfort||3)+(a.profile.cushioning||3)+(a.profile.protection||3),bp=(b.profile.comfort||3)+(b.profile.cushioning||3)+(b.profile.protection||3);return bp-ap})[0]||activeAt(day.date)[0];
+   if(!pair)return;
+   if(pair.km+km>pair.retireKm)pair=makeFuturePair({date:day.date,type:'Recovery',distance:km,surface:'road'},'training');
+   pair.km+=km;pair.assignments.push({date:day.date,type:'Rehab',km,rehab:true});pair.points.push({date:day.date,km:pair.km,type:'Rehab',rehab:true});
+  });
+ }
+
+ // Race-day selection works backwards from Race Day.
+ const racePlan={id:'race-day-equipment',date:raceDate,type:'Race Day',distance:Number(state.setup?.raceDistance)||42.195,surface:'road'};
+ const raceWindowFor=pair=>raceOptimalWindow(pair.profile,state.setup?.raceDistance),raceCandidates=pairs.filter(p=>(p.profile.roles||[]).includes('race')&&p.availableDate<=raceDate&&p.km<p.retireKm).map(pair=>{const win=raceWindowFor(pair),raceFit=lifecycleWorkoutFit(pair.profile,racePlan),inWindow=pair.km>=win.minKm&&pair.km<=win.maxKm;return{pair,win,raceFit,inWindow,score:raceFit+(inWindow?24:0)-Math.max(0,pair.km-win.maxKm)*.35}}).sort((a,b)=>b.score-a.score);
+ let raceChoice=raceCandidates.find(x=>x.inWindow&&x.raceFit>=60)||raceCandidates[0]||null;
+
+ // Smart/simple/protection first try to make an already-planned future race-capable pair work,
+ // rather than buying a second near-race pair. Redirect only non-specific mileage, never add training.
+ if((!raceChoice||raceChoice.pair.km>raceChoice.win.maxKm||raceChoice.raceFit<60)&&cfg.key!=='quality'){
+  const reservable=pairs.filter(p=>!p.owned&&p.availableDate<raceDate&&(p.profile.roles||[]).includes('race')).map(pair=>({pair,win:raceWindowFor(pair),raceFit:lifecycleWorkoutFit(pair.profile,racePlan)})).sort((a,b)=>b.raceFit-a.raceFit);
+  for(const candidate of reservable){
+   const pair=candidate.pair,target=Math.round((candidate.win.minKm+candidate.win.maxKm)/2);
+   if(pair.km<=candidate.win.maxKm&&candidate.raceFit>=60){raceChoice=candidate;break}
+   const movable=pair.assignments.filter(a=>!a.rehab&&!/Race|Specific|rehearsal|Threshold|interval|VO₂|Fartlek|Progression/i.test(a.type||'')).slice().sort((a,b)=>b.date.localeCompare(a.date));
+   for(const a of movable){
+    if(pair.km<=target)break;
+    const plan=fixed.find(p=>p.id===a.planId);if(!plan)continue;
+    const alternatives=activeAt(a.date).filter(q=>q.id!==pair.id&&q.km+a.km<=q.retireKm).map(q=>({q,fit:lifecycleWorkoutFit(q.profile,plan)})).filter(x=>x.fit>=cfg.minFit).sort((x,y)=>y.fit-x.fit);
+    const alt=alternatives[0]?.q;if(!alt)continue;
+    pair.assignments=pair.assignments.filter(x=>x!==a);pair.km-=a.km;
+    alt.assignments.push({...a,reallocatedForRacePreservation:true});alt.km+=a.km;
+    const row=assignments.find(x=>x.planId===a.planId);if(row){row.pairId=alt.id;row.ownedShoeId=alt.owned?alt.shoe.id:null;row.why='Reallocated to preserve the planned Race Day pair in its target mileage window';row.fit=lifecycleWorkoutFit(alt.profile,plan)}
+    events.push({date:a.date,type:'race-preservation',pairId:pair.id,text:`${plan.type} moved to ${lifecyclePairLabel(alt)} so ${lifecyclePairLabel(pair)} reaches Race Day with controlled mileage.`});
+   }
+   if(pair.km<=candidate.win.maxKm&&pair.km>=candidate.win.minKm&&candidate.raceFit>=60){raceChoice=candidate;break}
+  }
+ }
+
+ if(!raceChoice||raceChoice.pair.km>raceChoice.win.maxKm||raceChoice.raceFit<60){
+  // Only now may the planner create a separate race pair.
+  let reserved=pairs.filter(p=>!p.owned&&p.availableDate<raceDate&&(p.profile.roles||[]).includes('race')&&p.km<=raceWindowFor(p).maxKm).map(pair=>({pair,win:raceWindowFor(pair),raceFit:lifecycleWorkoutFit(pair.profile,racePlan)})).sort((a,b)=>b.raceFit-a.raceFit)[0]||null;
+  if(!reserved){
+   const targetProfile=lifecycleChoosePurchaseProfile(racePlan,'race');
+   // Build familiarisation from existing suitable sessions, earliest selected session defines first use.
+   const win=raceOptimalWindow(targetProfile,state.setup?.raceDistance),target=Math.round((win.minKm+win.maxKm)/2),sessions=raceFamiliarisationSessions({id:'future-race',characteristics:{roles:targetProfile.roles}},target);
+   const firstUse=sessions[0]?.date||iso(new Date(dte(raceDate).getTime()-35*DAY));
+   reserved= {pair:makeFuturePair({date:firstUse,type:'Race rehearsal',distance:Math.min(10,target),surface:'road'},'race',targetProfile),win,raceFit:lifecycleWorkoutFit(targetProfile,racePlan),sessions};
+  }
+  raceChoice=reserved;
+ }
+ // Reserve race pair: redirect selected race-relevant sessions to it until target midpoint, avoiding excess general mileage.
+ if(raceChoice){
+  const pair=raceChoice.pair,win=raceChoice.win||raceWindowFor(pair),target=Math.round((win.minKm+win.maxKm)/2);
+  if(pair.km<win.minKm){
+   const relevant=fixed.filter(p=>p.date>=pair.availableDate&&p.date<raceDate&&raceRelevantWorkout(p)).slice().sort((a,b)=>b.date.localeCompare(a.date));
+   for(const plan of relevant){
+    if(pair.km>=target)break;
+    const existing=assignments.find(a=>a.planId===plan.id);if(!existing||existing.pairId===pair.id)continue;
+    const old=pairs.find(p=>p.id===existing.pairId),move=Math.min(Number(existing.km)||0,Math.max(0,target-pair.km));
+    if(move<=0)continue;
+    // Move whole workout only; no split physical-pair mileage.
+    if(move<(Number(existing.km)||0)*.95)continue;
+    if(old){old.km=Math.max(old.currentKm,old.km-existing.km);old.assignments=old.assignments.filter(a=>a.planId!==plan.id);old.points=[]}
+    pair.km+=existing.km;pair.assignments.push({planId:plan.id,date:plan.date,type:plan.type,km:existing.km,raceFamiliarisation:true});
+    existing.pairId=pair.id;existing.ownedShoeId=pair.owned?pair.shoe.id:null;existing.why='Reserved for race-shoe familiarisation';existing.fit=lifecycleWorkoutFit(pair.profile,plan);
+   }
+  }
+ }
+
+ // Rebuild chronological points exactly from assignments (avoids spikes and decreases).
+ pairs.forEach(pair=>{
+  const base=pair.owned?pair.currentKm:0,pts=[{date:pair.owned?now:pair.purchaseDate,km:base,purchase:!pair.owned}],ordered=pair.assignments.slice().sort((a,b)=>a.date.localeCompare(b.date));let km=base;
+  ordered.forEach(a=>{km+=Number(a.km)||0;pts.push({date:a.date,km,type:a.type,planId:a.planId,rehab:a.rehab})});
+  if(pts.at(-1)?.date!==raceDate)pts.push({date:raceDate,km});
+  pair.km=km;pair.points=pts;
+ });
+
+ // Consolidate purchase list and merge near-duplicate role purchases.
+ let cleanPurchases=purchases.slice().sort((a,b)=>a.purchaseDate.localeCompare(b.purchaseDate));
+ if(cfg.key!=='quality'){
+  const kept=[];
+  cleanPurchases.forEach(p=>{
+   const pair=pairs.find(x=>x.id===p.pairId),dup=kept.find(k=>{const kp=pairs.find(x=>x.id===k.pairId);return Math.abs(dte(p.purchaseDate)-dte(k.purchaseDate))<=cfg.duplicatePurchaseGapDays*DAY&&roleOverlap(pair?.profile,kp?.profile)>=.67&&p.role!=='race'&&k.role!=='race'});
+   if(dup){p.mergedInto=dup.pairId;events.push({date:p.purchaseDate,type:'consolidated',pairId:p.pairId,text:`Purchase avoided: overlapping role consolidated into ${lifecyclePairLabel(pairs.find(x=>x.id===dup.pairId))}`})}
+   else kept.push(p);
+  });
+  cleanPurchases=kept;
+ }
+
+ const racePair=raceChoice?.pair||null,window=racePair?raceOptimalWindow(racePair.profile,state.setup?.raceDistance):null;
+ const result={strategy:cfg.key,now,raceDate,fixed,pairs,assignments,purchases:cleanPurchases,events,racePair,raceWindow:window,liveApplied:asicsLiveCatalogIsActive(),footMechanics:runnerFootMechanics()};
+ freshShoePlanCache={stamp,value:result};
+ return result
+}
+function freshLifecycleAssignmentForPlan(planId){return freshShoeLifecyclePlan().assignments.find(a=>a.planId===planId)||null}
+function freshPurchaseForOwnedShoe(shoeId){
+ const plan=freshShoeLifecyclePlan(),owned=`owned:${shoeId}`,first=plan.purchases.find(p=>{const pair=plan.pairs.find(x=>x.id===p.pairId);return pair&&pair.role!=='race'&&plan.events.some(e=>e.pairId===p.pairId)||false});
+ const assigned=plan.assignments.filter(a=>a.pairId===owned).sort((a,b)=>a.date.localeCompare(b.date)),pair=plan.pairs.find(x=>x.id===owned);
+ if(!pair)return null;
+ const last=assigned.at(-1),crossed=pair.km>=pair.retireKm-.1;
+ if(!crossed)return null;
+ const next=plan.purchases.find(p=>p.role!=='race'&&p.firstUseDate>=(last?.date||plan.now))||first;
+ return next||null
+}
+function shoeNextPurchasePlan(shoe){
+ const life=freshShoeLifecyclePlan(),owned=life.pairs.find(p=>p.owned&&p.shoe.id===shoe.id),assigned=life.assignments.filter(a=>a.pairId===owned?.id).sort((a,b)=>a.date.localeCompare(b.date)),last=assigned.at(-1),futurePurchase=life.purchases.filter(p=>p.role!=='race').sort((a,b)=>a.purchaseDate.localeCompare(b.purchaseDate)).find(p=>p.firstUseDate>=(last?.date||life.now))||null,replacement=futurePurchase?life.pairs.find(x=>x.id===futurePurchase.pairId)?.profile:replacementProfileForShoe(shoe),purchaseDate=futurePurchase?.purchaseDate||null,handoverDate=futurePurchase?.firstUseDate||null,daysRemaining=purchaseDate?Math.max(0,Math.ceil((dte(purchaseDate)-today())/DAY)):null,kmUntilPurchase=purchaseDate?shoePlannedUsageThrough(shoe.id,purchaseDate):null;
+ return{purchaseDate,handoverDate,daysRemaining,kmUntilPurchase,handoverKm:owned?.retireKm||shoeForecast(shoe).low,replacement,basis:futurePurchase?'Fresh lifecycle plan':'No replacement required before race',confidence:life.liveApplied?'High':'Medium'};
 }
 function shoeGraphRationaleHtml(series,events,raceLifecycle){
  const rows=series.map(item=>{const current=shoeMileage(item.shoe),event=events.find(e=>e.shoe.id===item.shoe.id),f=shoeForecast(item.shoe),start=shoePairStartDate(item.shoe);return`<li><b>${esc(shoeDisplayName(item.shoe))}:</b> this physical pair enters the graph on ${esc(shoeChartDate(start))}. It has ${Math.round(current)} km today.${event?` The current pair is planned to reach its ${Math.round(f.low)}–${Math.round(f.high)} km replacement range on ${esc(shoeChartDate(event.date))}. A proposed training replacement is shown only from its proposed purchase date.${event.optimisation?` The portfolio optimiser moved this replacement from ${esc(shoeChartDate(event.optimisation.originalDate))} to ${esc(shoeChartDate(event.date))} by shifting about ${Math.round(event.optimisation.divertedKm)} km of compatible mileage to ${esc(event.optimisation.absorbedBy)}.`:''}`:' It is not expected to reach its replacement threshold before Race Day.'}</li>`}).join('');
@@ -5909,104 +6104,20 @@ function shoeGraphRationaleHtml(series,events,raceLifecycle){
  return`<details class="shoeGraphRationale"><summary>How this physical-pair plan works</summary><div><p>Every curve represents one physical pair. An owned pair appears only from its recorded purchase/tracking start. A future pair appears only from its proposed purchase date. No physical pair is deliberately planned beyond its model-specific service-life threshold: when that threshold is reached, mileage must transfer to a fresh physical pair. Portfolio optimisation may change which compatible shoe receives a workout, but it may never extend a worn pair beyond its replacement threshold. The planner never treats one physical pair as both a worn training shoe and a separate fresh Race Day shoe.</p><ul>${rows}${race}</ul></div></details>`
 }
 function shoeProgrammeMileageChartHtml(){
- const shoes=(state.shoes||[]).filter(s=>s.status!=='retired'||s.showInHistory!==false);if(!shoes.length)return'<div class="shoeEmpty">Add a shoe to start mileage planning.</div>';
- const enabled=new Set(shoes.map(s=>s.id));
- const raceDate=state.setup?.raceDate||iso(today()),todayStr=iso(today()),programStart=state.setup?.planStart||todayStr,rawEvents=plannedReplacementEvents().filter(e=>e.date<=raceDate),eventByShoe=new Map(rawEvents.map(e=>[e.shoe.id,e]));
- const divertedAwayByShoe=new Map();rawEvents.forEach(e=>{(e.divertedPlanIds||[]).forEach(planId=>{const p=(state.plan||[]).find(x=>x.id===planId),originalShoeId=p?plannedAssignment(p.id)?.shoeId:null;if(originalShoeId&&originalShoeId!==e.shoe.id){const set=divertedAwayByShoe.get(originalShoeId)||new Set();set.add(planId);divertedAwayByShoe.set(originalShoeId,set)}})});
- const series=shoes.filter(s=>enabled.has(s.id)).map(s=>{const physicalStart=shoePairStartDate(s),chartStart=physicalStart>programStart?physicalStart:programStart,actual=shoeActualProgrammeSeries(s,chartStart,todayStr).filter(p=>p.date>=physicalStart),divertedAway=divertedAwayByShoe.get(s.id)||new Set(),rawPlanned=shoePlannedMileageSeries(s).filter(p=>p.date>=physicalStart&&!divertedAway.has(p.planId)),event=eventByShoe.get(s.id),forecast=shoeForecast(s),limit=Math.max(shoeMileage(s),Number(forecast.low)||0);let planned=[];for(const p of rawPlanned){if(Number(p.km)<=limit+.001){planned.push(p);continue}const prev=planned.at(-1);if(prev&&Number(prev.km)<limit&&Number(p.km)>Number(prev.km)){const ratio=(limit-Number(prev.km))/(Number(p.km)-Number(prev.km)),t0=dte(prev.date).getTime(),t1=dte(p.date).getTime(),date=iso(new Date(t0+(t1-t0)*clamp(ratio,0,1)));planned.push({...p,date,km:limit,lifecycleCap:true})}break}if(event)planned=planned.filter(p=>p.date<=event.date||p.lifecycleCap);return{shoe:s,physicalStart,actual,planned}});
- const raceLifecycle=raceShoePlan(),targetWindow=raceLifecycle?.targetWindow||raceLifecycle?.condition?.opt||null;
- const replacementSeries=rawEvents.filter(e=>enabled.has(e.shoe.id)&&e.replacement).flatMap(e=>{
-  const firstPurchaseDate=plannedTrainingPurchaseDate(e),usageEvents=[];
-  (state.plan||[]).filter(p=>p.type!=='Rest'&&p.date>e.date&&p.date<=raceDate).forEach(p=>{const assigned=plannedAssignment(p.id)?.shoeId;if(assigned!==e.shoe.id&&!e.divertedPlanIds?.includes(p.id))return;usageEvents.push({date:p.date,deltaKm:Number(p.distance)||0,type:p.type,driver:'training',portfolioDiverted:e.divertedPlanIds?.includes(p.id)})});
-  futureRehabShoeUsage(e.shoe.id,null).filter(x=>x.date>e.date&&x.date<=raceDate).forEach(x=>usageEvents.push({date:x.date,deltaKm:Number(x.distanceKm)||0,type:'Rehab',driver:'rehab'}));
-  usageEvents.sort((a,b)=>a.date.localeCompare(b.date)||(a.driver==='training'?-1:1));
-  const profile=e.replacement||replacementProfileForShoe(e.shoe),profileLow=Number(profile?.typicalReplacementLowKm)||550,userLow=Number(e.shoe?.replacementRangeKm?.low),retireKm=Math.max(250,Math.min(Number.isFinite(userLow)&&userLow>0?userLow:profileLow,Number(profile?.typicalReplacementHighKm)||profileLow*1.4)),out=[];
-  let generation=1,purchaseDate=firstPurchaseDate,pts=[{date:purchaseDate,km:0,purchase:true,driver:'rotation'}],km=0;
-  if(purchaseDate<e.date)pts.push({date:e.date,km:0,ready:true,driver:'rotation'});
-  const finishGeneration=(endDate,reason='wear')=>{if(pts.at(-1)?.date!==endDate)pts.push({date:endDate,km,driver:reason});out.push({event:{...e,replacement:profile},purchaseDate,points:pts,finalKm:km,generation,retireKm});};
-  usageEvents.forEach(u=>{let remaining=Math.max(0,Number(u.deltaKm)||0);while(remaining>0){const capacity=Math.max(0,retireKm-km);if(capacity<=.001){finishGeneration(u.date,'wear');generation++;purchaseDate=u.date;pts=[{date:purchaseDate,km:0,purchase:true,driver:'rotation'}];km=0;continue}const add=Math.min(remaining,capacity);km+=add;remaining-=add;pts.push({...u,deltaKm:add,km});if(km>=retireKm-.001&&remaining>0){finishGeneration(u.date,'wear');generation++;purchaseDate=u.date;pts=[{date:purchaseDate,km:0,purchase:true,driver:'rotation'}];km=0}}});
-  if(pts.length>1||!out.length){if(pts.at(-1)?.date!==raceDate)pts.push({date:raceDate,km,driver:'end'});out.push({event:{...e,replacement:profile},purchaseDate,points:pts,finalKm:km,generation,retireKm})}
-  return out;
- });
- let raceStrategy=null;if(raceLifecycle?.purchaseNeeded&&raceLifecycle.profile){const purchaseDate=raceLifecycle.purchaseStart||raceLifecycle.purchaseEnd||raceLifecycle.famSessions?.[0]?.date||todayStr,pts=[{date:purchaseDate,km:0,purchase:true,driver:'rotation'}];let km=0;(raceLifecycle.famSessions||[]).slice().sort((a,b)=>a.date.localeCompare(b.date)).forEach(p=>{if(p.date<purchaseDate||p.date>raceDate)return;const add=Number(p.plannedShoeKm)||0;km+=add;pts.push({date:p.date,km,deltaKm:add,type:p.type,driver:'training'})});if(pts.at(-1)?.date!==raceDate)pts.push({date:raceDate,km,driver:'end'});raceStrategy={name:`ASICS ${raceLifecycle.profile.family} ${raceLifecycle.profile.version}`,owned:false,purchaseDate,points:pts,finalKm:km,window:targetWindow}}else if(raceLifecycle?.preferred&&raceLifecycle.condition&&!raceLifecycle.preferredRetiresBeforeRace){const shoe=raceLifecycle.preferred,full=shoePlannedMileageSeries(shoe).filter(p=>p.date>=shoePairStartDate(shoe)&&p.date<=raceDate),pts=full.length?full:[{date:todayStr,km:shoeMileage(shoe)},{date:raceDate,km:shoeMileage(shoe)}];raceStrategy={name:shoeDisplayName(shoe),owned:true,purchaseDate:shoePairStartDate(shoe),points:pts,finalKm:pts.at(-1)?.km||shoeMileage(shoe),window:raceLifecycle.condition.opt}};
- const dates=[programStart,todayStr,raceDate,...series.flatMap(x=>[x.physicalStart,...x.actual.map(p=>p.date),...x.planned.map(p=>p.date)]),...replacementSeries.flatMap(x=>x.points.map(p=>p.date)),...(raceStrategy?.points||[]).map(p=>p.date)].filter(Boolean).sort(),values=[...series.flatMap(x=>[...x.actual,...x.planned].map(p=>p.km)),...replacementSeries.flatMap(x=>x.points.map(p=>p.km)),...(raceStrategy?.points||[]).map(p=>p.km)].filter(Number.isFinite);if(targetWindow)values.push(Number(targetWindow.maxKm)||0);if(!values.length)return'<div class="shoeEmpty">No tracked or planned mileage yet.</div>';
- const minD=dte(dates[0]).getTime(),maxD=Math.max(minD+DAY,dte(raceDate).getTime()),maxY=Math.max(10,Math.ceil(Math.max(...values)*1.18/50)*50),W=920,H=500,L=112,R=34,T=112,B=88,x=d=>L+(dte(d).getTime()-minD)/(maxD-minD)*(W-L-R),y=v=>T+(maxY-v)/maxY*(H-T-B);
- // Deliberately high-contrast palette: every physical pair gets its own colour.
- const palette=['#35E2D0','#F4C95D','#73A7FF','#FF758F','#B58CFF','#8DE35C','#FF9F43','#46D6F0','#E66FE8','#F06A5D'];
- let pairColorIndex=0;series.forEach(item=>item.color=palette[pairColorIndex++%palette.length]);replacementSeries.forEach(item=>item.color=palette[pairColorIndex++%palette.length]);if(raceStrategy)raceStrategy.color=palette[pairColorIndex++%palette.length];
+ const life=freshShoeLifecyclePlan(),pairs=life.pairs.filter(p=>p.owned||p.assignments.length||p===life.racePair);if(!pairs.length)return'<div class="shoeEmpty">Add a shoe to start mileage planning.</div>';
+ const raceDate=life.raceDate,todayStr=life.now,programStart=state.setup?.planStart||todayStr,actualSeries=(state.shoes||[]).filter(sh=>sh.status!=='retired'||sh.showInHistory!==false).map(sh=>({shoe:sh,points:shoeActualProgrammeSeries(sh,programStart,todayStr)}));
+ const dates=[programStart,todayStr,raceDate,...pairs.flatMap(p=>p.points.map(x=>x.date)),...actualSeries.flatMap(x=>x.points.map(p=>p.date))].filter(Boolean).sort(),values=[...pairs.flatMap(p=>p.points.map(x=>x.km)),...actualSeries.flatMap(x=>x.points.map(p=>p.km))].filter(Number.isFinite),window=life.raceWindow;if(window)values.push(window.maxKm);
+ const minD=dte(dates[0]).getTime(),maxD=Math.max(minD+DAY,dte(raceDate).getTime()),maxY=Math.max(100,Math.ceil(Math.max(...values,100)*1.15/50)*50),W=920,H=500,L=112,R=34,T=86,B=88,x=d=>L+(dte(d).getTime()-minD)/(maxD-minD)*(W-L-R),y=v=>T+(maxY-v)/maxY*(H-T-B),palette=['#35E2D0','#F4C95D','#73A7FF','#FF758F','#B58CFF','#8DE35C','#FF9F43','#46D6F0','#E66FE8','#F06A5D'];
+ const colorById=new Map();let ci=0;pairs.forEach(p=>colorById.set(p.id,palette[ci++%palette.length]));
  let grid='';for(let i=0;i<=4;i++){const v=maxY*i/4,yy=y(v);grid+=`<line x1="${L}" y1="${yy}" x2="${W-R}" y2="${yy}"/><text x="${L-20}" y="${yy+8}" text-anchor="end">${Math.round(v)}</text>`}
- const raceX=x(raceDate),todayX=x(todayStr),targetBand=targetWindow&&raceStrategy?(()=>{const low=Math.max(0,Number(targetWindow.minKm)||0),high=Math.min(maxY,Number(targetWindow.maxKm)||0),yy1=y(high),yy2=y(low),bandX=Math.max(L,raceX-116);return`<g class="shoeRaceTargetBand"><rect x="${bandX}" y="${yy1}" width="${Math.max(20,raceX-bandX)}" height="${Math.max(6,yy2-yy1)}"/><text x="${raceX-8}" y="${Math.max(T+26,yy1-12)}" text-anchor="end">Race target · ${Math.round(low)}–${Math.round(high)} km</text></g>`})():'';
- const paths=series.map(s=>{const c=s.color,actualPts=s.actual.map(p=>`${x(p.date).toFixed(1)},${y(p.km).toFixed(1)}`).join(' '),plannedPts=s.planned.map(p=>`${x(p.date).toFixed(1)},${y(p.km).toFixed(1)}`).join(' ');return`${actualPts?`<polyline class="shoeLine shoeActualLine" style="--shoe-color:${c}" points="${actualPts}"/>`:''}${plannedPts?`<polyline class="shoeLine shoePlannedLine" style="--shoe-color:${c}" points="${plannedPts}"/>`:''}`}).join('');
- const replacementProjection=replacementSeries.map(item=>`<polyline class="shoeLine shoeNewPairLine" style="--shoe-color:${item.color}" points="${item.points.map(p=>`${x(p.date).toFixed(1)},${y(p.km).toFixed(1)}`).join(' ')}"/>`).join('');
- const raceStrategyPath=raceStrategy?`<polyline class="shoeLine shoeRaceStrategyLine" style="--shoe-color:${raceStrategy.color}" points="${raceStrategy.points.map(p=>`${x(p.date).toFixed(1)},${y(p.km).toFixed(1)}`).join(' ')}"/><circle class="shoeRaceStrategyPoint" style="--shoe-color:${raceStrategy.color}" cx="${raceX}" cy="${y(raceStrategy.finalKm)}" r="8"/>`:'';
- const replacementMarkers='';
- const xlabels=`<text class="xLab" x="${todayX}" y="${H-26}" text-anchor="start">Today · ${esc(shoeChartDate(todayStr))}</text><text class="xLab" x="${raceX}" y="${H-26}" text-anchor="end">Race day · ${esc(shoeChartDate(raceDate))}</text>`;
- const ownedLegend=series.map(s=>`<span class="shoeLegendItem"><span class="shoeLegendSwatch" style="--shoe-color:${s.color}"></span><b>OWNED</b> ${esc(shoeDisplayName(s.shoe))}</span>`).join(''),futureLegend=replacementSeries.map(item=>`<span class="shoeLegendItem future"><span class="shoeLegendSwatch dotted" style="--shoe-color:${item.color}"></span><b>FUTURE${item.generation>1?` #${item.generation}`:''}</b> ${esc(`ASICS ${item.event.replacement?.family||'running shoe'} ${item.event.replacement?.version||''}`)}</span>`).join(''),raceLegend=raceStrategy&&!raceStrategy.owned?`<span class="shoeLegendItem race"><span class="shoeLegendSwatch race" style="--shoe-color:${raceStrategy.color}"></span><b>FUTURE RACE</b> ${esc(raceStrategy.name)}</span>`:'';const legend=ownedLegend+futureLegend+raceLegend;
- // Explain the actual causes of visible allocation changes rather than asking the runner to infer them from slope changes.
- const allocationEvents=[];
- replacementSeries.forEach(item=>{const e=item.event;if(item.generation===1){allocationEvents.push({date:e.date,driver:'Shoe rotation',markerKm:Number(e.km)||0,title:`${shoeDisplayName(e.shoe)} → ASICS ${e.replacement?.family||'running shoe'} ${e.replacement?.version||''}`,text:e.optimisation?`The original replacement point was ${shoeChartDate(e.optimisation.originalDate)}. The portfolio optimiser delays this purchase by about ${e.optimisation.delayDays} days because ${e.optimisation.absorbedBy} can safely absorb about ${Math.round(e.optimisation.divertedKm)} km of compatible training first. This avoids two purchases in unnecessarily quick succession while preserving workout fit.`:`The current pair reaches its planned replacement range at about ${Math.round(e.km)} km. Subsequent compatible mileage moves to a new physical pair.`})}else{allocationEvents.push({date:item.purchaseDate,driver:'Shoe rotation',markerKm:0,title:`ASICS ${e.replacement?.family||'running shoe'} ${e.replacement?.version||''} → fresh pair #${item.generation}`,text:`The previous future physical pair reaches about ${Math.round(item.retireKm||0)} km, so the engine starts another physical pair instead of accumulating unrealistic mileage beyond its planned service-life threshold. Future compatible workouts then move to this fresh pair.`})}});
- if(raceStrategy&&!raceStrategy.owned)allocationEvents.push({date:raceStrategy.purchaseDate,driver:'Shoe rotation',markerKm:0,title:`${raceStrategy.name} enters as the Race Day pair`,text:`This pair enters late by design. It receives only selected race-relevant sessions so it reaches Race Day near ${Math.round(raceStrategy.finalKm)} km rather than accumulating general training mileage.`});
- function weekStartIso(date){const d=dte(date),day=(d.getDay()+6)%7;d.setDate(d.getDate()-day);return iso(d)}
-
- function shoeAllocationProfileScore(profile,plan){
-  if(!profile||!plan)return 0;
-  const req=SHOE_REQ[plan.type]||SHOE_REQ.Easy;
-  let weighted=0,total=0;
-  const add=(value,w)=>{weighted+=clamp(Number(value)||0,0,100)*w;total+=w};
-  add(profile.workoutSuitability?.[plan.type]??shoeProfileWorkoutSuitability(profile,plan.type),3.4);
-  add(shoeDistanceScore(profile,plan.distance),1.2);
-  add(shoeSurfaceScore(profile,plan),1.6);
-  const metric=(key,score)=>{if(req[key])add((Number(score)||0)/5*100,req[key]/6)};
-  metric('cushioning',profile.cushioning);metric('protection',profile.protection);metric('responsiveness',profile.responsiveness);
-  metric('efficiency',profile.efficiency);metric('grip',profile.grip);metric('stability',profile.stability);
-  metric('durability',profile.durability);metric('comfort',profile.comfort);
-  if(req.weight)add(({'ultra-light':5,'very-light':5,light:4,'medium-light':4,medium:3,'medium-heavy':2,heavy:1,unknown:3}[profile.weightClass]||3)/5*100,req.weight/6);
-  return total?Math.round(weighted/total):50;
- }
- function shoeAllocationTarget(label){
-  const text=String(label||'').replace(/^future\s+/i,'').trim();
-  const owned=(state.shoes||[]).find(sh=>shoeDisplayName(sh).toLowerCase()===text.toLowerCase());
-  if(owned)return{label:shoeDisplayName(owned),profile:shoeProfileForShoe(owned),shoe:owned};
-  const m=/^(?:ASICS\s+)?(.+?)\s+(\d+)$/.exec(text);
-  if(m){const profile=knownShoeProfile('ASICS',m[1],m[2]);if(profile)return{label:`ASICS ${profile.family} ${profile.version}`,profile,shoe:null}}
-  return null;
- }
- function shoeAllocationPreferenceRationale(label,typesText,date){
-  const types=String(typesText||'').split(',').map(x=>x.trim()).filter(Boolean);
-  const target=shoeAllocationTarget(label);
-  if(!target||!types.length)return' The selected pair best matches the affected workout mix based on its workout-role, cushioning/protection, responsiveness and distance profile.';
-  const relevant=(state.plan||[]).filter(p=>p.type!=='Rest'&&types.includes(p.type)&&(!date||p.date>=date)).slice(0,10);
-  if(!relevant.length)return` ${target.label} is preferred for this allocation because its profile better matches the affected workout mix than the other available pairs.`;
-  let best=null;
-  relevant.forEach(plan=>{
-    const targetScore=shoeAllocationProfileScore(target.profile,plan);
-    const alternatives=(state.shoes||[]).filter(sh=>sh.status!=='retired'&&(!target.shoe||sh.id!==target.shoe.id)).map(sh=>({label:shoeDisplayName(sh),score:shoeAllocationProfileScore(shoeProfileForShoe(sh),plan)})).sort((a,b)=>b.score-a.score);
-    const alt=alternatives[0]||null,margin=alt?targetScore-alt.score:targetScore;
-    const candidate={plan,targetScore,alt,margin};
-    if(!best||candidate.margin>best.margin)best=candidate;
-  });
-  if(!best)return` ${target.label} is preferred because its profile better matches the affected workout mix than the other available pairs.`;
-  const p=target.profile,reasons=[];
-  if((p.workoutSuitability?.[best.plan.type]??shoeProfileWorkoutSuitability(p,best.plan.type))>=80)reasons.push(`strong ${best.plan.type.toLowerCase()} suitability`);
-  if((p.cushioning||0)>=4||(p.protection||0)>=4)reasons.push('cushioning/protection');
-  if((p.responsiveness||0)>=4)reasons.push('responsiveness');
-  if((p.efficiency||0)>=4)reasons.push('efficiency');
-  if(shoeSurfaceScore(p,best.plan)>=90)reasons.push('surface fit');
-  const why=(reasons.slice(0,3).join(', ')||'better overall workout fit');
-  if(best.alt)return` For ${best.plan.type}, ${target.label} scores about ${best.targetScore}/100 on the equipment-fit factors versus ${best.alt.score}/100 for ${best.alt.label}, mainly because of ${why}.`;
-  return` For ${best.plan.type}, ${target.label} is the strongest available match, mainly because of ${why}.`;
- }
- function addSlopeShift(label,points,ignoreDates=[]){const ordered=(points||[]).filter(p=>p.date>=todayStr&&p.date<=raceDate).slice().sort((a,b)=>a.date.localeCompare(b.date)),weeks=new Map();let prev=null;ordered.forEach(p=>{if(prev){const delta=Math.max(0,Number(p.km)-Number(prev.km));if(delta>.01){const w=weekStartIso(p.date),row=weeks.get(w)||{training:0,rehab:0,types:[]};if(p.rehab||p.driver==='rehab')row.rehab+=delta;else row.training+=delta;if(p.type&&!row.types.includes(p.type))row.types.push(p.type);weeks.set(w,row)}}prev=p});const keys=[...weeks.keys()].sort();let best=null;for(let i=1;i<keys.length;i++){const a=weeks.get(keys[i-1])||{training:0,rehab:0,types:[]},b=weeks.get(keys[i])||{training:0,rehab:0,types:[]},ta=a.training+a.rehab,tb=b.training+b.rehab,change=Math.abs(tb-ta);if(change<8)continue;if(ignoreDates.some(d=>Math.abs(dte(keys[i]).getTime()-dte(d).getTime())<10*DAY))continue;if(!best||change>best.change)best={date:keys[i],a,b,ta,tb,change}}if(!best)return;const rehabDelta=Math.abs(best.b.rehab-best.a.rehab),trainingDelta=Math.abs(best.b.training-best.a.training),driver=rehabDelta>trainingDelta?'Rehab plan':'Training plan',types=best.b.types.slice(0,3).join(','),markerPoint=ordered.filter(p=>p.date<=best.date).at(-1)||ordered.find(p=>p.date>=best.date)||null;const preferenceWhy=driver==='Training plan'?shoeAllocationPreferenceRationale(label,types,best.date):'';allocationEvents.push({date:best.date,driver,markerKm:Number(markerPoint?.km)||0,title:`Mileage allocation changes for ${label}`,text:driver==='Rehab plan'?`Expected rehabilitation walking/running exposure on this pair changes from about ${best.a.rehab.toFixed(1)} to ${best.b.rehab.toFixed(1)} km/week. This is driven by the rehab schedule, not by shoe wear.`:`Planned use of this pair changes from about ${best.ta.toFixed(1)} to ${best.tb.toFixed(1)} km/week as the training programme changes the sessions assigned to it${types?` (${types})`:''}.${preferenceWhy}`})}
- series.forEach(s=>addSlopeShift(shoeDisplayName(s.shoe),s.planned,rawEvents.map(e=>e.date)));
- replacementSeries.forEach(item=>addSlopeShift(`future ASICS ${item.event.replacement?.family||'shoe'} ${item.event.replacement?.version||''}`,item.points,[item.event.date,item.purchaseDate]));
- if(raceStrategy)addSlopeShift(raceStrategy.name,raceStrategy.points,[raceStrategy.purchaseDate]);
- allocationEvents.sort((a,b)=>String(a.date).localeCompare(String(b.date)));const uniqueEvents=[];allocationEvents.forEach(e=>{const key=`${e.date}|${e.driver}|${e.title}`;if(!uniqueEvents.some(x=>x.key===key))uniqueEvents.push({...e,key})});
- const driverColor=driver=>driver==='Rehab plan'?'#73A7FF':driver==='Training plan'?'#35E2D0':'#F4C95D';
- uniqueEvents.forEach((e,i)=>{e.markerNo=i+1;e.markerColor=driverColor(e.driver)});
- const eventMarkers=uniqueEvents.map(e=>{const xx=x(e.date),yy=y(Math.min(maxY,Math.max(0,Number(e.markerKm)||0)));return`<g class="shoeCauseMarker" style="--event-color:${e.markerColor}" aria-label="${esc(e.driver)} event ${e.markerNo}"><line x1="${xx}" y1="${Math.max(T,yy-22)}" x2="${xx}" y2="${Math.min(H-B,yy+22)}"/><circle cx="${xx}" cy="${yy}" r="13"/><text x="${xx}" y="${yy+5}" text-anchor="middle">${e.markerNo}</text></g>`}).join('');
- const allocationHtml=uniqueEvents.length?`<div class="shoeGraphEvents"><div class="shoeGraphEventsHead"><small>GRAPH EVENTS</small><b>Tap a number to explain it</b><p>Each foldout matches the same numbered marker on the graph. Blue = rehab plan, teal = training plan, amber = shoe rotation.</p></div><div class="shoeGraphEventsBody">${uniqueEvents.map(e=>`<details class="shoeGraphEventDetail driver-${e.driver.toLowerCase().replace(/[^a-z]+/g,'-')}" style="--event-color:${e.markerColor}"><summary><span class="shoeGraphEventSummary"><span class="shoeEventNumber">${e.markerNo}</span><span><b>${esc(e.driver)}</b><small>${esc(shoeChartDate(e.date))} · ${esc(e.title)}</small></span></span></summary><div class="shoeGraphEventExplanation"><p>${esc(e.text)}</p></div></details>`).join('')}</div></div>`:'';
- const raceStrategyCard=raceStrategy?`<div class="shoeRaceStrategyCard"><small>RACE-DAY TARGET</small><b>${esc(raceStrategy.name)}</b><span>~${Math.round(raceStrategy.finalKm)} km planned on ${esc(shoeChartDate(raceDate))} · target ${Math.round(raceStrategy.window?.minKm||0)}–${Math.round(raceStrategy.window?.maxKm||0)} km</span></div>`:'';
- return`<div class="shoeChartWrap shoeProgrammeChart"><div class="shoeChartRaceDate"><small>PHYSICAL-PAIR PLAN THROUGH RACE DAY</small><b>Race day · ${esc(shoeChartDate(raceDate))}</b></div>${raceStrategyCard}<div class="shoeGraphStrategy">${shoeEngineStrategyHtml()}</div><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Physical shoe pairs, purchase dates, planned replacements and race-day pair mileage through race day">${targetBand}<g class="shoeGrid">${grid}</g><line class="shoeTodayLine" x1="${todayX}" y1="${T}" x2="${todayX}" y2="${H-B}"/><line class="shoeRaceLine" x1="${raceX}" y1="${T}" x2="${raceX}" y2="${H-B}"/>${paths}${replacementProjection}${raceStrategyPath}${replacementMarkers}${eventMarkers}${xlabels}<text class="yTitle" transform="translate(32 ${H/2}) rotate(-90)" text-anchor="middle">Accumulated km</text></svg><div class="shoeChartKey"><span><i class="actual"></i>Logged mileage</span><span><i class="planned"></i>Future plan</span><span><i class="raceshoe"></i>Race-day pair</span></div><div class="shoeChartLegend">${legend}</div>${allocationHtml}</div>`
+ const actual=actualSeries.map(item=>{const pair=pairs.find(p=>p.owned&&p.shoe.id===item.shoe.id),col=pair?colorById.get(pair.id):'#35E2D0',pts=item.points.map(p=>`${x(p.date).toFixed(1)},${y(p.km).toFixed(1)}`).join(' ');return pts?`<polyline class="shoeLine shoeActualLine" style="--shoe-color:${col}" points="${pts}"/>`:''}).join('');
+ const future=pairs.map(pair=>{const col=colorById.get(pair.id),pts=pair.points.filter(p=>p.date>=todayStr).map(p=>`${x(p.date).toFixed(1)},${y(p.km).toFixed(1)}`).join(' '),cls=pair===life.racePair?'shoeRaceStrategyLine':pair.owned?'shoePlannedLine':'shoeNewPairLine';return pts?`<polyline class="shoeLine ${cls}" style="--shoe-color:${col}" points="${pts}"/>`:''}).join('');
+ const purchaseMarkers=life.purchases.map((p,n)=>{const pair=pairs.find(x=>x.id===p.pairId);if(!pair)return'';const xx=x(p.purchaseDate),yy=y(0),col=colorById.get(pair.id);return`<g class="shoePurchaseMarker" style="--shoe-color:${col}"><line x1="${xx}" y1="${T}" x2="${xx}" y2="${H-B}"/><circle cx="${xx}" cy="${yy}" r="10"/><text x="${xx}" y="${Math.max(T+18,yy-14)}" text-anchor="middle">Buy ${n+1}</text></g>`}).join('');
+ const raceX=x(raceDate),todayX=x(todayStr),targetBand=window&&life.racePair?(()=>{const yy1=y(window.maxKm),yy2=y(window.minKm),bx=Math.max(L,raceX-120);return`<g class="shoeRaceTargetBand"><rect x="${bx}" y="${yy1}" width="${raceX-bx}" height="${Math.max(5,yy2-yy1)}"/><text x="${raceX-8}" y="${Math.max(T+20,yy1-10)}" text-anchor="end">Race target · ${Math.round(window.minKm)}–${Math.round(window.maxKm)} km</text></g>`})():'';
+ const legend=pairs.map(pair=>`<span class="shoeLegendItem ${pair.owned?'':'future'} ${pair===life.racePair?'race':''}"><span class="shoeLegendSwatch ${pair.owned?'':'dotted'}" style="--shoe-color:${colorById.get(pair.id)}"></span><b>${pair.owned?'OWNED':pair===life.racePair?'FUTURE RACE':'FUTURE'}</b> ${esc(lifecyclePairLabel(pair))}</span>`).join('');
+ const purchaseCards=life.purchases.length?`<div class="freshPurchaseSummary"><small>PURCHASE PLAN</small>${life.purchases.map((p,n)=>{const pair=pairs.find(x=>x.id===p.pairId);return`<div><span><b>${n+1}. ${esc(lifecyclePairLabel(pair))}</b><small>${esc(p.role==='race'?'Race-day pair':'Training replacement')}</small></span><span><b>${fmtDate(p.purchaseDate)}</b><small>First planned use ${fmtDate(p.firstUseDate)}</small></span></div>`}).join('')}</div>`:`<div class="freshPurchaseSummary none"><small>PURCHASE PLAN</small><b>No new pair currently required before Race Day</b></div>`;
+ const rationale=`<details class="shoeGraphRationale"><summary>Why this shoe plan?</summary><div><p>The running programme is treated as fixed. The engine first uses the physical pairs you already own, respects each pair’s remaining service-life capacity, then introduces a new physical pair only when the remaining programme cannot be covered appropriately. ${life.strategy==='balanced'?'Smart rotation avoids overlapping near-term purchases unless they serve genuinely different roles.':life.strategy==='fewer'?'Keep it simple favours versatile pairs and delays new purchases until a real capacity gap exists.':life.strategy==='quality'?'Performance rotation allows specialist quality/race pairs where they materially improve workout fit.':'Protection first uses more conservative wear limits and favours cushioning/protection.'}</p><p><b>User shoe context:</b> ${esc(footMechanicsLabel())}. <b>ASICS source:</b> ${life.liveApplied?'current live portfolio successfully loaded':'local validated catalogue because live retrieval is unavailable'}.</p></div></details>`;
+ return`<div class="shoeChartWrap shoeProgrammeChart"><div class="shoeChartRaceDate"><small>PHYSICAL-PAIR PLAN THROUGH RACE DAY</small><b>Race day · ${esc(shoeChartDate(raceDate))}</b></div>${life.racePair?`<div class="shoeRaceStrategyCard"><small>RACE-DAY PAIR</small><b>${esc(lifecyclePairLabel(life.racePair))}</b><span>~${Math.round(life.racePair.km)} km projected · target ${Math.round(window?.minKm||0)}–${Math.round(window?.maxKm||0)} km</span></div>`:''}<div class="shoeGraphStrategy">${shoeEngineStrategyHtml()}</div><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Owned and future physical shoe pairs through Race Day">${targetBand}<g class="shoeGrid">${grid}</g><line class="shoeTodayLine" x1="${todayX}" y1="${T}" x2="${todayX}" y2="${H-B}"/><line class="shoeRaceLine" x1="${raceX}" y1="${T}" x2="${raceX}" y2="${H-B}"/>${actual}${future}${purchaseMarkers}<text class="xLab" x="${todayX}" y="${H-26}" text-anchor="start">Today · ${esc(shoeChartDate(todayStr))}</text><text class="xLab" x="${raceX}" y="${H-26}" text-anchor="end">Race day · ${esc(shoeChartDate(raceDate))}</text><text class="yTitle" transform="translate(32 ${H/2}) rotate(-90)" text-anchor="middle">Accumulated km</text></svg><div class="shoeChartKey"><span><i class="actual"></i>Logged mileage</span><span><i class="planned"></i>Future plan</span><span><i class="raceshoe"></i>Race-day pair</span></div><div class="shoeChartLegend">${legend}</div>${purchaseCards}${rationale}</div>`
 }
 function shoeMileageChartHtml(){return shoeProgrammeMileageChartHtml()}
 function shoeRotationCard(shoe){const f=shoeForecast(shoe),p=shoeProfileForShoe(shoe),primary=(p.roles||[])[0]||'mixed',best=(p.roles||[]).slice(0,3).map(r=>SHOE_ROLE_LABELS[r]||r).join(' · ')||'Mixed use',buy=shoeNextPurchasePlan(shoe),replacementName=buy.replacement?`ASICS ${buy.replacement.family} ${buy.replacement.version}`:'Replacement model still building',buyDate=buy.purchaseDate?shoeChartDate(buy.purchaseDate):null,handover=buy.handoverDate?shoeChartDate(buy.handoverDate):null,counter=buy.purchaseDate?(buy.daysRemaining===0?'Buy now':`${buy.daysRemaining} day${buy.daysRemaining===1?'':'s'} remaining`):'Timing needs more usage evidence',kmCounter=Number.isFinite(buy.kmUntilPurchase)?`~${Math.round(buy.kmUntilPurchase)} planned km until purchase`:'Mileage counter building';return`<article class="shoeRotationCard ${shoeStatusClass(f.status)}" data-shoe-detail="${esc(shoe.id)}" tabindex="0"><div class="shoeCardHead"><span>${todayPictogram('shoe')}</span><div><small>${esc(shoe.brand||'')}</small><h4>${esc([shoe.model,shoe.version].filter(Boolean).join(' '))}</h4>${shoe.nickname?`<p>${esc(shoe.nickname)}</p>`:''}</div><span class="shoeStatus ${shoeStatusClass(f.status)}">${esc(f.label)}</span></div><div class="shoeBestAt"><small>BEST AT</small><b>${esc(best)}</b></div><div class="shoeCardMetrics"><div><small>CURRENT MILEAGE</small><b>${Math.round(f.km)} km</b></div><div><small>PRIMARY USE</small><b>${esc(SHOE_ROLE_LABELS[primary]||primary)}</b></div><div><small>EXPECTED WINDOW</small><b>${Math.round(f.low)}–${Math.round(f.high)} km</b></div><div><small>EST. REMAINING</small><b>~${Math.round((f.remainingLow+f.remainingHigh)/2)} km</b></div></div><div class="shoePurchaseCountdown"><div class="shoePurchaseCountdownHead"><small>NEXT PAIR</small><b>${esc(replacementName)}</b></div><div class="shoePurchaseCountdownGrid"><div><small>BUY NEXT PAIR BY</small><strong>${buyDate?esc(buyDate):'—'}</strong><span>${esc(counter)}</span></div><div><small>UNTIL PURCHASE</small><strong>${esc(kmCounter)}</strong><span>${esc(buy.basis)}${buy.confidence?` · ${esc(buy.confidence)} confidence`:''}</span></div></div>${handover?`<p>Planned handover: <b>${esc(handover)}</b> at about <b>${Math.round(buy.handoverKm)} km</b>. Buying earlier gives time to receive and introduce the replacement before this pair reaches its planned replacement range.</p>`:`<p>The purchase date will appear once the programme or observed usage provides enough evidence.</p>`}</div><div class="shoeCardFooter"><span>Projected replacement period</span><b>${esc(shoeForecastDateText(f))}</b></div></article>`}
@@ -6033,11 +6144,8 @@ function shoeProposalProfile(item){return findAsicsProfile(item.brand||'ASICS',i
 function shoeProposalRoleOverlap(a,b){const pa=shoeProposalProfile(a),pb=shoeProposalProfile(b);if(!pa||!pb)return 0;const A=new Set(pa.roles||[]),B=new Set(pb.roles||[]),shared=[...A].filter(x=>B.has(x)).length,den=Math.max(1,Math.min(A.size,B.size));return shared/den}
 function optimiseShoePurchaseProposals(items){const strategy=SHOE_ENGINE_STRATEGIES[state.shoeEngineStrategy]?state.shoeEngineStrategy:'balanced';const sorted=items.slice().sort((a,b)=>String(a.recommendedPurchaseStart||'9999').localeCompare(String(b.recommendedPurchaseStart||'9999'))),kept=[];for(const item of sorted){if(item.kind==='race'){kept.push(item);continue}const t=item.recommendedPurchaseStart?dte(item.recommendedPurchaseStart).getTime():NaN;const duplicate=kept.find(prev=>{if(prev.kind==='race')return false;const pt=prev.recommendedPurchaseStart?dte(prev.recommendedPurchaseStart).getTime():NaN;if(!Number.isFinite(t)||!Number.isFinite(pt)||Math.abs(t-pt)>56*DAY)return false;const overlap=shoeProposalRoleOverlap(item,prev);const sameFamily=normalizeShoeFamily(item.model)===normalizeShoeFamily(prev.model);return sameFamily||overlap>=.67});if(duplicate&&strategy!=='quality'){duplicate.rationale=(duplicate.rationale||'')+' The rotation engine also absorbed a substantially overlapping near-term purchase to avoid buying two shoes for the same job within eight weeks.';continue}kept.push(item)}return kept}
 function shoePurchaseProposals(){
- const race=state.setup?.raceDate||iso(today()),items=[];
- plannedReplacementEvents().filter(e=>e.date>=iso(today())&&e.date<=race&&e.replacement).forEach(e=>{const purchaseDate=plannedTrainingPurchaseDate(e);items.push({id:`proposal-training-${e.shoe.id}-${e.date}`,kind:'training',brand:'ASICS',model:e.replacement.family,version:String(e.replacement.version||''),recommendedPurchaseStart:purchaseDate,recommendedPurchaseEnd:e.date,targetFirstUseDate:e.date,targetRaceDayMileage:null,intendedRole:'training',replacesShoeId:e.shoe.id,replacesName:shoeDisplayName(e.shoe),rationale:e.optimisation?`Portfolio-optimised replacement. Originally projected around ${shoeChartDate(e.optimisation.originalDate)}, but delayed because ${e.optimisation.absorbedBy} can absorb ~${Math.round(e.optimisation.divertedKm)} km of compatible mileage first.`:`Replace ${shoeDisplayName(e.shoe)} before the remaining programme pushes that physical pair beyond its expected service-life range.`})});
- const rp=raceShoePlan();if(rp?.purchaseNeeded&&rp.profile){items.push({id:'proposal-race-day',kind:'race',brand:'ASICS',model:rp.profile.family,version:String(rp.profile.version||''),recommendedPurchaseStart:rp.purchaseStart,recommendedPurchaseEnd:rp.purchaseEnd,targetFirstUseDate:rp.famSessions?.[0]?.date||null,targetRaceDayMileage:rp.projectedNew,intendedRole:'race',rationale:rp.reason||'Dedicated Race Day pair planned to reach the target familiarity window.'})}
- (state.plannedShoePurchases||[]).filter(x=>x.status==='planned').forEach(x=>{if(!items.some(i=>i.kind===x.intendedRole&&normalizeShoeFamily(i.model)===normalizeShoeFamily(x.model)&&String(i.version||'')===String(x.version||'')))items.push({...x,id:x.id,kind:x.intendedRole||'planned'})});
- return optimiseShoePurchaseProposals(items);
+ const life=freshShoeLifecyclePlan();
+ return life.purchases.map((p,n)=>{const pair=life.pairs.find(x=>x.id===p.pairId);return{id:`lifecycle-purchase-${n+1}`,kind:p.role==='race'?'race':'training',brand:'ASICS',model:pair?.profile?.family||'Running shoe',version:String(pair?.profile?.version||''),recommendedPurchaseStart:p.purchaseDate,recommendedPurchaseEnd:p.firstUseDate,targetFirstUseDate:p.firstUseDate,targetRaceDayMileage:p.role==='race'?Math.round(pair?.km||0):null,intendedRole:p.role,rationale:p.reason,source:life.liveApplied?'ASICS live portfolio + user shoe context + fixed plan':'Local ASICS catalogue + user shoe context + fixed plan'}});
 }
 function shoeFuturePurchasePlanHtml(){const items=shoePurchaseProposals();if(!items.length)return`<div class="shoeNoPurchase"><b>No additional purchases currently proposed</b><p>The current rotation can cover the remaining programme and Race Day lifecycle requirements on present evidence.</p></div>`;return`<div class="shoeFuturePurchases"><div class="shoeFuturePurchaseHead"><small>FUTURE PURCHASES</small><h4>What the rotation may need next</h4><p>Training replacements and the Race Day pair are shown separately. Adding an actual purchase recalculates this plan.</p></div>${items.map(x=>`<article class="shoeFuturePurchase"><div><small>${x.kind==='race'?'RACE-DAY PAIR':'TRAINING REPLACEMENT'}</small><b>${esc([x.brand,x.model,x.version].filter(Boolean).join(' '))}</b><span>${x.recommendedPurchaseStart?`From ${fmtDate(x.recommendedPurchaseStart)}`:'Timing building'}${x.recommendedPurchaseEnd?` · by ${fmtDate(x.recommendedPurchaseEnd)}`:''}</span></div><p>${esc(x.kind==='training'&&x.replacesName?`Planned to replace ${x.replacesName}. ${x.rationale||''}`:x.rationale||'Model-derived lifecycle recommendation.')}</p>${Number.isFinite(Number(x.targetRaceDayMileage))&&Number(x.targetRaceDayMileage)>0?`<strong>Target Race Day mileage ~${Math.round(Number(x.targetRaceDayMileage))} km</strong>`:''}</article>`).join('')}</div>`}
 function rehabDayNeedsShoe(day){if(!day)return false;const walking=String(day.walkingTarget||'').toLowerCase(),running=String(day.running||'').toLowerCase();return (walking&&!walking.includes('no walking')&&!walking.includes('not planned'))||(running&&!running.includes('no running')&&!running.includes('not planned'))}
@@ -6119,6 +6227,7 @@ const pages=[['today','Today'],['plan','Plan'],['runs','Log'],['dashboard','Prog
 document.body.addEventListener('change',e=>{if(e.target.id==='shoeEngineStrategySelect'){
  const anchorTop=document.querySelector('#shoes .shoeGraphStrategy')?.getBoundingClientRect().top||0;
  state.shoeEngineStrategy=e.target.value;
+ freshShoePlanCache={stamp:null,value:null};
  shoeAutoAssignmentStamp=null;
  shoeAutoAssignments();
  save();
@@ -6351,7 +6460,7 @@ function applySettingsDraft(candidate,days){
  state.days=days;
  if(baselineChanged){state.programStartPrediction=initialProgrammePrediction(state.setup);state.predictionHistory=[]}
  if(trainingChanged){buildPlan();state.weekView=currentWeek()}
- if(shoeContextChanged){shoeAutoAssignmentStamp=null;shoeAutoAssignments()}
+ if(shoeContextChanged){freshShoePlanCache={stamp:null,value:null};shoeAutoAssignmentStamp=null;shoeAutoAssignments()}
  save();closeDialog();renderAll();
  toast(trainingChanged?'Settings saved. Future workouts were rebuilt; Undo is available in Settings.':'Shoe context saved. Training plan unchanged; shoe recommendations were recalculated.');
 }
