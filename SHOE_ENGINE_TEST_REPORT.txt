@@ -1,5 +1,5 @@
 AI RUNNING COACH — SHOE ENGINE CORRECTIVE RELEASE TEST REPORT
-Release: v14.0.6 · build 40006
+Release: v14.0.7 · build 40007
 
 CORRECTIONS
 - Weekly 25% allocation is now solved across whole sessions as a constrained weekly optimisation, rather than a one-session donor repair.
@@ -15,7 +15,7 @@ Hard-invariant failures: 0
 Score integration: 4/4
 First-use chronology: 4/4
 Race/rotation tests: 4/4
-v14.0.6 corrective regressions: 6/6
+v14.0.7 corrective regressions: 6/6
 JavaScript syntax: PASS
 
 LIMITATION
