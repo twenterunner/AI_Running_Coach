@@ -4749,3 +4749,12 @@ body:has(#dashboard.progressPage.active),#mainContent:has(#dashboard.progressPag
 .planShoeSummary{align-items:start}
 
 /* v14.0.8 shoe-session layout is scoped in index.html to preserve the frozen global visual system. */
+
+/* v14.0.9 — root visual alignment: Shoes Level-1 cards inherit the exact locked Today main-card gradient. */
+#shoes{--today-main-card-gradient:linear-gradient(145deg,#075468 0%,#073c50 52%,#062c3d 100%);--today-main-card-border:rgba(40,214,219,.42)}
+#shoes .shoeSection,#shoes .shoeSection.level1,#shoes .shoeSection:not(.level1){
+ background:var(--today-main-card-gradient)!important;
+ border:1px solid var(--today-main-card-border)!important;
+ border-radius:18px!important;
+ box-shadow:none!important
+}

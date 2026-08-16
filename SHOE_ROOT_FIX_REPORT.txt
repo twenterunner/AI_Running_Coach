@@ -1,0 +1,51 @@
+AI Running Coach v14.0.9 · build 40009 — ROOT CAUSE FIX
+
+ROOT CAUSE 1 — missing owned shoes in daily session comparison
+The v14.0.8 UI still made an owned physical pair pass through forecast-lifecycle eligibility:
+- recorded start-date gating;
+- projected lifecycle-capacity gating;
+- lookup in the forecast lifecycle pair set.
+
+That mixed two different concepts: "physically owned/active" and "selected/serviceable in the forecast".
+An active physical pair could therefore disappear from AVAILABLE SHOES.
+
+v14.0.9 separates them:
+- state.shoes status=active is the authoritative source for owned physical availability;
+- every owned active pair is scored and displayed for every run/rehab session;
+- lifecycle projection influences the lifecycle/condition score but cannot remove the owned pair;
+- future proposed pairs remain date-gated and capacity-gated.
+
+ROOT CAUSE 2 — 25% weekly allocation could be undone later
+The 25% optimiser ran before Race Day tuning and future-purchase pruning. Those later stages could reassign
+sessions after the 25% allocation had succeeded. The validator then treated a miss only as an advisory.
+
+v14.0.9:
+- runs the weekly whole-session optimiser again after pruning/Race Day decisions;
+- makes a remaining weekly-share violation a hard validation issue.
+
+ROOT CAUSE 3 — Shoes visual system was a copied approximation
+The Shoes tab had accumulated several historical gradient declarations. The visual values were close to Today
+but maintained independently, allowing drift.
+
+v14.0.9:
+- uses the exact locked Today main-card gradient:
+  linear-gradient(145deg,#075468 0%,#073c50 52%,#062c3d 100%)
+- uses the exact locked Today border rgba(40,214,219,.42)
+- applies it to every main .shoeSection, including sections previously overridden by .shoeSection:not(.level1).
+
+CACHE ROOT CAUSE
+The deployed v14.0.8 index still loaded app.js with the old 40006 cache-buster while CSS/manifest used 40008.
+That could leave JavaScript behind the visible version label.
+
+v14.0.9 makes index, app, CSS, manifest and service worker cache keys consistently 40009.
+
+TESTS
+- SESSION SUITABILITY: 54/54, 0 hard invariant failures
+- Score integration: 4/4
+- First-use chronology: 4/4
+- Race/rotation: 4/4
+- New root-cause regression tests: 11/11
+- app.js syntax: PASS
+- service-worker.js syntax: PASS
+
+No training-plan generation, prediction, recovery, pathway, FIT/CSV or execution-scoring logic was intentionally changed.

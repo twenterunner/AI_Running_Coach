@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '14.0.8';
-  const BUILD = 40008;
+  const VERSION = '14.0.9';
+  const BUILD = 40009;
   const SCHEMA = 10400;
   const PRIMARY_STORAGE_KEY = 'arc_v10400_web';
   const MIRROR_STORAGE_KEY = 'arc_v10400_mirror';
@@ -5760,27 +5760,31 @@ function shoeSuitabilityComponents(profile,plan,options={}){return shoeSuitabili
 function authoritativeShoeRanking(plan,{rehab=false}={}){
  const life=freshShoeLifecyclePlan(),row=life.assignments.find(a=>a.planId===plan.id&&Boolean(a.rehab)===Boolean(rehab)),km=Math.max(0,Number(plan.distance)||0);
  const candidates=[],seen=new Set();
- // Owned physical pairs are runner inventory. They remain comparison candidates until actually
- // retired/unavailable; forecast non-selection must never make an owned pair disappear from the UI.
+ // UI availability has one authoritative source: the runner's physical inventory.
+ // An owned active shoe is always scored for a session. The lifecycle forecast may influence its
+ // lifecycle component and recommendation, but it may never remove that physical pair from comparison.
  for(const shoe of (state.shoes||[]).filter(sh=>sh.status!=='retired')){
   const id=`owned:${shoe.id}`;if(seen.has(id))continue;seen.add(id);
-  const pair=life.pairs.find(p=>p.id===id)||{id,owned:true,shoe,profile:shoeProfileForShoe(shoe),currentKm:shoeMileage(shoe),km:shoeMileage(shoe),availableDate:shoePairStartDate(shoe)||life.now,retireKm:lifecycleRetireKmForProfile(shoeProfileForShoe(shoe),shoe),assignments:[],role:'owned'};
-  const availableOn=shoePairStartDate(shoe)||pair.availableDate||'0000-00-00';if(availableOn>plan.date)continue;
-  const before=lifecyclePairKmBeforeDate(pair,plan.date);
-  if(before+km>Number(pair.retireKm)+1e-6)continue;
-  const assessment=shoeSuitabilityAssessment(pair.profile,plan,{rehab,shoe,projectedKm:before+km,retireKm:pair.retireKm});
-  candidates.push({pair,shoe,score:assessment.score,selected:row?.pairId===pair.id,components:assessment.components})
+  const profile=shoeProfileForShoe(shoe),lifePair=life.pairs.find(p=>p.id===id),currentKm=shoeMileage(shoe);
+  const pair=lifePair||{id,owned:true,shoe,profile,currentKm,km:currentKm,availableDate:life.now,retireKm:lifecycleRetireKmForProfile(profile,shoe),assignments:[],role:'owned'};
+  // For scoring, projected wear uses the forecast ledger when present. It is deliberately not an
+  // eligibility filter: an active owned pair must remain visible so the runner can see its score.
+  const before=lifePair?lifecyclePairKmBeforeDate(lifePair,plan.date):currentKm;
+  const retireKm=Number(pair.retireKm)||lifecycleRetireKmForProfile(profile,shoe);
+  const assessment=shoeSuitabilityAssessment(profile,plan,{rehab,shoe,projectedKm:before+km,retireKm});
+  candidates.push({pair,shoe,score:assessment.score,selected:row?.pairId===id,components:assessment.components,owned:true})
  }
- // Future physical pairs become comparable only after their authoritative purchase / first-use date.
+ // A future physical pair is not "available" until the lifecycle ledger says it has actually entered.
  for(const pair of life.pairs.filter(p=>!p.owned)){
   if(seen.has(pair.id))continue;seen.add(pair.id);
   if(pair.role==='race'&&!/Race/.test(String(plan.type||'')))continue;
   const availableOn=pair.purchaseDate||pair.availableDate||'9999-12-31';if(availableOn>plan.date)continue;
-  const before=lifecyclePairKmBeforeDate(pair,plan.date);if(before+km>Number(pair.retireKm)+1e-6)continue;
+  const before=lifecyclePairKmBeforeDate(pair,plan.date);
+  if(before+km>Number(pair.retireKm)+1e-6)continue;
   const shoe=lifecyclePairAsDisplayShoe(pair),assessment=shoeSuitabilityAssessment(pair.profile,plan,{rehab,shoe:null,projectedKm:before+km,retireKm:pair.retireKm});
-  candidates.push({pair,shoe,score:assessment.score,selected:row?.pairId===pair.id,components:assessment.components})
+  candidates.push({pair,shoe,score:assessment.score,selected:row?.pairId===pair.id,components:assessment.components,owned:false})
  }
- candidates.sort((a,b)=>b.score-a.score||Number(b.selected)-Number(a.selected));
+ candidates.sort((a,b)=>Number(b.selected)-Number(a.selected)||b.score-a.score);
  return{life,row,ranked:candidates}
 }
 function shoeAvailableScoresInlineHtml(plan,{rehab=false}={}){
@@ -6477,7 +6481,8 @@ function lifecycleValidatePlan(result){
  // a worse shoe. A validator cannot prove preventability after the fact, so it is advisory here.
  const retire=result.pairs.filter(p=>p.projectedRetireDate&&p.role!=='race').map(p=>({id:p.id,date:p.projectedRetireDate})).sort((a,b)=>a.date.localeCompare(b.date));
  for(let i=1;i<retire.length;i++){const gap=(dte(retire[i].date)-dte(retire[i-1].date))/DAY;if(gap<56)adv('principal-retirements-within-eight-weeks',{pairIds:[retire[i-1].id,retire[i].id],gapDays:gap})}
- advisories.push(...lifecycleValidateWeeklyMinimumShare(result));
+ const weeklyShareIssues=lifecycleValidateWeeklyMinimumShare(result);
+ weeklyShareIssues.forEach(x=>add('available-shoe-below-25pct-weekly-mileage',x));
  result.validationAdvisories=advisories;
  return issues
 }
@@ -6610,7 +6615,7 @@ function freshShoeLifecyclePlan(){
  const fixed=(state.plan||[]).filter(p=>p.type!=='Rest'&&p.date>=now&&p.date<=raceDate).slice().sort((a,b)=>a.date.localeCompare(b.date));
  const injury=(state.injuries||[]).find(x=>x.id===state.activeInjuryPlanId);
  const rehabStamp=injury?JSON.stringify({id:injury.id,plannedRehabShoes:injury.plannedRehabShoes||{},checks:(injury.checkIns||[]).map(c=>[c.date,c.walkMinutes,c.runMinutes,c.rehabShoeId,c.pain,c.hop,c.bridge]),updatedAt:injury.updatedAt||injury.lastUpdated||''}):'';
- const stamp=['score-v7-physical-pair-min-purchase',state.storageRevision||0,runnerFootMechanics(),raceDate,OFFLINE_ASICS_CATALOGUE_VERSION,fixed.map(p=>`${p.id}:${p.date}:${p.type}:${p.distance}:${p.surface||''}`).join(';'),(state.shoes||[]).map(sh=>`${sh.id}:${sh.status}:${shoeMileage(sh).toFixed(2)}:${sh.condition||sh.conditionFeedback||''}`).join(';'),[...manual].join(';'),rehabStamp].join('|');
+ const stamp=['score-v8-owned-inventory-rootfix',state.storageRevision||0,runnerFootMechanics(),raceDate,OFFLINE_ASICS_CATALOGUE_VERSION,fixed.map(p=>`${p.id}:${p.date}:${p.type}:${p.distance}:${p.surface||''}`).join(';'),(state.shoes||[]).map(sh=>`${sh.id}:${sh.status}:${shoeMileage(sh).toFixed(2)}:${sh.condition||sh.conditionFeedback||''}`).join(';'),[...manual].join(';'),rehabStamp].join('|');
  if(freshShoePlanCache.stamp===stamp)return freshShoePlanCache.value;
 
  const pairs=(state.shoes||[]).filter(sh=>sh.status!=='retired').map(sh=>{const profile=shoeProfileForShoe(sh),km=shoeMileage(sh);return{id:`owned:${sh.id}`,owned:true,shoe:sh,profile,currentKm:km,km,availableDate:now,purchaseDate:shoePairStartDate(sh),retireKm:lifecycleRetireKmForProfile(profile,sh),lifeKm:lifecycleRetireKmForProfile(profile,sh),assignments:[],points:[{date:now,km}],role:'owned'}});
@@ -6687,6 +6692,9 @@ function freshShoeLifecyclePlan(){
  // Remove late/low-use non-race purchases that the remaining physical rotation can cover.
  // Consolidate repeatedly because removing one redundant future pair can make another redundant.
  for(let prunePass=0;prunePass<4;prunePass++){const before=pairs.length;lifecyclePruneLateRedundantPurchases(ctx,fixed,assignments,manual,raceChoice?.pair||null,raceDate);if(pairs.length===before)break}
+ // Pruning and Race Day tuning can reassign ordinary sessions. Re-run the weekly optimiser last so
+ // the 25% rule is a final allocation invariant rather than an intermediate suggestion.
+ lifecycleEnforceWeeklyMinimumShare(ctx,fixed,assignments,manual);
  lifecycleSynchronizeFuturePairTiming(pairs,purchases);
  let finalPairs=pairs.filter(p=>p.owned||p.assignments.length||p===raceChoice?.pair);
  let finalPurchases=purchases.filter(p=>finalPairs.some(x=>x.id===p.pairId)).sort((a,b)=>a.purchaseDate.localeCompare(b.purchaseDate));
