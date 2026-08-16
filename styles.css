@@ -4626,3 +4626,11 @@ body:has(#dashboard.progressPage.active),#mainContent:has(#dashboard.progressPag
 .shoeRaceStrategyCard.invalid{border-color:rgba(255,184,94,.4)!important}
 .todayRehabCard.completed .rehabPrioritySummary span,.todayRehabCard.completed .runnerStatus.good{color:#91e8b4}
 .todayRehabCard.completed .runnerCallout.completed{border-color:rgba(103,224,166,.24)}
+
+/* v13.7.57 */
+#injury .injuryRunnerRail.ahead i,#injury .injuryRunnerRail.met i{background:var(--green)}
+#injury .injuryRunnerRail.on i{background:var(--teal)}
+#injury .injuryRunnerRail.behind i,#injury .injuryRunnerRail.notMet i{background:var(--red)}
+#injury .injuryRunnerRail.unknown i{background:#718a95}
+#shoes .shoeSlopeEvents details{border-left:4px solid var(--event-color,#58e4df)!important}
+#shoes .shoeSlopeEvents details[open]{box-shadow:inset 3px 0 0 color-mix(in srgb,var(--event-color,#58e4df) 72%,transparent)}
