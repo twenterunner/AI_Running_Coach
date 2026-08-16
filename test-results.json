@@ -1,14 +1,14 @@
 {
-  "release": "14.0.3",
-  "build": 40003,
-  "coreScenarioSuite": {
+  "release": "14.0.4",
+  "build": 40004,
+  "core": {
     "suite": "SESSION SUITABILITY",
     "scenarios": 54,
     "passed": 54,
     "hardInvariantFailures": 0,
     "failures": []
   },
-  "scoreIntegration": {
+  "score": {
     "passed": 4,
     "failed": 0,
     "hillsSuperblast": 90,
@@ -19,52 +19,26 @@
     },
     "racePair": "SUPERBLAST 3"
   },
-  "futurePairFirstUseRegression": {
+  "firstUse": {
     "passed": 4,
     "failed": 0,
     "authoritativeFirstUse": "2026-08-18"
   },
-  "releaseChecks": [
-    {
-      "name": "syntax:app.js",
-      "status": "PASS"
-    },
-    {
-      "name": "syntax:service-worker.js",
-      "status": "PASS"
-    },
-    {
-      "name": "syntax:shoe-engine-tests.js",
-      "status": "PASS"
-    },
-    {
-      "name": "syntax:shoe-score-integration-tests.js",
-      "status": "PASS"
-    },
-    {
-      "name": "syntax:shoe-first-use-regression-tests.js",
-      "status": "PASS"
-    },
-    {
-      "name": "ledger-derived future first use",
-      "status": "PASS"
-    },
-    {
-      "name": "positive mileage defines first use",
-      "status": "PASS"
-    },
-    {
-      "name": "session visible all-shoe scores",
-      "status": "PASS"
-    },
-    {
-      "name": "Plan session summary includes comparison",
-      "status": "PASS"
-    },
-    {
-      "name": "hard error not exposed for stale first-use metadata",
-      "status": "PASS"
-    }
-  ],
-  "hardInvariantFailures": 0
+  "rotationRace": {
+    "passed": 4,
+    "failed": 0
+  },
+  "checks": {
+    "syntax app.js": true,
+    "syntax service-worker.js": true,
+    "syntax shoe-engine-tests.js": true,
+    "syntax shoe-score-integration-tests.js": true,
+    "syntax shoe-first-use-regression-tests.js": true,
+    "syntax shoe-rotation-race-tests.js": true,
+    "25% weekly allocator present": true,
+    "25% validator present": true,
+    "race familiarisation prioritises final 42 days": true,
+    "dedicated race shoe requires close exposure": true,
+    "race remains under 250km": true
+  }
 }

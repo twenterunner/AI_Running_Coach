@@ -1,34 +1,19 @@
 AI RUNNING COACH — SHOE ENGINE CORRECTIVE RELEASE TEST REPORT
-Release: v14.0.3 · build 40003
-Engine: SESSION SUITABILITY
+Release: v14.0.4 · build 40004
 
-CORRECTIONS IN THIS RELEASE
+NEW RULES
+- Every available ordinary training shoe must receive at least 25% of that week's running mileage whenever this is feasible with indivisible planned sessions, lifecycle capacity and acceptable session fit.
+- Manual shoe overrides remain authoritative.
+- Dedicated Race Day shoes are excluded from the ordinary 25% floor; they have a separate race-familiarisation requirement.
+- A future dedicated Race Day shoe must have at least one positive-mileage exposure inside the final 42 days before the race, while retaining the existing minimum familiarisation and <250 km Race Day ceiling.
+- Race familiarisation candidates are now selected from 42/56/70-day horizons and prioritise the final 42 days, race-relevant sessions and later dates.
 
-1. FUTURE-PAIR FIRST-USE CHRONOLOGY
-The assignment ledger is now authoritative for future-pair timing.
-For every future physical pair, purchase date, availability date and first-use date are recalculated from
-the earliest positive-mileage assignment after all reallocations. Zero-distance placeholders do not establish first use.
-The validator independently reconciles this timing before checking chronology, so stale optimiser metadata cannot
-produce repeated false future-pair-mileage-before-first-use failures.
-
-2. ALL AVAILABLE SHOE SCORES AT EACH SESSION
-Each individual training session now shows AVAILABLE SHOE SCORES directly beneath the proposed shoe.
-Every physical pair that is serviceable, available on that date and has enough lifecycle capacity is listed with its
-0–100 suitability score. The selected pair is marked with a check.
-The existing Compare shoe scores foldout remains for the detailed weighted component breakdown.
-Today and rehabilitation surfaces use the same authoritative ranking.
+WHY THE PREVIOUS GRAPH WAS WRONG
+The previous optimiser only tried to accumulate enough familiarisation mileage somewhere in a broad 70/84/112-day window. It did not require an exposure close to Race Day. That allowed a race shoe to accumulate its minimum mileage early and then disappear from the graph until the race. This release makes that invalid.
 
 TEST RESULTS
-Core scenario suite: 54/54 passed
-Hard-invariant failures: 0
+Core shoe scenarios: 54/54 passed; hard invariant failures: 0
 Score integration: 4/4 passed
-Future-pair first-use regression: 4/4 passed
-JavaScript syntax: PASS
-
-TARGETED FIRST-USE REGRESSION
-A deliberately stale future pair was initialized with metadata saying first use = 30 Aug while its ledger contained
-positive assignments on 18 Aug, 25 Aug and 30 Aug. The engine reconciled purchase/availability/first use to 18 Aug,
-and validation found zero positive-mileage assignments before first use.
-
-RELEASE STATUS
-PASS — all automated release checks passed.
+First-use chronology: 4/4 passed
+Weekly rotation/Race proximity: 4/4 passed
+Static release checks: 11/11 passed
