@@ -1,7 +1,7 @@
 {
-  "release": "14.0.2",
-  "build": 40002,
-  "scenarioSuite": {
+  "release": "14.0.3",
+  "build": 40003,
+  "coreScenarioSuite": {
     "suite": "SESSION SUITABILITY",
     "scenarios": 54,
     "passed": 54,
@@ -19,56 +19,52 @@
     },
     "racePair": "SUPERBLAST 3"
   },
+  "futurePairFirstUseRegression": {
+    "passed": 4,
+    "failed": 0,
+    "authoritativeFirstUse": "2026-08-18"
+  },
   "releaseChecks": [
     {
-      "name": "JavaScript syntax",
+      "name": "syntax:app.js",
       "status": "PASS"
     },
     {
-      "name": "54-scenario hard-invariant suite",
+      "name": "syntax:service-worker.js",
       "status": "PASS"
     },
     {
-      "name": "Score reconciliation integration tests",
+      "name": "syntax:shoe-engine-tests.js",
       "status": "PASS"
     },
     {
-      "name": "Current-like 46 km / 298 km state produces feasible Race Day pair",
+      "name": "syntax:shoe-score-integration-tests.js",
       "status": "PASS"
     },
     {
-      "name": "No generic blocked/unavailable lifecycle release state",
+      "name": "syntax:shoe-first-use-regression-tests.js",
       "status": "PASS"
     },
     {
-      "name": "Capacity overflow repair present",
+      "name": "ledger-derived future first use",
       "status": "PASS"
     },
     {
-      "name": "Deterministic fallback lifecycle present",
+      "name": "positive mileage defines first use",
       "status": "PASS"
     },
     {
-      "name": "One authoritative score object",
+      "name": "session visible all-shoe scores",
       "status": "PASS"
     },
     {
-      "name": "Visible score weights and formula",
+      "name": "Plan session summary includes comparison",
       "status": "PASS"
     },
     {
-      "name": "Today/Plan/Rehab use authoritative score",
-      "status": "PASS"
-    },
-    {
-      "name": "Value-add footwear-plan summary",
-      "status": "PASS"
-    },
-    {
-      "name": "Legacy mode-dependent fit branches removed",
+      "name": "hard error not exposed for stale first-use metadata",
       "status": "PASS"
     }
   ],
-  "totalAutomatedTests": 58,
   "hardInvariantFailures": 0
 }

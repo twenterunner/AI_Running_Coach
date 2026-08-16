@@ -1,94 +1,34 @@
 AI RUNNING COACH — SHOE ENGINE CORRECTIVE RELEASE TEST REPORT
-Release: v14.0.2 · build 40002
+Release: v14.0.3 · build 40003
 Engine: SESSION SUITABILITY
 
-WHAT WAS FIXED
+CORRECTIONS IN THIS RELEASE
 
-1. FEASIBLE LIFECYCLE REPAIR
-- The previous repair pass could rebuild graph points while leaving an over-capacity assignment in the ledger.
-- Capacity overflow is now repaired chronologically.
-- If a session would push a pair beyond its retirement target, that exact session is moved to the highest-scoring serviceable pair.
-- If no existing pair has enough remaining capacity, a just-in-time successor is created and used immediately.
-- A deterministic fallback lifecycle is built if the first lifecycle still fails hard validation.
-- The generic "Shoe lifecycle unavailable" / "Shoe plan temporarily blocked" release state has been removed.
-- Truly contradictory constraints can still be reported explicitly rather than silently displaying an invalid graph.
+1. FUTURE-PAIR FIRST-USE CHRONOLOGY
+The assignment ledger is now authoritative for future-pair timing.
+For every future physical pair, purchase date, availability date and first-use date are recalculated from
+the earliest positive-mileage assignment after all reallocations. Zero-distance placeholders do not establish first use.
+The validator independently reconciles this timing before checking chronology, so stale optimiser metadata cannot
+produce repeated false future-pair-mileage-before-first-use failures.
 
-2. ONE SCORE, ONE EXPLANATION
-- Headline Shoe Suitability and the visible component scores now come from the SAME shoeSuitabilityAssessment() object.
-- Overall score is the weighted average of the displayed components.
-- No hidden additive bonus is applied after the visible component calculation.
-- A score of 100/100 is forbidden if any positively weighted visible component is below 100.
-- Session-specific component weights are shown to the runner.
+2. ALL AVAILABLE SHOE SCORES AT EACH SESSION
+Each individual training session now shows AVAILABLE SHOE SCORES directly beneath the proposed shoe.
+Every physical pair that is serviceable, available on that date and has enough lifecycle capacity is listed with its
+0–100 suitability score. The selected pair is marked with a check.
+The existing Compare shoe scores foldout remains for the detailed weighted component breakdown.
+Today and rehabilitation surfaces use the same authoritative ranking.
 
-Visible components:
-- Workout match
-- Distance match
-- Cushioning / protection
-- Responsiveness / efficiency
-- Stability / support
-- Surface / grip
-- Foot-mechanics context
-- Rehabilitation context when relevant
-- Lifecycle / condition
+TEST RESULTS
+Core scenario suite: 54/54 passed
+Hard-invariant failures: 0
+Score integration: 4/4 passed
+Future-pair first-use regression: 4/4 passed
+JavaScript syntax: PASS
 
-3. FOOTWEAR PLAN VALUE
-The Shoes section now shows:
-- total remaining training/rehab sessions covered;
-- number of physical pairs used;
-- planned km and number of sessions per pair;
-- dominant session roles per pair;
-- next purchase requirement and date, or "None required";
-- Race Day pair and projected mileage;
-- the next recommendation and score gap versus the next-best shoe;
-- a full chronological session-by-session footwear plan;
-- every serviceable physical pair's score for every training/rehab session.
+TARGETED FIRST-USE REGRESSION
+A deliberately stale future pair was initialized with metadata saying first use = 30 Aug while its ledger contained
+positive assignments on 18 Aug, 25 Aug and 30 Aug. The engine reconciled purchase/availability/first use to 18 Aug,
+and validation found zero positive-mileage assignments before first use.
 
-4. CROSS-APP SCORE VISIBILITY
-- Today shows the recommended physical pair and its score.
-- Plan shows the recommended physical pair and its score.
-- Rehab shows the proposed physical pair and its score.
-- The same comparison foldout is used across these surfaces.
-
-AUTOMATED TEST RESULTS
-Core shoe scenarios: 54/54 passed
-Core hard-invariant failures: 0
-Score/lifecycle integration tests: 4/4 passed
-Total automated checks in these two suites: 58
-
-CURRENT-LIKE REGRESSION
-Starting mileage:
-- SUPERBLAST 3: 46 km
-- NOVABLAST 4: 298 km
-
-Mixed three-week programme + Race Day:
-- complete session assignment achieved;
-- final SUPERBLAST 3 mileage in the synthetic case: 166.3 km;
-- NOVABLAST 4 remains at 298 km where it is not the best session match;
-- Race Day pair: SUPERBLAST 3;
-- Race Day pair remains below 250 km.
-
-SCORE RECONCILIATION EXAMPLE
-Synthetic 8.1 km Hills session:
-- SUPERBLAST 3: 90/100
-- NOVABLAST 4: 79/100
-The headline score exactly equals the weighted average of the displayed components.
-
-RELEASE CHECKS
-- PASS: JavaScript syntax
-- PASS: 54-scenario hard-invariant suite
-- PASS: Score reconciliation integration tests
-- PASS: Current-like 46 km / 298 km state produces feasible Race Day pair
-- PASS: No generic blocked/unavailable lifecycle release state
-- PASS: Capacity overflow repair present
-- PASS: Deterministic fallback lifecycle present
-- PASS: One authoritative score object
-- PASS: Visible score weights and formula
-- PASS: Today/Plan/Rehab use authoritative score
-- PASS: Value-add footwear-plan summary
-- PASS: Legacy mode-dependent fit branches removed
-
-LIMITATION
-The user's actual GitHub Pages localStorage cannot be loaded inside this execution environment.
-The unchanged storage schema is retained, and the new lifecycle is recalculated from the user's existing
-stored physical-pair data on load. The current-like regression was added specifically to reproduce the
-46 km / 298 km type of state that exposed the prior failure.
+RELEASE STATUS
+PASS — all automated release checks passed.

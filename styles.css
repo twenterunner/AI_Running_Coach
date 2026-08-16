@@ -4686,7 +4686,7 @@ body:has(#dashboard.progressPage.active),#mainContent:has(#dashboard.progressPag
 .shoeApproachFixed{display:grid;gap:8px}
 .shoeApproachFixed>strong{font-size:1.2rem;line-height:1.2}
 
-/* v14.0.2 — runner-facing Session Suitability score inspection */
+/* v14.0.3 — runner-facing Session Suitability score inspection */
 .shoeSuitabilityDetails{margin-top:10px;border:1px solid rgba(98,226,217,.22);border-radius:14px;background:rgba(3,28,36,.32);overflow:hidden}
 .shoeSuitabilityDetails>summary{cursor:pointer;list-style:none;padding:11px 13px;font-weight:800;color:#8ff5ec;display:flex;align-items:center;justify-content:space-between}
 .shoeSuitabilityDetails>summary::-webkit-details-marker{display:none}
@@ -4715,7 +4715,7 @@ body:has(#dashboard.progressPage.active),#mainContent:has(#dashboard.progressPag
 .shoeSessionMeta span,.shoeSessionPick span{color:#b7c9cd;font-weight:750}
 .shoeSessionPick{margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,.07)}
 
-/* v14.0.2 footwear-plan summary */
+/* v14.0.3 footwear-plan summary */
 .shoeSessionOverview{display:grid;gap:12px}
 .shoeSessionOverviewGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
 .shoeSessionOverviewGrid>div{background:rgba(4,27,36,.42);border:1px solid rgba(98,226,217,.16);border-radius:14px;padding:12px;display:flex;flex-direction:column;gap:3px}
@@ -4738,3 +4738,12 @@ body:has(#dashboard.progressPage.active),#mainContent:has(#dashboard.progressPag
 .shoeSuitabilityPair>summary span{min-width:0;overflow-wrap:anywhere}
 .shoeSuitabilityPair>summary b{max-width:none!important;white-space:nowrap!important}
 @media(max-width:380px){.shoeSuitabilityPair>summary{grid-template-columns:1fr!important}.shoeSuitabilityPair>summary b{text-align:left!important}}
+
+/* v14.0.3 — session-level visible comparison */
+.shoeAvailableScores{grid-column:1/-1;display:grid;gap:5px;margin-top:8px;padding:9px 10px;background:rgba(5,25,33,.38);border:1px solid rgba(98,226,217,.13);border-radius:11px}
+.shoeAvailableScores>small{font-size:.66rem;font-weight:850;letter-spacing:.08em;color:#70dcd5}
+.shoeAvailableScores>span{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:.78rem}
+.shoeAvailableScores>span b{font-weight:650;color:#c8d9dd;overflow-wrap:anywhere}
+.shoeAvailableScores>span strong{white-space:nowrap;color:#dce9eb}
+.shoeAvailableScores>span.selected b,.shoeAvailableScores>span.selected strong{color:#7cebe3}
+.planShoeSummary{align-items:start}
