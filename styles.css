@@ -4552,3 +4552,29 @@ body:has(#dashboard.progressPage.active),#mainContent:has(#dashboard.progressPag
 /* v13.7.44 */
 #shoes .asicsLiveStatus button:disabled{opacity:.65;cursor:wait}
 #shoes .asicsLiveStatus span{overflow-wrap:anywhere}
+
+/* v13.7.45 — live ASICS confirmation + graph-adjacent strategy */
+#shoes .asicsLiveStatus.success{
+  border-color:rgba(72,220,139,.42)!important;
+  background:rgba(10,71,62,.34)!important;
+}
+#shoes .asicsLiveStatus.success b{
+  color:#8ff0b8!important;
+}
+#shoes .asicsPlanApplied{
+  display:block!important;
+  margin-top:3px!important;
+  font-weight:700!important;
+  color:#c7e9e5!important;
+}
+#shoes .shoeProgrammeChart>.shoeGraphStrategy{
+  margin:14px 0 8px!important;
+  padding:0!important;
+}
+#shoes .shoeProgrammeChart>.shoeGraphStrategy + svg{
+  margin-top:0!important;
+}
+#shoes .shoeApproachControl{
+  background:rgba(3,31,43,.46)!important;
+  border:1px solid rgba(80,210,219,.18)!important;
+}

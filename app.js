@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '13.7.44';
-  const BUILD = 30744;
+  const VERSION = '13.7.45';
+  const BUILD = 30745;
   const SCHEMA = 10400;
   const PRIMARY_STORAGE_KEY = 'arc_v10400_web';
   const MIRROR_STORAGE_KEY = 'arc_v10400_mirror';
@@ -5584,16 +5584,15 @@ function shoeWeeklyActual(shoeId){const km=shoeRecentKm(shoeId,28);return km>0?k
 function shoeConditionModifier(shoe){const c=shoe.condition||shoe.conditionFeedback||'Feels normal';return c==='Feels normal'?0:c==='Slightly worn'?-0.05:c==='Noticeably flat'?-0.16:c==='Grip deteriorating'?-0.12:c==='Upper damaged'?-0.14:c==='Causing discomfort'?-0.20:0}
 
 const ASICS_LIVE_CATEGORY_URLS=[
- 'https://www.asics.com/nl/en-nl/novablast/c/as88000005/',
- 'https://www.asics.com/nl/en-nl/superblast/c/as93800000/',
- 'https://www.asics.com/nl/en-nl/gel-nimbus/c/as60300000/',
- 'https://www.asics.com/nl/en-nl/gel-cumulus/c/as60700000/',
- 'https://www.asics.com/nl/en-nl/metaspeed/c/as93010000/',
- 'https://www.asics.com/nl/en-nl/mens-fast-running-shoes/c/as10201030/'
+ 'https://www.asics.com/nl/en-nl/running-shoes/c/as270000000/',
+ 'https://www.asics.com/nl/en-nl/unisex-running-shoes/c/AS220101000/',
+ 'https://www.asics.com/nl/en-nl/metaspeed/c/as93010000/'
 ];
 const ASICS_READER_PREFIX='https://r.jina.ai/';
 const ASICS_ALLORIGINS_RAW='https://api.allorigins.win/raw?url=';
 const ASICS_ALLORIGINS_GET='https://api.allorigins.win/get?url=';
+const ASICS_CORSPROXY='https://corsproxy.io/?url=';
+const ASICS_CODETABS='https://api.codetabs.com/v1/proxy?quest=';
 let asicsLiveRefreshInFlight=null;
 let asicsLiveLastTransport='';
 function asicsLiveCatalog(){return Array.isArray(state.asicsLiveCatalog)?state.asicsLiveCatalog:[]}
@@ -5610,7 +5609,7 @@ function parseAsicsCategoryProducts(text,sourceUrl=''){
  const add=(rawName,rawUrl=null)=>{
   const name=normaliseName(rawName);
   if(!name||seen.has(name.toUpperCase()))return;
-  if(!/^(?:NOVABLAST|SUPERBLAST|GEL-NIMBUS|GEL-CUMULUS|MAGIC SPEED|METASPEED|MEGABLAST|SONICBLAST|NOOSA TRI|GEL-PULSE|EVORIDE)\b/i.test(name))return;
+  if(!/^(?:NOVABLAST|SUPERBLAST|GEL-NIMBUS|GEL-CUMULUS|MAGIC SPEED|METASPEED|MEGABLAST|SONICBLAST|NOOSA TRI|GEL-PULSE|EVORIDE|GEL-KAYANO|GT-2000|GT-1000)\b/i.test(name))return;
   const url=rawUrl?(String(rawUrl).startsWith('http')?String(rawUrl):`https://www.asics.com${String(rawUrl).startsWith('/')?'':'/'}${rawUrl}`):null;
   seen.add(name.toUpperCase());out.push({name,url,sourceUrl,availabilitySource:'ASICS collection page'});
  };
@@ -5622,7 +5621,7 @@ function parseAsicsCategoryProducts(text,sourceUrl=''){
 
  // ASICS catalogue/Reader views often expose product names but suppress the link target.
  // Treat those names as live availability evidence rather than rejecting the page.
- const productLine=/(NOVABLAST\s+\d+(?:\s+PLATINUM)?|SUPERBLAST\s+\d+(?:\s+EKIDEN)?|GEL-NIMBUS\s+\d+(?:\s+(?:PLATINUM|ATC|TOKYO|PARIS|TR|IRN|WIDE|SUNNY SIZZLE))?|GEL-CUMULUS\s+\d+(?:\s+\w+)?|MAGIC SPEED\s+\d+|METASPEED\s+(?:SKY|EDGE)(?:\s+TOKYO)?|METASPEED\s+RAY|MEGABLAST(?:\s+\d+)?|SONICBLAST(?:\s+\d+)?|NOOSA TRI\s+\d+|GEL-PULSE\s+\d+|EVORIDE\s+\d+)/gi;
+ const productLine=/(NOVABLAST\s+\d+(?:\s+PLATINUM)?|SUPERBLAST\s+\d+(?:\s+EKIDEN)?|GEL-NIMBUS\s+\d+(?:\s+(?:PLATINUM|ATC|TOKYO|PARIS|TR|IRN|WIDE|SUNNY SIZZLE))?|GEL-CUMULUS\s+\d+(?:\s+\w+)?|MAGIC SPEED\s+\d+|METASPEED\s+(?:SKY|EDGE)(?:\s+TOKYO)?|METASPEED\s+RAY|MEGABLAST(?:\s+\d+)?|SONICBLAST(?:\s+\d+)?|NOOSA TRI\s+\d+|GEL-PULSE\s+\d+|EVORIDE\s+\d+|GEL-KAYANO\s+\d+(?:\s+PLATINUM)?|GT-2000\s+\d+(?:\s+ATC)?|GT-1000\s+\d+)/gi;
  while((m=productLine.exec(src)))add(m[1],null);
  return out
 }
@@ -5642,61 +5641,120 @@ function fetchAsicsViaJsonp(url,timeoutMs=12000){
 }
 async function fetchAsicsOfficialText(url){
  const attempts=[];
- const tryFetch=async(label,requestUrl,options={})=>{
-  try{const r=await fetch(requestUrl,{cache:'no-store',...options});if(!r.ok)throw Error(`HTTP ${r.status}`);const text=await r.text();if(!text||text.length<100)throw Error('empty response');asicsLiveLastTransport=label;return text}
-  catch(err){attempts.push(`${label}: ${String(err?.message||err)}`);return null}
+ const tryFetch=async(label,requestUrl,options={},timeoutMs=6500)=>{
+  const ctrl=new AbortController(),timer=setTimeout(()=>ctrl.abort(),timeoutMs);
+  try{
+   const r=await fetch(requestUrl,{cache:'no-store',signal:ctrl.signal,...options});
+   if(!r.ok)throw Error(`HTTP ${r.status}`);
+   const text=await r.text();
+   if(!text||text.length<120)throw Error('empty response');
+   asicsLiveLastTransport=label;
+   return text;
+  }catch(err){
+   attempts.push(`${label}: ${err?.name==='AbortError'?'timeout':String(err?.message||err)}`);
+   return null;
+  }finally{clearTimeout(timer)}
  };
+ const encoded=encodeURIComponent(url);
  let text=await tryFetch('Jina Reader',`${ASICS_READER_PREFIX}${url}`,{headers:{Accept:'text/plain'}});
  if(text)return text;
- text=await tryFetch('AllOrigins raw',`${ASICS_ALLORIGINS_RAW}${encodeURIComponent(url)}`);
+ text=await tryFetch('AllOrigins raw',`${ASICS_ALLORIGINS_RAW}${encoded}`);
  if(text)return text;
- text=await tryFetch('Direct ASICS',url,{mode:'cors'});
+ text=await tryFetch('CORSProxy',`${ASICS_CORSPROXY}${encoded}`);
  if(text)return text;
- try{const jsonp=await fetchAsicsViaJsonp(url);asicsLiveLastTransport='AllOrigins JSONP';return jsonp}
- catch(err){attempts.push(`AllOrigins JSONP: ${String(err?.message||err)}`)}
- throw Error(`No live transport succeeded. ${attempts.join(' · ')}`);
+ text=await tryFetch('CodeTabs',`${ASICS_CODETABS}${encoded}`);
+ if(text)return text;
+ text=await tryFetch('Direct ASICS',url,{mode:'cors'},5000);
+ if(text)return text;
+ try{
+  text=await fetchAsicsViaJsonp(url,6500);
+  if(text){asicsLiveLastTransport='AllOrigins JSONP';return text}
+ }catch(err){attempts.push(`AllOrigins JSONP: ${String(err?.message||err)}`)}
+ throw Error(`Live catalogue unavailable. ${attempts.join(' · ')}`);
+}
+
+function asicsLiveCatalogIsActive(){
+ const meta=asicsLiveMeta(),catalog=asicsLiveCatalog();
+ return Boolean(catalog.length&&meta.lastChecked&&!meta.error);
+}
+function footMechanicsLabel(){
+ return({neutral:'Neutral',pronation:'Pronates / overpronates',supination:'Supinates / underpronates',unknown:'Not sure'})[runnerFootMechanics()]||'Not sure';
+}
+function asicsLivePlanContextText(){
+ const rd=Number(state.setup?.raceDistance)||0;
+ return `${footMechanicsLabel()} · ${rd>0?`${rd} km target race`:'race distance not set'}`;
 }
 async function refreshAsicsLiveCatalog({manual=false}={}){
  if(asicsLiveRefreshInFlight)return asicsLiveRefreshInFlight;
- const btn=$('refreshAsicsLive');if(btn){btn.disabled=true;btn.textContent='Checking ASICS…'}
- asicsLiveLastTransport='';asicsLiveRefreshInFlight=(async()=>{
+ const btn=$('refreshAsicsLive');
+ if(btn){btn.disabled=true;btn.textContent='Checking ASICS…'}
+ asicsLiveLastTransport='';
+ asicsLiveRefreshInFlight=(async()=>{
   const discovered=[],sourceErrors=[];
   for(const url of ASICS_LIVE_CATEGORY_URLS){
-   try{const text=await fetchAsicsOfficialText(url),found=parseAsicsCategoryProducts(text,url);discovered.push(...found);if(!found.length)sourceErrors.push(`No products parsed from ${url}`)}
-   catch(err){sourceErrors.push(String(err?.message||err))}
+   try{
+    const text=await fetchAsicsOfficialText(url),found=parseAsicsCategoryProducts(text,url);
+    discovered.push(...found);
+    if(!found.length)sourceErrors.push(`No supported running models parsed from ${url}`);
+   }catch(err){sourceErrors.push(String(err?.message||err))}
   }
-  const dedup=[...new Map(discovered.map(x=>[x.name.toUpperCase(),x])).values()].slice(0,24),details=[];
+  const dedup=[...new Map(discovered.map(x=>[x.name.toUpperCase(),x])).values()].slice(0,40),details=[];
   for(const item of dedup){
    if(item.url){
-    try{const p=parseAsicsProductPage(await fetchAsicsOfficialText(item.url),item.url);if(p.name){details.push({...item,...p,sourceUrl:item.sourceUrl||p.url});continue}}catch(_){}
+    try{
+     const p=parseAsicsProductPage(await fetchAsicsOfficialText(item.url),item.url);
+     if(p.name){details.push({...item,...p,sourceUrl:item.sourceUrl||p.url});continue}
+    }catch(_){}
    }
-   // Collection-page evidence is still a valid live confirmation of current availability.
-   // Local profile supplies model-derived recommendation attributes; manufacturer claims remain separate.
    details.push({...item,official:true,manufacturer:'ASICS',liveValidated:true,url:item.url||item.sourceUrl||null});
   }
-  if(!details.length)throw Error(sourceErrors[0]||'No current ASICS running models could be validated.');
+  if(!details.length)throw Error(sourceErrors[0]||'No current ASICS running models were returned by the live catalogue.');
+  const checked=new Date().toISOString();
   state.asicsLiveCatalog=details;
-  state.asicsLiveCatalogMeta={lastChecked:new Date().toISOString(),source:'ASICS NL live',transport:asicsLiveLastTransport||'Live web transport',count:details.length,error:null};
-  shoeAutoAssignmentStamp=null;shoeAutoAssignments();save();
-  if($('shoesContent')?.closest('.page')?.classList.contains('active'))renderShoes();
-  if(manual)toast(`ASICS live catalogue updated · ${details.length} current models.`);
-  return details
- })().catch(err=>{
-  state.asicsLiveCatalogMeta={...asicsLiveMeta(),lastAttempt:new Date().toISOString(),error:String(err?.message||err)};
+  state.asicsLiveCatalogMeta={
+   lastChecked:checked,
+   source:'ASICS NL live portfolio',
+   transport:asicsLiveLastTransport||'Live web transport',
+   count:details.length,
+   error:null,
+   appliedToPlan:true,
+   appliedFootMechanics:runnerFootMechanics(),
+   appliedRaceDistance:Number(state.setup?.raceDistance)||null
+  };
+  shoeAutoAssignmentStamp=null;
+  shoeAutoAssignments();
   save();
-  if(manual)toast(`ASICS live refresh failed · ${String(err?.message||err)} Using cached/local catalogue.`,true);
-  return asicsLiveCatalog()
+  if($('shoesContent')?.closest('.page')?.classList.contains('active'))renderShoes();
+  if(manual)toast(`ASICS live confirmed · ${details.length} current models loaded and applied to the shoe plan.`);
+  return details;
+ })().catch(err=>{
+  state.asicsLiveCatalogMeta={...asicsLiveMeta(),lastAttempt:new Date().toISOString(),error:String(err?.message||err),appliedToPlan:false};
+  save();
+  if(manual)toast('ASICS live could not be reached. Local catalogue remains active; no live data was applied.',true);
+  return asicsLiveCatalog();
  }).finally(()=>{
   asicsLiveRefreshInFlight=null;
-  const b=$('refreshAsicsLive');if(b){b.disabled=false;b.textContent='Refresh ASICS live'}
+  const b=$('refreshAsicsLive');
+  if(b){b.disabled=false;b.textContent='Refresh ASICS live'}
  });
  return asicsLiveRefreshInFlight
 }
 function maybeRefreshAsicsLiveCatalog(){if(!navigator.onLine)return;const meta=asicsLiveMeta(),last=meta.lastChecked||meta.lastAttempt,age=last?Date.now()-new Date(last).getTime():Infinity;if(age>24*60*60*1000&&!asicsLiveRefreshInFlight)refreshAsicsLiveCatalog()}
-function asicsLiveStatusHtml(){const meta=asicsLiveMeta(),list=asicsLiveCatalog(),when=meta.lastChecked?fmtDate(iso(new Date(meta.lastChecked))):'Not checked yet',status=meta.error?`Live refresh unavailable · local catalogue remains active`:meta.lastChecked?`Last checked ${when}${meta.transport?` · via ${meta.transport}`:''}`:'Refresh when online to validate current models and specifications.';return`<div class="asicsLiveStatus"><div><small>LIVE ASICS CATALOGUE</small><b>${list.length?`${list.length} current models live-validated`:'Local catalogue active'}</b><span>${status}</span></div><button id="refreshAsicsLive" class="secondary small" type="button">Refresh ASICS live</button></div>`}
-function liveAsicsProfileForItem(item){const parsed=splitModelVersion(item.name),known=findAsicsProfile('ASICS',parsed.model,parsed.version);if(known)return{...known,liveItem:item,evidenceSource:`ASICS live availability · ${item.url||item.sourceUrl||'ASICS NL collection'}`,profileConfidence:'manufacturer/live'};const supportive=/overpron|stability|support/i.test(item.support||''),neutral=/neutral/i.test(item.support||'')||!supportive,faster=/faster|fast/i.test(item.goal||''),high=/high|hoog/i.test(item.cushion||'');return{brand:'ASICS',family:parsed.model||item.name,version:Number(parsed.version)||'',neutral,supportType:supportive?'stability':'neutral',surfaces:[/trail/i.test(item.surface||'')?'trail':'road'],roles:faster?['tempo','intervals','race','daily']:['daily','easy','recovery','long'],cushioning:high?5:3,responsiveness:faster?5:3,stability:supportive?5:3,protection:high?5:3,grip:3,efficiency:faster?5:3,durability:4,comfort:high?5:3,weightClass:item.weightG&&item.weightG<230?'light':item.weightG&&item.weightG<270?'medium-light':'medium',plated:/METASPEED/i.test(item.name),plateType:/METASPEED/i.test(item.name)?'carbon':null,preferredDistanceMinKm:0,preferredDistanceMaxKm:100,workoutSuitability:{},typicalReplacementLowKm:/METASPEED/i.test(item.name)?400:600,typicalReplacementHighKm:/METASPEED/i.test(item.name)?800:900,evidenceSource:`ASICS live availability · ${item.url||item.sourceUrl||'ASICS NL collection'}`,profileConfidence:'manufacturer/live',liveItem:item}}
+function asicsLiveStatusHtml(){
+ const meta=asicsLiveMeta(),list=asicsLiveCatalog(),active=asicsLiveCatalogIsActive(),when=meta.lastChecked?fmtDate(iso(new Date(meta.lastChecked))):'Not checked yet';
+ if(active)return`<div class="asicsLiveStatus success"><div><small>ASICS LIVE PORTFOLIO</small><b>✓ Live data confirmed · ${list.length} current models</b><span>Checked ${when}${meta.transport?` · via ${esc(meta.transport)}`:''}</span><span class="asicsPlanApplied">Used in shoe plan · ${esc(asicsLivePlanContextText())}</span></div><button id="refreshAsicsLive" class="secondary small" type="button">Refresh ASICS live</button></div>`;
+ const fallback=meta.error?'Live check unavailable. The local ASICS catalogue is being used.':'Refresh to validate the current ASICS portfolio online.';
+ return`<div class="asicsLiveStatus"><div><small>ASICS LIVE PORTFOLIO</small><b>Local catalogue active</b><span>${esc(fallback)}</span><span class="asicsPlanApplied">Current shoe-plan context · ${esc(asicsLivePlanContextText())}</span></div><button id="refreshAsicsLive" class="secondary small" type="button">Refresh ASICS live</button></div>`
+}
+function liveAsicsProfileForItem(item){const parsed=splitModelVersion(item.name),known=findAsicsProfile('ASICS',parsed.model,parsed.version);if(known)return{...known,liveItem:item,evidenceSource:`ASICS live availability · ${item.url||item.sourceUrl||'ASICS NL collection'}`,profileConfidence:'manufacturer/live'};const supportive=/overpron|stability|support/i.test(item.support||'')||/GEL-KAYANO|GT-2000|GT-1000/i.test(item.name||''),neutral=/neutral/i.test(item.support||'')||!supportive,faster=/faster|fast/i.test(item.goal||''),high=/high|hoog/i.test(item.cushion||'');return{brand:'ASICS',family:parsed.model||item.name,version:Number(parsed.version)||'',neutral,supportType:supportive?'stability':'neutral',surfaces:[/trail/i.test(item.surface||'')?'trail':'road'],roles:faster?['tempo','intervals','race','daily']:['daily','easy','recovery','long'],cushioning:high?5:3,responsiveness:faster?5:3,stability:supportive?5:3,protection:high?5:3,grip:3,efficiency:faster?5:3,durability:4,comfort:high?5:3,weightClass:item.weightG&&item.weightG<230?'light':item.weightG&&item.weightG<270?'medium-light':'medium',plated:/METASPEED/i.test(item.name),plateType:/METASPEED/i.test(item.name)?'carbon':null,preferredDistanceMinKm:0,preferredDistanceMaxKm:100,workoutSuitability:{},typicalReplacementLowKm:/METASPEED/i.test(item.name)?400:600,typicalReplacementHighKm:/METASPEED/i.test(item.name)?800:900,evidenceSource:`ASICS live availability · ${item.url||item.sourceUrl||'ASICS NL collection'}`,profileConfidence:'manufacturer/live',liveItem:item}}
 function runnerFootMechanics(){return state.setup?.footMechanics||'unknown'}
-function gaitPurchaseAdjustment(profile){const gait=runnerFootMechanics(),support=String(profile.supportType||profile.liveItem?.support||'').toLowerCase(),neutral=profile.neutral!==false&&!/stability|overpron|support/.test(support);if(gait==='pronation')return /stability|overpron|support/.test(support)?22:neutral?-18:0;if(gait==='supination')return neutral?10:-16;if(gait==='neutral')return neutral?12:-15;return 0}
+function gaitPurchaseAdjustment(profile){
+ const gait=runnerFootMechanics(),family=normalizeShoeFamily(profile.family||profile.liveItem?.name||''),support=String(profile.supportType||profile.liveItem?.support||'').toLowerCase(),supportive=/stability|overpron|support/.test(support)||/GEL-KAYANO|GT-2000|GT-1000/.test(family),neutral=profile.neutral!==false&&!supportive;
+ if(gait==='pronation')return supportive?12:neutral?-4:0;
+ if(gait==='supination')return neutral?8:supportive?-10:0;
+ if(gait==='neutral')return neutral?7:supportive?-5:0;
+ return 0
+}
 const SHOE_ENGINE_STRATEGIES={balanced:{label:'Smart rotation · recommended',desc:'Builds the smallest sensible rotation that still gives each workout an appropriate shoe, protects service life and prepares Race Day without unnecessary overlap.'},fewer:{label:'Keep it simple',desc:'Prioritises versatility and uses the fewest pairs practical, replacing only when wear or a genuine capability gap justifies it.'},quality:{label:'Performance rotation',desc:'Creates clearer separation between daily mileage, quality sessions and Race Day when a dedicated faster shoe materially improves workout fit.'},protection:{label:'Protection first',desc:'Prioritises cushioning, protection, familiarity and earlier replacement when load, rehabilitation or shoe wear makes protection more important than rotation size.'}};function shoeEngineStrategy(){return SHOE_ENGINE_STRATEGIES[state.shoeEngineStrategy]||SHOE_ENGINE_STRATEGIES.balanced}function shoeEngineStrategyHtml(){const cur=SHOE_ENGINE_STRATEGIES[state.shoeEngineStrategy]?state.shoeEngineStrategy:'balanced';return`<div class="shoeApproachControl"><label for="shoeEngineStrategySelect">Shoe engine approach</label><select id="shoeEngineStrategySelect">${Object.entries(SHOE_ENGINE_STRATEGIES).map(([k,v])=>`<option value="${k}" ${cur===k?'selected':''}>${esc(v.label)}</option>`).join('')}</select><small>${esc(shoeEngineStrategy().desc)}</small></div>`}
 function shoeWearState(shoe){const p=shoeProfileForShoe(shoe),km=shoeMileage(shoe),low=Number(shoe.replacementRangeKm?.low)||p.typicalReplacementLowKm,high=Number(shoe.replacementRangeKm?.high)||p.typicalReplacementHighKm,condition=shoe.condition||shoe.conditionFeedback||'Feels normal';let status='healthy',label='Healthy';if(condition==='Causing discomfort'||condition==='Upper damaged'||km>=high){status='replace';label='Replacement recommended'}else if(km>=low||['Noticeably flat','Grip deteriorating'].includes(condition)){status='approaching';label='Approaching replacement'}else if(!Number.isFinite(km)){status='unknown';label='Insufficient evidence'}return{status,label,km,low,high,remainingLow:Math.max(0,low-km),remainingHigh:Math.max(0,high-km)}}
 function shoeSurfaceScore(profile,plan){const surface=String(plan.surface||'road').toLowerCase(),surfaces=profile.surfaces||['road'];if(surfaces.includes(surface))return 100;if(surface==='road'&&surfaces.includes('mixed'))return 90;if(surface==='mixed'&&surfaces.includes('road'))return 72;if(surface==='trail'&&surfaces.includes('mixed'))return 78;return 35}
@@ -5737,8 +5795,25 @@ function raceRelevantWorkout(p){return /Race-pace|Specific long run|Race rehears
 function raceFamiliarisationSessions(shoe,targetKm){const raceDate=state.setup?.raceDate,now=iso(today());if(!raceDate)return[];const plans=(state.plan||[]).filter(p=>p.type!=='Rest'&&p.date>=now&&p.date<raceDate&&raceRelevantWorkout(p)).slice().sort((a,b)=>b.date.localeCompare(a.date));let km=0,out=[];for(const p of plans){const specific=/Race-pace|Specific|rehearsal|Marathon-specific|Half-marathon-specific/.test(p.type),portion=specific?Number(p.distance)||0:Math.min(Number(p.distance)||0,8);out.push({...p,plannedShoeKm:portion});km+=portion;if(km>=targetKm&&out.length>=Math.min(3,plans.length))break}return out.sort((a,b)=>a.date.localeCompare(b.date))}
 function raceShoeProjectedMileage(shoe){return shoeMileage(shoe)+shoePlannedUsageThrough(shoe.id,state.setup?.raceDate)}
 function raceShoeCondition(shoe){const p=shoeProfileForShoe(shoe),opt=raceOptimalWindow(p,state.setup?.raceDistance),current=shoeMileage(shoe),projected=raceShoeProjectedMileage(shoe),wear=shoeForecast(shoe),fam=shoeFamiliarity(shoe,'Race Day'),raceSuitable=(p.roles||[]).includes('race');let label='Healthy',code='healthy';if(!raceSuitable){label='Unsuitable for race day';code='unsuitable'}else if(fam.runs<2||fam.km<Math.min(opt.minKm,15)){label='Familiarisation required';code='too-new'}else if(projected>=wear.high||['Replacement recommended'].includes(wear.label)){label='Replacement before race advisable';code='replace'}else if(projected>=wear.low*.9){label='Approaching high wear';code='high-wear'}else if(projected>=opt.minKm&&projected<=opt.maxKm){label='Optimal race window';code='optimal'}else if(projected<opt.minKm){label='Familiarisation needed';code='familiarise'}return{label,code,current,projected,opt,wear,fam,raceSuitable}}
-function candidatePurchaseProfiles(){const byFamily=new Map();ASICS_SHOE_PROFILES.filter(p=>!p.variant&&(p.roles||[]).includes('race')).forEach(p=>{const cur=byFamily.get(p.family);if(!cur||Number(p.version)>Number(cur.version))byFamily.set(p.family,p)});asicsLiveCatalog().forEach(item=>{const p=liveAsicsProfileForItem(item),key=`${p.family}-${p.version||''}`;if((p.roles||[]).includes('race')||/METASPEED|SUPERBLAST|MAGIC SPEED|NOOSA/i.test(item.name))byFamily.set(key,p)});return[...byFamily.values()]}
-function purchaseProfileScore(p){const d=Number(state.setup?.raceDistance)||42.2;let score=(p.efficiency||3)*9+(p.responsiveness||3)*8+(p.cushioning||3)*(d>=21?5:2)+(p.protection||3)*(d>=30?6:2)+(p.grip||3)*2+gaitPurchaseAdjustment(p);score+=p.plated?8:2;if(p.liveItem)score+=6;if(d>Number(p.preferredDistanceMaxKm||999))score-=30;if(d<Number(p.preferredDistanceMinKm||0))score-=15;if(p.family==='METASPEED RAY'&&d>=30)score-=12;if(p.family==='SUPERBLAST'&&d>=30)score+=5;return score}
+function candidatePurchaseProfiles(){
+ const byFamily=new Map();
+ ASICS_SHOE_PROFILES.filter(p=>!p.variant).forEach(p=>{const key=`${p.family}-${p.version||''}`,cur=byFamily.get(key);if(!cur||Number(p.version)>Number(cur.version))byFamily.set(key,p)});
+ asicsLiveCatalog().forEach(item=>{const p=liveAsicsProfileForItem(item),key=`${p.family}-${p.version||''}`;byFamily.set(key,p)});
+ return[...byFamily.values()]
+}
+function purchaseProfileScore(p){
+ const d=Number(state.setup?.raceDistance)||42.2,raceRole=(p.roles||[]).includes('race'),longRole=(p.roles||[]).includes('long');
+ let score=(p.efficiency||3)*7+(p.responsiveness||3)*6+(p.cushioning||3)*(d>=21?5:2)+(p.protection||3)*(d>=30?5:2)+(p.grip||3)*1.5+gaitPurchaseAdjustment(p);
+ if(raceRole)score+=d>=10?14:8;
+ if(longRole&&d>=21)score+=8;
+ if(p.plated&&d>=10)score+=6;
+ if(p.liveItem)score+=5;
+ if(d>Number(p.preferredDistanceMaxKm||999))score-=30;
+ if(d<Number(p.preferredDistanceMinKm||0))score-=15;
+ if(p.family==='METASPEED RAY'&&d>=30)score-=12;
+ if(p.family==='SUPERBLAST'&&d>=30)score+=5;
+ return score
+}
 function recommendedPurchaseProfile(){return candidatePurchaseProfiles().sort((a,b)=>purchaseProfileScore(b)-purchaseProfileScore(a))[0]||null}
 function raceShoePlan(){
  const active=(state.shoes||[]).filter(s=>s.status!=='retired'),raceDate=state.setup?.raceDate;if(!raceDate)return{status:'no-race',confidence:'Low'};
@@ -5931,7 +6006,7 @@ function shoeProgrammeMileageChartHtml(){
  const eventMarkers=uniqueEvents.map(e=>{const xx=x(e.date),yy=y(Math.min(maxY,Math.max(0,Number(e.markerKm)||0)));return`<g class="shoeCauseMarker" style="--event-color:${e.markerColor}" aria-label="${esc(e.driver)} event ${e.markerNo}"><line x1="${xx}" y1="${Math.max(T,yy-22)}" x2="${xx}" y2="${Math.min(H-B,yy+22)}"/><circle cx="${xx}" cy="${yy}" r="13"/><text x="${xx}" y="${yy+5}" text-anchor="middle">${e.markerNo}</text></g>`}).join('');
  const allocationHtml=uniqueEvents.length?`<div class="shoeGraphEvents"><div class="shoeGraphEventsHead"><small>GRAPH EVENTS</small><b>Tap a number to explain it</b><p>Each foldout matches the same numbered marker on the graph. Blue = rehab plan, teal = training plan, amber = shoe rotation.</p></div><div class="shoeGraphEventsBody">${uniqueEvents.map(e=>`<details class="shoeGraphEventDetail driver-${e.driver.toLowerCase().replace(/[^a-z]+/g,'-')}" style="--event-color:${e.markerColor}"><summary><span class="shoeGraphEventSummary"><span class="shoeEventNumber">${e.markerNo}</span><span><b>${esc(e.driver)}</b><small>${esc(shoeChartDate(e.date))} · ${esc(e.title)}</small></span></span></summary><div class="shoeGraphEventExplanation"><p>${esc(e.text)}</p></div></details>`).join('')}</div></div>`:'';
  const raceStrategyCard=raceStrategy?`<div class="shoeRaceStrategyCard"><small>RACE-DAY TARGET</small><b>${esc(raceStrategy.name)}</b><span>~${Math.round(raceStrategy.finalKm)} km planned on ${esc(shoeChartDate(raceDate))} · target ${Math.round(raceStrategy.window?.minKm||0)}–${Math.round(raceStrategy.window?.maxKm||0)} km</span></div>`:'';
- return`<div class="shoeChartWrap shoeProgrammeChart"><div class="shoeChartRaceDate"><small>PHYSICAL-PAIR PLAN THROUGH RACE DAY</small><b>Race day · ${esc(shoeChartDate(raceDate))}</b></div>${raceStrategyCard}<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Physical shoe pairs, purchase dates, planned replacements and race-day pair mileage through race day">${targetBand}<g class="shoeGrid">${grid}</g><line class="shoeTodayLine" x1="${todayX}" y1="${T}" x2="${todayX}" y2="${H-B}"/><line class="shoeRaceLine" x1="${raceX}" y1="${T}" x2="${raceX}" y2="${H-B}"/>${paths}${replacementProjection}${raceStrategyPath}${replacementMarkers}${eventMarkers}${xlabels}<text class="yTitle" transform="translate(32 ${H/2}) rotate(-90)" text-anchor="middle">Accumulated km</text></svg><div class="shoeChartKey"><span><i class="actual"></i>Logged mileage</span><span><i class="planned"></i>Future plan</span><span><i class="raceshoe"></i>Race-day pair</span></div><div class="shoeChartLegend">${legend}</div>${allocationHtml}</div>`
+ return`<div class="shoeChartWrap shoeProgrammeChart"><div class="shoeChartRaceDate"><small>PHYSICAL-PAIR PLAN THROUGH RACE DAY</small><b>Race day · ${esc(shoeChartDate(raceDate))}</b></div>${raceStrategyCard}<div class="shoeGraphStrategy">${shoeEngineStrategyHtml()}</div><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Physical shoe pairs, purchase dates, planned replacements and race-day pair mileage through race day">${targetBand}<g class="shoeGrid">${grid}</g><line class="shoeTodayLine" x1="${todayX}" y1="${T}" x2="${todayX}" y2="${H-B}"/><line class="shoeRaceLine" x1="${raceX}" y1="${T}" x2="${raceX}" y2="${H-B}"/>${paths}${replacementProjection}${raceStrategyPath}${replacementMarkers}${eventMarkers}${xlabels}<text class="yTitle" transform="translate(32 ${H/2}) rotate(-90)" text-anchor="middle">Accumulated km</text></svg><div class="shoeChartKey"><span><i class="actual"></i>Logged mileage</span><span><i class="planned"></i>Future plan</span><span><i class="raceshoe"></i>Race-day pair</span></div><div class="shoeChartLegend">${legend}</div>${allocationHtml}</div>`
 }
 function shoeMileageChartHtml(){return shoeProgrammeMileageChartHtml()}
 function shoeRotationCard(shoe){const f=shoeForecast(shoe),p=shoeProfileForShoe(shoe),primary=(p.roles||[])[0]||'mixed',best=(p.roles||[]).slice(0,3).map(r=>SHOE_ROLE_LABELS[r]||r).join(' · ')||'Mixed use',buy=shoeNextPurchasePlan(shoe),replacementName=buy.replacement?`ASICS ${buy.replacement.family} ${buy.replacement.version}`:'Replacement model still building',buyDate=buy.purchaseDate?shoeChartDate(buy.purchaseDate):null,handover=buy.handoverDate?shoeChartDate(buy.handoverDate):null,counter=buy.purchaseDate?(buy.daysRemaining===0?'Buy now':`${buy.daysRemaining} day${buy.daysRemaining===1?'':'s'} remaining`):'Timing needs more usage evidence',kmCounter=Number.isFinite(buy.kmUntilPurchase)?`~${Math.round(buy.kmUntilPurchase)} planned km until purchase`:'Mileage counter building';return`<article class="shoeRotationCard ${shoeStatusClass(f.status)}" data-shoe-detail="${esc(shoe.id)}" tabindex="0"><div class="shoeCardHead"><span>${todayPictogram('shoe')}</span><div><small>${esc(shoe.brand||'')}</small><h4>${esc([shoe.model,shoe.version].filter(Boolean).join(' '))}</h4>${shoe.nickname?`<p>${esc(shoe.nickname)}</p>`:''}</div><span class="shoeStatus ${shoeStatusClass(f.status)}">${esc(f.label)}</span></div><div class="shoeBestAt"><small>BEST AT</small><b>${esc(best)}</b></div><div class="shoeCardMetrics"><div><small>CURRENT MILEAGE</small><b>${Math.round(f.km)} km</b></div><div><small>PRIMARY USE</small><b>${esc(SHOE_ROLE_LABELS[primary]||primary)}</b></div><div><small>EXPECTED WINDOW</small><b>${Math.round(f.low)}–${Math.round(f.high)} km</b></div><div><small>EST. REMAINING</small><b>~${Math.round((f.remainingLow+f.remainingHigh)/2)} km</b></div></div><div class="shoePurchaseCountdown"><div class="shoePurchaseCountdownHead"><small>NEXT PAIR</small><b>${esc(replacementName)}</b></div><div class="shoePurchaseCountdownGrid"><div><small>BUY NEXT PAIR BY</small><strong>${buyDate?esc(buyDate):'—'}</strong><span>${esc(counter)}</span></div><div><small>UNTIL PURCHASE</small><strong>${esc(kmCounter)}</strong><span>${esc(buy.basis)}${buy.confidence?` · ${esc(buy.confidence)} confidence`:''}</span></div></div>${handover?`<p>Planned handover: <b>${esc(handover)}</b> at about <b>${Math.round(buy.handoverKm)} km</b>. Buying earlier gives time to receive and introduce the replacement before this pair reaches its planned replacement range.</p>`:`<p>The purchase date will appear once the programme or observed usage provides enough evidence.</p>`}</div><div class="shoeCardFooter"><span>Projected replacement period</span><b>${esc(shoeForecastDateText(f))}</b></div></article>`}
@@ -5947,7 +6022,7 @@ function renderShoes(){const root=$('shoesContent');if(!root)return;clearLegacyA
  const plannedPurchase=(state.plannedShoePurchases||[]).filter(x=>x.status==='planned').map(x=>`<div class="shoeSavedPurchase"><span>PLANNED PURCHASE</span><b>${esc([x.brand,x.model,x.version].filter(Boolean).join(' '))}</b><small>${x.recommendedPurchaseStart&&x.recommendedPurchaseEnd?`${fmtDate(x.recommendedPurchaseStart)} – ${fmtDate(x.recommendedPurchaseEnd)}`:'Timing still uncertain'} · target race-day mileage ~${Math.round(Number(x.targetRaceDayMileage)||0)} km</small><button type="button" class="secondary small" data-dismiss-shoe-purchase="${esc(x.id)}">Dismiss plan</button></div>`).join('');
  root.innerHTML=`<div class="sectionTitle shoesPageTitle"><div><span class="pageEyebrow">SHOE ROTATION</span><h2>Shoes</h2><p>Mileage, workout matching, lifecycle and race-day planning.</p></div><button id="addShoeBtn" class="primary small" type="button">Add running shoe</button></div>
  <section class="shoeSection"><div class="shoeSectionHead"><span>01</span><div><small>ACTIVE ROTATION</small><h3>Your available shoes</h3></div></div><div class="shoeRotationGrid">${active.map(shoeRotationCard).join('')||'<div class="shoeEmpty">No active shoes.</div>'}</div></section>
- <section class="shoeSection level1 shoeLifecycleSection"><div class="shoeSectionHead"><span>02</span><div><small>MILEAGE & LIFECYCLE PLAN</small><h3>Actual vs planned shoe mileage</h3><p>Real accumulated mileage versus the planned rotation through race day, including expected replacement points.</p></div></div><article class="shoeChartCard">${asicsLiveStatusHtml()}<div class="shoeGraphStrategy">${shoeEngineStrategyHtml()}</div>${shoeMileageChartHtml()}</article></section>
+ <section class="shoeSection level1 shoeLifecycleSection"><div class="shoeSectionHead"><span>02</span><div><small>MILEAGE & LIFECYCLE PLAN</small><h3>Actual vs planned shoe mileage</h3><p>Real accumulated mileage versus the planned rotation through race day, including expected replacement points.</p></div></div><article class="shoeChartCard">${asicsLiveStatusHtml()}${shoeMileageChartHtml()}</article></section>
  `;
  
  const refreshLive=$('refreshAsicsLive');if(refreshLive)refreshLive.onclick=()=>refreshAsicsLiveCatalog({manual:true});maybeRefreshAsicsLiveCatalog();
@@ -6041,7 +6116,17 @@ function choosePlanShoe(planId){const plan=(state.plan||[]).find(p=>p.id===planI
 
 function renderAll(){[renderDashboard,renderToday,renderPlan,renderRuns,renderMetrics,renderAssessments,renderCoach,renderInjury,renderRecovery,renderRace,renderSettings,renderShoes,renderPlanHealth,renderMigrationReport].forEach(fn=>{try{fn()}catch(err){recordDiagnostic('Render failure in '+fn.name,err)}});try{renderProgressChartsStandalone()}catch(err){recordDiagnostic('Render failure in renderProgressChartsStandalone',err)}renderDiagnostics();ensureAccessibleForms();renderUndoButtons()}
 const pages=[['today','Today'],['plan','Plan'],['runs','Log'],['dashboard','Progress'],['assessments','Assessments'],['recovery','Recovery'],['injury','Injury'],['shoes','Shoes'],['race','Race day'],['settings','Settings']];
-document.body.addEventListener('change',e=>{if(e.target.id==='shoeEngineStrategySelect'){const sectionTop=document.querySelector('#shoes .shoeGraphStrategy')?.getBoundingClientRect().top||0;state.shoeEngineStrategy=e.target.value;shoeAutoAssignmentStamp=null;shoeAutoAssignments();save();renderShoes();requestAnimationFrame(()=>{const el=document.querySelector('#shoes .shoeGraphStrategy');if(el)window.scrollBy(0,el.getBoundingClientRect().top-sectionTop)});toast('Shoe engine approach updated · graph recalculated.');return}const sel=e.target.closest?.('[data-rehab-shoe-plan]');if(!sel)return;const injury=(state.injuries||[]).find(x=>x.id===sel.dataset.rehabShoePlan);if(!injury)return;injury.plannedRehabShoes=injury.plannedRehabShoes||{};if(sel.value)injury.plannedRehabShoes[sel.dataset.rehabShoeDate]=sel.value;else delete injury.plannedRehabShoes[sel.dataset.rehabShoeDate];save();toast(sel.value?'Rehabilitation shoe planned.':'Rehabilitation shoe cleared.');});
+document.body.addEventListener('change',e=>{if(e.target.id==='shoeEngineStrategySelect'){
+ const anchorTop=document.querySelector('#shoes .shoeGraphStrategy')?.getBoundingClientRect().top||0;
+ state.shoeEngineStrategy=e.target.value;
+ shoeAutoAssignmentStamp=null;
+ shoeAutoAssignments();
+ save();
+ renderShoes();
+ requestAnimationFrame(()=>{const el=document.querySelector('#shoes .shoeGraphStrategy');if(el)window.scrollBy(0,el.getBoundingClientRect().top-anchorTop)});
+ toast('Shoe approach updated · graph and purchase plan recalculated.');
+ return
+}const sel=e.target.closest?.('[data-rehab-shoe-plan]');if(!sel)return;const injury=(state.injuries||[]).find(x=>x.id===sel.dataset.rehabShoePlan);if(!injury)return;injury.plannedRehabShoes=injury.plannedRehabShoes||{};if(sel.value)injury.plannedRehabShoes[sel.dataset.rehabShoeDate]=sel.value;else delete injury.plannedRehabShoes[sel.dataset.rehabShoeDate];save();toast(sel.value?'Rehabilitation shoe planned.':'Rehabilitation shoe cleared.');});
 $('nav').innerHTML=pages.map((p,i)=>`<button data-page="${p[0]}" class="${i?'':'active'}">${p[1]}</button>`).join('');$('nav').onclick=e=>{let p=e.target.dataset.page;if(!p)return;document.querySelectorAll('.page').forEach(x=>x.classList.toggle('active',x.id===p));document.querySelectorAll('#nav button').forEach(x=>x.classList.toggle('active',x.dataset.page===p));renderAll();scrollTo(0,0)};document.body.onclick=e=>{if(e.target.id==='addShoeBtn'){openShoeForm();return}let sd=e.target.closest('[data-shoe-detail]');if(sd){openShoeDetail(sd.dataset.shoeDetail);return}let cps=e.target.closest('[data-choose-plan-shoe]');if(cps){choosePlanShoe(cps.dataset.choosePlanShoe);return}if(e.target.id==='addInjuryBtn'){openInjuryForm();return}let activate=e.target.closest('[data-activate-injury-plan]');if(activate){let id=activate.dataset.activateInjuryPlan,current=state.injuries.find(x=>x.id===state.activeInjuryPlanId),next=state.injuries.find(x=>x.id===id);if(next&&confirm(`Switch the active recovery plan from ${current?.location||'the current injury'} to ${next.location||'this injury'}? Only one plan can be followed at a time.`)){state.activeInjuryPlanId=id;save();renderInjury();toast('Active recovery plan switched.')}return;}let ib=e.target.closest('[data-injury-check]');if(ib){const injury=state.injuries.find(x=>x.id===ib.dataset.injuryCheck);if(injury){const existing=(injury.checkIns||[]).find(c=>c.date===iso(today()))||null;openInjuryCheck(injury,existing)}return}let ice=e.target.closest('[data-injury-check-edit]');if(ice){let injury=state.injuries.find(x=>x.id===ice.dataset.injuryCheckEdit),check=injury?.checkIns?.find(x=>x.date===ice.dataset.checkDate);if(injury&&check)openInjuryCheck(injury,check);return}let icd=e.target.closest('[data-injury-check-date]');if(icd){let injury=state.injuries.find(x=>x.id===icd.dataset.injuryCheckDate),check=injury?.checkIns?.find(x=>x.date===icd.dataset.checkDate)||null;if(injury)openInjuryCheck(injury,check,{date:icd.dataset.checkDate});return}let ie=e.target.closest('[data-injury-edit]');if(ie){openInjuryForm(state.injuries.find(x=>x.id===ie.dataset.injuryEdit));return}let idel=e.target.closest('[data-injury-delete]');if(idel){if(confirm('Delete this injury and its check-ins?')){state.injuries=state.injuries.filter(x=>x.id!==idel.dataset.injuryDelete);if(state.activeInjuryPlanId===idel.dataset.injuryDelete)state.activeInjuryPlanId=state.injuries[0]?.id||null;save();renderInjury()}return}const go=e.target.closest('[data-go]');if(go){closeDialog();activatePage(go.dataset.go,go.dataset.anchor||null);return}const scoreLink=e.target.closest('.wiScoreLink');if(scoreLink){setTimeout(()=>{const d=document.getElementById('executionBreakdownFoldout');if(d)d.open=true},0)}const planRunBtn=e.target.closest('[data-plan-run]');if(planRunBtn){openRunDetails(planRunBtn.dataset.planRun);return}let factorToggle=e.target.closest('.factorToggle');if(factorToggle){let tile=factorToggle.closest('.factorKpi'),open=tile.classList.toggle('open');factorToggle.setAttribute('aria-expanded',String(open));return}let w=e.target.closest('.workout');if(w&&!e.target.closest('button')){document.querySelectorAll('.workout[open]').forEach(x=>{if(x!==w)x.removeAttribute('open')});}};
 const navigationPages=pages.filter(item=>item[0]!=='assessments');
 const primaryPages=navigationPages.slice(0,4),secondaryPages=navigationPages.slice(4);
