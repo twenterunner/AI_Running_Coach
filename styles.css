@@ -4548,7 +4548,3 @@ body:has(#dashboard.progressPage.active),#mainContent:has(#dashboard.progressPag
 #shoes .shoeGraphStrategy + .shoeMileageLifecycle{
  margin-top:0!important;
 }
-
-/* v13.7.42 */
-#shoes .asicsLiveStatus span{overflow-wrap:anywhere}
-#shoes .asicsLiveStatus button:disabled{opacity:.65;cursor:wait}

@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '13.7.42';
-  const BUILD = 30742;
+  const VERSION = '13.7.41';
+  const BUILD = 30741;
   const SCHEMA = 10400;
   const PRIMARY_STORAGE_KEY = 'arc_v10400_web';
   const MIRROR_STORAGE_KEY = 'arc_v10400_mirror';
@@ -5592,10 +5592,7 @@ const ASICS_LIVE_CATEGORY_URLS=[
  'https://www.asics.com/nl/en-nl/mens-fast-running-shoes/c/as10201030/'
 ];
 const ASICS_READER_PREFIX='https://r.jina.ai/';
-const ASICS_ALLORIGINS_RAW='https://api.allorigins.win/raw?url=';
-const ASICS_ALLORIGINS_GET='https://api.allorigins.win/get?url=';
 let asicsLiveRefreshInFlight=null;
-let asicsLiveLastTransport='';
 function asicsLiveCatalog(){return Array.isArray(state.asicsLiveCatalog)?state.asicsLiveCatalog:[]}
 function asicsLiveMeta(){return state.asicsLiveCatalogMeta&&typeof state.asicsLiveCatalogMeta==='object'?state.asicsLiveCatalogMeta:{}}
 function cleanAsicsProductName(v){return String(v||'').replace(/(?:Men'?s|Women'?s|Unisex)?\s*Running Shoes.*$/i,'').replace(/€.*$/,'').replace(/\s+/g,' ').trim().replace(/™/g,'')}
@@ -5626,39 +5623,16 @@ function parseAsicsCategoryProducts(text,sourceUrl=''){
  return out
 }
 function parseAsicsProductPage(text,url=''){const src=String(text||''),h=(src.match(/^#\s+(.+)$/m)||[])[1],name=cleanAsicsProductName(h||''),field=label=>{const r=new RegExp(`(?:^|\\n)${label}\\s*\\n([^\\n]+)`,'i').exec(src);return r?r[1].trim():null},weightRaw=field('Weight'),dropRaw=field('Heel Drop'),support=field('Support')||field('Ondersteuning'),surface=field('Surface')||field('Ondergrond'),cushion=field('Cushion')||field('Demping'),goal=field('Goal')||field('Doel'),weightG=weightRaw?(Number((weightRaw.match(/(\d+(?:\.\d+)?)\s*g/i)||[])[1])||null):null,dropMm=dropRaw?(Number((dropRaw.match(/(\d+(?:\.\d+)?)\s*mm/i)||[])[1])||null):null;return{name:name||cleanAsicsProductName((url.match(/\/([^/]+)\/p\//)||[])[1]?.replace(/-/g,' ')),url,surface,cushion,support,goal,weightG,dropMm,official:true,manufacturer:'ASICS'}}
-
-function fetchAsicsViaJsonp(url,timeoutMs=12000){
- return new Promise((resolve,reject)=>{
-  const cb=`__asicsLive_${Date.now()}_${Math.random().toString(36).slice(2)}`,script=document.createElement('script');
-  let done=false;
-  const cleanup=()=>{try{delete window[cb]}catch(_){window[cb]=undefined}script.remove()};
-  const timer=setTimeout(()=>{if(done)return;done=true;cleanup();reject(Error('AllOrigins JSONP timed out.'))},timeoutMs);
-  window[cb]=payload=>{if(done)return;done=true;clearTimeout(timer);cleanup();const text=payload?.contents;if(typeof text==='string'&&text.length>100)resolve(text);else reject(Error('AllOrigins JSONP returned no page content.'))};
-  script.onerror=()=>{if(done)return;done=true;clearTimeout(timer);cleanup();reject(Error('AllOrigins JSONP could not be loaded.'))};
-  script.src=`${ASICS_ALLORIGINS_GET}${encodeURIComponent(url)}&callback=${encodeURIComponent(cb)}`;
-  script.async=true;document.head.appendChild(script);
- });
-}
 async function fetchAsicsOfficialText(url){
- const attempts=[];
- const tryFetch=async(label,requestUrl,options={})=>{
-  try{const r=await fetch(requestUrl,{cache:'no-store',...options});if(!r.ok)throw Error(`HTTP ${r.status}`);const text=await r.text();if(!text||text.length<100)throw Error('empty response');asicsLiveLastTransport=label;return text}
-  catch(err){attempts.push(`${label}: ${String(err?.message||err)}`);return null}
- };
- let text=await tryFetch('Jina Reader',`${ASICS_READER_PREFIX}${url}`,{headers:{Accept:'text/plain'}});
- if(text)return text;
- text=await tryFetch('AllOrigins raw',`${ASICS_ALLORIGINS_RAW}${encodeURIComponent(url)}`);
- if(text)return text;
- text=await tryFetch('Direct ASICS',url,{mode:'cors'});
- if(text)return text;
- try{const jsonp=await fetchAsicsViaJsonp(url);asicsLiveLastTransport='AllOrigins JSONP';return jsonp}
- catch(err){attempts.push(`AllOrigins JSONP: ${String(err?.message||err)}`)}
- throw Error(`No live transport succeeded. ${attempts.join(' · ')}`);
+ const readerUrl=`${ASICS_READER_PREFIX}${url}`;
+ try{const r=await fetch(readerUrl,{cache:'no-store',headers:{Accept:'text/plain'}});if(r.ok){const text=await r.text();if(text&&text.length>200)return text}}catch(_){}
+ try{const r=await fetch(url,{cache:'no-store',mode:'cors'});if(r.ok)return await r.text()}catch(_){}
+ throw Error('ASICS live lookup is blocked by the current browser/network.');
 }
 async function refreshAsicsLiveCatalog({manual=false}={}){
  if(asicsLiveRefreshInFlight)return asicsLiveRefreshInFlight;
  const btn=$('refreshAsicsLive');if(btn){btn.disabled=true;btn.textContent='Checking ASICS…'}
- asicsLiveLastTransport='';asicsLiveRefreshInFlight=(async()=>{
+ asicsLiveRefreshInFlight=(async()=>{
   const discovered=[],sourceErrors=[];
   for(const url of ASICS_LIVE_CATEGORY_URLS){
    try{const text=await fetchAsicsOfficialText(url),found=parseAsicsCategoryProducts(text,url);discovered.push(...found);if(!found.length)sourceErrors.push(`No products parsed from ${url}`)}
@@ -5675,7 +5649,7 @@ async function refreshAsicsLiveCatalog({manual=false}={}){
   }
   if(!details.length)throw Error(sourceErrors[0]||'No current ASICS running models could be validated.');
   state.asicsLiveCatalog=details;
-  state.asicsLiveCatalogMeta={lastChecked:new Date().toISOString(),source:'ASICS NL live',transport:asicsLiveLastTransport||'Live web transport',count:details.length,error:null};
+  state.asicsLiveCatalogMeta={lastChecked:new Date().toISOString(),source:'ASICS NL live',transport:'Official ASICS pages via browser-safe reader; direct official fallback',count:details.length,error:null};
   shoeAutoAssignmentStamp=null;shoeAutoAssignments();save();
   if($('shoesContent')?.closest('.page')?.classList.contains('active'))renderShoes();
   if(manual)toast(`ASICS live catalogue updated · ${details.length} current models.`);
@@ -5692,11 +5666,11 @@ async function refreshAsicsLiveCatalog({manual=false}={}){
  return asicsLiveRefreshInFlight
 }
 function maybeRefreshAsicsLiveCatalog(){if(!navigator.onLine)return;const meta=asicsLiveMeta(),age=meta.lastChecked?Date.now()-new Date(meta.lastChecked).getTime():Infinity;if(age>7*DAY&&!asicsLiveRefreshInFlight)refreshAsicsLiveCatalog()}
-function asicsLiveStatusHtml(){const meta=asicsLiveMeta(),list=asicsLiveCatalog(),when=meta.lastChecked?fmtDate(iso(new Date(meta.lastChecked))):'Not checked yet',status=meta.error?`Last live check failed · ${esc(meta.error)}`:meta.lastChecked?`Last checked ${when}${meta.transport?` · via ${meta.transport}`:''}`:'Refresh when online to validate current models and specifications.';return`<div class="asicsLiveStatus"><div><small>LIVE ASICS CATALOGUE</small><b>${list.length?`${list.length} current models live-validated`:'Local catalogue active'}</b><span>${status}</span></div><button id="refreshAsicsLive" class="secondary small" type="button">Refresh ASICS live</button></div>`}
+function asicsLiveStatusHtml(){const meta=asicsLiveMeta(),list=asicsLiveCatalog(),when=meta.lastChecked?fmtDate(iso(new Date(meta.lastChecked))):'Not checked yet',status=meta.error?`Last live check failed · ${esc(meta.error)}`:meta.lastChecked?`Last checked ${when}`:'Refresh when online to validate current models and specifications.';return`<div class="asicsLiveStatus"><div><small>LIVE ASICS CATALOGUE</small><b>${list.length?`${list.length} current models live-validated`:'Local catalogue active'}</b><span>${status}</span></div><button id="refreshAsicsLive" class="secondary small" type="button">Refresh ASICS live</button></div>`}
 function liveAsicsProfileForItem(item){const parsed=splitModelVersion(item.name),known=findAsicsProfile('ASICS',parsed.model,parsed.version);if(known)return{...known,liveItem:item,evidenceSource:`ASICS live availability · ${item.url||item.sourceUrl||'ASICS NL collection'}`,profileConfidence:'manufacturer/live'};const supportive=/overpron|stability|support/i.test(item.support||''),neutral=/neutral/i.test(item.support||'')||!supportive,faster=/faster|fast/i.test(item.goal||''),high=/high|hoog/i.test(item.cushion||'');return{brand:'ASICS',family:parsed.model||item.name,version:Number(parsed.version)||'',neutral,supportType:supportive?'stability':'neutral',surfaces:[/trail/i.test(item.surface||'')?'trail':'road'],roles:faster?['tempo','intervals','race','daily']:['daily','easy','recovery','long'],cushioning:high?5:3,responsiveness:faster?5:3,stability:supportive?5:3,protection:high?5:3,grip:3,efficiency:faster?5:3,durability:4,comfort:high?5:3,weightClass:item.weightG&&item.weightG<230?'light':item.weightG&&item.weightG<270?'medium-light':'medium',plated:/METASPEED/i.test(item.name),plateType:/METASPEED/i.test(item.name)?'carbon':null,preferredDistanceMinKm:0,preferredDistanceMaxKm:100,workoutSuitability:{},typicalReplacementLowKm:/METASPEED/i.test(item.name)?400:600,typicalReplacementHighKm:/METASPEED/i.test(item.name)?800:900,evidenceSource:`ASICS live availability · ${item.url||item.sourceUrl||'ASICS NL collection'}`,profileConfidence:'manufacturer/live',liveItem:item}}
 function runnerFootMechanics(){return state.setup?.footMechanics||'unknown'}
 function gaitPurchaseAdjustment(profile){const gait=runnerFootMechanics(),support=String(profile.supportType||profile.liveItem?.support||'').toLowerCase(),neutral=profile.neutral!==false&&!/stability|overpron|support/.test(support);if(gait==='pronation')return /stability|overpron|support/.test(support)?22:neutral?-18:0;if(gait==='supination')return neutral?10:-16;if(gait==='neutral')return neutral?12:-15;return 0}
-const SHOE_ENGINE_STRATEGIES={balanced:{label:'Balanced · recommended',desc:'Balances workout fit, rotation, service life, injury-aware cushioning/protection and race-day preparation.'},fewer:{label:'Minimise new pairs',desc:'Uses versatile existing shoes for longer where condition remains acceptable and reduces overlapping purchases.'},protection:{label:'Prioritise protection',desc:'Favors cushioning, protection and earlier replacement.'},quality:{label:'Dedicated quality shoes',desc:'Favors a separate responsive pair for intervals, threshold, race-specific and other quality sessions.'},fit:{label:'Best workout fit',desc:'Chooses the strongest model match for each session type, accepting a larger rotation when it materially improves suitability.'}};function shoeEngineStrategy(){return SHOE_ENGINE_STRATEGIES[state.shoeEngineStrategy]||SHOE_ENGINE_STRATEGIES.balanced}function shoeEngineStrategyHtml(){const cur=state.shoeEngineStrategy||'balanced';return`<div class="shoeApproachControl"><label for="shoeEngineStrategySelect">Shoe engine approach</label><select id="shoeEngineStrategySelect">${Object.entries(SHOE_ENGINE_STRATEGIES).map(([k,v])=>`<option value="${k}" ${cur===k?'selected':''}>${esc(v.label)}</option>`).join('')}</select><small>${esc(shoeEngineStrategy().desc)}</small></div>`}
+const SHOE_ENGINE_STRATEGIES={balanced:{label:'Smart rotation · recommended',desc:'Builds the smallest sensible rotation that still gives each workout an appropriate shoe, protects service life and prepares Race Day without unnecessary overlap.'},fewer:{label:'Keep it simple',desc:'Prioritises versatility and uses the fewest pairs practical, replacing only when wear or a genuine capability gap justifies it.'},quality:{label:'Performance rotation',desc:'Creates clearer separation between daily mileage, quality sessions and Race Day when a dedicated faster shoe materially improves workout fit.'},protection:{label:'Protection first',desc:'Prioritises cushioning, protection, familiarity and earlier replacement when load, rehabilitation or shoe wear makes protection more important than rotation size.'}};function shoeEngineStrategy(){return SHOE_ENGINE_STRATEGIES[state.shoeEngineStrategy]||SHOE_ENGINE_STRATEGIES.balanced}function shoeEngineStrategyHtml(){const cur=SHOE_ENGINE_STRATEGIES[state.shoeEngineStrategy]?state.shoeEngineStrategy:'balanced';return`<div class="shoeApproachControl"><label for="shoeEngineStrategySelect">Shoe engine approach</label><select id="shoeEngineStrategySelect">${Object.entries(SHOE_ENGINE_STRATEGIES).map(([k,v])=>`<option value="${k}" ${cur===k?'selected':''}>${esc(v.label)}</option>`).join('')}</select><small>${esc(shoeEngineStrategy().desc)}</small></div>`}
 function shoeWearState(shoe){const p=shoeProfileForShoe(shoe),km=shoeMileage(shoe),low=Number(shoe.replacementRangeKm?.low)||p.typicalReplacementLowKm,high=Number(shoe.replacementRangeKm?.high)||p.typicalReplacementHighKm,condition=shoe.condition||shoe.conditionFeedback||'Feels normal';let status='healthy',label='Healthy';if(condition==='Causing discomfort'||condition==='Upper damaged'||km>=high){status='replace';label='Replacement recommended'}else if(km>=low||['Noticeably flat','Grip deteriorating'].includes(condition)){status='approaching';label='Approaching replacement'}else if(!Number.isFinite(km)){status='unknown';label='Insufficient evidence'}return{status,label,km,low,high,remainingLow:Math.max(0,low-km),remainingHigh:Math.max(0,high-km)}}
 function shoeSurfaceScore(profile,plan){const surface=String(plan.surface||'road').toLowerCase(),surfaces=profile.surfaces||['road'];if(surfaces.includes(surface))return 100;if(surface==='road'&&surfaces.includes('mixed'))return 90;if(surface==='mixed'&&surfaces.includes('road'))return 72;if(surface==='trail'&&surfaces.includes('mixed'))return 78;return 35}
 function shoeDistanceScore(profile,distance){const d=Number(distance)||0,min=Number(profile.preferredDistanceMinKm)||0,max=Number(profile.preferredDistanceMaxKm)||999;if(d>=min&&d<=max)return 100;if(d<min)return Math.max(55,100-(min-d)*8);return Math.max(20,100-(d-max)*5)}
@@ -5956,12 +5930,15 @@ function renderShoes(){const root=$('shoesContent');if(!root)return;reconcileSho
  const savePurchase=$('saveRacePurchasePlan');if(savePurchase)savePurchase.onclick=()=>{const plan=raceShoePlan();saveRacePurchasePlan(plan);save();renderShoes();toast('Race-shoe purchase plan saved.')};root.querySelectorAll('[data-dismiss-shoe-purchase]').forEach(btn=>btn.onclick=()=>{const item=(state.plannedShoePurchases||[]).find(x=>x.id===btn.dataset.dismissShoePurchase);if(item)item.status='dismissed';save();renderShoes();toast('Purchase plan dismissed.')});
 }
 
+function shoeProposalProfile(item){return findAsicsProfile(item.brand||'ASICS',item.model||'',item.version||'')||ASICS_SHOE_PROFILES.find(p=>normalizeShoeFamily(p.family)===normalizeShoeFamily(item.model))||null}
+function shoeProposalRoleOverlap(a,b){const pa=shoeProposalProfile(a),pb=shoeProposalProfile(b);if(!pa||!pb)return 0;const A=new Set(pa.roles||[]),B=new Set(pb.roles||[]),shared=[...A].filter(x=>B.has(x)).length,den=Math.max(1,Math.min(A.size,B.size));return shared/den}
+function optimiseShoePurchaseProposals(items){const strategy=SHOE_ENGINE_STRATEGIES[state.shoeEngineStrategy]?state.shoeEngineStrategy:'balanced';const sorted=items.slice().sort((a,b)=>String(a.recommendedPurchaseStart||'9999').localeCompare(String(b.recommendedPurchaseStart||'9999'))),kept=[];for(const item of sorted){if(item.kind==='race'){kept.push(item);continue}const t=item.recommendedPurchaseStart?dte(item.recommendedPurchaseStart).getTime():NaN;const duplicate=kept.find(prev=>{if(prev.kind==='race')return false;const pt=prev.recommendedPurchaseStart?dte(prev.recommendedPurchaseStart).getTime():NaN;if(!Number.isFinite(t)||!Number.isFinite(pt)||Math.abs(t-pt)>56*DAY)return false;const overlap=shoeProposalRoleOverlap(item,prev);const sameFamily=normalizeShoeFamily(item.model)===normalizeShoeFamily(prev.model);return sameFamily||overlap>=.67});if(duplicate&&strategy!=='quality'){duplicate.rationale=(duplicate.rationale||'')+' The rotation engine also absorbed a substantially overlapping near-term purchase to avoid buying two shoes for the same job within eight weeks.';continue}kept.push(item)}return kept}
 function shoePurchaseProposals(){
  const race=state.setup?.raceDate||iso(today()),items=[];
  plannedReplacementEvents().filter(e=>e.date>=iso(today())&&e.date<=race&&e.replacement).forEach(e=>{const purchaseDate=plannedTrainingPurchaseDate(e);items.push({id:`proposal-training-${e.shoe.id}-${e.date}`,kind:'training',brand:'ASICS',model:e.replacement.family,version:String(e.replacement.version||''),recommendedPurchaseStart:purchaseDate,recommendedPurchaseEnd:e.date,targetFirstUseDate:e.date,targetRaceDayMileage:null,intendedRole:'training',replacesShoeId:e.shoe.id,replacesName:shoeDisplayName(e.shoe),rationale:e.optimisation?`Portfolio-optimised replacement. Originally projected around ${shoeChartDate(e.optimisation.originalDate)}, but delayed because ${e.optimisation.absorbedBy} can absorb ~${Math.round(e.optimisation.divertedKm)} km of compatible mileage first.`:`Replace ${shoeDisplayName(e.shoe)} before the remaining programme pushes that physical pair beyond its expected service-life range.`})});
  const rp=raceShoePlan();if(rp?.purchaseNeeded&&rp.profile){items.push({id:'proposal-race-day',kind:'race',brand:'ASICS',model:rp.profile.family,version:String(rp.profile.version||''),recommendedPurchaseStart:rp.purchaseStart,recommendedPurchaseEnd:rp.purchaseEnd,targetFirstUseDate:rp.famSessions?.[0]?.date||null,targetRaceDayMileage:rp.projectedNew,intendedRole:'race',rationale:rp.reason||'Dedicated Race Day pair planned to reach the target familiarity window.'})}
  (state.plannedShoePurchases||[]).filter(x=>x.status==='planned').forEach(x=>{if(!items.some(i=>i.kind===x.intendedRole&&normalizeShoeFamily(i.model)===normalizeShoeFamily(x.model)&&String(i.version||'')===String(x.version||'')))items.push({...x,id:x.id,kind:x.intendedRole||'planned'})});
- return items.sort((a,b)=>String(a.recommendedPurchaseStart||'9999').localeCompare(String(b.recommendedPurchaseStart||'9999')));
+ return optimiseShoePurchaseProposals(items);
 }
 function shoeFuturePurchasePlanHtml(){const items=shoePurchaseProposals();if(!items.length)return`<div class="shoeNoPurchase"><b>No additional purchases currently proposed</b><p>The current rotation can cover the remaining programme and Race Day lifecycle requirements on present evidence.</p></div>`;return`<div class="shoeFuturePurchases"><div class="shoeFuturePurchaseHead"><small>FUTURE PURCHASES</small><h4>What the rotation may need next</h4><p>Training replacements and the Race Day pair are shown separately. Adding an actual purchase recalculates this plan.</p></div>${items.map(x=>`<article class="shoeFuturePurchase"><div><small>${x.kind==='race'?'RACE-DAY PAIR':'TRAINING REPLACEMENT'}</small><b>${esc([x.brand,x.model,x.version].filter(Boolean).join(' '))}</b><span>${x.recommendedPurchaseStart?`From ${fmtDate(x.recommendedPurchaseStart)}`:'Timing building'}${x.recommendedPurchaseEnd?` · by ${fmtDate(x.recommendedPurchaseEnd)}`:''}</span></div><p>${esc(x.kind==='training'&&x.replacesName?`Planned to replace ${x.replacesName}. ${x.rationale||''}`:x.rationale||'Model-derived lifecycle recommendation.')}</p>${Number.isFinite(Number(x.targetRaceDayMileage))&&Number(x.targetRaceDayMileage)>0?`<strong>Target Race Day mileage ~${Math.round(Number(x.targetRaceDayMileage))} km</strong>`:''}</article>`).join('')}</div>`}
 function rehabDayNeedsShoe(day){if(!day)return false;const walking=String(day.walkingTarget||'').toLowerCase(),running=String(day.running||'').toLowerCase();return (walking&&!walking.includes('no walking')&&!walking.includes('not planned'))||(running&&!running.includes('no running')&&!running.includes('not planned'))}
