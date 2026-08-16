@@ -4681,3 +4681,7 @@ body:has(#dashboard.progressPage.active),#mainContent:has(#dashboard.progressPag
 #shoes .shoeRotationDecision>b,#shoes .shoeRotationDecision>span,#shoes .shoeRotationDecision>em{display:block}
 #shoes .shoeRotationDecision>b{margin-top:3px;color:#effcff}#shoes .shoeRotationDecision>span{margin-top:3px;color:#b9cbd3;font-size:13px}#shoes .shoeRotationDecision p{margin:7px 0 4px;color:#a9bec8;line-height:1.4}#shoes .shoeRotationDecision em{color:#7fded3;font-style:normal;font-size:12px;font-weight:800}
 #shoes .shoeRotationDecision.none{border-style:dashed}
+
+/* v13.8.6 balanced-only shoe strategy */
+.shoeApproachFixed{display:grid;gap:8px}
+.shoeApproachFixed>strong{font-size:1.2rem;line-height:1.2}

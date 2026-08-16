@@ -1,4 +1,16 @@
-AI Running Coach v13.8.5 · build 30805
+AI Running Coach v13.8.6 · build 30806
+
+Balanced-only shoe engine
+- Removed Performance and Protection / injury-conscious modes.
+- Removed the shoe-mode selector and mode-switch recalculation path.
+- Balanced is now the single authoritative shoe strategy.
+- Target two meaningfully active training pairs, allow short three-pair handovers only when justified.
+- Use model-specific life up to 100%, never retire below 80% full model life.
+- Purchases remain need-driven; Race Day reuses an existing suitable pair when possible and adds a dedicated pair only when required.
+- Rehab, pronation/foot-mechanics context, workout suitability, current mileage, lifecycle capacity and Race Day familiarity remain inputs.
+- Existing training, prediction, recovery, rehabilitation progression, pathway, scoring and import calculations are unchanged.
+
+AI Running Coach v13.8.6 · build 30806
 
 Shoe purchase/graph consistency update
 - A final purchase-necessity gate removes late or low-use non-race future pairs when every assigned workout can be covered by the remaining rotation.
@@ -10,11 +22,11 @@ Shoe purchase/graph consistency update
 - Validation flags any surviving late low-use non-race purchase.
 - Existing training, prediction, recovery, rehabilitation progression, pathway, scoring and import calculations are unchanged.
 
-AI Running Coach v13.8.5 · build 30805
+AI Running Coach v13.8.6 · build 30806
 Revision/header/cache synchronization release.
-- Header fallback and runtime header both use v13.8.5 build 30805.
+- Header fallback and runtime header both use v13.8.6 build 30806.
 - app.js CORE.VERSION/BUILD, manifest and service-worker cache use the same revision.
-- CSS/JS/manifest asset query strings are cache-busted to build 30805.
+- CSS/JS/manifest asset query strings are cache-busted to build 30806.
 
 AI Running Coach v13.8.2 — coach-first shoe strategy + rebuilt optimiser — build 30802
 
