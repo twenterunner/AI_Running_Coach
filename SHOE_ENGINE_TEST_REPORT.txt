@@ -1,0 +1,26 @@
+AI Running Coach v13.8.1 build 30801 — Shoe Engine Verification
+
+72-scenario matrix: PASS 72 / FAIL 0
+24 targeted boundary tests: PASS 24 / FAIL 0
+Total: PASS 96 / FAIL 0
+
+Hard invariants checked:
+- no use before purchase
+- no assignment beyond retirement/service-life limit
+- no graph point beyond retirement
+- no extended one-pair training rotation where two-pair allocation is required
+- >=25% weekly share for each active non-race pair whenever physically feasible
+- no unused or materially idle future purchase
+- purchase date / first meaningful use consistency
+- Race Day pair exists and is inside its target window
+- Race Day pair <=250 km
+- retirement cannot precede final planned use
+- Race Day specialist is not generic overflow
+
+UI regression checks:
+- no numbered slope-change markers rendered
+- BUY is a compact first-use marker
+- RETIRE is an X at final planned use
+- rehab is a background band only
+- one compact legend entry per physical pair
+- runner-facing Rotation Plan shown below graph

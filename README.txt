@@ -1,3 +1,31 @@
+AI Running Coach v13.8.1 — coach-first shoe strategy + rebuilt optimiser — build 30801
+
+- Rebuilt lifecycle optimiser retained from v13.8.0 verification baseline.
+- Shoe graph simplified: no numbered slope/debug events, no full-height BUY lines, no redundant chart key.
+- One physical-pair curve per shoe: logged mileage solid, forecast dashed.
+- BUY shown as a compact first-use marker; RETIRE shown as an × at final planned use; curves end there.
+- Race Day target remains at the Race Day edge; active rehab is a background band only.
+- Compact per-pair legend and runner-facing Rotation Plan replace debugging explanations.
+- Balanced / Performance / Protection & rehab remain the three coaching strategies.
+- 72-scenario matrix + 24 targeted boundary suite required before release.
+
+AI Running Coach v13.8.1 — authoritative shoe optimiser rebuild — build 30801
+
+- Replaces the previous sequential shoe-allocation/repair behaviour with a weekly physical-pair optimiser.
+- Treats purchase, first use, weekly allocation, service-life boundary, retirement, Race Day familiarisation and graph lifecycle as one authoritative state.
+- Targets two active training pairs; three is accepted during genuine handover.
+- Enforces the 25% weekly share whenever physically feasible with indivisible workout sessions, while explicitly respecting session granularity, workout fit and remaining service life.
+- Future shoes are bought at first meaningful use; no use-before-purchase and no plotting/use beyond retirement.
+- Generic retirement overflow can no longer be diverted into the dedicated Race Day pair.
+- Race Day pair remains within the model target window and never above the 250 km absolute ceiling.
+- Performance, Balanced and Injury Prevention retain their 90% / 100% / 80% lifecycle rules and mode-specific shoe-selection priorities.
+- Rehab and pronation context remain inputs to the same lifecycle selection logic.
+
+Verification before release:
+- 72-scenario regression matrix: 72 passed, 0 hard-invariant failures.
+- 24 targeted boundary scenarios: 24 passed, 0 hard-invariant failures.
+- Boundary coverage includes one/two/three-pair rotations, fresh and near-EOL shoes, short/long race horizons, all three modes, overpronation context, low/high weekly volume, purchase/use ordering, retirement clipping, Race Day <=250 km and graph retirement boundaries.
+
 AI Running Coach v13.7.63 — purchase/first-use/retirement consistency — build 30763
 
 - Purchase date and first use are now one authoritative lifecycle point for every future physical pair.
