@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '13.7.48';
-  const BUILD = 30748;
+  const VERSION = '13.7.49';
+  const BUILD = 30749;
   const SCHEMA = 10400;
   const PRIMARY_STORAGE_KEY = 'arc_v10400_web';
   const MIRROR_STORAGE_KEY = 'arc_v10400_mirror';
@@ -5782,6 +5782,11 @@ function lifecycleRetireKmForProfile(profile,shoe=null){
  return Math.max(Math.round(shoe?shoeMileage(shoe):0),Math.round(target))
 }
 function lifecycleProfileKey(profile){return`${normalizeShoeFamily(profile?.family||'shoe')}|${String(profile?.version||'')}`}
+function futureProfileDisplayName(profile){
+ if(profile?.currentName)return`ASICS ${profile.currentName}`;
+ const family=String(profile?.family||'Running shoe').trim(),version=String(profile?.version||'').trim();
+ return`ASICS ${family}${version?' '+version:''}`.trim()
+}
 function lifecyclePairLabel(pair){return pair.owned?shoeDisplayName(pair.shoe):futureProfileDisplayName(pair.profile)}
 function lifecycleRoles(profile){return new Set(profile?.roles||[])}
 function lifecycleIsQuality(type){return /Threshold|interval|VO₂|Fartlek|Progression|Specific|rehearsal|Race-pace|Fitness assessment|Hills/i.test(String(type||''))}
