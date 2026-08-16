@@ -1,4 +1,4 @@
-AI Running Coach v13.8.4 · build 30804
+AI Running Coach v13.8.5 · build 30805
 
 Shoe purchase/graph consistency update
 - A final purchase-necessity gate removes late or low-use non-race future pairs when every assigned workout can be covered by the remaining rotation.
@@ -10,11 +10,11 @@ Shoe purchase/graph consistency update
 - Validation flags any surviving late low-use non-race purchase.
 - Existing training, prediction, recovery, rehabilitation progression, pathway, scoring and import calculations are unchanged.
 
-AI Running Coach v13.8.4 · build 30804
+AI Running Coach v13.8.5 · build 30805
 Revision/header/cache synchronization release.
-- Header fallback and runtime header both use v13.8.4 build 30804.
+- Header fallback and runtime header both use v13.8.5 build 30805.
 - app.js CORE.VERSION/BUILD, manifest and service-worker cache use the same revision.
-- CSS/JS/manifest asset query strings are cache-busted to build 30804.
+- CSS/JS/manifest asset query strings are cache-busted to build 30805.
 
 AI Running Coach v13.8.2 — coach-first shoe strategy + rebuilt optimiser — build 30802
 
