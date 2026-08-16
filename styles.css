@@ -4507,3 +4507,44 @@ body:has(#dashboard.progressPage.active),#mainContent:has(#dashboard.progressPag
   color:#abc9d0;
   font-size:11px;
 }
+
+/* v13.7.40 — shoe context save, live ASICS status, graph-adjacent strategy */
+#shoes .shoeChartCard>.asicsLiveStatus{
+ margin:0 0 14px!important;
+ padding:12px!important;
+ border:1px solid rgba(80,210,219,.16)!important;
+ border-radius:12px!important;
+ background:rgba(3,31,43,.35)!important;
+}
+#shoes .shoeGraphStrategy{
+ margin:0 0 8px!important;
+ padding:0!important;
+}
+#shoes .shoeApproachControl{
+ display:grid!important;
+ grid-template-columns:1fr!important;
+ gap:6px!important;
+ padding:10px 12px!important;
+ border-radius:12px!important;
+ background:rgba(3,31,43,.44)!important;
+ border:1px solid rgba(80,210,219,.16)!important;
+}
+#shoes .shoeApproachControl label{
+ color:#45e0e4!important;
+ font-size:10px!important;
+ font-weight:900!important;
+ letter-spacing:.06em!important;
+ text-transform:uppercase!important;
+}
+#shoes .shoeApproachControl select{
+ width:100%!important;
+ margin:0!important;
+}
+#shoes .shoeApproachControl small{
+ color:#b7d0d7!important;
+ line-height:1.35!important;
+}
+#shoes .shoeGraphStrategy + .shoeLifecycleWrap,
+#shoes .shoeGraphStrategy + .shoeMileageLifecycle{
+ margin-top:0!important;
+}
