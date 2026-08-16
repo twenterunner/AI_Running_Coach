@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '13.7.53';
-  const BUILD = 30753;
+  const VERSION = '13.7.54';
+  const BUILD = 30754;
   const SCHEMA = 10400;
   const PRIMARY_STORAGE_KEY = 'arc_v10400_web';
   const MIRROR_STORAGE_KEY = 'arc_v10400_mirror';
@@ -5884,47 +5884,82 @@ function lifecycleWeeklyPairVolumes(pair){
  (pair?.assignments||[]).forEach(a=>{const w=lifecycleWeekKey(a.date);totals.set(w,(totals.get(w)||0)+(Number(a.km)||0))});
  return totals
 }
+function lifecyclePairKmBeforeDate(pair,date){
+ let km=pair.owned?pair.currentKm:0;
+ pair.assignments.filter(a=>a.date<date).forEach(a=>{km+=Number(a.km)||0});
+ return km
+}
+function lifecycleWeekEnd(week){return iso(new Date(dte(week).getTime()+6*DAY))}
+function lifecycleActiveNonRacePairsForWeek(pairs,week){
+ const end=lifecycleWeekEnd(week);
+ return pairs.filter(pair=>{
+  if(pair.role==='race'||pair.availableDate>end)return false;
+  return lifecyclePairKmBeforeDate(pair,week)<pair.retireKm-1
+ })
+}
+function lifecycleRemoveFuturePair(ctx,pair,fixed,assignments,reason){
+ if(!pair||pair.owned||pair.role==='race')return false;
+ const {pairs,purchases,events}=ctx,rows=pair.assignments.slice().sort((a,b)=>a.date.localeCompare(b.date)),moves=[];
+ for(const row of rows){
+  const plan=(fixed||[]).find(p=>p.id===row.planId)||{id:row.planId,date:row.date,type:row.type,distance:row.km,surface:'road'};
+  const alt=pairs.filter(p=>p.id!==pair.id&&p.availableDate<=row.date&&p.km+row.km<=p.retireKm+1)
+    .map(p=>({p,fit:lifecycleWorkoutFit(p.profile,plan),score:lifecyclePairAssignmentScore(p,plan).score+(p.owned?12:0)}))
+    .filter(x=>x.fit>=Math.max(24,lifecycleAcceptableFit(plan)-8)).sort((a,b)=>b.score-a.score)[0]?.p;
+  if(!alt)return false;moves.push([row,alt])
+ }
+ moves.forEach(([row,alt])=>lifecycleReassign(row,alt,pairs));
+ const pi=purchases.findIndex(p=>p.pairId===pair.id);if(pi>=0)purchases.splice(pi,1);
+ const idx=pairs.indexOf(pair);if(idx>=0)pairs.splice(idx,1);
+ events.push({date:pair.availableDate,type:'purchase-avoided',pairId:pair.id,text:reason||`${lifecyclePairLabel(pair)} is not purchased because the existing rotation can remain continuously and meaningfully used.`});
+ return true
+}
 function lifecycleEnforceMinWeeklyShare(ctx,fixed,assignments){
  const {pairs,purchases,events}=ctx,minShare=.25;
- for(let guard=0;guard<8;guard++){
-  let changed=false;
+ const weeks=[...new Set((assignments||[]).map(a=>lifecycleWeekKey(a.date)))].sort();
+ for(let outer=0;outer<12;outer++){
+  let anyChange=false,restart=false;
   const weeklyTotal=lifecycleWeeklyVolumes(assignments);
-  for(const pair of pairs.filter(p=>p.role!=='race')){
-   const pairWeeks=lifecycleWeeklyPairVolumes(pair);
-   for(const [week,pairKm] of pairWeeks.entries()){
-    const total=weeklyTotal.get(week)||0;if(total<=0||pairKm/total>=minShare-1e-6)continue;
-    const rows=pair.assignments.filter(a=>lifecycleWeekKey(a.date)===week).slice();
-    let removable=true;const choices=[];
-    for(const row of rows){
-     const plan=(fixed||[]).find(p=>p.id===row.planId)||{id:row.planId,date:row.date,type:row.type,distance:row.km,surface:'road'};
-     const alt=pairs.filter(p=>p.id!==pair.id&&p.availableDate<=row.date&&p.km+row.km<=p.retireKm+1)
-       .map(p=>({p,fit:lifecycleWorkoutFit(p.profile,plan),score:lifecyclePairAssignmentScore(p,plan).score+(p.owned?8:0)}))
-       .filter(x=>x.fit>=lifecycleAcceptableFit(plan)).sort((a,b)=>b.score-a.score)[0]?.p;
-     if(!alt){removable=false;break}
-     choices.push([row,alt])
-    }
-    if(removable){
-      choices.forEach(([row,alt])=>lifecycleReassign(row,alt,pairs));
-      events.push({date:rows[0]?.date||week,type:'rotation-consolidation',pairId:pair.id,text:`${lifecyclePairLabel(pair)} is removed from this week's rotation because its planned share would be below 25% of weekly running volume.`});
-      changed=true;continue
-    }
-    const need=Math.max(0,minShare*total-pairKm);
-    let moved=0;
-    const candidates=(assignments||[]).filter(a=>lifecycleWeekKey(a.date)===week&&a.pairId!==pair.id)
-      .map(row=>{const plan=(fixed||[]).find(p=>p.id===row.planId)||{id:row.planId,date:row.date,type:row.type,distance:row.km,surface:'road'};return{row,plan,fit:lifecycleWorkoutFit(pair.profile,plan)}})
-      .filter(x=>x.fit>=lifecycleAcceptableFit(x.plan)&&pair.km+x.row.km<=pair.retireKm+1)
-      .sort((a,b)=>b.fit-a.fit);
+  for(const week of weeks){
+   const total=weeklyTotal.get(week)||0;if(total<=0)continue;
+   let active=lifecycleActiveNonRacePairsForWeek(pairs,week);
+   // More than four non-race physical pairs can never satisfy a 25% floor. Remove/defer future pairs first.
+   while(active.length>4){
+    const future=active.filter(p=>!p.owned).sort((a,b)=>(b.availableDate||'').localeCompare(a.availableDate||''))[0];
+    if(!future||!lifecycleRemoveFuturePair(ctx,future,fixed,assignments,'Purchase deferred: keeping this pair would create more active shoes than can each receive at least 25% of weekly running volume.'))break;
+    active=lifecycleActiveNonRacePairsForWeek(pairs,week);anyChange=true;restart=true
+   }
+   if(restart)break;
+   const target=minShare*total;
+   // Recompute share from actual running assignments. A serviceable pair with zero km is still active and must receive work.
+   for(const pair of active){
+    let pairKm=pair.assignments.filter(a=>lifecycleWeekKey(a.date)===week&&!a.rehab).reduce((n,a)=>n+(Number(a.km)||0),0);
+    if(pairKm>=target-1e-6)continue;
+    let need=target-pairKm;
+    const candidates=(assignments||[]).filter(row=>lifecycleWeekKey(row.date)===week&&row.pairId!==pair.id)
+      .map(row=>{
+       const plan=(fixed||[]).find(p=>p.id===row.planId)||{id:row.planId,date:row.date,type:row.type,distance:row.km,surface:'road'};
+       const donor=pairs.find(p=>p.id===row.pairId),donorKm=donor?.assignments.filter(a=>lifecycleWeekKey(a.date)===week&&!a.rehab).reduce((n,a)=>n+(Number(a.km)||0),0)||0;
+       const donorFloor=donor?.role==='race'?0:target;
+       return{row,plan,donor,fit:lifecycleWorkoutFit(pair.profile,plan),donorSpare:donorKm-donorFloor}
+      })
+      .filter(x=>x.donor&&x.donorSpare>=x.row.km-1e-6&&x.fit>=Math.max(24,lifecycleAcceptableFit(x.plan)-8)&&lifecyclePairKmBeforeDate(pair,x.row.date)+x.row.km<=pair.retireKm+1)
+      .sort((a,b)=>b.fit-a.fit||b.donorSpare-a.donorSpare);
     for(const x of candidates){
-      lifecycleReassign(x.row,pair,pairs);moved+=x.row.km;changed=true;
-      if(moved>=need)break
+     lifecycleReassign(x.row,pair,pairs);need-=x.row.km;pairKm+=x.row.km;anyChange=true;
+     if(need<=1e-6)break
+    }
+    if(need>1e-6){
+     // A proposed future training pair that cannot earn a meaningful continuous share should not exist yet.
+     if(!pair.owned&&pair.role!=='race'&&lifecycleRemoveFuturePair(ctx,pair,fixed,assignments,'Purchase deferred: this future pair could not be used for at least 25% of weekly running volume while the existing shoes remain serviceable.')){anyChange=true;restart=true;break}
     }
    }
+   if(restart)break
   }
-  if(!changed)break
+  if(restart)continue;
+  if(!anyChange)break
  }
- pairs.filter(p=>!p.owned&&p.role!=='race'&&!p.assignments.length).forEach(pair=>{
-   const pi=purchases.findIndex(p=>p.pairId===pair.id);if(pi>=0)purchases.splice(pi,1)
- })
+ // Final cleanup of unused future non-race pairs.
+ pairs.filter(p=>!p.owned&&p.role!=='race'&&!p.assignments.length).slice().forEach(pair=>lifecycleRemoveFuturePair(ctx,pair,fixed,assignments,'Purchase removed because the pair has no meaningful programme use.'))
 }
 function lifecycleCompactRotation(ctx,fixed){
  const cfg=lifecycleStrategyConfig(),{pairs,purchases,events}=ctx;
@@ -6004,6 +6039,13 @@ function lifecycleContextualRaceProfile(racePlan,pairs){
 function lifecycleCreatePair(ctx,plan,role='training',preferredProfile=null){
  const cfg=lifecycleStrategyConfig(),{pairs,purchases,events}=ctx,distance=Math.max(0,Number(plan.distance)||0);
  const isRace=role==='race';
+ if(!isRace){
+  const activeNow=pairs.filter(p=>p.role!=='race'&&p.availableDate<=plan.date&&lifecyclePairKmBeforeDate(p,plan.date)<p.retireKm-1);
+  if(activeNow.length>=4){
+   const fallback=activeNow.map(p=>({p,...lifecyclePairAssignmentScore(p,plan)})).filter(x=>x.p.km+distance<=x.p.retireKm+1).sort((a,b)=>b.score-a.score)[0]?.p;
+   if(fallback)return fallback
+  }
+ }
  // Reuse a future physical pair only when it genuinely covers the requested role.
  // A request for a Race Day pair must never silently reuse an ordinary daily trainer.
  const reusable=pairs.filter(p=>!p.owned&&p.availableDate<=plan.date&&p.km+distance<=p.retireKm)
@@ -6186,14 +6228,23 @@ function lifecycleValidatePlan(result){
   }
  });
  const weeklyTotal=lifecycleWeeklyVolumes(result.assignments);
+ for(const [week,total] of weeklyTotal.entries()){
+  if(total<=0)continue;
+  lifecycleActiveNonRacePairsForWeek(result.pairs,week).forEach(pair=>{
+   const km=pair.assignments.filter(a=>lifecycleWeekKey(a.date)===week&&!a.rehab).reduce((n,a)=>n+(Number(a.km)||0),0),share=km/total;
+   if(share<.25-1e-6)issues.push({code:'active-non-race-pair-below-25-percent-weekly-share',pairId:pair.id,week,share})
+  })
+ }
+
  result.pairs.filter(p=>p.role!=='race').forEach(pair=>{
-  const pw=lifecycleWeeklyPairVolumes(pair);
-  for(const [week,km] of pw.entries()){
-   const total=weeklyTotal.get(week)||0;
-   if(total>0&&km/total<.25-1e-6)issues.push({code:'non-race-pair-below-25-percent-weekly-share',pairId:pair.id,week,share:km/total})
+  const last=pair.assignments.filter(a=>!a.rehab).slice().sort((a,b)=>a.date.localeCompare(b.date)).at(-1);
+  if(!last)return;
+  const kmAtLast=lifecyclePairKmBeforeDate(pair,iso(new Date(dte(last.date).getTime()+DAY)));
+  if(last.date<result.raceDate&&kmAtLast<pair.retireKm-1){
+   const laterRunning=result.assignments.some(a=>a.date>last.date);
+   if(laterRunning)issues.push({code:'serviceable-pair-stops-being-used',pairId:pair.id,lastUse:last.date,km:kmAtLast,limit:pair.retireKm})
   }
  });
-
  result.pairs.filter(p=>!p.owned&&p.assignments.length).forEach(pair=>{
   const u=lifecycleFuturePairUsageSummary(pair);
   if(u.first28Count<2&&u.first28Km<15)issues.push({code:'future-pair-not-used-meaningfully-after-purchase',pairId:pair.id});
