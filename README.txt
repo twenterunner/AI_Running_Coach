@@ -1,4 +1,15 @@
-AI Running Coach v14.0.5 · build 40005
+AI Running Coach v14.0.6 · build 40006
+
+Shoe lifecycle corrective release
+- 25% weekly minimum solved using whole-session constrained allocation whenever feasible.
+- Redundant late purchases are pruned before display/cache.
+- Only genuinely available physical pairs appear in session score comparisons.
+- Plan shoe cards use the Today shoe-card hierarchy.
+- Shoe graph suppresses artificial flat equal-mileage segments.
+- Race Day planning retains sub-250 km and close-to-race familiarisation rules.
+- Non-shoe engines remain regression locked.
+
+AI Running Coach v14.0.6 · build 40006
 
 SESSION SUITABILITY shoe-engine rebuild
 - One authoritative physical-pair engine for running and rehabilitation shoe planning.

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,interactive-widget=resizes-content">
 <meta name="theme-color" content="#07111D"><title>AI Running Coach</title>
-<link rel="manifest" href="manifest.webmanifest?v=40005"><link rel="stylesheet" href="styles.css?v=40005-session-suitability">
+<link rel="manifest" href="manifest.webmanifest?v=40006"><link rel="stylesheet" href="styles.css?v=40006-session-suitability">
 <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png?v=10320">
 <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png?v=10320">
 <link rel="icon" href="favicon.ico?v=10320">
@@ -11,11 +11,15 @@
 <meta property="og:image" content="github-banner.png">
 
 
+<style id="shoe-session-v1406">
+/* v14.0.6: Plan uses the same runner-facing shoe tile hierarchy as Today. */
+.sessionShoeCard{display:grid!important;grid-template-columns:48px minmax(0,1fr)!important;gap:14px!important;align-items:start!important;padding:16px!important;border:1px solid rgba(61,214,198,.16)!important;border-radius:16px!important;background:#0c1923!important}.sessionShoeCard>span:first-child{width:48px;height:48px;display:grid;place-items:center;border-radius:13px;background:rgba(61,214,198,.08);color:#79eee0}.sessionShoeBody{display:grid;gap:8px}.sessionShoeBody>b{font-size:15px;line-height:1.35}.sessionShoeBody>p{margin:0;font-size:12px}.sessionShoeChoose{width:100%;margin-top:4px}.sessionShoeCard .shoeAvailableScores{margin-top:6px}.sessionShoeCard .shoeAvailableScores span{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center}.sessionShoeCard .shoeAvailableScores b{white-space:normal;overflow-wrap:anywhere}.sessionShoeCard .shoeSuitabilityDetails{margin-top:4px}
+</style>
 </head>
 <body>
 <a class="skipLink" href="#mainContent">Skip to main content</a>
 <header class="topbar">
-  <div class="brand"><img class="logo" src="icon-192.png?v=40005" alt="AI Running Coach logo"><div class="brand-copy"><h1>AI Running Coach</h1><p>Race-specific adaptive planning · v14.0.5 · build 40005</p></div></div>
+  <div class="brand"><img class="logo" src="icon-192.png?v=40006" alt="AI Running Coach logo"><div class="brand-copy"><h1>AI Running Coach</h1><p>Race-specific adaptive planning · v14.0.6 · build 40006</p></div></div>
   <button id="installBtn" class="install hidden">Install</button>
 </header>
 <nav id="nav" aria-label="Primary navigation"></nav>
@@ -255,10 +259,10 @@
   <article class="settingsSection"><div class="settingsSectionHead"><span>02</span><div><small>TRAINING STRUCTURE</small><h3>When can you train?</h3><p>Availability and the long-run day used when the plan is rebuilt.</p></div></div><div id="daysGrid"></div></article>
   <article class="settingsSection"><div class="settingsSectionHead"><span>03</span><div><small>ADAPTIVE MODEL</small><h3>Is the configured plan structurally sound?</h3><p>Plan Health validates the programme structure without duplicating Progress.</p></div></div><div class="settingsNested"><div class="panelHead"><div><h3>Plan Health</h3><p class="muted compact">Structure score, calculation and recommendations for the configured plan.</p></div><button id="planHealthBtn" class="secondary">Validate plan</button></div><div id="planHealthContent"></div></div></article>
   <article class="settingsSection"><div class="settingsSectionHead"><span>04</span><div><small>DATA & IMPORTS</small><h3>Manage your local training data</h3><p>Back up, restore or export data. Destructive actions remain clearly separated.</p></div></div><div class="settingsNested"><div class="buttonRow settingsDataActions"><button id="backupBtn">Download backup</button><label for="restoreFile" class="buttonLike">Restore backup</label><input id="restoreFile" type="file" accept=".json"><button id="undoRestoreBtn" type="button" class="secondary hidden">Undo last restore</button><button id="exportBtn">Export runs CSV</button></div><div class="settingsDangerZone"><b>Reset local app data</b><p>Use only when you intend to remove the current local programme and history.</p><button id="resetBtn" class="danger">Reset app</button></div></div></article>
-  <article class="settingsSection"><div class="settingsSectionHead"><span>05</span><div><small>APP & MODEL INFORMATION</small><h3>Which version is running?</h3><p>Reference information for this local build.</p></div></div><div class="settingsNested settingsAppInfo"><div><small>APP VERSION</small><strong>v14.0.5</strong></div><div><small>BUILD</small><strong>40005</strong></div><div><small>DATA</small><strong>Stored locally</strong></div></div></article>
+  <article class="settingsSection"><div class="settingsSectionHead"><span>05</span><div><small>APP & MODEL INFORMATION</small><h3>Which version is running?</h3><p>Reference information for this local build.</p></div></div><div class="settingsNested settingsAppInfo"><div><small>APP VERSION</small><strong>v14.0.6</strong></div><div><small>BUILD</small><strong>40006</strong></div><div><small>DATA</small><strong>Stored locally</strong></div></div></article>
 </section>
 </main>
-<footer class="appFooter"><span>AI Running Coach</span><small>v14.0.5 · build 40005</small></footer>
+<footer class="appFooter"><span>AI Running Coach</span><small>v14.0.6 · build 40006</small></footer>
 
 <div id="modal" class="modal hidden" role="dialog" aria-modal="true" aria-label="AI Running Coach dialog" tabindex="-1"><div class="modalCard"><button id="closeModal" class="close" type="button" aria-label="Close dialog">×</button><div id="modalContent"></div></div></div>
 
@@ -287,5 +291,5 @@
     <button class="primary full" type="submit">Review and create my plan</button>
   </form>
 </div>
-<script src="app.js?v=40005-session-suitability"></script>
+<script src="app.js?v=40006-session-suitability"></script>
 </body></html>

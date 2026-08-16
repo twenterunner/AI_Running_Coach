@@ -1,18 +1,13 @@
 AI RUNNING COACH — SHOE ENGINE CORRECTIVE RELEASE TEST REPORT
-Release: v14.0.5 · build 40005
+Release: v14.0.6 · build 40006
 
-FIX
-v14.0.4 incorrectly promoted the 25% weekly rotation target to a hard lifecycle invariant.
-Because sessions are indivisible, an exact 25% split is not always mathematically possible. This caused an otherwise
-valid shoe lifecycle to be suppressed and replaced by repeated available-shoe-below-25pct-weekly-mileage errors.
-
-v14.0.5:
-- keeps the 25% weekly target in the allocation optimiser;
-- reallocates whole sessions toward >=25% per available ordinary pair when feasible;
-- preserves stronger constraints: session appropriateness, manual overrides, retirement/capacity and Race Day rules;
-- treats a residual <25% share as an advisory when whole-session arithmetic or stronger constraints prevent exact compliance;
-- never suppresses an otherwise valid graph merely because the weekly percentage cannot be hit exactly;
-- retains the final-42-day Race Day shoe familiarisation requirement.
+CORRECTIONS
+- Weekly 25% allocation is now solved across whole sessions as a constrained weekly optimisation, rather than a one-session donor repair.
+- Late/low-use non-race purchase pruning is now actually executed before the lifecycle is cached/displayed.
+- Session score lists include only physical pairs genuinely available on that session date; future pairs use their purchase/first-use date.
+- Plan session shoe cards reuse the Today shoe-card hierarchy and no longer duplicate an Alternative label above the score comparison.
+- Graph rendering removes consecutive equal-mileage points so no artificial horizontal usage segment is drawn.
+- Race Day pair logic remains subject to the <250 km ceiling and close-to-race familiarisation.
 
 TEST RESULTS
 Core scenarios: 54/54 passed
@@ -20,5 +15,8 @@ Hard-invariant failures: 0
 Score integration: 4/4
 First-use chronology: 4/4
 Race/rotation tests: 4/4
-Weekly-share blocking regression: 4/4
-Release checks: 12/12 passed
+v14.0.6 corrective regressions: 6/6
+JavaScript syntax: PASS
+
+LIMITATION
+The uploaded release did not include styles.css. The Plan/Today shoe-card alignment styles required for this correction are therefore scoped in index.html; the existing repository styles.css remains unchanged.
