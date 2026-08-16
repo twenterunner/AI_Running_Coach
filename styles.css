@@ -4617,3 +4617,12 @@ body:has(#dashboard.progressPage.active),#mainContent:has(#dashboard.progressPag
 #shoes .purchasePlanRow p{margin:5px 0 0!important;color:#c4d9dd!important;line-height:1.4!important}
 #shoes .freshPurchaseSummary.none p{margin:6px 0 0;color:#aec7cc;line-height:1.4}
 @media(max-width:420px){#shoes .purchasePlanHead{display:grid!important;grid-template-columns:1fr!important}#shoes .purchasePlanHead strong{white-space:normal!important}}
+
+/* v13.7.51 */
+#shoes .shoePurchaseNoNeed{margin-top:10px;padding:12px 14px;border-radius:14px;background:rgba(3,31,43,.55);border:1px solid rgba(100,205,211,.16)}
+#shoes .shoePurchaseNoNeed small{display:block;color:#71e5df;font-weight:800;letter-spacing:.06em}
+#shoes .shoePurchaseNoNeed strong{display:block;margin-top:6px;color:#fff;font-size:1.05rem}
+#shoes .shoePurchaseNoNeed p{margin:7px 0 0;color:#b7cdd2;line-height:1.4}
+.shoeRaceStrategyCard.invalid{border-color:rgba(255,184,94,.4)!important}
+.todayRehabCard.completed .rehabPrioritySummary span,.todayRehabCard.completed .runnerStatus.good{color:#91e8b4}
+.todayRehabCard.completed .runnerCallout.completed{border-color:rgba(103,224,166,.24)}
