@@ -4119,3 +4119,136 @@ body:has(#dashboard.progressPage.active),#mainContent:has(#dashboard.progressPag
 #shoes .shoeGraphEventSummary small{font-size:10px;line-height:1.35;color:var(--text-2)}
 #shoes .shoeGraphEventExplanation{padding:0 12px 11px 55px}
 #shoes .shoeGraphEventExplanation p{margin:0;font-size:12px;line-height:1.55;color:var(--text-2)}
+
+@media(max-width:700px){#modal.modal{position:fixed!important;inset:0!important;width:100vw!important;height:100dvh!important;max-height:100dvh!important;padding:10px!important;align-items:center!important;justify-content:center!important;overflow:hidden!important;box-sizing:border-box!important}#modal .modalCard{width:min(100%,680px)!important;max-width:calc(100vw - 20px)!important;max-height:calc(100dvh - 20px)!important;margin:0!important;padding:18px 14px calc(18px + env(safe-area-inset-bottom))!important;overflow-x:hidden!important;overflow-y:auto!important;box-sizing:border-box!important;border-radius:22px!important}#modal .modalCard>*{max-width:100%;box-sizing:border-box}#modal input,#modal select,#modal textarea,#modal button{max-width:100%;min-width:0}}.shoeChartWrap.single svg{min-height:220px}.shoeHistoryHeadline{display:flex;align-items:baseline;gap:8px;margin-bottom:8px}.shoeHistoryHeadline b{font-size:22px;color:#fff}.shoeHistoryHeadline span{font-size:12px;color:var(--muted)}.shoeHistoryGrid{stroke:rgba(136,161,177,.18);stroke-width:1}.shoeHistoryLabel{fill:#bcd0d7;font-size:15px;font-weight:700}.shoeHistoryCurrent{fill:var(--teal);stroke:#fff;stroke-width:2}.rehabDayCheckinBtn{margin-top:12px}.shoeEngineStrategy{margin-bottom:16px;padding:18px}
+
+
+/* v13.7.35 — run duration input and mobile log-detail spacing */
+.logEditModal .runDurationField .fieldFormatHint{
+  font-weight:600;
+  color:var(--muted);
+  white-space:nowrap;
+}
+.logEditModal #erDuration{
+  font-variant-numeric:tabular-nums;
+  letter-spacing:.02em;
+}
+
+/* Summary metrics must never collapse into label+value text strings. */
+.logDetailModal .runSummaryMetrics{
+  display:grid!important;
+  grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  gap:10px!important;
+  margin-top:16px!important;
+}
+.logDetailModal .runSummaryMetrics>div{
+  display:grid!important;
+  grid-template-columns:1fr!important;
+  align-content:start!important;
+  gap:4px!important;
+  min-width:0!important;
+  padding:12px 11px!important;
+  border-radius:12px!important;
+}
+.logDetailModal .runSummaryMetrics small{
+  display:block!important;
+  margin:0!important;
+  font-size:10px!important;
+  line-height:1.25!important;
+  letter-spacing:.04em!important;
+}
+.logDetailModal .runSummaryMetrics b{
+  display:block!important;
+  margin:0!important;
+  font-size:17px!important;
+  line-height:1.2!important;
+  overflow-wrap:anywhere!important;
+}
+.logDetailModal .runSummaryMetrics span{
+  display:block!important;
+  margin:0!important;
+  font-size:11px!important;
+  line-height:1.3!important;
+}
+
+/* Data-quality sentence gets its own lines. */
+.logDetailModal .runDataQuality{
+  display:grid!important;
+  grid-template-columns:1fr!important;
+  gap:5px!important;
+  padding:11px 12px!important;
+}
+.logDetailModal .runDataQuality b{
+  display:block!important;
+  font-size:12px!important;
+  line-height:1.3!important;
+}
+.logDetailModal .runDataQuality span{
+  display:block!important;
+  font-size:11px!important;
+  line-height:1.45!important;
+}
+
+/* Pathway numbers: visible separation between labels and values. */
+.logDetailModal .logEvidenceMetrics{
+  display:grid!important;
+  grid-template-columns:repeat(3,minmax(0,1fr))!important;
+  gap:8px!important;
+}
+.logDetailModal .logEvidenceMetrics>span{
+  display:grid!important;
+  grid-template-columns:1fr!important;
+  align-content:space-between!important;
+  gap:6px!important;
+  min-width:0!important;
+  padding:9px 7px!important;
+  border-radius:9px!important;
+  background:rgba(3,31,43,.20)!important;
+}
+.logDetailModal .logEvidenceMetrics small{
+  display:block!important;
+  margin:0!important;
+  font-size:7px!important;
+  line-height:1.25!important;
+  overflow-wrap:anywhere!important;
+}
+.logDetailModal .logEvidenceMetrics b{
+  display:block!important;
+  margin:0!important;
+  font-size:12px!important;
+  line-height:1.15!important;
+  text-align:left!important;
+}
+.logDetailModal .logFactorFlow{
+  gap:8px!important;
+  margin-top:12px!important;
+}
+.logDetailModal .logFactorFlow>div{
+  display:grid!important;
+  gap:4px!important;
+  padding:10px!important;
+}
+.logDetailModal .logFactorFlow small{font-size:8px!important;line-height:1.25!important}
+.logDetailModal .logFactorFlow b{font-size:14px!important;line-height:1.2!important}
+.logDetailModal .logFactorFlow span{font-size:9px!important;line-height:1.35!important}
+
+/* Keep readable spacing inside log modal narrative sections. */
+.logDetailModal .logDetailSectionHead>div,
+.logDetailModal .runSummaryHead>div{min-width:0!important}
+.logDetailModal .logDetailSectionHead h3,
+.logDetailModal .runSummaryHead h2{margin-top:4px!important}
+.logDetailModal .logDetailSectionHead p,
+.logDetailModal .runSummaryHead p{margin-top:7px!important;line-height:1.45!important}
+.logDetailModal .logEvidenceMeaning{
+  font-size:11px!important;
+  line-height:1.55!important;
+  margin-top:12px!important;
+}
+
+@media(max-width:420px){
+ .logEditModal .formGrid{grid-template-columns:1fr!important;gap:13px!important}
+ .logDetailModal .runSummaryMetrics{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+ .logDetailModal .logEvidenceMetrics{grid-template-columns:1fr!important}
+ .logDetailModal .logFactorFlow{grid-template-columns:1fr!important}
+ .logDetailModal .logFactorFlow>i{transform:rotate(90deg);padding:2px 0}
+}

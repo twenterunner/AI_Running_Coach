@@ -1,10 +1,10 @@
 'use strict';
 
-const CACHE = 'arc-v13716-build-30732';
+const CACHE = 'arc-v13716-build-30735';
 const CACHE_PREFIX = 'arc-v';
 const APP_SHELL = './index.html';
 const ASSETS = [
-  './', './index.html', './styles.css?v=30732-linked-curve-events', './app.js?v=30732-linked-curve-events', './manifest.webmanifest?v=30732'
+  './', './index.html', './styles.css?v=30735-linked-curve-events', './app.js?v=30735-linked-curve-events', './manifest.webmanifest?v=30735'
 ];
 
 self.addEventListener('install', event => {
