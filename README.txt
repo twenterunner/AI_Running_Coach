@@ -1,4 +1,15 @@
-AI Running Coach v13.8.7 · build 30807
+AI Running Coach v13.8.8 · build 30808
+
+Rehabilitation shoe preselection fix
+- The shoe shown on the daily rehabilitation card is now populated from the same authoritative rehab/lifecycle proposal used by the check-in.
+- A new daily rehab check-in preselects the proposed rehab shoe rather than a same-day run shoe.
+- A previously saved rehab shoe remains authoritative when editing an existing check-in.
+- A manually selected rehab-plan shoe remains authoritative.
+- Changing the check-in date recalculates and preselects the proposal for that calendar day.
+- Retired shoes are never auto-selected.
+- No rehabilitation progression, training-plan, prediction, pathway, scoring or mileage logic was changed.
+
+AI Running Coach v13.8.8 · build 30808
 
 Daily rehab shoe prepopulation
 - The daily rehabilitation check-in now preselects the exact active physical shoe proposed for that rehabilitation day.

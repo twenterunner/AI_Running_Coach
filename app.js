@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '13.8.7';
-  const BUILD = 30807;
+  const VERSION = '13.8.8';
+  const BUILD = 30808;
   const SCHEMA = 10400;
   const PRIMARY_STORAGE_KEY = 'arc_v10400_web';
   const MIRROR_STORAGE_KEY = 'arc_v10400_mirror';
@@ -5259,7 +5259,7 @@ function openInjuryCheck(i,existing=null,options={}){
  const runStatusField=$('icRunStatus'),runMinutesField=$('icRun'),runPainField=$('icRunPain'),gaitField=$('icGait'),walkMinutesField=$('icWalkMinutes'),locomotionField=$('icLocomotion'),exerciseField=$('icRehabExercises'),stretchField=$('icStretchGoal'),strengthField=$('icBridge'),impactField=$('icHop'),worseField=$('icWorse'),responseField=$('icResponse'),consistencyBox=$('icConsistency'),dateField=$('icDate');
  let activePlan=initialPlan,activeScheduled=initialScheduled,syncing=false;
  const showBlock=(id,show)=>{const el=$(id);if(el)el.classList.toggle('hidden',!show)};
- const applyScheduledQuestions=(date,preserve=true)=>{activePlan=planForDate(date);activeScheduled=scheduledMeta(activePlan);const planItems=(activePlan.items||[]).map(x=>`<li>${esc(x)}</li>`).join(''),exactExercises=(activeScheduled.scheduledExercises||[]).map(x=>`<li><b>${esc(x.name)}</b>${x.dose?`<span>${esc(x.dose)}</span>`:''}</li>`).join('');const plannedRehab=plannedRehabShoeForDay(i,activePlan),shoeField=$('icRehabShoe');if(shoeField&&plannedRehab&&(!preserve||!shoeField.value))shoeField.value=plannedRehab;$('icScheduledPlan').innerHTML=`<b>Plan for ${esc(fmtDate(date))}: ${esc(activePlan.title)}</b>${planItems?`<ul>${planItems}</ul>`:'<p>No rehabilitation activity is scheduled.</p>'}${activePlan.stretchGoalOffered===true?`<p><b>Optional progression:</b> ${esc(activePlan.stretchGoal||'')}</p>`:''}<p class="muted compact">This is the exact prescription shown on this date's seven-day plan card.</p>`;const exactBox=$('icExactExercises');if(exactBox)exactBox.innerHTML=exactExercises?`<small>SCHEDULED EXERCISES FOR THIS DATE</small><ul>${exactExercises}</ul>`:'';
+ const applyScheduledQuestions=(date,preserve=true)=>{activePlan=planForDate(date);activeScheduled=scheduledMeta(activePlan);const planItems=(activePlan.items||[]).map(x=>`<li>${esc(x)}</li>`).join(''),exactExercises=(activeScheduled.scheduledExercises||[]).map(x=>`<li><b>${esc(x.name)}</b>${x.dose?`<span>${esc(x.dose)}</span>`:''}</li>`).join('');const shoeField=$('icRehabShoe'),dateExisting=(i.checkIns||[]).find(c=>c.date===date),plannedRehab=defaultRehabCheckinShoeId(i,activePlan,dateExisting||{});if(shoeField&&plannedRehab&&(!preserve||!shoeField.value||date!==originalDate))shoeField.value=plannedRehab;$('icScheduledPlan').innerHTML=`<b>Plan for ${esc(fmtDate(date))}: ${esc(activePlan.title)}</b>${planItems?`<ul>${planItems}</ul>`:'<p>No rehabilitation activity is scheduled.</p>'}${activePlan.stretchGoalOffered===true?`<p><b>Optional progression:</b> ${esc(activePlan.stretchGoal||'')}</p>`:''}<p class="muted compact">This is the exact prescription shown on this date's seven-day plan card.</p>`;const exactBox=$('icExactExercises');if(exactBox)exactBox.innerHTML=exactExercises?`<small>SCHEDULED EXERCISES FOR THIS DATE</small><ul>${exactExercises}</ul>`:'';
 
   showBlock('icExerciseExecutionBlock',activeScheduled.exercisePlanned);showBlock('icWalkingExecutionBlock',activeScheduled.walkingPlanned);showBlock('icStretchExecutionBlock',activeScheduled.stretchPlanned);showBlock('icStrengthToleranceBlock',activeScheduled.strengthPlanned);showBlock('icImpactToleranceBlock',activeScheduled.impactPlanned);showBlock('icRunningSection',activeScheduled.runningPlanned);
   if(!activeScheduled.exercisePlanned)exerciseField.value='not_planned';else if(exerciseField.value==='not_planned')exerciseField.value='';
@@ -6764,16 +6764,18 @@ function defaultRehabCheckinShoeId(injury,day,previous={}){
  const activeIds=new Set((state.shoes||[]).filter(s=>s.status!=='retired').map(s=>s.id));
  const saved=previous?.rehabShoeId||'';
  if(saved&&activeIds.has(saved))return saved;
+ // The daily rehabilitation shoe proposal is authoritative for a new check-in.
+ // A same-day logged run must not silently replace the proposed rehab shoe.
+ const proposed=plannedRehabShoeForDay(injury,day)||'';
+ if(proposed&&activeIds.has(proposed))return proposed;
  const sameDayRun=(state.runs||[]).find(r=>r.date===day.date&&selectedShoeIdForRun(r));
  const logged=sameDayRun?selectedShoeIdForRun(sameDayRun):'';
- if(logged&&activeIds.has(logged))return logged;
- const proposed=plannedRehabShoeForDay(injury,day)||'';
- return proposed&&activeIds.has(proposed)?proposed:'';
+ return logged&&activeIds.has(logged)?logged:'';
 }
 function rehabShoePlanHtml(injury,day){
  if(!rehabDayNeedsShoe(day)||!(state.shoes||[]).some(s=>s.status!=='retired'))return'';
- const explicit=plannedRehabShoeId(injury,day.date),planned=freshLifecycleRehabAssignment(injury.id,day.date),selected=explicit||(planned?.pair?.owned?planned.pair.shoe.id:''),bestLabel=planned?lifecyclePairLabel(planned.pair):(rehabShoeRecommendation(day)?shoeDisplayName(rehabShoeRecommendation(day).shoe):''),exp=rehabExpectedDistance(day);
- return`<div class="rehabShoePlan"><span>${todayPictogram('shoe')}</span><div><small>SHOE</small><select data-rehab-shoe-plan="${esc(injury.id)}" data-rehab-shoe-date="${esc(day.date)}">${shoeSelectOptions(selected,true)}</select><p>${bestLabel?`Shoe plan: ${esc(bestLabel)}. `:''}Expected shoe distance ~${exp.totalKm.toFixed(1)} km${exp.runMinutes?` (${exp.walkMinutes} min walk + ${exp.runMinutes} min slow run)`:exp.walkMinutes?` (${exp.walkMinutes} min walk)`:''}. ${explicit?'Your manual shoe choice is retained.':'The same lifecycle proposal is used by the Shoes graph and daily check-in.'}</p></div></div>`
+ const explicit=plannedRehabShoeId(injury,day.date),selected=plannedRehabShoeForDay(injury,day),selectedShoe=(state.shoes||[]).find(s=>s.id===selected&&s.status!=='retired'),planned=freshLifecycleRehabAssignment(injury.id,day.date),bestLabel=selectedShoe?shoeDisplayName(selectedShoe):(planned?lifecyclePairLabel(planned.pair):''),exp=rehabExpectedDistance(day);
+ return`<div class="rehabShoePlan"><span>${todayPictogram('shoe')}</span><div><small>SHOE</small><select data-rehab-shoe-plan="${esc(injury.id)}" data-rehab-shoe-date="${esc(day.date)}">${shoeSelectOptions(selected,true)}</select><p>${bestLabel?`Shoe plan: ${esc(bestLabel)}. `:''}Expected shoe distance ~${exp.totalKm.toFixed(1)} km${exp.runMinutes?` (${exp.walkMinutes} min walk + ${exp.runMinutes} min slow run)`:exp.walkMinutes?` (${exp.walkMinutes} min walk)`:''}. ${explicit?'Your manual/saved shoe choice is retained.':'This same proposed shoe is preselected in the daily check-in.'}</p></div></div>`
 }
 let futureRehabShoeUsageCache={stamp:null,byShoe:new Map()};
 function futureRehabShoeUsageStamp(){const injury=(state.injuries||[]).find(x=>x.id===state.activeInjuryPlanId);return [state.storageRevision||0,state.activeInjuryPlanId||'',state.setup?.raceDate||'',(state.shoes||[]).filter(s=>s.status!=='retired').map(s=>`${s.id}:${s.status}:${shoeMileage(s).toFixed(3)}`).join(','),injury?JSON.stringify({id:injury.id,plannedRehabShoes:injury.plannedRehabShoes||{},checks:(injury.checkIns||[]).map(c=>[c.date,c.walkMinutes,c.runMinutes,c.rehabShoeId,c.walkDistanceKm,c.runDistanceKm])}):''].join('|')}
