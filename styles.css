@@ -4685,3 +4685,32 @@ body:has(#dashboard.progressPage.active),#mainContent:has(#dashboard.progressPag
 /* v13.8.6 balanced-only shoe strategy */
 .shoeApproachFixed{display:grid;gap:8px}
 .shoeApproachFixed>strong{font-size:1.2rem;line-height:1.2}
+
+/* v14.0.1 — runner-facing Session Suitability score inspection */
+.shoeSuitabilityDetails{margin-top:10px;border:1px solid rgba(98,226,217,.22);border-radius:14px;background:rgba(3,28,36,.32);overflow:hidden}
+.shoeSuitabilityDetails>summary{cursor:pointer;list-style:none;padding:11px 13px;font-weight:800;color:#8ff5ec;display:flex;align-items:center;justify-content:space-between}
+.shoeSuitabilityDetails>summary::-webkit-details-marker{display:none}
+.shoeSuitabilityDetails>summary:after{content:"›";font-size:20px;transform:rotate(90deg);transition:transform .18s ease}
+.shoeSuitabilityDetails[open]>summary:after{transform:rotate(-90deg)}
+.shoeSuitabilityPanel{padding:0 12px 12px}
+.shoeSuitabilityTitle{display:flex;justify-content:space-between;gap:12px;padding:8px 0 10px;border-top:1px solid rgba(255,255,255,.08)}
+.shoeSuitabilityTitle small{color:#68dcd4;font-weight:900;letter-spacing:.08em}
+.shoeSuitabilityPair{border-top:1px solid rgba(255,255,255,.08)}
+.shoeSuitabilityPair>summary{cursor:pointer;list-style:none;padding:12px 2px;display:flex;justify-content:space-between;gap:12px;align-items:center}
+.shoeSuitabilityPair>summary::-webkit-details-marker{display:none}
+.shoeSuitabilityPair>summary span{font-weight:700;color:#d8e6e9}
+.shoeSuitabilityPair>summary b{white-space:nowrap;color:#d8e6e9}
+.shoeSuitabilityPair.selected>summary span,.shoeSuitabilityPair.selected>summary b{color:#7cf0e7}
+.shoeSuitabilityComponents{padding:0 2px 10px}
+.shoeSuitabilityComponents>div{display:flex;justify-content:space-between;gap:16px;padding:5px 0;font-size:.88rem;color:#a9bdc2}
+.shoeSuitabilityComponents b{color:#dbe8ea}
+.shoeSuitabilityNote{font-size:.82rem;color:#8da8ae;margin:10px 0 2px}
+@media(max-width:560px){.shoeSuitabilityTitle{display:block}.shoeSuitabilityTitle b{display:block;margin-top:3px}.shoeSuitabilityPair>summary{align-items:flex-start}.shoeSuitabilityPair>summary span{padding-right:6px}}
+
+.shoeSessionPlan{display:grid;gap:10px}
+.shoeSessionRow{padding:14px;border:1px solid rgba(98,226,217,.18);border-radius:16px;background:rgba(3,29,38,.42)}
+.shoeSessionMeta,.shoeSessionPick{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:3px 12px;align-items:center}
+.shoeSessionMeta small,.shoeSessionPick small{grid-column:1/-1;color:#69dcd4;font-weight:850;letter-spacing:.06em}
+.shoeSessionMeta b,.shoeSessionPick b{color:#f1f7f8}
+.shoeSessionMeta span,.shoeSessionPick span{color:#b7c9cd;font-weight:750}
+.shoeSessionPick{margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,.07)}

@@ -1,44 +1,46 @@
-AI Running Coach v14.0.0 · build 40000
-SESSION SUITABILITY — Shoe Engine Test Report
-Date: 2026-08-16
+AI RUNNING COACH — SHOE ENGINE CORRECTIVE RELEASE TEST REPORT
+Release: v14.0.1 · build 40001
+Engine: SESSION SUITABILITY
 
-RELEASE RESULT
-PASS — 0 HARD-INVARIANT FAILURES in the automated shoe scenario suite.
+CORRECTION
+- Removed the user-facing "Shoe plan temporarily blocked" release state.
+- Added lifecycleRepairPlan() between BUILD and final VALIDATE.
+- Sequential future replacements are no longer incorrectly counted as simultaneously maintained shoes.
+- Eight-week retirement spacing is advisory unless preventability can actually be established; it cannot itself block a valid plan.
+- Future purchase dates are repaired to the first mileage-producing use.
+- Future race pairs that cannot be adequately familiarised are rejected in favour of an appropriate owned race-capable pair when available.
+- Authoritative mileage/graph points are rebuilt from the assignment ledger before final validation.
+- Session selection is score-driven: no idle-time or retirement-spacing bonus can make a lower-scoring shoe win.
+
+SCORE VISIBILITY
+- Shoes now contains a SESSION SUITABILITY section for every remaining training and rehabilitation session.
+- Each session shows the selected physical pair and score.
+- Expanding "View shoe suitability scores" shows every serviceable physical pair and its 0–100 score.
+- Each pair can be expanded to show Workout match, Distance match, Cushioning/protection,
+  Responsiveness/efficiency, Stability/support, Surface/grip, Foot-mechanics context,
+  Rehabilitation context where relevant, and Lifecycle/condition.
+- The same score inspector is exposed in Today, Plan and rehabilitation shoe views.
 
 AUTOMATED SCENARIO SUITE
-54 scenarios passed / 54 executed.
-Coverage includes:
-- Foot mechanics: Neutral, Pronates/overpronates, Supinates/underpronates, Not sure.
-- Program contexts: 5 km, 10 km, half marathon, marathon, ultra.
-- Starting states: zero shoes; one fresh; one heavily worn; two complementary; two overlapping; one near retirement + one fresh; two near retirement; three healthy; historical obsolete owned model.
-- Rehab: no injury shoe context, walking, return-to-run, manual rehab shoe override.
-- Race Day: existing suitable pair; existing pair too worn; training pair can serve; dedicated race pair required; >=250 km rejection; familiarisation minimum.
-- Lifecycle: high mileage, low mileage, condition deterioration, manual retirement, actual mileage replacing forecast basis.
-- Score-direction tests: protective trainer beats aggressive specialist for recovery/rehab; responsive performance shoe beats recovery trainer for threshold; supination penalises highly guided shoes; pronation increases guided relevance for protective mileage without forcing it for quality work.
-- Ledger principles: future pair starts at 0 km; no use after retirement; no artificial redistribution; obsolete owned model remains recognised but is excluded from current purchase candidates.
+Scenarios: 54
+Passed: 54
+Hard-invariant failures: 0
+Failures: 0
 
-STATIC / INTEGRITY CHECKS
-PASS — app.js JavaScript syntax.
-PASS — service-worker.js JavaScript syntax.
-PASS — manifest.webmanifest JSON syntax.
-PASS — shoe-engine-tests.js syntax/execution.
-PASS — legacy 25%-weekly-share functions removed.
-PASS — old multi-strategy state/mode symbols removed.
-PASS — one freshShoeLifecyclePlan, one lifecycleSessionSuitabilityScore, one lifecycleValidatePlan.
-PASS — version/build synchronised to 14.0.0 / 40000 in app.js, index.html, manifest.webmanifest and service-worker.js.
-PASS — service-worker cache updated to arc-v1400-build-40000 and JS/CSS query strings cache-busted.
-PASS — schema remains 10400, preserving historical/local user data compatibility.
+RELEASE CHECKS
+- PASS: JavaScript syntax
+- PASS: Hard validation repair pass present
+- PASS: Blocked-plan release UI removed
+- PASS: Per-session training suitability ranking UI
+- PASS: Per-session rehabilitation suitability ranking UI
+- PASS: Today suitability-score drilldown
+- PASS: Plan suitability-score drilldown
+- PASS: Rehab/check-in authoritative assignment integration
+- PASS: Legacy 25% weekly-share rule absent
+- PASS: Version/cache integrity v14.0.1 build 40001
 
-HARD VALIDATION GATE
-The authoritative lifecycle result is validated before being consumed by authoritative Plan/Today/Rehab assignments, purchase proposals or the mileage graph. If validation fails, those outputs are blocked rather than displaying an invalid plan.
-
-REGRESSION LOCK
-Source diff inspection shows implementation changes confined to version/cache metadata and the Shoes implementation area. No training-plan generation, prediction, recovery, HRV, injury progression, pathway, execution-scoring or FIT/CSV calculation code was intentionally changed.
-
-CURRENT ASICS CATALOGUE CHECK
-Current NL ASICS pages were verified during the rebuild for NOVABLAST 6, SUPERBLAST 3, GEL-NIMBUS 28 and METASPEED TOKYO. The app remains offline-first; the catalogue is a curated snapshot rather than a live scraper.
-
-LIMITATIONS
-- The execution environment blocks Chromium from loading localhost/file application pages, so a true headless DOM/mobile browser run could not be completed here. Full JavaScript syntax/static checks and the deterministic engine scenario suite were run instead.
-- The uploaded files do not include the user's device localStorage contents. Existing-state migration was therefore protected structurally by keeping schema 10400 and the existing normalisation/storage fields, rather than by importing the user's actual browser database into this environment.
-- Service-life ranges are planning estimates, not scientific failure thresholds; condition/comfort feedback can justify earlier retirement.
+LIMITATION
+The execution environment does not provide a reliable full mobile-browser DOM run against the user's
+GitHub Pages/localStorage state. JavaScript syntax, deterministic shoe scenarios, source integration,
+hard-gate architecture and cache/version integrity were checked here. The user's browser-stored state
+will be migrated by the unchanged data schema and recalculated by the new engine on load.

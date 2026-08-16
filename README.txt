@@ -1,4 +1,4 @@
-AI Running Coach v14.0.0 · build 40000
+AI Running Coach v14.0.1 · build 40001
 
 SESSION SUITABILITY shoe-engine rebuild
 - One authoritative physical-pair engine for running and rehabilitation shoe planning.

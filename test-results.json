@@ -1,7 +1,51 @@
 {
+  "release": "14.0.1",
+  "build": 40001,
   "suite": "SESSION SUITABILITY",
   "scenarios": 54,
   "passed": 54,
   "hardInvariantFailures": 0,
-  "failures": []
+  "failures": [],
+  "releaseChecks": [
+    {
+      "name": "JavaScript syntax",
+      "status": "PASS"
+    },
+    {
+      "name": "Hard validation repair pass present",
+      "status": "PASS"
+    },
+    {
+      "name": "Blocked-plan release UI removed",
+      "status": "PASS"
+    },
+    {
+      "name": "Per-session training suitability ranking UI",
+      "status": "PASS"
+    },
+    {
+      "name": "Per-session rehabilitation suitability ranking UI",
+      "status": "PASS"
+    },
+    {
+      "name": "Today suitability-score drilldown",
+      "status": "PASS"
+    },
+    {
+      "name": "Plan suitability-score drilldown",
+      "status": "PASS"
+    },
+    {
+      "name": "Rehab/check-in authoritative assignment integration",
+      "status": "PASS"
+    },
+    {
+      "name": "Legacy 25% weekly-share rule absent",
+      "status": "PASS"
+    },
+    {
+      "name": "Version/cache integrity v14.0.1 build 40001",
+      "status": "PASS"
+    }
+  ]
 }
