@@ -4252,3 +4252,211 @@ body:has(#dashboard.progressPage.active),#mainContent:has(#dashboard.progressPag
  .logDetailModal .logFactorFlow{grid-template-columns:1fr!important}
  .logDetailModal .logFactorFlow>i{transform:rotate(90deg);padding:2px 0}
 }
+
+
+/* v13.7.36 — Log detail hard-lock to approved Today teal hierarchy */
+#modal.logDetailModal .runSummaryHero,
+#modal.logDetailModal .logWorkoutIntelligence,
+#modal.logDetailModal .logIntervalAnalysis,
+#modal.logDetailModal .visualComparable,
+#modal.logDetailModal .logTrainingEvidence,
+#modal.logDetailModal .logTrainingConsequence,
+#modal.logDetailModal .logEquipmentCard{
+  background:linear-gradient(145deg,#075468 0%,#073c50 52%,#062c3d 100%)!important;
+  border:1px solid rgba(40,214,219,.42)!important;
+  border-radius:18px!important;
+  box-shadow:none!important;
+}
+#modal.logDetailModal .runSummaryMetrics>div,
+#modal.logDetailModal .shoeRunEquipment>div,
+#modal.logDetailModal .logEvidenceMetrics>span,
+#modal.logDetailModal .factorTile,
+#modal.logDetailModal .runDataQuality,
+#modal.logDetailModal .logEvidenceCalc,
+#modal.logDetailModal .runExecutionBreakdown{
+  background:rgba(3,31,43,.44)!important;
+  border:1px solid rgba(80,210,219,.16)!important;
+  border-radius:12px!important;
+  box-shadow:none!important;
+}
+#modal.logDetailModal .runSummaryMetrics br,
+#modal.logDetailModal .runDataQuality br,
+#modal.logDetailModal .logEvidenceMetrics br,
+#modal.logDetailModal .factorTile br{
+  display:block!important;
+  content:""!important;
+}
+#modal.logDetailModal .runSummaryMetrics{
+  grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  gap:10px!important;
+}
+#modal.logDetailModal .runSummaryMetrics>div{
+  padding:12px!important;
+  min-height:76px!important;
+}
+#modal.logDetailModal .runSummaryMetrics small{
+  font-size:10px!important;
+  line-height:1.2!important;
+  color:#9fc1ca!important;
+}
+#modal.logDetailModal .runSummaryMetrics b{
+  margin-top:5px!important;
+  font-size:17px!important;
+  line-height:1.2!important;
+  color:#fff!important;
+}
+#modal.logDetailModal .runSummaryMetrics span{
+  margin-top:4px!important;
+  font-size:11px!important;
+  line-height:1.3!important;
+  color:#b7d0d7!important;
+}
+#modal.logDetailModal .runDataQuality{
+  padding:12px!important;
+  margin-top:10px!important;
+}
+#modal.logDetailModal .runDataQuality b{
+  font-size:13px!important;
+  line-height:1.3!important;
+}
+#modal.logDetailModal .runDataQuality span{
+  margin-top:5px!important;
+  font-size:11px!important;
+  line-height:1.45!important;
+}
+#modal.logDetailModal .logEvidenceGaugeRow{
+  display:grid!important;
+  grid-template-columns:86px minmax(0,1fr)!important;
+  gap:12px!important;
+  align-items:stretch!important;
+}
+#modal.logDetailModal .logEvidenceMetrics{
+  display:grid!important;
+  grid-template-columns:repeat(3,minmax(0,1fr))!important;
+  gap:8px!important;
+}
+#modal.logDetailModal .logEvidenceMetrics>span{
+  padding:10px 8px!important;
+}
+#modal.logDetailModal .logEvidenceMetrics small{
+  font-size:8px!important;
+  line-height:1.25!important;
+  color:#9cbac4!important;
+}
+#modal.logDetailModal .logEvidenceMetrics b{
+  margin-top:5px!important;
+  font-size:13px!important;
+  line-height:1.2!important;
+  color:#fff!important;
+}
+#modal.logDetailModal .logFactorFlow{
+  display:grid!important;
+  grid-template-columns:minmax(0,1fr) 24px minmax(0,1fr)!important;
+  gap:8px!important;
+  align-items:stretch!important;
+}
+#modal.logDetailModal .factorTile{
+  padding:11px!important;
+}
+#modal.logDetailModal .factorTile small{
+  font-size:8px!important;
+  line-height:1.25!important;
+}
+#modal.logDetailModal .factorTile b{
+  margin-top:5px!important;
+  font-size:15px!important;
+  line-height:1.2!important;
+}
+#modal.logDetailModal .factorTile span{
+  margin-top:5px!important;
+  font-size:10px!important;
+  line-height:1.35!important;
+}
+#modal.logDetailModal .logEvidenceMeaning,
+#modal.logDetailModal .logEvidenceSafeguard{
+  font-size:12px!important;
+  line-height:1.55!important;
+}
+@media(max-width:420px){
+ #modal.logDetailModal .logEvidenceGaugeRow{
+   grid-template-columns:1fr!important;
+ }
+ #modal.logDetailModal .logEvidenceMetrics{
+   grid-template-columns:1fr!important;
+ }
+ #modal.logDetailModal .logFactorFlow{
+   grid-template-columns:1fr!important;
+ }
+ #modal.logDetailModal .logFactorFlow>i{
+   transform:rotate(90deg)!important;
+   padding:2px 0!important;
+ }
+}
+
+
+/* v13.7.37 — Shoes tab uses approved Today teal hierarchy */
+#shoes{
+  --shoes-level1:linear-gradient(145deg,#075468 0%,#073c50 52%,#062c3d 100%);
+  --shoes-level1-border:rgba(40,214,219,.42);
+  --shoes-level2:rgba(3,31,43,.44);
+  --shoes-level2-border:rgba(80,210,219,.16);
+}
+#shoes .shoeSection{
+  background:var(--shoes-level1)!important;
+  border:1px solid var(--shoes-level1-border)!important;
+  border-radius:18px!important;
+  box-shadow:none!important;
+}
+#shoes .shoeSection.level1{
+  background:var(--shoes-level1)!important;
+  border-color:var(--shoes-level1-border)!important;
+}
+#shoes .shoeRotationCard,
+#shoes .shoeChartCard,
+#shoes .shoeOutlookRow,
+#shoes .shoePlanTableWrap,
+#shoes .shoeRaceNowCard,
+#shoes .raceShoeHero,
+#shoes .raceShoePlanCard,
+#shoes .shoeGraphEvents,
+#shoes .shoeSavedPurchase,
+#shoes .shoeEmpty,
+#shoes .shoeEngineStrategy{
+  background:var(--shoes-level2)!important;
+  border:1px solid var(--shoes-level2-border)!important;
+  border-radius:14px!important;
+  box-shadow:none!important;
+}
+#shoes .shoeGraphStrategy{
+  margin:0 0 14px!important;
+}
+#shoes .shoeGraphStrategy .shoeEngineStrategy{
+  margin:0!important;
+  padding:14px!important;
+}
+#shoes .shoeGraphStrategy .shoeEngineStrategy h4{
+  margin:4px 0 10px!important;
+}
+#shoes .shoeGraphStrategy .shoeEngineStrategy select{
+  width:100%!important;
+}
+#shoes .shoeGraphStrategy .shoeEngineStrategy p{
+  margin:9px 0 6px!important;
+  line-height:1.45!important;
+}
+#shoes .shoeSectionHead>span{
+  background:rgba(21,184,202,.13)!important;
+  border:1px solid rgba(45,218,224,.35)!important;
+}
+#shoes .shoeSectionHead small,
+#shoes .shoeEngineStrategy>small{
+  color:#45e0e4!important;
+}
+#shoes .shoePlanTable th,
+#shoes .shoePlanTable td{
+  background:transparent!important;
+}
+@media(max-width:430px){
+ #shoes .shoeSection{padding:16px!important}
+ #shoes .shoeChartCard{padding:12px!important}
+}

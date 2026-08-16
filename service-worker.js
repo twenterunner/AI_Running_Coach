@@ -1,10 +1,10 @@
 'use strict';
 
-const CACHE = 'arc-v13716-build-30735';
+const CACHE = 'arc-v13737-build-30737';
 const CACHE_PREFIX = 'arc-v';
 const APP_SHELL = './index.html';
 const ASSETS = [
-  './', './index.html', './styles.css?v=30735-linked-curve-events', './app.js?v=30735-linked-curve-events', './manifest.webmanifest?v=30735'
+  './', './index.html', './styles.css?v=30737-linked-curve-events', './app.js?v=30737-linked-curve-events', './manifest.webmanifest?v=30737'
 ];
 
 self.addEventListener('install', event => {
@@ -26,16 +26,13 @@ async function navigationResponse(request) {
 }
 
 async function sameOriginAsset(request, event) {
-  const cached = await caches.match(request);
-  const update = fetch(request, { cache: 'no-store' }).then(async response => {
+  try {
+    const response = await fetch(request, { cache: 'no-store' });
     if (response.ok && response.type === 'basic') await (await caches.open(CACHE)).put(request, response.clone());
     return response;
-  });
-  if (cached) {
-    event.waitUntil(update.catch(() => undefined));
-    return cached;
+  } catch {
+    return (await caches.match(request)) || Response.error();
   }
-  return update;
 }
 
 self.addEventListener('fetch', event => {
