@@ -1,11 +1,11 @@
-AI Running Coach v14.1.1 · build 40101
+AI Running Coach v14.1.2 · build 40102
 
 Corrective shoe release
 - 25% weekly shoe share is a constrained target, enforced whenever whole-session allocation makes it feasible; impossible exact shares no longer invalidate the entire lifecycle plan.
 - Daily Plan shoe card is forced to a single-column flow at every nested level, fixing inherited-grid text collisions and narrow compare panels.
 - All active owned physical shoes remain visible and scored for each daily session.
 - Shoe comparison explanatory text now matches the physical-inventory logic.
-- Cache/version identifiers aligned at build 40101.
+- Cache/version identifiers aligned at build 40102.
 - Non-shoe engines remain regression locked.
 
 AI Running Coach v14.0.9 · build 40009
