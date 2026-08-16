@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '14.2.0';
-  const BUILD = 40200;
+  const VERSION = '14.2.1';
+  const BUILD = 40201;
   const SCHEMA = 10400;
   const PRIMARY_STORAGE_KEY = 'arc_v10400_web';
   const MIRROR_STORAGE_KEY = 'arc_v10400_mirror';
@@ -6075,6 +6075,8 @@ const SHOE_PLANNER_RULES=Object.freeze({
 });
 function shoePlannerMinimumScore(plan){return lifecycleIsQuality(plan?.type)?SHOE_PLANNER_RULES.qualityAcceptableScore:SHOE_PLANNER_RULES.minimumAcceptableScore}
 function shoePlannerPairKmBefore(pair,date){return lifecyclePairKmBeforeDate(pair,date)}
+function shoePlannerProjectedFinalKm(pair){return (pair?.owned?Number(pair.currentKm)||0:0)+(pair?.assignments||[]).reduce((n,a)=>n+(Number(a.km)||0),0)}
+function shoePlannerHasFinalCapacity(pair,additionalKm=0){return shoePlannerProjectedFinalKm(pair)+Math.max(0,Number(additionalKm)||0)<=Number(pair?.retireKm)+1e-6}
 function shoePlannerPairScore(pair,plan,{rehab=false}={}){
  const km=Math.max(0,Number(plan?.distance)||0),before=shoePlannerPairKmBefore(pair,plan.date),assessment=shoeSuitabilityAssessment(pair.profile,plan,{rehab,shoe:pair.owned?pair.shoe:null,projectedKm:before+km,retireKm:pair.retireKm});
  return{score:assessment.score,components:assessment.components,before,after:before+km,remaining:Number(pair.retireKm)-before}
@@ -6085,6 +6087,7 @@ function shoePlannerCanUse(pair,plan,{rehab=false,allowRacePair=false}={}){
  if(pair.role==='race'&&!allowRacePair)return false;
  const km=Math.max(0,Number(plan.distance)||0),sc=shoePlannerPairScore(pair,plan,{rehab});
  if(sc.after>Number(pair.retireKm)+1e-6)return false;
+ if(!shoePlannerHasFinalCapacity(pair,km))return false;
  return sc.score>=Math.max(24,shoePlannerMinimumScore(plan)-8)
 }
 function shoePlannerAssign(pair,plan,assignments,why,extra={}){
@@ -6092,8 +6095,9 @@ function shoePlannerAssign(pair,plan,assignments,why,extra={}){
  pair.assignments.push(row);pair.km=(pair.owned?Number(pair.currentKm)||0:0)+pair.assignments.reduce((n,a)=>n+(Number(a.km)||0),0);assignments.push(row);return row
 }
 function shoePlannerMove(row,newPair,pairs){
+ if(!newPair||!shoePlannerHasFinalCapacity(newPair,row?.km))return false;
  const old=pairs.find(p=>p.id===row.pairId);if(old){old.assignments=old.assignments.filter(a=>a!==row);old.km=(old.owned?Number(old.currentKm)||0:0)+old.assignments.reduce((n,a)=>n+(Number(a.km)||0),0)}
- row.pairId=newPair.id;row.ownedShoeId=newPair.owned?newPair.shoe.id:null;newPair.assignments.push(row);newPair.km=(newPair.owned?Number(newPair.currentKm)||0:0)+newPair.assignments.reduce((n,a)=>n+(Number(a.km)||0),0)
+ row.pairId=newPair.id;row.ownedShoeId=newPair.owned?newPair.shoe.id:null;newPair.assignments.push(row);newPair.km=(newPair.owned?Number(newPair.currentKm)||0:0)+newPair.assignments.reduce((n,a)=>n+(Number(a.km)||0),0);return true
 }
 function shoePlannerUpcomingBlock(trigger,allSessions,days=35){const from=dte(trigger.date).getTime(),to=from+days*DAY;return(allSessions||[]).filter(x=>x.date>=trigger.date&&dte(x.date).getTime()<=to)}
 function shoePlannerPurchaseProfile(trigger,allSessions,pairs,role='training'){
@@ -6151,7 +6155,7 @@ function shoePlannerMoveLateSessionsToPair(pair,racePlan,fixed,assignments,pairs
  const window=lifecycleRaceTargetWindow(pair.profile,racePlan.distance),target=lifecycleRaceTargetKm(window),raceMs=dte(racePlan.date).getTime();
  for(const horizon of [42,56,70]){
   if(pair.km>=target)break;const start=iso(new Date(raceMs-horizon*DAY)),candidates=assignments.filter(r=>!r.rehab&&r.pairId!==pair.id&&r.date>=start&&r.date<racePlan.date&&!manual.has(r.planId)).map(r=>({r,plan:fixed.find(p=>p.id===r.planId)})).filter(x=>x.plan).sort((a,b)=>(lifecycleRaceRelevant(b.plan)?1:0)-(lifecycleRaceRelevant(a.plan)?1:0)||b.plan.date.localeCompare(a.plan.date));
-  for(const x of candidates){if(pair.km>=target)break;if(pair.km+x.r.km>window.maxKm||pair.km+x.r.km>=SHOE_PLANNER_RULES.raceDayMaximumKm)continue;if(!shoePlannerCanUse(pair,x.plan,{allowRacePair:true}))continue;shoePlannerMove(x.r,pair,pairs);x.r.raceFamiliarisation=true;x.r.why=`Race Day familiarisation: this existing workout is deliberately assigned to the selected Race Day physical pair inside the final ${horizon}-day preparation window.`}
+  for(const x of candidates){if(pair.km>=target)break;if(pair.km+x.r.km>window.maxKm||pair.km+x.r.km>=SHOE_PLANNER_RULES.raceDayMaximumKm)continue;if(!shoePlannerCanUse(pair,x.plan,{allowRacePair:true}))continue;if(!shoePlannerMove(x.r,pair,pairs))continue;x.r.raceFamiliarisation=true;x.r.why=`Race Day familiarisation: this existing workout is deliberately assigned to the selected Race Day physical pair inside the final ${horizon}-day preparation window.`}
  }
  return shoePlannerRaceScore(pair,racePlan)
 }
@@ -6202,6 +6206,29 @@ function shoePlannerCleanupPurchases(result){
 function shoePlannerWeeklyShareStatus(result){
  const failures=[],weeks=[...new Set(result.fixed.map(p=>shoePlannerWeekKey(p.date)))];for(const wk of weeks){const sessions=result.fixed.filter(p=>shoePlannerWeekKey(p.date)===wk),rows=result.assignments.filter(a=>!a.rehab&&shoePlannerWeekKey(a.date)===wk),total=sessions.reduce((n,p)=>n+(Number(p.distance)||0),0);if(total<=0)continue;const eligible=shoePlannerRotationEligiblePairs(result.pairs,sessions,total),threshold=SHOE_PLANNER_RULES.weeklyMinimumShare*total;for(const p of eligible){const km=rows.filter(r=>r.pairId===p.id).reduce((n,r)=>n+(Number(r.km)||0),0);if(km+1e-6<threshold)failures.push({code:'weekly-share-below-target',week:wk,pairId:p.id,km,total,targetKm:threshold})}}return failures
 }
+function shoePlannerRepairLifecycleCapacity(result,manual){
+ let guard=0;
+ while(guard++<40){
+  const over=result.pairs.find(p=>shoePlannerProjectedFinalKm(p)>Number(p.retireKm)+1e-6);
+  if(!over)break;
+  const rows=over.assignments.filter(r=>!manual.has(r.planId)).slice().sort((a,b)=>b.date.localeCompare(a.date));
+  let repaired=false;
+  for(const row of rows){
+   const plan=result.fixed.find(p=>p.id===row.planId)||{id:row.planId,date:row.date,type:row.type,distance:row.km,surface:'road'};
+   const alt=result.pairs.filter(p=>p!==over&&p.availableDate<=row.date&&(p.role!=='race'||row.raceFamiliarisation))
+     .filter(p=>shoePlannerCanUse(p,plan,{rehab:Boolean(row.rehab),allowRacePair:Boolean(row.raceFamiliarisation)}))
+     .map(p=>({p,...shoePlannerPairScore(p,plan,{rehab:Boolean(row.rehab)})})).sort((a,b)=>b.score-a.score)[0]?.p;
+   if(alt&&shoePlannerMove(row,alt,result.pairs)){repaired=true;break}
+   if(!row.rehab){
+    const np=shoePlannerCreatePair(plan,result.fixed,result.pairs,result.purchases,result.events,'training');
+    if(np&&shoePlannerMove(row,np,result.pairs)){repaired=true;break}
+   }
+  }
+  if(!repaired)break
+ }
+ result.pairs=result.pairs.filter(p=>p.owned||p.assignments.length||p===result.racePair);
+ result.purchases=result.purchases.filter(b=>result.pairs.some(p=>p.id===b.pairId));
+}
 function lifecycleValidatePlan(result){
  const issues=[],add=(code,extra={})=>issues.push({code,...extra}),pairById=new Map(result.pairs.map(p=>[p.id,p]));
  for(const row of result.assignments){const pair=pairById.get(row.pairId);if(!pair){add('assignment-without-physical-pair',{planId:row.planId});continue}if(row.date<pair.availableDate)add('shoe-used-before-purchase',{pairId:pair.id,date:row.date,availableDate:pair.availableDate})}
@@ -6209,13 +6236,13 @@ function lifecycleValidatePlan(result){
  for(const buy of result.purchases){const pair=pairById.get(buy.pairId),first=pair?.assignments.filter(a=>Number(a.km)>0).sort((a,b)=>a.date.localeCompare(b.date))[0];if(!pair||!first)add('unnecessary-purchase',{pairId:buy.pairId});else if(first.date!==buy.firstUseDate||first.date!==buy.purchaseDate)add('purchase-not-at-first-use',{pairId:buy.pairId,firstUse:first.date,purchase:buy.purchaseDate})}
  for(const p of result.pairs.filter(x=>!x.owned&&x.role!=='race')){const shadow={...result,pairs:result.pairs.map(x=>x),purchases:result.purchases.map(x=>x)};if(p.assignments.length===0)add('unused-future-pair',{pairId:p.id})}
  const race=result.racePair;if(Number(state.setup?.raceDistance)>0&&!race)add('race-day-requirement-unsatisfied');if(race){const window=lifecycleRaceTargetWindow(race.profile,Number(state.setup?.raceDistance)||42.195),remaining=race.retireKm-race.km;if(race.km>=SHOE_PLANNER_RULES.raceDayMaximumKm)add('race-day-shoe-250km-or-more',{pairId:race.id,km:race.km});if(race.km<window.minKm-1e-6)add('race-day-shoe-insufficiently-familiar',{pairId:race.id,km:race.km,minKm:window.minKm});if(race.km>window.maxKm+1e-6)add('race-day-shoe-overused',{pairId:race.id,km:race.km,maxKm:window.maxKm});if(remaining<(Number(state.setup?.raceDistance)||42.195)+SHOE_PLANNER_RULES.minimumRaceLifeAfterStartKm)add('race-day-shoe-too-close-to-lifecycle',{pairId:race.id,remaining})}
- // Weekly share is a hard invariant only when the optimiser declares the pair rotation-eligible,
- // which means an indivisible-session >=25% solution exists for that physical pair.
- shoePlannerWeeklyShareStatus(result).forEach(x=>add(x.code,x));
+ // Weekly 25% is enforced by the whole-session optimiser when a feasible allocation exists.
+ // It is not a lifecycle validity error: indivisible workouts, manual choices and Race Day familiarisation
+ // can make an exact weekly split impossible. Never hide an otherwise safe shoe plan for that reason.
  return issues
 }
 function freshShoeLifecyclePlan(){
- const now=iso(today()),raceDate=state.setup?.raceDate||now,manual=new Map((state.plannedShoeAssignments||[]).filter(a=>a.source==='user').map(a=>[a.planId,a.shoeId])),fixed=(state.plan||[]).filter(p=>p.type!=='Rest'&&p.date>=now&&p.date<=raceDate).slice().sort((a,b)=>a.date.localeCompare(b.date)),injury=(state.injuries||[]).find(x=>x.id===state.activeInjuryPlanId),rehabStamp=injury?JSON.stringify({id:injury.id,plannedRehabShoes:injury.plannedRehabShoes||{},checks:(injury.checkIns||[]).map(c=>[c.date,c.walkMinutes,c.runMinutes,c.rehabShoeId,c.pain,c.hop,c.bridge]),updatedAt:injury.updatedAt||injury.lastUpdated||''}):'',stamp=['session-suitability-v12-clean',state.storageRevision||0,runnerFootMechanics(),raceDate,OFFLINE_ASICS_CATALOGUE_VERSION,fixed.map(p=>`${p.id}:${p.date}:${p.type}:${p.distance}:${p.surface||''}`).join(';'),(state.shoes||[]).map(sh=>`${sh.id}:${sh.status}:${shoeMileage(sh).toFixed(2)}:${sh.condition||sh.conditionFeedback||''}`).join(';'),[...manual].join(';'),rehabStamp].join('|');
+ const now=iso(today()),raceDate=state.setup?.raceDate||now,manual=new Map((state.plannedShoeAssignments||[]).filter(a=>a.source==='user').map(a=>[a.planId,a.shoeId])),fixed=(state.plan||[]).filter(p=>p.type!=='Rest'&&p.date>=now&&p.date<=raceDate).slice().sort((a,b)=>a.date.localeCompare(b.date)),injury=(state.injuries||[]).find(x=>x.id===state.activeInjuryPlanId),rehabStamp=injury?JSON.stringify({id:injury.id,plannedRehabShoes:injury.plannedRehabShoes||{},checks:(injury.checkIns||[]).map(c=>[c.date,c.walkMinutes,c.runMinutes,c.rehabShoeId,c.pain,c.hop,c.bridge]),updatedAt:injury.updatedAt||injury.lastUpdated||''}):'',stamp=['session-suitability-v13-capacity-safe',state.storageRevision||0,runnerFootMechanics(),raceDate,OFFLINE_ASICS_CATALOGUE_VERSION,fixed.map(p=>`${p.id}:${p.date}:${p.type}:${p.distance}:${p.surface||''}`).join(';'),(state.shoes||[]).map(sh=>`${sh.id}:${sh.status}:${shoeMileage(sh).toFixed(2)}:${sh.condition||sh.conditionFeedback||''}`).join(';'),[...manual].join(';'),rehabStamp].join('|');
  if(freshShoePlanCache.stamp===stamp)return freshShoePlanCache.value;
  const pairs=(state.shoes||[]).filter(sh=>sh.status!=='retired').map(sh=>{const profile=shoeProfileForShoe(sh),km=shoeMileage(sh),retireKm=lifecycleRetireKmForProfile(profile,sh);return{id:`owned:${sh.id}`,owned:true,shoe:sh,profile,currentKm:km,km,availableDate:now,purchaseDate:shoePairStartDate(sh),retireKm,lifeKm:retireKm,assignments:[],points:[{date:now,km}],role:'owned'}}),purchases=[],assignments=[],events=[];
  // Chronological assignment. Purchase only at the first exact session that the physical pairs already
@@ -6230,10 +6257,13 @@ function freshShoeLifecyclePlan(){
  const weeks=[...new Set(fixed.map(p=>shoePlannerWeekKey(p.date)))].sort();for(const wk of weeks)shoePlannerRebalanceWeek(fixed.filter(p=>shoePlannerWeekKey(p.date)===wk),pairs,assignments,manual);
  // Rehabilitation uses the same suitability model but is not distorted by ordinary weekly-rotation percentages.
  if(injury){const progress=injuryPrediction(injury),rehabEnd=[raceDate,progress?.windowEnd||raceDate].filter(Boolean).sort()[0];for(let d=new Date(dte(now).getTime()+DAY),guard=0;d<=dte(rehabEnd)&&guard<120;d=new Date(d.getTime()+DAY),guard++){const date=iso(d),day=rehabCalendarDay(injury,progress,date,rehabPlanDayIndex(injury,date));if(!rehabDayNeedsShoe(day))continue;const exp=rehabExpectedDistance(day),km=Math.max(0,Number(exp.totalKm)||0);if(km<=0)continue;const plan={id:`rehab-shoe-${injury.id}-${date}`,date,type:'Rehab recovery',distance:km,surface:'road'},explicit=plannedRehabShoeId(injury,date),manualPair=explicit?pairs.find(p=>p.owned&&p.shoe.id===explicit&&shoePlannerCanUse(p,plan,{rehab:true})):null;let candidates=shoePlannerWeeklyCandidates(pairs,plan,{rehab:true});if(!candidates.length){const np=shoePlannerCreatePair(plan,[...fixed,plan],pairs,purchases,events,'training');if(np)candidates=shoePlannerWeeklyCandidates(pairs,plan,{rehab:true})}const pick=manualPair||candidates[0]?.p;if(pick)shoePlannerAssign(pick,plan,assignments,manualPair?'Runner rehabilitation override retained.':`Rehabilitation suitability ${shoePlannerPairScore(pick,plan,{rehab:true}).score}/100.`,{rehab:true,walkMinutes:exp.walkMinutes,runMinutes:exp.runMinutes})}}
- const racePlan={id:'race-day-equipment',date:raceDate,type:'Race Day',distance:Number(state.setup?.raceDistance)||42.195,surface:'road'},raceChoice=shoePlannerSelectRacePair(racePlan,fixed,assignments,pairs,purchases,events,manual,fixed);for(const wk of weeks)shoePlannerRebalanceWeek(fixed.filter(p=>shoePlannerWeekKey(p.date)===wk),pairs,assignments,manual);const result={strategy:'session-suitability',now,raceDate,fixed,pairs,assignments,purchases,events,racePair:raceChoice?.pair||null,raceWindow:raceChoice?.window||null,catalogueSource:'offline',catalogueVersion:OFFLINE_ASICS_CATALOGUE_VERSION,footMechanics:runnerFootMechanics(),engine:'session-suitability-v12-clean'};
+ const racePlan={id:'race-day-equipment',date:raceDate,type:'Race Day',distance:Number(state.setup?.raceDistance)||42.195,surface:'road'},raceChoice=shoePlannerSelectRacePair(racePlan,fixed,assignments,pairs,purchases,events,manual,fixed);for(const wk of weeks)shoePlannerRebalanceWeek(fixed.filter(p=>shoePlannerWeekKey(p.date)===wk),pairs,assignments,manual);const result={strategy:'session-suitability',now,raceDate,fixed,pairs,assignments,purchases,events,racePair:raceChoice?.pair||null,raceWindow:raceChoice?.window||null,catalogueSource:'offline',catalogueVersion:OFFLINE_ASICS_CATALOGUE_VERSION,footMechanics:runnerFootMechanics(),engine:'session-suitability-v13-capacity-safe'};
  // Purchases are removed if the same programme can be covered without them; this is part of the one planner, not a fallback algorithm.
  shoePlannerCleanupPurchases(result);
  // Cleanup can change ordinary weekly shares; rebalance once more without moving manual or Race Day familiarisation rows.
+ for(const wk of weeks)shoePlannerRebalanceWeek(fixed.filter(p=>shoePlannerWeekKey(p.date)===wk),result.pairs,assignments,manual);
+ // Final capacity repair: no post-processing step may leave a physical pair above its lifecycle.
+ shoePlannerRepairLifecycleCapacity(result,manual);
  for(const wk of weeks)shoePlannerRebalanceWeek(fixed.filter(p=>shoePlannerWeekKey(p.date)===wk),result.pairs,assignments,manual);
  // Rebuild authoritative pair mileage and graph points only from the final assignment ledger.
  result.pairs.forEach(pair=>{pair.km=(pair.owned?Number(pair.currentKm)||0:0)+pair.assignments.reduce((n,a)=>n+(Number(a.km)||0),0);const first=pair.assignments.filter(a=>Number(a.km)>0).sort((a,b)=>a.date.localeCompare(b.date))[0];if(!pair.owned&&first){pair.availableDate=first.date;pair.purchaseDate=first.date;const buy=result.purchases.find(p=>p.pairId===pair.id);if(buy){buy.purchaseDate=first.date;buy.firstUseDate=first.date}}lifecycleRebuildPoints(pair,now,raceDate)});
@@ -6285,7 +6315,7 @@ function shoeNonFlatSvgSegments(points,x,y,attrs=''){
  return out
 }
 function shoeProgrammeMileageChartHtml(){
- let life=freshShoeLifecyclePlan();if(!life.valid)return`<div class="shoeEmpty shoePlanConflict"><b>Shoe plan requires attention</b><p>${esc((life.validationIssues||[]).map(x=>x.code).join(' · ')||'The current physical-pair constraints cannot be reconciled.')}</p></div>`;const pairs=life.pairs.filter(p=>p.owned||p.assignments.length||p===life.racePair);if(!pairs.length)return'<div class="shoeEmpty">Add a shoe to start mileage planning.</div>';
+ let life=freshShoeLifecyclePlan();if(!life.valid){const codes=[...new Set((life.validationIssues||[]).map(x=>x.code))],labels={'pair-exceeds-lifecycle':'A shoe would exceed its lifecycle limit.','assignment-without-physical-pair':'A planned session has no physical shoe assignment.','shoe-used-before-purchase':'A future shoe is assigned before its first-use date.','race-day-requirement-unsatisfied':'No safe Race Day shoe can be assigned from the current plan.','race-day-shoe-insufficiently-familiar':'The Race Day shoe needs more familiarisation mileage.','race-day-shoe-overused':'The proposed Race Day shoe would have too much mileage.','race-day-shoe-250km-or-more':'The proposed Race Day shoe would exceed the 250 km Race Day limit.','race-day-shoe-too-close-to-lifecycle':'The Race Day shoe would be too close to its lifecycle limit.'};return`<div class="shoeEmpty shoePlanConflict"><b>Shoe plan requires attention</b><p>${esc(codes.map(c=>labels[c]||'The shoe plan contains an unresolved safety constraint.').join(' '))}</p></div>`};const pairs=life.pairs.filter(p=>p.owned||p.assignments.length||p===life.racePair);if(!pairs.length)return'<div class="shoeEmpty">Add a shoe to start mileage planning.</div>';
  const raceDate=life.raceDate,todayStr=life.now,programStart=state.setup?.planStart||todayStr,actualSeries=(state.shoes||[]).map(sh=>({shoe:sh,points:shoeActualProgrammeSeries(sh,programStart,todayStr)})).filter(x=>x.points.length);
  const dates=[programStart,todayStr,raceDate,...pairs.flatMap(p=>p.points.map(x=>x.date)),...actualSeries.flatMap(x=>x.points.map(p=>p.date))].filter(Boolean).sort(),values=[...pairs.flatMap(p=>p.points.map(x=>x.km)),...actualSeries.flatMap(x=>x.points.map(p=>p.km))].filter(Number.isFinite),window=life.raceWindow;if(window)values.push(window.maxKm);
  const minD=dte(dates[0]).getTime(),maxD=Math.max(minD+DAY,dte(raceDate).getTime()),maxY=Math.max(100,Math.ceil(Math.max(...values,100)*1.15/50)*50),W=920,H=470,L=112,R=34,T=72,B=78,x=d=>L+(dte(d).getTime()-minD)/(maxD-minD)*(W-L-R),y=v=>T+(maxY-v)/maxY*(H-T-B),palette=['#35E2D0','#F4C95D','#73A7FF','#FF758F','#B58CFF','#8DE35C','#FF9F43','#46D6F0','#E66FE8','#F06A5D'];

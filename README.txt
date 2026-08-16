@@ -1,4 +1,4 @@
-AI Running Coach v14.2.0 · build 40200
+AI Running Coach v14.2.1 · build 40201
 
 SHOE ENGINE RESET
 - One chronological physical-pair planner replaces the previous layered lifecycle/fallback/pruning architecture.
