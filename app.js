@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '13.7.52';
-  const BUILD = 30752;
+  const VERSION = '13.7.53';
+  const BUILD = 30753;
   const SCHEMA = 10400;
   const PRIMARY_STORAGE_KEY = 'arc_v10400_web';
   const MIRROR_STORAGE_KEY = 'arc_v10400_mirror';
@@ -5872,6 +5872,60 @@ function lifecycleMeaningfulQualityNeed(plan,fixed){
  const km=remaining.reduce((n,p)=>n+(Number(p.distance)||0),0);
  return remaining.length>=3&&km>=18
 }
+
+function lifecycleWeekKey(date){return shoeWeekStart(date)}
+function lifecycleWeeklyVolumes(assignments){
+ const totals=new Map();
+ (assignments||[]).forEach(a=>{const w=lifecycleWeekKey(a.date);totals.set(w,(totals.get(w)||0)+(Number(a.km)||0))});
+ return totals
+}
+function lifecycleWeeklyPairVolumes(pair){
+ const totals=new Map();
+ (pair?.assignments||[]).forEach(a=>{const w=lifecycleWeekKey(a.date);totals.set(w,(totals.get(w)||0)+(Number(a.km)||0))});
+ return totals
+}
+function lifecycleEnforceMinWeeklyShare(ctx,fixed,assignments){
+ const {pairs,purchases,events}=ctx,minShare=.25;
+ for(let guard=0;guard<8;guard++){
+  let changed=false;
+  const weeklyTotal=lifecycleWeeklyVolumes(assignments);
+  for(const pair of pairs.filter(p=>p.role!=='race')){
+   const pairWeeks=lifecycleWeeklyPairVolumes(pair);
+   for(const [week,pairKm] of pairWeeks.entries()){
+    const total=weeklyTotal.get(week)||0;if(total<=0||pairKm/total>=minShare-1e-6)continue;
+    const rows=pair.assignments.filter(a=>lifecycleWeekKey(a.date)===week).slice();
+    let removable=true;const choices=[];
+    for(const row of rows){
+     const plan=(fixed||[]).find(p=>p.id===row.planId)||{id:row.planId,date:row.date,type:row.type,distance:row.km,surface:'road'};
+     const alt=pairs.filter(p=>p.id!==pair.id&&p.availableDate<=row.date&&p.km+row.km<=p.retireKm+1)
+       .map(p=>({p,fit:lifecycleWorkoutFit(p.profile,plan),score:lifecyclePairAssignmentScore(p,plan).score+(p.owned?8:0)}))
+       .filter(x=>x.fit>=lifecycleAcceptableFit(plan)).sort((a,b)=>b.score-a.score)[0]?.p;
+     if(!alt){removable=false;break}
+     choices.push([row,alt])
+    }
+    if(removable){
+      choices.forEach(([row,alt])=>lifecycleReassign(row,alt,pairs));
+      events.push({date:rows[0]?.date||week,type:'rotation-consolidation',pairId:pair.id,text:`${lifecyclePairLabel(pair)} is removed from this week's rotation because its planned share would be below 25% of weekly running volume.`});
+      changed=true;continue
+    }
+    const need=Math.max(0,minShare*total-pairKm);
+    let moved=0;
+    const candidates=(assignments||[]).filter(a=>lifecycleWeekKey(a.date)===week&&a.pairId!==pair.id)
+      .map(row=>{const plan=(fixed||[]).find(p=>p.id===row.planId)||{id:row.planId,date:row.date,type:row.type,distance:row.km,surface:'road'};return{row,plan,fit:lifecycleWorkoutFit(pair.profile,plan)}})
+      .filter(x=>x.fit>=lifecycleAcceptableFit(x.plan)&&pair.km+x.row.km<=pair.retireKm+1)
+      .sort((a,b)=>b.fit-a.fit);
+    for(const x of candidates){
+      lifecycleReassign(x.row,pair,pairs);moved+=x.row.km;changed=true;
+      if(moved>=need)break
+    }
+   }
+  }
+  if(!changed)break
+ }
+ pairs.filter(p=>!p.owned&&p.role!=='race'&&!p.assignments.length).forEach(pair=>{
+   const pi=purchases.findIndex(p=>p.pairId===pair.id);if(pi>=0)purchases.splice(pi,1)
+ })
+}
 function lifecycleCompactRotation(ctx,fixed){
  const cfg=lifecycleStrategyConfig(),{pairs,purchases,events}=ctx;
  if(!['fewer','balanced','protection'].includes(cfg.key))return;
@@ -6104,9 +6158,13 @@ function lifecycleSynchronizeFuturePairTiming(pairs,purchases){
 function lifecycleRebuildPoints(pair,now,raceDate){
  let km=pair.owned?pair.currentKm:0;
  const points=[{date:pair.owned?now:pair.purchaseDate,km,purchase:!pair.owned}];
- pair.assignments.slice().sort((a,b)=>a.date.localeCompare(b.date)).forEach(a=>{km+=Number(a.km)||0;points.push({date:a.date,km,type:a.type,planId:a.planId,rehab:a.rehab})});
- if(points.at(-1)?.date!==raceDate)points.push({date:raceDate,km});
- pair.km=km;pair.points=points
+ const rows=pair.assignments.slice().sort((a,b)=>a.date.localeCompare(b.date));
+ for(const a of rows){
+  const add=Number(a.km)||0;
+  if(km+add>pair.retireKm+1)break;
+  km+=add;points.push({date:a.date,km,type:a.type,planId:a.planId,rehab:a.rehab})
+ }
+ pair.km=km;pair.points=points;pair.projectedRetireDate=points.at(-1)?.date||pair.availableDate||now
 }
 function lifecycleValidatePlan(result){
  const issues=[],cfg=lifecycleStrategyConfig();
@@ -6120,6 +6178,22 @@ function lifecycleValidatePlan(result){
   if(days<cfg.minPurchaseGapDays&&a.role===b.role)issues.push({code:'close-duplicate-purchases',a:a.pairId,b:b.pairId});
  }
  result.pairs.forEach(pair=>{if(pair.km>pair.retireKm+1)issues.push({code:'service-life-exceeded',pairId:pair.id,km:pair.km,limit:pair.retireKm})});
+ result.pairs.forEach(pair=>{
+  let km=pair.owned?pair.currentKm:0;
+  for(const row of pair.assignments.slice().sort((a,b)=>a.date.localeCompare(b.date))){
+   km+=Number(row.km)||0;
+   if(km>pair.retireKm+1){issues.push({code:'assignment-beyond-retire-limit',pairId:pair.id,date:row.date,km,limit:pair.retireKm});break}
+  }
+ });
+ const weeklyTotal=lifecycleWeeklyVolumes(result.assignments);
+ result.pairs.filter(p=>p.role!=='race').forEach(pair=>{
+  const pw=lifecycleWeeklyPairVolumes(pair);
+  for(const [week,km] of pw.entries()){
+   const total=weeklyTotal.get(week)||0;
+   if(total>0&&km/total<.25-1e-6)issues.push({code:'non-race-pair-below-25-percent-weekly-share',pairId:pair.id,week,share:km/total})
+  }
+ });
+
  result.pairs.filter(p=>!p.owned&&p.assignments.length).forEach(pair=>{
   const u=lifecycleFuturePairUsageSummary(pair);
   if(u.first28Count<2&&u.first28Km<15)issues.push({code:'future-pair-not-used-meaningfully-after-purchase',pairId:pair.id});
@@ -6174,6 +6248,7 @@ function freshShoeLifecyclePlan(){
  // Portfolio-first sanity pass: eliminate any future training purchase whose entire
  // workload can still be covered by physical pairs already in the rotation.
  lifecycleCompactRotation(ctx,fixed);
+ lifecycleEnforceMinWeeklyShare(ctx,fixed,assignments);
 
  const racePlan={id:'race-day-equipment',date:raceDate,type:'Race Day',distance:Number(state.setup?.raceDistance)||42.195,surface:'road'};
  let raceCandidates=pairs.filter(p=>lifecycleRaceEligiblePair(p,racePlan)).map(p=>lifecycleRaceFit(p,racePlan)).sort((a,b)=>b.score-a.score);
@@ -6189,6 +6264,7 @@ function freshShoeLifecyclePlan(){
  const raceChoiceValid=raceChoice&&raceChoice.preRaceKm>=raceChoice.window.minKm&&raceChoice.preRaceKm<=raceChoice.window.maxKm;
  if(!raceChoiceValid)raceChoice=lifecycleBuildDedicatedRacePair(ctx,racePlan,fixed,assignments,manual);
 
+ lifecycleEnforceMinWeeklyShare(ctx,fixed,assignments);
  lifecycleSynchronizeFuturePairTiming(pairs,purchases);
  pairs.forEach(pair=>lifecycleRebuildPoints(pair,now,raceDate));
  let finalPairs=pairs.filter(p=>p.owned||p.assignments.length),usedIds=new Set(finalPairs.map(p=>p.id)),finalPurchases=purchases.filter(p=>usedIds.has(p.pairId)).sort((a,b)=>a.purchaseDate.localeCompare(b.purchaseDate));
