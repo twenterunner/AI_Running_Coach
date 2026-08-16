@@ -1,0 +1,14 @@
+'use strict';
+const assert=require('assert'),fs=require('fs');
+const app=fs.readFileSync('app.js','utf8'),html=fs.readFileSync('index.html','utf8'),sw=fs.readFileSync('service-worker.js','utf8');
+assert(app.includes("weeklyShareIssues.forEach(x=>adv('weekly-share-below-target',x))"));
+assert(!app.includes("weeklyShareIssues.forEach(x=>add('available-shoe-below-25pct-weekly-mileage',x))"));
+assert(app.includes("All active physical shoes you own are shown and scored for this session."));
+assert(app.includes("for(const shoe of (state.shoes||[]).filter(sh=>sh.status!=='retired'))"));
+assert(html.includes(".planShoeRow.sessionShoeCard{"));
+assert(html.includes("display:flex!important;flex-direction:column!important;align-items:stretch!important"));
+assert(html.includes(".sessionShoeCard>*{width:100%!important;max-width:100%!important;min-width:0!important"));
+assert(html.includes(".sessionShoeCard .shoeSuitabilityPanel{display:flex!important;flex-direction:column!important"));
+assert(html.includes("app.js?v=40100"));
+assert(sw.includes("arc-v1410-build-40100"));
+console.log(JSON.stringify({passed:10,failed:0}));

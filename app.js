@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '14.0.9';
-  const BUILD = 40009;
+  const VERSION = '14.1.0';
+  const BUILD = 40100;
   const SCHEMA = 10400;
   const PRIMARY_STORAGE_KEY = 'arc_v10400_web';
   const MIRROR_STORAGE_KEY = 'arc_v10400_mirror';
@@ -5794,7 +5794,7 @@ function shoeAvailableScoresInlineHtml(plan,{rehab=false}={}){
 }
 function shoeSuitabilityDetailsHtml(plan,{rehab=false}={}){
  const result=authoritativeShoeRanking(plan,{rehab}),ranked=result.ranked;if(!ranked.length)return'';
- return`<details class="shoeSuitabilityDetails"><summary>Compare shoe scores</summary><div class="shoeSuitabilityPanel"><div class="shoeSuitabilityTitle"><small>SHOE SUITABILITY</small><b>${esc(plan.type||'Session')} · ${Number(plan.distance||0).toFixed(1)} km</b></div>${ranked.map(x=>`<details class="shoeSuitabilityPair ${x.selected?'selected':''}"><summary><span>${esc(shoeDisplayName(x.shoe))}</span><b>${x.score}/100 ${x.selected?'✓ SELECTED':''}</b></summary><div class="shoeSuitabilityComponents">${x.components.map(c=>`<div><span>${esc(c.label)} <small>${Math.round(c.weight)}% weight</small></span><b>${Math.round(c.value)}/100</b></div>`).join('')}</div><p class="shoeScoreFormula">Overall ${x.score}/100 = weighted average of the components above. No separate hidden bonus is added.</p></details>`).join('')}<p class="shoeSuitabilityNote">Only physical pairs that are available, serviceable and have enough remaining capacity for this exact session are compared. A manual runner override remains clearly distinguished from the coach recommendation.</p></div></details>`
+ return`<details class="shoeSuitabilityDetails"><summary>Compare shoe scores</summary><div class="shoeSuitabilityPanel"><div class="shoeSuitabilityTitle"><small>SHOE SUITABILITY</small><b>${esc(plan.type||'Session')} · ${Number(plan.distance||0).toFixed(1)} km</b></div>${ranked.map(x=>`<details class="shoeSuitabilityPair ${x.selected?'selected':''}"><summary><span>${esc(shoeDisplayName(x.shoe))}</span><b>${x.score}/100 ${x.selected?'✓ SELECTED':''}</b></summary><div class="shoeSuitabilityComponents">${x.components.map(c=>`<div><span>${esc(c.label)} <small>${Math.round(c.weight)}% weight</small></span><b>${Math.round(c.value)}/100</b></div>`).join('')}</div><p class="shoeScoreFormula">Overall ${x.score}/100 = weighted average of the components above. No separate hidden bonus is added.</p></details>`).join('')}<p class="shoeSuitabilityNote">All active physical shoes you own are shown and scored for this session. Projected wear affects the lifecycle score but does not hide an owned shoe. Future proposed pairs appear only after their planned entry date. A manual runner override remains clearly distinguished from the coach recommendation.</p></div></details>`
 }
 function planShoeSummaryHtml(plan){if(!plan||plan.type==='Rest'||!(state.shoes||[]).some(s=>s.status!=='retired'))return'';const assignment=plannedAssignment(plan.id),rec=shoeRecommendationForPlan(plan);if(!rec?.best)return'';const label=assignment?.source==='user'?'Selected shoe':rec.future?'Planned future shoe':rec.planner?'Shoe plan':'Shoe';return`<div class="planShoeSummary"><span class="planShoeSummaryIcon">${todayPictogram('shoe')}</span><span class="planShoeSummaryText"><small>${esc(label)}</small><b>${esc(shoeDisplayName(rec.best.shoe))}</b></span><strong class="planShoeSummaryScore">${Math.round(rec.best.score)}/100</strong></div>`}
 function todayShoeRowHtml(plan){if(!plan||(state.shoes||[]).filter(s=>s.status!=='retired').length===0)return'';const rec=shoeRecommendationForPlan(plan);if(!rec.best)return'';return`<div class="todayShoeRow"><span>${todayPictogram('shoe')}</span><div><small>SHOE</small><b>${esc(shoeDisplayName(rec.best.shoe))} · ${Math.round(rec.best.score)}/100</b><p>Recommended for today’s ${esc(plan.type)}</p>${shoeAvailableScoresInlineHtml(plan)}${shoeSuitabilityDetailsHtml(plan)}${rec.alternative?`<small class="todayShoeAlternative">Alternative · ${esc(shoeDisplayName(rec.alternative.shoe))}</small>`:''}</div></div>`}
@@ -6482,7 +6482,10 @@ function lifecycleValidatePlan(result){
  const retire=result.pairs.filter(p=>p.projectedRetireDate&&p.role!=='race').map(p=>({id:p.id,date:p.projectedRetireDate})).sort((a,b)=>a.date.localeCompare(b.date));
  for(let i=1;i<retire.length;i++){const gap=(dte(retire[i].date)-dte(retire[i-1].date))/DAY;if(gap<56)adv('principal-retirements-within-eight-weeks',{pairIds:[retire[i-1].id,retire[i].id],gapDays:gap})}
  const weeklyShareIssues=lifecycleValidateWeeklyMinimumShare(result);
- weeklyShareIssues.forEach(x=>add('available-shoe-below-25pct-weekly-mileage',x));
+ // The 25% rotation rule is enforced by the allocator whenever a whole-session solution exists.
+ // If no exact allocation exists (session granularity, manual choice, suitability or lifecycle),
+ // report it as an advisory; it must never invalidate an otherwise feasible shoe plan.
+ weeklyShareIssues.forEach(x=>adv('weekly-share-below-target',x));
  result.validationAdvisories=advisories;
  return issues
 }
@@ -6615,7 +6618,7 @@ function freshShoeLifecyclePlan(){
  const fixed=(state.plan||[]).filter(p=>p.type!=='Rest'&&p.date>=now&&p.date<=raceDate).slice().sort((a,b)=>a.date.localeCompare(b.date));
  const injury=(state.injuries||[]).find(x=>x.id===state.activeInjuryPlanId);
  const rehabStamp=injury?JSON.stringify({id:injury.id,plannedRehabShoes:injury.plannedRehabShoes||{},checks:(injury.checkIns||[]).map(c=>[c.date,c.walkMinutes,c.runMinutes,c.rehabShoeId,c.pain,c.hop,c.bridge]),updatedAt:injury.updatedAt||injury.lastUpdated||''}):'';
- const stamp=['score-v8-owned-inventory-rootfix',state.storageRevision||0,runnerFootMechanics(),raceDate,OFFLINE_ASICS_CATALOGUE_VERSION,fixed.map(p=>`${p.id}:${p.date}:${p.type}:${p.distance}:${p.surface||''}`).join(';'),(state.shoes||[]).map(sh=>`${sh.id}:${sh.status}:${shoeMileage(sh).toFixed(2)}:${sh.condition||sh.conditionFeedback||''}`).join(';'),[...manual].join(';'),rehabStamp].join('|');
+ const stamp=['score-v9-feasible-share-ui-fix',state.storageRevision||0,runnerFootMechanics(),raceDate,OFFLINE_ASICS_CATALOGUE_VERSION,fixed.map(p=>`${p.id}:${p.date}:${p.type}:${p.distance}:${p.surface||''}`).join(';'),(state.shoes||[]).map(sh=>`${sh.id}:${sh.status}:${shoeMileage(sh).toFixed(2)}:${sh.condition||sh.conditionFeedback||''}`).join(';'),[...manual].join(';'),rehabStamp].join('|');
  if(freshShoePlanCache.stamp===stamp)return freshShoePlanCache.value;
 
  const pairs=(state.shoes||[]).filter(sh=>sh.status!=='retired').map(sh=>{const profile=shoeProfileForShoe(sh),km=shoeMileage(sh);return{id:`owned:${sh.id}`,owned:true,shoe:sh,profile,currentKm:km,km,availableDate:now,purchaseDate:shoePairStartDate(sh),retireKm:lifecycleRetireKmForProfile(profile,sh),lifeKm:lifecycleRetireKmForProfile(profile,sh),assignments:[],points:[{date:now,km}],role:'owned'}});
