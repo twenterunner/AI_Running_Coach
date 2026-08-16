@@ -4647,3 +4647,8 @@ body:has(#dashboard.progressPage.active),#mainContent:has(#dashboard.progressPag
 #shoes .shoeRehabBand text{fill:#9fc3ff;font-size:16px;font-weight:900}
 .shoeChartKey i.rehab{background:rgba(115,167,255,.22);border:1px dashed #73a7ff}
 #shoes .shoeSinglePoint{fill:var(--shoe-color);stroke:var(--shoe-color)}
+
+/* v13.7.62 — authoritative purchase markers */
+#shoes .shoePurchaseMarker .shoePurchaseLine{stroke:var(--shoe-color);stroke-width:2.4;stroke-dasharray:7 5;opacity:.9}
+#shoes .shoePurchaseMarker circle{fill:#08202b;stroke:var(--shoe-color);stroke-width:2.5}
+#shoes .shoePurchaseMarker .shoePurchaseLabel{fill:var(--shoe-color);font-size:13px;font-weight:900;paint-order:stroke;stroke:#07303b;stroke-width:3px}
