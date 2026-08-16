@@ -4685,7 +4685,3 @@ body:has(#dashboard.progressPage.active),#mainContent:has(#dashboard.progressPag
 /* v13.8.6 balanced-only shoe strategy */
 .shoeApproachFixed{display:grid;gap:8px}
 .shoeApproachFixed>strong{font-size:1.2rem;line-height:1.2}
-
-/* v13.8.9 shoe lifecycle graph */
-.shoeRaceEndpoint circle{fill:var(--shoe-color);stroke:#07141d;stroke-width:2}
-.shoeRaceEndpoint text{fill:var(--shoe-color);font-weight:800;font-size:12px}
