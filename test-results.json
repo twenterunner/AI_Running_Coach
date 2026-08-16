@@ -1,32 +1,12 @@
 {
-  "release": "14.0.4",
-  "build": 40004,
+  "release": "14.0.5",
+  "build": 40005,
   "core": {
     "suite": "SESSION SUITABILITY",
     "scenarios": 54,
     "passed": 54,
     "hardInvariantFailures": 0,
     "failures": []
-  },
-  "score": {
-    "passed": 4,
-    "failed": 0,
-    "hillsSuperblast": 90,
-    "hillsNovablast": 79,
-    "finalKm": {
-      "SUPERBLAST 3": 166.3,
-      "NOVABLAST 4": 298
-    },
-    "racePair": "SUPERBLAST 3"
-  },
-  "firstUse": {
-    "passed": 4,
-    "failed": 0,
-    "authoritativeFirstUse": "2026-08-18"
-  },
-  "rotationRace": {
-    "passed": 4,
-    "failed": 0
   },
   "checks": {
     "syntax app.js": true,
@@ -35,10 +15,44 @@
     "syntax shoe-score-integration-tests.js": true,
     "syntax shoe-first-use-regression-tests.js": true,
     "syntax shoe-rotation-race-tests.js": true,
-    "25% weekly allocator present": true,
-    "25% validator present": true,
-    "race familiarisation prioritises final 42 days": true,
-    "dedicated race shoe requires close exposure": true,
-    "race remains under 250km": true
+    "syntax shoe-weekly-share-regression-tests.js": true,
+    "weekly 25 allocator active": true,
+    "weekly shortfall advisory only": true,
+    "old hard weekly failure removed": true,
+    "race close exposure retained": true,
+    "graph hard gate still exists": true
+  },
+  "suites": {
+    "shoe-engine-tests.js": {
+      "suite": "SESSION SUITABILITY",
+      "scenarios": 54,
+      "passed": 54,
+      "hardInvariantFailures": 0,
+      "failures": []
+    },
+    "shoe-score-integration-tests.js": {
+      "passed": 4,
+      "failed": 0,
+      "hillsSuperblast": 90,
+      "hillsNovablast": 79,
+      "finalKm": {
+        "SUPERBLAST 3": 166.3,
+        "NOVABLAST 4": 298
+      },
+      "racePair": "SUPERBLAST 3"
+    },
+    "shoe-first-use-regression-tests.js": {
+      "passed": 4,
+      "failed": 0,
+      "authoritativeFirstUse": "2026-08-18"
+    },
+    "shoe-rotation-race-tests.js": {
+      "passed": 4,
+      "failed": 0
+    },
+    "shoe-weekly-share-regression-tests.js": {
+      "passed": 4,
+      "failed": 0
+    }
   }
 }

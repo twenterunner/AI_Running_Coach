@@ -1,19 +1,24 @@
 AI RUNNING COACH — SHOE ENGINE CORRECTIVE RELEASE TEST REPORT
-Release: v14.0.4 · build 40004
+Release: v14.0.5 · build 40005
 
-NEW RULES
-- Every available ordinary training shoe must receive at least 25% of that week's running mileage whenever this is feasible with indivisible planned sessions, lifecycle capacity and acceptable session fit.
-- Manual shoe overrides remain authoritative.
-- Dedicated Race Day shoes are excluded from the ordinary 25% floor; they have a separate race-familiarisation requirement.
-- A future dedicated Race Day shoe must have at least one positive-mileage exposure inside the final 42 days before the race, while retaining the existing minimum familiarisation and <250 km Race Day ceiling.
-- Race familiarisation candidates are now selected from 42/56/70-day horizons and prioritise the final 42 days, race-relevant sessions and later dates.
+FIX
+v14.0.4 incorrectly promoted the 25% weekly rotation target to a hard lifecycle invariant.
+Because sessions are indivisible, an exact 25% split is not always mathematically possible. This caused an otherwise
+valid shoe lifecycle to be suppressed and replaced by repeated available-shoe-below-25pct-weekly-mileage errors.
 
-WHY THE PREVIOUS GRAPH WAS WRONG
-The previous optimiser only tried to accumulate enough familiarisation mileage somewhere in a broad 70/84/112-day window. It did not require an exposure close to Race Day. That allowed a race shoe to accumulate its minimum mileage early and then disappear from the graph until the race. This release makes that invalid.
+v14.0.5:
+- keeps the 25% weekly target in the allocation optimiser;
+- reallocates whole sessions toward >=25% per available ordinary pair when feasible;
+- preserves stronger constraints: session appropriateness, manual overrides, retirement/capacity and Race Day rules;
+- treats a residual <25% share as an advisory when whole-session arithmetic or stronger constraints prevent exact compliance;
+- never suppresses an otherwise valid graph merely because the weekly percentage cannot be hit exactly;
+- retains the final-42-day Race Day shoe familiarisation requirement.
 
 TEST RESULTS
-Core shoe scenarios: 54/54 passed; hard invariant failures: 0
-Score integration: 4/4 passed
-First-use chronology: 4/4 passed
-Weekly rotation/Race proximity: 4/4 passed
-Static release checks: 11/11 passed
+Core scenarios: 54/54 passed
+Hard-invariant failures: 0
+Score integration: 4/4
+First-use chronology: 4/4
+Race/rotation tests: 4/4
+Weekly-share blocking regression: 4/4
+Release checks: 12/12 passed
