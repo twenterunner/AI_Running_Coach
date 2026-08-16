@@ -4634,3 +4634,9 @@ body:has(#dashboard.progressPage.active),#mainContent:has(#dashboard.progressPag
 #injury .injuryRunnerRail.unknown i{background:#718a95}
 #shoes .shoeSlopeEvents details{border-left:4px solid var(--event-color,#58e4df)!important}
 #shoes .shoeSlopeEvents details[open]{box-shadow:inset 3px 0 0 color-mix(in srgb,var(--event-color,#58e4df) 72%,transparent)}
+
+/* v13.7.58 — lifecycle-plan propagation + rehab graph */
+#shoes .shoeRehabBand rect{fill:rgba(115,167,255,.055);stroke:rgba(115,167,255,.30);stroke-width:1;stroke-dasharray:5 6}
+#shoes .shoeRehabBand text{fill:#8fb9ff;font-size:15px;font-weight:800}
+#shoes .shoeLegendRehab{display:inline-block;width:26px;height:10px;border-radius:5px;background:rgba(115,167,255,.20);border:1px dashed #73a7ff;margin-right:7px}
+.planShoeSummary small,.planShoeRow small{letter-spacing:.035em}
