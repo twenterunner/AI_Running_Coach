@@ -1,3 +1,15 @@
+AI Running Coach v14.2.0 · build 40200
+
+SHOE ENGINE RESET
+- One chronological physical-pair planner replaces the previous layered lifecycle/fallback/pruning architecture.
+- Owned active shoes are used first; a purchase is created only at the first session that existing physical pairs cannot cover appropriately within lifecycle capacity.
+- Weekly >=25% allocation is solved with complete sessions whenever mathematically feasible for rotation-eligible pairs.
+- Race Day first reuses an owned or already-required training pair; a dedicated race pair is last resort only.
+- Purchases that can be removed without losing programme coverage are removed inside the same planner.
+- Graph points are built only from the final assignment ledger; no artificial horizontal mileage segments.
+- Historical shoe data, actual mileage and run/rehab assignments remain preserved.
+- Non-shoe training, prediction, pathway, recovery, injury, import and execution engines remain regression locked.
+
 AI Running Coach v14.1.2 · build 40102
 
 Corrective shoe release

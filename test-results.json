@@ -1,38 +1,38 @@
 {
-  "release": "14.0.8",
-  "build": 40008,
-  "core": {
-    "suite": "SESSION SUITABILITY",
+  "release": "14.2.0",
+  "build": 40200,
+  "architecture": "single chronological physical-pair planner",
+  "coreScenarioSuite": {
     "scenarios": 54,
     "passed": 54,
-    "hardInvariantFailures": 0,
-    "failures": []
+    "hardInvariantFailures": 0
   },
   "scoreIntegration": {
     "passed": 4,
-    "failed": 0,
-    "hillsSuperblast": 90,
-    "hillsNovablast": 79,
-    "finalKm": {
-      "SUPERBLAST 3": 166.3,
-      "NOVABLAST 4": 298
-    },
-    "racePair": "SUPERBLAST 3"
+    "failed": 0
   },
-  "firstUse": {
+  "firstUseChronology": {
     "passed": 4,
-    "failed": 0,
-    "authoritativeFirstUse": "2026-08-18"
+    "failed": 0
   },
   "raceRotation": {
     "passed": 4,
     "failed": 0
   },
-  "v1408Regression": {
-    "passed": 10,
-    "failed": 0
+  "resetBoundaryRegression": {
+    "passed": 17,
+    "failed": 0,
+    "currentLike": {
+      "novablastStartKm": 298,
+      "superblastStartKm": 46,
+      "ownedRemainingCapacityKm": 1306,
+      "remainingProgrammeKm": 1400,
+      "capacityDeficitKm": 94,
+      "expectedOrdinaryPurchases": 1,
+      "freshPairRaceDayKm": 105
+    }
   },
-  "hardInvariantFailures": 0,
-  "syntax": "PASS",
-  "versionCacheIntegrity": "PASS"
+  "legacyPlannerArtifactsPresent": false,
+  "javascriptSyntax": "PASS",
+  "serviceWorkerSyntax": "PASS"
 }

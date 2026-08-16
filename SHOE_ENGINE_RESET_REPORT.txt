@@ -1,0 +1,48 @@
+AI RUNNING COACH — SHOE ENGINE RESET TEST REPORT
+Release: v14.2.0 · build 40200
+
+ARCHITECTURE
+The prior layered shoe lifecycle architecture was removed. The release has one chronological physical-pair planner.
+
+AUTHORITATIVE RULES
+1. Existing owned active physical pairs are always considered before a purchase.
+2. A new ordinary pair may be created only at the first exact session that no already-available pair can cover appropriately within remaining lifecycle capacity.
+3. A future pair starts at 0 km and purchase date = first mileage-producing use.
+4. Weekly allocation uses whole sessions and enforces >=25% of weekly running mileage for every rotation-eligible ordinary pair whenever a mathematically feasible assignment exists.
+5. Purchases are removed again if the same remaining programme can be covered without them.
+6. Race Day first considers owned and already-required training pairs. A dedicated race pair is last resort only.
+7. Race Day pair must be <250 km, inside its model-specific familiarity window and retain comfortable lifecycle after the race starts.
+8. Rehabilitation uses the same suitability score but is not distorted by ordinary weekly-rotation percentages.
+9. Graph mileage is derived only from the final physical-pair assignment ledger. Equal-mileage horizontal usage segments are not drawn.
+10. Manual runner overrides remain authoritative unless the physical pair cannot perform the session.
+
+REMOVED OLD SHOE ARTIFACTS
+- lifecycleCreatePair
+- lifecycleFallbackPlan
+- lifecycleRepairPlan
+- lifecyclePruneLateRedundantPurchases
+- lifecycleEmergencyRacePair
+- lifecycleBuildDedicatedRacePair
+- legacy duplicate-pair consolidation layer
+- old slope-change event engine
+- obsolete graph optimiser rationale
+
+TEST RESULTS
+- SESSION SUITABILITY scenario suite: 54/54 passed, 0 hard-invariant failures
+- Score integration: 4/4 passed
+- First-use chronology: 4/4 passed
+- Race/rotation: 4/4 passed
+- Reset architecture/current-like capacity regression: 17/17 passed
+- JavaScript syntax: PASS
+- Service-worker syntax: PASS
+
+CURRENT-LIKE CAPACITY REGRESSION
+Starting state: Novablast 4 = 298/800 km; Superblast 3 = 46/850 km.
+Remaining owned capacity = 1,306 km.
+Synthetic remaining programme = 1,400 km.
+Capacity deficit = 94 km.
+Expected ordinary purchases = exactly 1.
+A fresh pair at 105 km on Race Day is inside a 42–169 km target and therefore must be evaluated before any dedicated Race Day purchase.
+
+REGRESSION LOCK
+No non-shoe training-plan generation, predictions, pathways, recovery, HRV, injury progression, FIT/CSV import or execution-scoring logic was intentionally modified.
