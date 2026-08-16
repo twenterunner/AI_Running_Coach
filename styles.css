@@ -4605,3 +4605,16 @@ body:has(#dashboard.progressPage.active),#mainContent:has(#dashboard.progressPag
 #shoes .shoePurchaseMarker line{stroke:var(--shoe-color);stroke-width:1;stroke-dasharray:5 6;opacity:.55}
 #shoes .shoePurchaseMarker circle{fill:#082734;stroke:var(--shoe-color);stroke-width:3}
 #shoes .shoePurchaseMarker text{fill:#dffcff;font-size:15px;font-weight:800}
+
+/* v13.7.47: 3-back/4-ahead rehab + material slope explanations */
+#shoes .shoeSlopeMarker circle{fill:#082734;stroke:var(--shoe-color);stroke-width:4}
+#shoes .shoeSlopeMarker text{fill:#fff;font-size:16px;font-weight:900}
+#shoes .shoeSlopeEvents{margin-top:14px;padding:14px;border-radius:14px;background:rgba(3,31,43,.45);border:1px solid rgba(80,210,219,.17)}
+#shoes .shoeSlopeEvents>small{color:#58e4df;font-weight:900;letter-spacing:.08em}
+#shoes .shoeSlopeEvents>p{margin:5px 0 12px;color:#afc9cf}
+#shoes .shoeSlopeEvents details{margin:8px 0;border-radius:12px;background:rgba(3,25,35,.58);border:1px solid rgba(115,190,199,.14)}
+#shoes .shoeSlopeEvents summary{display:flex;align-items:center;gap:10px;padding:11px 12px;cursor:pointer}
+#shoes .shoeSlopeEvents summary>span:last-child{display:flex;min-width:0;flex-direction:column}
+#shoes .shoeSlopeEvents summary small{color:#9db9c0}
+#shoes .shoeSlopeEvents details>p{padding:0 12px 12px;margin:0;color:#d1e3e5;line-height:1.48}
+#shoes .slopeEventNo{width:30px;height:30px;display:grid;place-items:center;flex:0 0 30px;border-radius:50%;border:2px solid #58e4df;color:#58e4df;font-weight:900}
