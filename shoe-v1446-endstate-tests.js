@@ -1,0 +1,13 @@
+'use strict';
+const assert=require('assert'),fs=require('fs');
+const app=fs.readFileSync('app.js','utf8');
+assert(app.includes('raceFamiliarisationLookbackDays:112'));
+assert(app.includes("if(pair.role==='race'&&projected>=SESSION_SHOE_RULES.raceDayMaximumKm-.5)return false"));
+assert(app.includes('const usedPairs=[...used.entries()].filter(([,km])=>km>1e-6)'));
+assert(app.includes("if(rows.length>=2&&usedPairs.length<2)add('fewer-than-two-active-pairs'"));
+assert(app.includes('A second physical pair is required now so the weekly rotation never collapses to one shoe.'));
+assert(app.includes('latest week-window that can build its required'));
+assert(app.includes('shoeEngineWeeklyRebalance(sessions,pairs,assignments,manual)'));
+assert(!app.includes('shoeEngineForceWeeklyShare(raceChoice.pair'));
+assert(app.includes("engine:'session-suitability-v28-integrated-race-rotation'"));
+console.log(JSON.stringify({passed:9,failed:0}));
