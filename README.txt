@@ -1,4 +1,14 @@
-AI Running Coach v14.5.9 · build 40509
+AI Running Coach v14.4.7 · build 40407
+
+Targeted shoe-purchase spacing
+- Settings > Shoe planning context now includes “Target weeks between shoe purchases” (0–52 weeks).
+- 0 preserves the existing lifecycle-only purchase timing.
+- When a target is set, future purchase dates are spaced around that cadence where programme deadlines allow.
+- Required first-use dates, physical-pair lifecycle, weekly >=25% rotation and Race Day requirements remain hard constraints and can override the spacing target.
+- A planned pair is still unavailable before its actual first-use date; purchase timing does not create artificial shoe mileage or graph flats.
+- Changing the spacing preference recalculates only the Shoes engine; it does not rebuild the training programme.
+
+AI Running Coach v14.4.6 · build 40406
 
 Shoes engine clean reset
 - one authoritative physical-pair planner;
