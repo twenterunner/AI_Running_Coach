@@ -1,73 +1,13 @@
 {
-  "release": "14.4.6",
-  "build": 40406,
-  "javascriptSyntax": "PASS",
-  "serviceWorkerSyntax": "PASS",
-  "coreSessionSuitability": {
-    "passed": 54,
-    "scenarios": 54,
-    "hardInvariantFailures": 0
-  },
-  "firstUseChronology": {
-    "passed": 4,
-    "failed": 0
-  },
-  "raceRotation": {
-    "passed": 4,
-    "failed": 0
-  },
-  "scoreIntegration": {
-    "passed": 4,
-    "failed": 0
-  },
-  "weekly25PercentPolicy": {
-    "passed": 8,
-    "failed": 0
-  },
-  "activeRotation": {
-    "passed": 14,
-    "failed": 0
-  },
-  "v1446EndState": {
-    "passed": 9,
-    "failed": 0
-  },
-  "browserAcceptance": {
-    "valid": true,
-    "issues": [],
-    "badWeeks": [],
-    "race": {
-      "label": "ASICS SUPERBLAST 3",
-      "preRaceKm": 71.3,
-      "window": {
-        "minKm": 42.195,
-        "maxKm": 168.78
-      }
-    },
-    "purchases": [
-      {
-        "date": "2027-01-19",
-        "role": "training",
-        "pair": "future:1:SUPERBLAST|3"
-      },
-      {
-        "date": "2027-03-14",
-        "role": "race",
-        "pair": "future:2:SUPERBLAST|3:race"
-      }
-    ],
-    "nav": {
-      "top": 740,
-      "bottom": 816,
-      "left": 12,
-      "right": 378,
-      "width": 366,
-      "height": 76,
-      "viewportW": 390,
-      "viewportH": 844,
-      "inside": true
-    },
-    "shoesHasWarning": false,
-    "shoesTextStart": ""
-  }
+  "release":"14.4.8",
+  "build":40408,
+  "javascriptSyntax":"PASS",
+  "serviceWorkerSyntax":"PASS",
+  "coreSessionSuitability":{"passed":54,"scenarios":54,"hardInvariantFailures":0},
+  "firstUseChronology":{"passed":4,"failed":0},
+  "raceRotation":{"passed":4,"failed":0},
+  "scoreIntegration":{"passed":4,"failed":0},
+  "weekly25PercentPolicy":{"passed":8,"failed":0},
+  "activeRotation":{"passed":14,"failed":0},
+  "transactionalRacePackageNav":{"passed":10,"failed":0}
 }
