@@ -1,0 +1,45 @@
+AI Running Coach — Shoe Purchase Sufficiency Boundary Fix
+Release: v14.2.3 · build 40203
+
+ROOT CAUSE
+The planner still used the preferred session-suitability threshold as part of purchase necessity and purchase cleanup.
+That allowed this sequence:
+1. an owned shoe was available and had lifecycle capacity;
+2. it scored below the preferred recommendation threshold for a session;
+3. the planner treated the session as uncovered;
+4. a new pair was purchased;
+5. cleanup refused to remove that purchase for the same preferred-score reason.
+
+NEW HARD PURCHASE RULE
+An ordinary purchase is allowed only when no existing physical pair can safely cover the exact session.
+
+SAFE COVER means:
+- physically available on the session date;
+- not retired / not a Race-only pair for ordinary work;
+- enough remaining lifecycle capacity;
+- basic workout compatibility;
+- basic suitability floor.
+
+The preferred recommendation threshold is used to rank shoes, NOT to decide whether money must be spent.
+
+If an owned shoe is safe but not ideal, the engine assigns it as an EXISTING-SHOE COMPROMISE rather than purchasing.
+
+The same rule is now used in:
+- chronological training assignment;
+- rehabilitation assignment;
+- shoePlannerCreatePair hard gate;
+- lifecycle capacity repair;
+- unnecessary-purchase cleanup;
+- final purchase-necessity validation.
+
+FINAL PURCHASE AUDIT
+Every future ordinary pair is audited against the final ledger. If its assigned sessions can all be safely absorbed
+by the other available physical pairs within lifecycle capacity, that purchase is classified as unnecessary and the
+plan cannot validate with it present.
+
+TEST RESULTS
+Core shoe scenarios: 54/54
+Hard-invariant failures: 0
+Sufficiency boundary tests: 10/10
+Existing score integration, first-use chronology, race/rotation, capacity and availability suites: PASS
+JavaScript syntax: PASS
