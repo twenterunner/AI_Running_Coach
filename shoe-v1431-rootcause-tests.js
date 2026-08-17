@@ -9,6 +9,6 @@ assert(css.includes('grid-template-columns:minmax(0,1fr) 76px!important'));
 assert(!app.includes('const affected=[...new Set(allSessions.filter(s=>s.date>=shoePlannerEntryDate(raceChoice.pair)||raceChoice.pair.owned)'));
 assert(app.includes('Race Day is the final allocation stage.'));
 assert(app.includes('function shoeEngineFinalizeRaceDay'));
-assert(app.includes("engine:'session-suitability-v21-race-final'"));
-assert(sw.includes('arc-v1431-build-40301'));
+assert(app.includes("engine:'session-suitability-v22-graph-race-ui'"));
+assert(sw.includes('arc-v1432-build-40302'));
 console.log(JSON.stringify({passed:9,failed:0}));
