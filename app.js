@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '14.4.3';
-  const BUILD = 40403;
+  const VERSION = '14.4.4';
+  const BUILD = 40404;
   const SCHEMA = 10400;
   const PRIMARY_STORAGE_KEY = 'arc_v10400_web';
   const MIRROR_STORAGE_KEY = 'arc_v10400_mirror';
@@ -6168,16 +6168,16 @@ function shoeEngineRepairActiveRotation(result,allSessions,manual,purchases,even
   const sessions=allSessions.filter(s=>shoeEngineWeekKey(s.date)===wk).sort((a,b)=>a.date.localeCompare(b.date)||b.importance-a.importance);if(!sessions.length)continue;
   const rows=result.assignments.filter(a=>sessions.some(s=>s.id===a.planId)),total=rows.reduce((n,a)=>n+(Number(a.km)||0),0);if(total<=0)continue;
   const first=sessions[0].date,target=SESSION_SHOE_RULES.weeklyMinimumShare*total;
-  let active=result.pairs.filter(p=>shoeEngineIsAvailable(p,first)&&shoeEngineRemainingKmBefore(p,first)>0&&shoeEngineCanReachWeeklyShare(p,sessions,target));
+  let active=result.pairs.filter(p=>shoeEngineIsAvailable(p,first)&&shoeEngineRemainingKmBefore(p,first)>0&&shoeEngineCanReachWeeklyShareAtWeekStart(p,sessions,target,first));
   // A replacement is only real if it is actually used. Create and commit it to >=25% in the same week.
   while(active.length<SESSION_SHOE_RULES.targetMinPairs){
    const np=shoeEngineCreatePair(sessions[0],allSessions,result.pairs,purchases,events,'training','A replacement is required in this week because fewer than two physical pairs can actively carry the weekly rotation.');if(!np)break;
-   active=result.pairs.filter(p=>shoeEngineIsAvailable(p,first)&&shoeEngineRemainingKmBefore(p,first)>0&&shoeEngineCanReachWeeklyShare(p,sessions,target));
+   active=result.pairs.filter(p=>shoeEngineIsAvailable(p,first)&&shoeEngineRemainingKmBefore(p,first)>0&&shoeEngineCanReachWeeklyShareAtWeekStart(p,sessions,target,first));
    if(!shoeEngineForceWeeklyShare(np,sessions,result.pairs,result.assignments,manual)){
     // Do not leave a phantom purchase behind if the whole-session week cannot commit it.
     result.pairs.splice(result.pairs.indexOf(np),1);const bi=purchases.findIndex(b=>b.pairId===np.id);if(bi>=0)purchases.splice(bi,1);break
    }
-   active=result.pairs.filter(p=>shoeEngineIsAvailable(p,first)&&shoeEngineRemainingKmBefore(p,first)>0&&shoeEngineCanReachWeeklyShare(p,sessions,target));
+   active=result.pairs.filter(p=>shoeEngineIsAvailable(p,first)&&shoeEngineRemainingKmBefore(p,first)>0&&shoeEngineCanReachWeeklyShareAtWeekStart(p,sessions,target,first));
   }
   shoeEngineWeeklyRebalance(sessions,result.pairs,result.assignments,manual);
  }
