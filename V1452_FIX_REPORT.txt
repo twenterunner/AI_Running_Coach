@@ -1,0 +1,6 @@
+v14.5.2 build 40502
+- Preferred purchase spacing: 12 weeks / 84 days, soft target.
+- Generated shoe plan is no longer hidden merely because diagnostics exist.
+- Bottom navigation docked at bottom:0 on all mobile tabs.
+- Safe-area inset is included inside the nav height/padding.
+- All pages reserve 100px + safe-area for the fixed nav.
