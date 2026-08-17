@@ -6,11 +6,11 @@ assert(app.includes('points.push({date:life.raceDate,km:preRaceKm+raceKm,raceDay
 assert(app.includes('function shoeGraphRetirementPoint'));
 assert(app.includes('× RETIRE'));
 assert(app.includes('yy=y(preRace)')); assert(app.includes('start ${Math.round(preRace)} km'));
-assert(css.includes('.shoeActualLine{stroke-dasharray:none!important}'));
-assert(css.includes('.shoePlannedLine,.shoeNewPairLine,.shoeRaceStrategyLine{stroke-dasharray:10 8!important}'));
+assert(css.includes('#shoes .shoeActualLine{stroke-dasharray:none!important'));
+assert(css.includes('#shoes .shoePlannedLine,#shoes .shoeNewPairLine,#shoes .shoeRaceStrategyLine{stroke-dasharray:10 8!important'));
 assert(css.includes('#plan .planShoeRow.sessionShoeCard{'));
 assert(css.includes('grid-template-columns:minmax(0,1fr) 76px!important'));
 assert(app.includes("const score=race*.82+famScore*.18"));
 assert(app.includes('selected primarily for Race Day suitability'));
-assert(sw.includes('arc-v1432-build-40302'));
+assert(sw.includes('arc-v1433-build-40303'));
 console.log(JSON.stringify({passed:12,failed:0}));

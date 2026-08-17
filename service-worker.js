@@ -1,11 +1,11 @@
-// AI Running Coach v14.3.2 · build 40302
+// AI Running Coach v14.3.3 · build 40303
 'use strict';
 
-const CACHE = 'arc-v1432-build-40302';
+const CACHE = 'arc-v1433-build-40303';
 const CACHE_PREFIX = 'arc-v';
 const APP_SHELL = './index.html';
 const ASSETS = [
-  './', './index.html', './styles.css?v=40302-graph-ui', './app.js?v=40302-graph-ui', './manifest.webmanifest?v=40302'
+  './', './index.html', './styles.css?v=40303-card-paths', './app.js?v=40303-card-paths', './manifest.webmanifest?v=40303'
 ];
 
 self.addEventListener('install', event => {

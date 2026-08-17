@@ -2,7 +2,7 @@
 const assert=require('assert'),fs=require('fs');
 const app=fs.readFileSync('app.js','utf8'),css=fs.readFileSync('styles.css','utf8'),html=fs.readFileSync('index.html','utf8'),sw=fs.readFileSync('service-worker.js','utf8');
 
-assert(app.includes("engine:'session-suitability-v22-graph-race-ui'"));
+assert(app.includes("engine:'session-suitability-v23-clean-card-paths'"));
 for(const dead of ['shoePlannerCanSafelyCover','shoePlannerCleanupPurchases','shoePlannerRepairLifecycleCapacity','shoePlannerRebalanceWeek','shoePlannerCreatePair','lifecycleRemoveFuturePair','lifecycleContextualPurchaseProfile','lifecycleContextualRaceProfile']) assert(!app.includes(dead),`obsolete ${dead} remains`);
 assert(app.includes('weeklyMinimumShare:.25'));
 assert(app.includes('targetMinPairs:2'));
@@ -13,7 +13,7 @@ assert(app.includes('importance*Math.max(0,item.best-opt.score)'));
 assert(app.includes('each principal available pair reaches at least 25% of weekly volume'));
 assert(app.includes('raceDayMaximumKm:250'));
 assert(app.includes('shoeEngineProjectedKm(pair)+km>Number(pair.retireKm)+1e-6'));
-assert(app.includes('Future pairs appear only from their first-use date.'));
+assert(app.includes('Future pairs appear only from first use;'));
 assert(app.includes('function shoeEngineIsAvailable(pair,date)'));
 assert(app.includes("const availableOn=shoePlannerEntryDate(pair)||'9999-12-31';if(availableOn>plan.date)continue"));
 assert(css.includes('height:86px!important'));
@@ -21,6 +21,6 @@ assert(css.includes('#plan .sessionShoeCard details[open] > :not(summary)')); as
 assert(css.includes('grid-template-columns:minmax(0,1fr) 76px!important'));
 assert(!app.includes('function syncMobileBottomNavViewport'));
 assert(!app.includes("visualViewport?.addEventListener('scroll',syncMobileBottomNavViewport"));
-assert(html.includes('app.js?v=40302'));
-assert(sw.includes("arc-v1432-build-40302"));
+assert(html.includes('app.js?v=40303'));
+assert(sw.includes("arc-v1433-build-40303"));
 console.log(JSON.stringify({passed:23,failed:0}));
