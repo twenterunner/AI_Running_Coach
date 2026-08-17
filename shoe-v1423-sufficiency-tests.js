@@ -8,7 +8,7 @@ assert(app.includes('HARD PURCHASE GATE: existing safe capacity always wins over
 assert(app.includes('Existing-shoe compromise'));
 assert(app.includes('function shoePlannerPurchaseIsNecessary'));
 assert(app.includes("else if(!shoePlannerPurchaseIsNecessary(p,result))add('unnecessary-purchase'"));
-assert(app.includes('others.filter(p=>shoePlannerCanSafelyCover(p,plan))'));
+assert(app.includes('assessment.score>=20&&hardFit>=20'));
 
 // Boundary proof: preferred threshold and purchase threshold are intentionally different.
 const preferredMin=50, score=38, hardFit=45;

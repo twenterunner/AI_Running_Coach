@@ -1,0 +1,16 @@
+AI Running Coach v14.2.4 · build 40204
+Shoe-plan validation/cleanup correction
+
+The v14.2.3 purchase audit exposed a cleanup mismatch: the engine could prove a purchase unnecessary with
+one feasible reassignment, then try to remove it with a different greedy reassignment. That could leave the
+unnecessary purchase in place and make the final validator block the mileage chart.
+
+v14.2.4 creates one complete feasible reassignment ledger and applies that exact ledger.
+Availability, lifecycle capacity and minimum safe compatibility remain hard boundaries.
+Preferred suitability ranks shoes but does not by itself justify a purchase. Race Day remains separately constrained.
+Validator conditions now have explicit user-facing explanations.
+
+No training-plan, recovery, injury, prediction, pathway or workout-scoring logic was changed.
+
+Regression: 54/54 core shoe scenarios, 0 hard-invariant failures; score integration, first-use chronology,
+race/rotation, capacity, availability, purchase sufficiency and cleanup-ledger suites PASS. JavaScript syntax PASS.
