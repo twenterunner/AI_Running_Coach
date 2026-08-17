@@ -5009,3 +5009,26 @@ body:has(#dashboard.progressPage.active),#mainContent:has(#dashboard.progressPag
   #mainContent,.page{padding-bottom:calc(var(--mobile-nav-height) + var(--mobile-nav-clearance) + 42px + env(safe-area-inset-bottom))!important}
   .moreNav{bottom:calc(var(--mobile-nav-height) + var(--mobile-nav-clearance) + 8px + env(safe-area-inset-bottom))!important}
 }
+
+/* v14.4.3 — final mobile navigation geometry. Uses visual viewport width, not ancestor width. */
+@media (max-width:759px){
+  :root{--mobile-nav-height:76px;--mobile-nav-bottom:28px}
+  #nav{
+    position:fixed!important;
+    left:12px!important;right:auto!important;
+    bottom:var(--mobile-nav-bottom)!important;
+    width:calc(100vw - 24px)!important;max-width:calc(100vw - 24px)!important;
+    height:var(--mobile-nav-height)!important;min-height:var(--mobile-nav-height)!important;
+    margin:0!important;padding:6px!important;
+    grid-template-columns:repeat(5,minmax(0,1fr))!important;gap:2px!important;
+    box-sizing:border-box!important;overflow:hidden!important;
+    border-radius:20px!important;
+    transform:none!important;translate:none!important;
+  }
+  #nav button{width:auto!important;max-width:none!important;min-width:0!important;height:62px!important;min-height:62px!important;margin:0!important;padding:4px 0 7px!important;overflow:hidden!important;box-sizing:border-box!important}
+  #nav .navIcon{width:27px!important;height:27px!important;min-width:0!important}
+  #nav .navLabel{width:100%!important;max-width:100%!important;height:16px!important;line-height:16px!important;font-size:10px!important;text-align:center!important;white-space:nowrap!important;overflow:hidden!important}
+  #nav button.active:after{bottom:2px!important}
+  #mainContent,.page{padding-bottom:calc(var(--mobile-nav-height) + var(--mobile-nav-bottom) + 34px)!important}
+  .moreNav{bottom:calc(var(--mobile-nav-height) + var(--mobile-nav-bottom) + 8px)!important}
+}
