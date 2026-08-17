@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '14.5.0';
-  const BUILD = 40500;
+  const VERSION = '14.5.1';
+  const BUILD = 40501;
   const SCHEMA = 10400;
   const PRIMARY_STORAGE_KEY = 'arc_v10400_web';
   const MIRROR_STORAGE_KEY = 'arc_v10400_mirror';
@@ -5863,9 +5863,11 @@ const SHOE_ENGINE_RULES=Object.freeze({
  dedicatedRacePairOnlyAsLastResort:true,
  raceDayMaxKm:250,
  raceFamiliarisationCloseDays:42,
+ preferredPurchaseGapDays:56,
+ purchaseGapIsSoftTarget:true,
  noArtificialGraphFlats:true
 });
-function shoeLifecycleConfig(){return{minFit:55,targetActivePairs:2,maxOrdinaryPairs:3,minPurchaseGapDays:0,purchaseLeadDays:0}}
+function shoeLifecycleConfig(){return{minFit:55,targetActivePairs:2,maxOrdinaryPairs:3,preferredPurchaseGapDays:56,minPurchaseGapDays:0,purchaseLeadDays:0}}
 function lifecycleRetireKmForProfile(profile,shoe=null){
  // Evidence-informed, model-specific retirement target.
  // ASICS' broad guidance is roughly 600–800 km / 400–500 miles for ordinary trainers,
@@ -6095,8 +6097,8 @@ function shoeEngineFutureModelReason(profile,role='training'){
  return parts.slice(0,4).join(', ')
 }
 function shoeEngineCreatePair(trigger,sessions,pairs,purchases,events,role='training',reason=''){
- const profile=shoeEnginePurchaseProfile(trigger,sessions,pairs,role);if(!profile)return null;const firstUse=trigger.date,id=`future:${purchases.length+1}:${lifecycleProfileKey(profile)}${role==='race'?':race':''}`,retireKm=lifecycleRetireKmForProfile(profile),predecessor=role==='race'?null:pairs.filter(p=>p.role!=='race'&&shoeEngineIsAvailable(p,firstUse)).map(p=>({p,remain:shoeEngineRemainingKm(p)})).sort((a,b)=>a.remain-b.remain)[0]?.p||null;
- const pair={id,owned:false,shoe:null,profile,currentKm:0,km:0,plannedEntryDate:firstUse,availableDate:firstUse,purchaseDate:firstUse,retireKm,lifeKm:retireKm,assignments:[],points:[{date:firstUse,km:0,purchase:true}],role};pairs.push(pair);const modelWhy=shoeEngineFutureModelReason(profile,role);purchases.push({id:`purchase:${id}`,pairId:id,profile,purchaseDate:firstUse,firstUseDate:firstUse,role,reason:(reason||'The existing physical pairs cannot cover the programme requirement while respecting lifecycle and rotation rules.')+(modelWhy?` Model choice: ${modelWhy}.`:''),replacesPairId:predecessor?.id||null});events.push({date:firstUse,type:'pair-entry',pairId:id,text:`${futureProfileDisplayName(profile)} enters at its first required use.`});return pair
+ const profile=shoeEnginePurchaseProfile(trigger,sessions,pairs,role);if(!profile)return null;let firstUse=trigger.date;const preferredGap=Number(shoeLifecycleConfig().preferredPurchaseGapDays||56),priorDates=purchases.map(p=>p.purchaseDate||p.firstUseDate).filter(Boolean).sort(),lastPurchase=priorDates.at(-1)||null;let purchaseGapNote='';if(lastPurchase){const gap=Math.round((dte(firstUse)-dte(lastPurchase))/DAY);if(gap<preferredGap)purchaseGapNote=` Purchase spacing target: ${gap} days since the previous planned purchase versus the preferred ~${preferredGap} days. This soft target is overridden because delaying this pair would compromise lifecycle, rotation coverage, session suitability or Race Day readiness.`}const id=`future:${purchases.length+1}:${lifecycleProfileKey(profile)}${role==='race'?':race':''}`,retireKm=lifecycleRetireKmForProfile(profile),predecessor=role==='race'?null:pairs.filter(p=>p.role!=='race'&&shoeEngineIsAvailable(p,firstUse)).map(p=>({p,remain:shoeEngineRemainingKm(p)})).sort((a,b)=>a.remain-b.remain)[0]?.p||null;
+ const pair={id,owned:false,shoe:null,profile,currentKm:0,km:0,plannedEntryDate:firstUse,availableDate:firstUse,purchaseDate:firstUse,retireKm,lifeKm:retireKm,assignments:[],points:[{date:firstUse,km:0,purchase:true}],role};pairs.push(pair);const modelWhy=shoeEngineFutureModelReason(profile,role);purchases.push({id:`purchase:${id}`,pairId:id,profile,purchaseDate:firstUse,firstUseDate:firstUse,role,reason:(reason||'The existing physical pairs cannot cover the programme requirement while respecting lifecycle and rotation rules.')+(modelWhy?` Model choice: ${modelWhy}.`:'' )+purchaseGapNote,replacesPairId:predecessor?.id||null});events.push({date:firstUse,type:'pair-entry',pairId:id,text:`${futureProfileDisplayName(profile)} enters at its first required use.`});return pair
 }
 function shoeEngineLastUseBefore(pair,date,now){const rows=(pair.assignments||[]).filter(a=>a.date<date).slice().sort((a,b)=>a.date.localeCompare(b.date));return rows.length?rows.at(-1).date:now}
 function shoeEngineCanReachWeeklyShareAtWeekStart(pair,weekSessions,target,weekStart){
