@@ -5051,3 +5051,15 @@ body:has(#dashboard.progressPage.active),#mainContent:has(#dashboard.progressPag
   #mainContent,.page{padding-bottom:calc(var(--mobile-nav-height) + 24px + env(safe-area-inset-bottom))!important}
   .moreNav{bottom:calc(var(--mobile-nav-height) + 10px + env(safe-area-inset-bottom))!important}
 }
+
+/* v14.4.9 — final authoritative mobile bottom navigation. */
+@media (max-width:759px){
+  :root{--mobile-nav-height:80px;--mobile-nav-bottom:10px}
+  #nav{position:fixed!important;left:10px!important;right:10px!important;bottom:max(var(--mobile-nav-bottom),env(safe-area-inset-bottom))!important;width:auto!important;max-width:none!important;height:var(--mobile-nav-height)!important;min-height:var(--mobile-nav-height)!important;margin:0!important;padding:6px!important;display:grid!important;grid-template-columns:repeat(5,minmax(0,1fr))!important;gap:2px!important;box-sizing:border-box!important;overflow:visible!important;border-radius:20px!important;z-index:2147483000!important;transform:none!important;translate:none!important}
+  #nav button{width:100%!important;min-width:0!important;height:66px!important;min-height:66px!important;margin:0!important;padding:4px 0 8px!important;display:grid!important;grid-template-rows:28px 18px!important;gap:4px!important;align-content:center!important;justify-items:center!important;overflow:visible!important;box-sizing:border-box!important}
+  #nav .navIcon{width:28px!important;height:28px!important;display:grid!important;place-items:center!important}
+  #nav .navLabel{display:block!important;width:100%!important;height:18px!important;line-height:18px!important;font-size:10px!important;text-align:center!important;white-space:nowrap!important;overflow:visible!important}
+  #nav button.active:after{bottom:2px!important}
+  #mainContent,.page{padding-bottom:calc(var(--mobile-nav-height) + var(--mobile-nav-bottom) + 32px + env(safe-area-inset-bottom))!important}
+  .moreNav{bottom:calc(var(--mobile-nav-height) + var(--mobile-nav-bottom) + 8px + env(safe-area-inset-bottom))!important}
+}

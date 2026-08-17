@@ -1,0 +1,15 @@
+'use strict';
+const assert=require('assert'),fs=require('fs');
+const app=fs.readFileSync('app.js','utf8'),css=fs.readFileSync('styles.css','utf8'),idx=fs.readFileSync('index.html','utf8'),sw=fs.readFileSync('service-worker.js','utf8');
+assert(app.includes('shoeEngineRepairActiveRotation(postRaceResult,allSessions,manual,purchases,events,now)'));
+assert(app.includes("engine:'session-suitability-v31-final-repair'"));
+assert(app.includes('if(used)shoeEngineWeeklyRebalance(sessions,pairs,assignments,manual,new Set([raceChoice.pair.id]))'));
+assert(css.lastIndexOf('v14.4.9 — final authoritative mobile bottom navigation')>css.lastIndexOf('v14.4.8 — single global mobile bottom-nav geometry'));
+assert(css.includes('--mobile-nav-height:80px;--mobile-nav-bottom:10px'));
+assert(css.includes('overflow:visible!important'));
+assert(idx.includes('styles.css?v=40409-final-ledger-nav'));
+assert(idx.includes('app.js?v=40409-final-ledger-nav'));
+assert(sw.includes('styles.css?v=40409-final-ledger-nav'));
+assert(sw.includes('app.js?v=40409-final-ledger-nav'));
+assert(sw.includes("arc-v1449-build-40409"));
+console.log(JSON.stringify({passed:11,failed:0}));

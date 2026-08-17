@@ -1,13 +1,37 @@
 {
-  "release":"14.4.8",
-  "build":40408,
-  "javascriptSyntax":"PASS",
-  "serviceWorkerSyntax":"PASS",
-  "coreSessionSuitability":{"passed":54,"scenarios":54,"hardInvariantFailures":0},
-  "firstUseChronology":{"passed":4,"failed":0},
-  "raceRotation":{"passed":4,"failed":0},
-  "scoreIntegration":{"passed":4,"failed":0},
-  "weekly25PercentPolicy":{"passed":8,"failed":0},
-  "activeRotation":{"passed":14,"failed":0},
-  "transactionalRacePackageNav":{"passed":10,"failed":0}
+  "release": "14.4.9",
+  "build": 40409,
+  "syntax": {
+    "app.js": "PASS",
+    "service-worker.js": "PASS"
+  },
+  "core": {
+    "passed": 54,
+    "scenarios": 54,
+    "hardInvariantFailures": 0
+  },
+  "firstUse": {
+    "passed": 4,
+    "failed": 0
+  },
+  "raceRotation": {
+    "passed": 4,
+    "failed": 0
+  },
+  "scoreIntegration": {
+    "passed": 4,
+    "failed": 0
+  },
+  "weekly25Policy": {
+    "passed": 8,
+    "failed": 0
+  },
+  "activeRotation": {
+    "passed": 14,
+    "failed": 0
+  },
+  "finalLedgerNavCache": {
+    "passed": 11,
+    "failed": 0
+  }
 }
