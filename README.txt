@@ -1,4 +1,4 @@
-AI Running Coach v14.4.4 · build 40404
+AI Running Coach v14.4.5 · build 40405
 
 Shoes engine clean reset
 - one authoritative physical-pair planner;
