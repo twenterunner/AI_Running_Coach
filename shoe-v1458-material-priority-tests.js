@@ -5,7 +5,7 @@ assert(app.includes("if(rotationPriority==='quality-session'&&quality)return fal
 assert(app.includes("const limit=rotationPriority==='quality-session'?8:(quality?18:22)"));
 assert(app.includes("quality?(rotationPriority==='quality-session'?12:1.65)"));
 assert(app.includes('ACTIVE: ${esc(profile.short.toUpperCase())}'));
-assert(app.includes('Quality-session priority preserved all key quality/race-specific sessions'));
-assert(app.includes('Purchase-spacing priority allows selected quality-session compromises'));
-assert(app.includes('race-first-spacing-v7-material-priority'));
+assert(app.includes("if(index<1||rotationPriority==='quality-session')return false"));
+assert(app.includes('rather than receiving token early mileage'));
+assert(app.includes('race-first-spacing-v8-sustained-use'));
 console.log(JSON.stringify({passed:7,failed:0}));

@@ -19,6 +19,6 @@ const graph=build.indexOf('result.pairs.forEach(pair=>lifecycleRebuildPoints');
 assert(graph>canon,'graph must be rebuilt after canonical first-use dates');
 
 assert(app.includes("for(const b of result.purchases){b.spacingAdjusted=false;b.spacingReason='';b.spacingOverride=false}"));
-assert(app.includes('race-first-spacing-v7-material-priority'));
+assert(app.includes('race-first-spacing-v8-sustained-use'));
 
 console.log(JSON.stringify({passed:8,failed:0}));
