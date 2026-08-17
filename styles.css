@@ -5109,3 +5109,18 @@ body:has(#dashboard.progressPage.active),#mainContent:has(#dashboard.progressPag
   #mainContent,.page{padding-bottom:calc(100px + env(safe-area-inset-bottom))!important}
   .moreNav{bottom:calc(80px + env(safe-area-inset-bottom))!important}
 }
+\n/* v14.5.3 — daily shoe typography + standard disclosure arrow */
+#plan .sessionShoePrimary{gap:7px!important}
+#plan .sessionShoePrimary>small{margin-bottom:1px!important}
+#plan .sessionShoeRecommendationLine{align-items:center!important;column-gap:14px!important}
+#plan .sessionShoeModel{margin-top:1px!important;line-height:1.35!important}
+#plan .sessionShoeAvailable{margin-top:2px!important}
+#plan .sessionShoeAvailableRow{padding:10px 0!important}
+#plan .sessionShoeCard .shoeSuitabilityDetails>summary:after,
+#plan .sessionShoeCard .planShoeWhy>summary:after{
+ content:""!important;width:8px!important;height:8px!important;
+ border-right:2px solid var(--teal-2)!important;border-bottom:2px solid var(--teal-2)!important;
+ transform:rotate(45deg)!important;transition:.16s!important;margin-right:3px!important;flex:0 0 8px!important;
+}
+#plan .sessionShoeCard .shoeSuitabilityDetails[open]>summary:after,
+#plan .sessionShoeCard .planShoeWhy[open]>summary:after{transform:rotate(225deg)!important}

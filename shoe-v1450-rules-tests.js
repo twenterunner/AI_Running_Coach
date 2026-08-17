@@ -12,6 +12,6 @@ test('lifecycle remains hard',()=>{const block=s.slice(s.indexOf('function shoeE
 test('availability remains hard',()=>{const block=s.slice(s.indexOf('function shoeEngineValidation'),s.indexOf('function shoeEngineSoftTargets'));assert(block.includes("add('shoe-used-before-purchase'"));});
 test('guaranteed race fallback exists',()=>assert(s.includes('Guaranteed feasible Race Day fallback')));
 test('race-only purchase survives purchase cleanup',()=>assert(s.includes('p.assignments.length||p===result.racePair')));
-test('new engine cache identity',()=>assert(s.includes("engine:'race-first-rotation-v1'")));
+test('new engine cache identity',()=>assert(s.includes("engine:'race-first-spacing-v2'")));
 test('compact nav final override',()=>assert(css.includes('v14.5.0 — authoritative compact mobile navigation')));
 const failed=checks.filter(x=>!x[1]);console.log(JSON.stringify({passed:checks.length-failed.length,failed:failed.length,checks},null,2));if(failed.length)process.exit(1);

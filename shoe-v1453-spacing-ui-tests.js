@@ -1,0 +1,14 @@
+'use strict';
+const fs=require('fs'),assert=require('assert');
+const app=fs.readFileSync('app.js','utf8'),css=fs.readFileSync('styles.css','utf8');
+const checks=[];const test=(n,f)=>{try{f();checks.push([n,true])}catch(e){checks.push([n,false,e.message])}};
+test('12 week spacing remains configured',()=>assert(app.includes('preferredPurchaseGapDays:84')));
+test('spacing repair exists',()=>assert(app.includes('function shoeEngineRepairPurchaseSpacing')));
+test('spacing repair is transactional',()=>{assert(app.includes('const snap=snapshot()'));assert(app.includes('restore(snap)'))});
+test('spacing reallocates lower-priority sessions',()=>assert(app.includes('purchaseSpacingCompromise=true')));
+test('pre-race spacing repair runs',()=>assert(app.includes('shoeEngineRepairPurchaseSpacing(preRaceResult,allSessions,manual)')));
+test('post-race spacing repair runs',()=>assert(app.includes('shoeEngineRepairPurchaseSpacing(postRaceResult,allSessions,manual)')));
+test('justified spacing exception is explicit',()=>assert(app.includes('spacingOverride=true')));
+test('shoe score foldout uses standard chevron',()=>{const tail=css.slice(css.lastIndexOf('v14.5.3 — daily shoe typography'));assert(tail.includes('border-right:2px solid var(--teal-2)'));assert(!tail.includes('content:"›"'))});
+test('daily shoe recommendation has explicit spacing',()=>{assert(css.includes('#plan .sessionShoePrimary{gap:7px!important}'));assert(css.includes('column-gap:14px!important'))});
+const failed=checks.filter(x=>!x[1]);console.log(JSON.stringify({passed:checks.length-failed.length,failed:failed.length,checks},null,2));if(failed.length)process.exit(1);

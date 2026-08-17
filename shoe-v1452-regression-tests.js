@@ -7,4 +7,4 @@ ok(/freshLifecycleAssignmentForPlan\(planId\).*return life\.assignments/.test(ap
 ok(/v14\.5\.2 — FINAL authoritative mobile navigation/.test(css),'final nav override present');
 ok(/left:0!important;right:0!important;bottom:0!important/.test(css),'nav docked to bottom edge');
 ok(/width:100vw!important;max-width:100vw!important/.test(css),'nav constrained to viewport');
-ok(html.includes('v14.5.2') && html.includes('40502'),'version/build aligned');
+ok(html.includes('v14.5.3') && html.includes('40503'),'version/build aligned');
