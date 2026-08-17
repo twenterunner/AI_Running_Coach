@@ -4979,3 +4979,24 @@ body:has(#dashboard.progressPage.active),#mainContent:has(#dashboard.progressPag
 #shoes .shoePlannedLine,#shoes .shoeNewPairLine,#shoes .shoeRaceStrategyLine{stroke-dasharray:10 8!important;stroke-linecap:round!important;stroke-linejoin:round!important}
 #shoes .shoeRetireTick line{stroke:var(--shoe-color)!important;stroke-width:4!important}
 #shoes .shoeRetireTick text{fill:var(--shoe-color)!important;font-size:12px!important;font-weight:900!important}
+
+/* v14.4.1 — bottom navigation is a viewport invariant on every tab. */
+@media (max-width:759px){
+  :root{--mobile-nav-h:76px}
+  #nav{
+    position:fixed!important;
+    inset:auto 0 0 0!important;
+    width:100vw!important;
+    max-width:100vw!important;
+    height:auto!important;
+    min-height:var(--mobile-nav-h)!important;
+    padding:6px max(6px,env(safe-area-inset-right)) max(10px,env(safe-area-inset-bottom)) max(6px,env(safe-area-inset-left))!important;
+    overflow:hidden!important;
+    box-sizing:border-box!important;
+  }
+  #nav button{height:58px!important;min-height:58px!important;padding:3px 1px 5px!important;grid-template-rows:26px 16px!important}
+  #nav .navIcon{width:26px!important;height:26px!important}
+  #nav .navLabel{font-size:10px!important;line-height:16px!important;height:16px!important}
+  #mainContent,#today,#plan,#log,#progress,#more,#settings,#shoes,#race{padding-bottom:calc(var(--mobile-nav-h) + 34px + env(safe-area-inset-bottom))!important}
+  .moreNav{bottom:calc(var(--mobile-nav-h) + 8px + env(safe-area-inset-bottom))!important}
+}
