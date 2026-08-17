@@ -1,10 +1,11 @@
 {
-  "release": "14.2.0",
-  "build": 40200,
-  "architecture": "single chronological physical-pair planner",
-  "coreScenarioSuite": {
-    "scenarios": 54,
+  "release": "14.3.0",
+  "build": 40300,
+  "javascriptSyntax": "PASS",
+  "serviceWorkerSyntax": "PASS",
+  "coreSessionSuitability": {
     "passed": 54,
+    "scenarios": 54,
     "hardInvariantFailures": 0
   },
   "scoreIntegration": {
@@ -19,20 +20,12 @@
     "passed": 4,
     "failed": 0
   },
-  "resetBoundaryRegression": {
-    "passed": 17,
-    "failed": 0,
-    "currentLike": {
-      "novablastStartKm": 298,
-      "superblastStartKm": 46,
-      "ownedRemainingCapacityKm": 1306,
-      "remainingProgrammeKm": 1400,
-      "capacityDeficitKm": 94,
-      "expectedOrdinaryPurchases": 1,
-      "freshPairRaceDayKm": 105
-    }
+  "resetArchitectureMobile": {
+    "passed": 23,
+    "failed": 0
   },
-  "legacyPlannerArtifactsPresent": false,
-  "javascriptSyntax": "PASS",
-  "serviceWorkerSyntax": "PASS"
+  "policyRegression": {
+    "passed": 8,
+    "failed": 0
+  }
 }

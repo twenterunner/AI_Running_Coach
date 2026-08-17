@@ -1,4 +1,14 @@
-AI Running Coach v14.2.5 · build 40205
+AI Running Coach v14.3.0 · build 40300
+
+Shoes engine clean reset
+- one authoritative physical-pair planner;
+- each session ranked by suitability;
+- weekly 25% minimum share for each principal available pair, with low-race-value sessions compromised first;
+- purchase only when needed to maintain a useful 2–3 pair rotation or cover a true lifecycle/session gap;
+- Race Day pair always below 250 km and familiarised before the race;
+- future pairs unavailable before first use;
+- lifecycle retirement enforced;
+- mobile bottom navigation and daily shoe score foldout width fixed at root.
 
 SHOE ENGINE RESET
 - One chronological physical-pair planner replaces the previous layered lifecycle/fallback/pruning architecture.
