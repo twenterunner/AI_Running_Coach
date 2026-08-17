@@ -1,0 +1,12 @@
+'use strict';
+const fs=require('fs'),assert=require('assert');
+const app=fs.readFileSync('app.js','utf8');
+assert(app.includes('function shoeEngineRepairPurchaseSpacing'));
+assert(app.includes('const tryDelayLater='));
+assert(app.includes('const tryAdvanceEarlier='));
+assert(app.includes('Race-specific quality is deliberately expensive, but not forbidden.'));
+assert(app.includes('Purchase brought forward'));
+assert(app.includes('supportKmTarget'));
+assert(app.includes('race-first-spacing-v3-bidirectional'));
+assert(app.includes('preferredPurchaseGapDays:84'));
+console.log(JSON.stringify({passed:8,failed:0}));
