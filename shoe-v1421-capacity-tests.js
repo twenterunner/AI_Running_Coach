@@ -4,7 +4,7 @@ const app=fs.readFileSync('app.js','utf8');
 assert(app.includes('function shoePlannerProjectedFinalKm'));
 assert(app.includes('function shoePlannerHasFinalCapacity'));
 assert(app.includes('if(!shoePlannerHasFinalCapacity(pair,km))return false'));
-assert(app.includes('if(!newPair||!shoePlannerHasFinalCapacity(newPair,row?.km))return false'));
+assert(app.includes('if(!newPair||!row||!shoePlannerIsAvailableOn(newPair,row.date)||!shoePlannerHasFinalCapacity(newPair,row.km))return false'));
 assert(app.includes('function shoePlannerRepairLifecycleCapacity'));
 assert(!app.includes("shoePlannerWeeklyShareStatus(result).forEach(x=>add(x.code,x))"));
 assert(app.includes("Weekly 25% is enforced by the whole-session optimiser"));

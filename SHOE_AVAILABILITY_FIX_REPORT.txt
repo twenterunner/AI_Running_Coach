@@ -1,0 +1,28 @@
+AI Running Coach — Shoe Engine Availability Boundary Fix
+Release: v14.2.2 · build 40202
+
+ROOT CAUSE
+The planner had a final reconciliation step that changed a future physical pair's purchase/availability
+date to the earliest assignment found in its ledger. If an earlier session had been incorrectly moved onto
+that future pair, this step moved the shoe's availability backwards and made the illegal assignment look valid.
+
+FIX
+- Every future physical pair receives an immutable plannedEntryDate when it is created.
+- shoePlannerCanUse() rejects sessions before that date.
+- shoePlannerAssign() rejects sessions before that date.
+- shoePlannerMove() rejects reassignment before that date BEFORE mutating either pair.
+- Weekly rebalancing, lifecycle repair and Race Day familiarisation all pass through the same availability boundary.
+- Final lifecycle rebuild no longer moves purchase/availability dates backwards.
+- Validation checks every future assignment against immutable plannedEntryDate.
+- The graph starts a future pair only at immutable plannedEntryDate.
+- Owned shoes remain available according to their real physical inventory state.
+
+TEST RESULTS
+Core shoe scenarios: 54/54
+Hard-invariant failures: 0
+Availability-boundary regression: 11/11
+Existing capacity regression: PASS
+Score integration: PASS
+First-use chronology: PASS
+Race/rotation: PASS
+JavaScript syntax: PASS
