@@ -5063,3 +5063,15 @@ body:has(#dashboard.progressPage.active),#mainContent:has(#dashboard.progressPag
   #mainContent,.page{padding-bottom:calc(var(--mobile-nav-height) + var(--mobile-nav-bottom) + 32px + env(safe-area-inset-bottom))!important}
   .moreNav{bottom:calc(var(--mobile-nav-height) + var(--mobile-nav-bottom) + 8px + env(safe-area-inset-bottom))!important}
 }
+
+/* v14.5.0 — authoritative compact mobile navigation; all earlier mobile-nav geometry is superseded. */
+@media (max-width:759px){
+  :root{--mobile-nav-height:68px;--mobile-nav-bottom:2px}
+  #nav{position:fixed!important;left:8px!important;right:8px!important;bottom:max(2px,env(safe-area-inset-bottom))!important;width:auto!important;max-width:none!important;height:68px!important;min-height:68px!important;margin:0!important;padding:4px 5px!important;display:grid!important;grid-template-columns:repeat(5,minmax(0,1fr))!important;gap:2px!important;box-sizing:border-box!important;overflow:hidden!important;border-radius:18px!important;z-index:2147483000!important;transform:none!important;translate:none!important}
+  #nav button{width:100%!important;min-width:0!important;height:58px!important;min-height:58px!important;margin:0!important;padding:3px 0 5px!important;display:grid!important;grid-template-rows:25px 15px!important;gap:3px!important;align-content:center!important;justify-items:center!important;overflow:hidden!important;box-sizing:border-box!important}
+  #nav .navIcon{width:25px!important;height:25px!important;display:grid!important;place-items:center!important}
+  #nav .navLabel{display:block!important;width:100%!important;height:15px!important;line-height:15px!important;font-size:10px!important;text-align:center!important;white-space:nowrap!important;overflow:hidden!important}
+  #nav button.active:after{bottom:1px!important}
+  #mainContent,.page{padding-bottom:calc(68px + 18px + env(safe-area-inset-bottom))!important}
+  .moreNav{bottom:calc(68px + 6px + env(safe-area-inset-bottom))!important}
+}

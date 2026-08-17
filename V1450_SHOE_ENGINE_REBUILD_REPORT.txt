@@ -1,0 +1,42 @@
+AI Running Coach v14.5.0 · build 40500
+SHOE ENGINE REBUILD — RACE-FIRST ROTATION v1
+
+Architecture change
+- Feasibility is determined only by hard constraints.
+- Rotation balance is an optimisation objective, not a feasibility gate.
+- A feasible Race Day assignment is guaranteed by creating a dedicated safe race-capable pair when the existing rotation cannot supply one.
+
+Hard constraints
+1. No assignment before a physical pair is available.
+2. No assignment beyond the pair's retirement/lifecycle mileage.
+3. Every shoe-bearing planned session must resolve to a physical pair.
+4. Race Day must resolve to a suitable, serviceable physical pair.
+5. Race Day shoe must be below 250 km at race start.
+6. Race Day pair must retain race distance plus lifecycle reserve.
+
+Soft targets
+- Prefer 2–3 useful active pairs.
+- Aim for >=25% weekly share for principal ordinary training pairs.
+- Protect the best-suited shoe for highest race-value sessions.
+- Make rotation compromises first on lower-value sessions.
+- Avoid unnecessary purchases.
+- Race-shoe familiarisation target is desirable but cannot make the plan infeasible.
+
+Fallback sequence
+- Existing safe shoes first.
+- Rebalance lower-value sessions to improve rotation.
+- Allow <25% share when whole-session distances make the target impractical.
+- Allow temporary 1-pair or >3-pair overlap when lifecycle chronology requires it.
+- Create training replacement only when coverage/lifecycle requires it.
+- Create dedicated Race Day pair if no existing/future pair can satisfy Race Day hard constraints.
+
+Validation
+- SESSION SUITABILITY: 54/54 passed.
+- First-use chronology: 4/4 passed.
+- Rotation/Race regression: 4/4 passed.
+- Score integration: 4/4 passed.
+- v14.5.0 rule hierarchy: 11/11 passed.
+- app.js syntax: passed.
+- service-worker.js syntax: passed.
+
+The old v14.3/v14.4 shoe-policy regression artifacts were removed from this release package because they encoded the superseded rule that >=25% weekly share was a hard feasibility constraint.

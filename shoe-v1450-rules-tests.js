@@ -1,0 +1,17 @@
+'use strict';
+const fs=require('fs'),assert=require('assert');
+const s=fs.readFileSync('app.js','utf8');
+const css=fs.readFileSync('styles.css','utf8');
+const checks=[];const test=(n,f)=>{try{f();checks.push([n,true])}catch(e){checks.push([n,false,e.message])}};
+test('25% is not hard validation',()=>{const block=s.slice(s.indexOf('function shoeEngineValidation'),s.indexOf('function shoeEngineSoftTargets'));assert(!block.includes("add('active-pair-below-25pct'"));});
+test('25% retained as soft target',()=>assert(s.includes("code:'rotation-share-below-target'")));
+test('2-3 pairs retained as soft target',()=>{assert(s.includes("code:'single-pair-week'"));assert(s.includes("code:'rotation-overlap'"));});
+test('race familiarisation is soft',()=>{const block=s.slice(s.indexOf('function shoeEngineValidation'),s.indexOf('function shoeEngineSoftTargets'));assert(!block.includes("add('race-day-shoe-insufficiently-familiar'"));assert(s.includes("code:'race-familiarisation-below-target'"));});
+test('race <=250 remains hard',()=>{const block=s.slice(s.indexOf('function shoeEngineValidation'),s.indexOf('function shoeEngineSoftTargets'));assert(block.includes("add('race-day-shoe-250km-or-more'"));});
+test('lifecycle remains hard',()=>{const block=s.slice(s.indexOf('function shoeEngineValidation'),s.indexOf('function shoeEngineSoftTargets'));assert(block.includes("add('pair-exceeds-lifecycle'"));});
+test('availability remains hard',()=>{const block=s.slice(s.indexOf('function shoeEngineValidation'),s.indexOf('function shoeEngineSoftTargets'));assert(block.includes("add('shoe-used-before-purchase'"));});
+test('guaranteed race fallback exists',()=>assert(s.includes('Guaranteed feasible Race Day fallback')));
+test('race-only purchase survives purchase cleanup',()=>assert(s.includes('p.assignments.length||p===result.racePair')));
+test('new engine cache identity',()=>assert(s.includes("engine:'race-first-rotation-v1'")));
+test('compact nav final override',()=>assert(css.includes('v14.5.0 — authoritative compact mobile navigation')));
+const failed=checks.filter(x=>!x[1]);console.log(JSON.stringify({passed:checks.length-failed.length,failed:failed.length,checks},null,2));if(failed.length)process.exit(1);
