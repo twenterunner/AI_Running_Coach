@@ -1,0 +1,12 @@
+'use strict';
+const assert=require('assert'),fs=require('fs');
+const app=fs.readFileSync('app.js','utf8'),html=fs.readFileSync('index.html','utf8'),sw=fs.readFileSync('service-worker.js','utf8');
+assert(app.includes("p!==result.racePair&&!shoePlannerPurchaseIsNecessary(p,result)"));
+assert(app.includes("raceBuy.raceDayRole=true"));
+assert(html.includes("body:not(.modalOpen):not(.onboardingOpen) #nav"));
+assert(html.includes("z-index:1000!important"));
+assert(html.includes("grid-template-columns:minmax(0,1fr) 78px!important"));
+assert(html.includes("overflow:visible!important"));
+assert(html.includes("app.js?v=40205"));
+assert(sw.includes("arc-v1425-build-40205"));
+console.log(JSON.stringify({passed:8,failed:0}));

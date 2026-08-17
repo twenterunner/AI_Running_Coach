@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,interactive-widget=resizes-content">
 <meta name="theme-color" content="#07111D"><title>AI Running Coach</title>
-<link rel="manifest" href="manifest.webmanifest?v=40204"><link rel="stylesheet" href="styles.css?v=40204-shoe-reset">
+<link rel="manifest" href="manifest.webmanifest?v=40205"><link rel="stylesheet" href="styles.css?v=40205-shoe-reset">
 <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png?v=10320">
 <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png?v=10320">
 <link rel="icon" href="favicon.ico?v=10320">
@@ -50,11 +50,56 @@
 @media(max-width:430px){.sessionShoeCard .shoeSuitabilityPair>summary b{max-width:40vw!important}.sessionShoeCard .shoeSuitabilityComponents>div{grid-template-columns:minmax(0,1fr) 58px!important}.sessionShoeCard .shoeSuitabilityComponents>div b{width:58px!important;max-width:58px!important}}
 </style>
 
+
+<style id="v1425-mobile-hardening">
+@media(max-width:759px){
+  body:not(.modalOpen):not(.onboardingOpen) #nav{
+    display:grid!important;visibility:visible!important;opacity:1!important;
+    position:fixed!important;left:0!important;right:0!important;bottom:0!important;
+    width:100vw!important;max-width:100vw!important;min-height:72px!important;
+    z-index:1000!important;transform:translate3d(0,0,0)!important;
+    backface-visibility:hidden!important;pointer-events:auto!important;
+  }
+  #mainContent{padding-bottom:calc(108px + env(safe-area-inset-bottom))!important}
+}
+#plan .sessionShoeCard,#plan .sessionShoeCard details,#plan .sessionShoeCard .shoeSuitabilityPanel,
+#plan .sessionShoeCard .shoeSuitabilityPair,#plan .sessionShoeCard .shoeSuitabilityComponents{
+  width:100%!important;max-width:100%!important;min-width:0!important;box-sizing:border-box!important
+}
+#plan .sessionShoeCard .shoeSuitabilityPanel,#plan .sessionShoeCard .shoeSuitabilityPair,
+#plan .sessionShoeCard .shoeSuitabilityComponents{overflow:visible!important}
+#plan .sessionShoeCard .shoeSuitabilityPair>summary{
+  display:grid!important;grid-template-columns:minmax(0,1fr) minmax(86px,max-content)!important;
+  gap:10px!important;width:100%!important;min-width:0!important;padding:12px 14px!important
+}
+#plan .sessionShoeCard .shoeSuitabilityPair>summary span{min-width:0!important;overflow-wrap:anywhere!important;word-break:normal!important}
+#plan .sessionShoeCard .shoeSuitabilityPair>summary b{
+  width:auto!important;max-width:150px!important;min-width:86px!important;white-space:normal!important;
+  overflow:visible!important;text-align:right!important;line-height:1.25!important
+}
+#plan .sessionShoeCard .shoeSuitabilityComponents{padding:0 14px 12px!important}
+#plan .sessionShoeCard .shoeSuitabilityComponents>div{
+  display:grid!important;grid-template-columns:minmax(0,1fr) 78px!important;gap:12px!important;
+  width:100%!important;min-width:0!important;align-items:start!important
+}
+#plan .sessionShoeCard .shoeSuitabilityComponents>div span{min-width:0!important;overflow-wrap:anywhere!important}
+#plan .sessionShoeCard .shoeSuitabilityComponents>div b{
+  width:78px!important;max-width:78px!important;min-width:78px!important;white-space:nowrap!important;
+  overflow:visible!important;text-align:right!important;font-size:12px!important
+}
+@media(max-width:390px){
+  #plan .sessionShoeCard .shoeSuitabilityPair>summary{grid-template-columns:minmax(0,1fr) 92px!important}
+  #plan .sessionShoeCard .shoeSuitabilityPair>summary b{min-width:92px!important;max-width:92px!important;font-size:10.5px!important}
+  #plan .sessionShoeCard .shoeSuitabilityComponents>div{grid-template-columns:minmax(0,1fr) 72px!important}
+  #plan .sessionShoeCard .shoeSuitabilityComponents>div b{width:72px!important;min-width:72px!important;max-width:72px!important}
+}
+</style>
+
 </head>
 <body>
 <a class="skipLink" href="#mainContent">Skip to main content</a>
 <header class="topbar">
-  <div class="brand"><img class="logo" src="icon-192.png?v=40204" alt="AI Running Coach logo"><div class="brand-copy"><h1>AI Running Coach</h1><p>Race-specific adaptive planning · v14.2.4 · build 40204</p></div></div>
+  <div class="brand"><img class="logo" src="icon-192.png?v=40205" alt="AI Running Coach logo"><div class="brand-copy"><h1>AI Running Coach</h1><p>Race-specific adaptive planning · v14.2.5 · build 40205</p></div></div>
   <button id="installBtn" class="install hidden">Install</button>
 </header>
 <nav id="nav" aria-label="Primary navigation"></nav>
@@ -294,10 +339,10 @@
   <article class="settingsSection"><div class="settingsSectionHead"><span>02</span><div><small>TRAINING STRUCTURE</small><h3>When can you train?</h3><p>Availability and the long-run day used when the plan is rebuilt.</p></div></div><div id="daysGrid"></div></article>
   <article class="settingsSection"><div class="settingsSectionHead"><span>03</span><div><small>ADAPTIVE MODEL</small><h3>Is the configured plan structurally sound?</h3><p>Plan Health validates the programme structure without duplicating Progress.</p></div></div><div class="settingsNested"><div class="panelHead"><div><h3>Plan Health</h3><p class="muted compact">Structure score, calculation and recommendations for the configured plan.</p></div><button id="planHealthBtn" class="secondary">Validate plan</button></div><div id="planHealthContent"></div></div></article>
   <article class="settingsSection"><div class="settingsSectionHead"><span>04</span><div><small>DATA & IMPORTS</small><h3>Manage your local training data</h3><p>Back up, restore or export data. Destructive actions remain clearly separated.</p></div></div><div class="settingsNested"><div class="buttonRow settingsDataActions"><button id="backupBtn">Download backup</button><label for="restoreFile" class="buttonLike">Restore backup</label><input id="restoreFile" type="file" accept=".json"><button id="undoRestoreBtn" type="button" class="secondary hidden">Undo last restore</button><button id="exportBtn">Export runs CSV</button></div><div class="settingsDangerZone"><b>Reset local app data</b><p>Use only when you intend to remove the current local programme and history.</p><button id="resetBtn" class="danger">Reset app</button></div></div></article>
-  <article class="settingsSection"><div class="settingsSectionHead"><span>05</span><div><small>APP & MODEL INFORMATION</small><h3>Which version is running?</h3><p>Reference information for this local build.</p></div></div><div class="settingsNested settingsAppInfo"><div><small>APP VERSION</small><strong>v14.2.4</strong></div><div><small>BUILD</small><strong>40204</strong></div><div><small>DATA</small><strong>Stored locally</strong></div></div></article>
+  <article class="settingsSection"><div class="settingsSectionHead"><span>05</span><div><small>APP & MODEL INFORMATION</small><h3>Which version is running?</h3><p>Reference information for this local build.</p></div></div><div class="settingsNested settingsAppInfo"><div><small>APP VERSION</small><strong>v14.2.5</strong></div><div><small>BUILD</small><strong>40205</strong></div><div><small>DATA</small><strong>Stored locally</strong></div></div></article>
 </section>
 </main>
-<footer class="appFooter"><span>AI Running Coach</span><small>v14.2.4 · build 40204</small></footer>
+<footer class="appFooter"><span>AI Running Coach</span><small>v14.2.5 · build 40205</small></footer>
 
 <div id="modal" class="modal hidden" role="dialog" aria-modal="true" aria-label="AI Running Coach dialog" tabindex="-1"><div class="modalCard"><button id="closeModal" class="close" type="button" aria-label="Close dialog">×</button><div id="modalContent"></div></div></div>
 
@@ -326,5 +371,5 @@
     <button class="primary full" type="submit">Review and create my plan</button>
   </form>
 </div>
-<script src="app.js?v=40204-shoe-reset"></script>
+<script src="app.js?v=40205-shoe-reset"></script>
 </body></html>
