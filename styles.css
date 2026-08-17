@@ -5130,3 +5130,5 @@ body:has(#dashboard.progressPage.active),#mainContent:has(#dashboard.progressPag
 #shoes .shoePriorityControl label{color:#9fb6bf!important;font-size:9px!important;font-weight:900!important;letter-spacing:.07em!important;text-transform:uppercase!important}
 #shoes .shoePriorityControl select{width:100%!important;min-height:40px!important;padding:8px 10px!important;border-radius:9px!important;background:#071d26!important;color:#eef9fb!important;border:1px solid rgba(80,210,219,.25)!important;font:inherit!important}
 #shoes .shoePriorityControl small{display:block!important;margin:0!important;color:#a9c0c8!important;line-height:1.4!important}
+
+#shoes .shoePriorityActive{display:inline-flex!important;width:max-content!important;max-width:100%!important;padding:4px 7px!important;border-radius:999px!important;border:1px solid rgba(83,220,211,.28)!important;background:rgba(83,220,211,.08)!important;color:#75e4dc!important;font-size:9px!important;font-weight:900!important;letter-spacing:.06em!important;line-height:1.2!important}

@@ -1,0 +1,19 @@
+AI Running Coach v14.5.8 · build 40508
+
+The v14.5.7 selector changed weights but could still converge to the same plan.
+
+v14.5.8 makes the two preferences structurally different:
+
+Purchase spacing priority:
+- May reassign selected quality/race-specific sessions to improve the ~12-week purchase gap.
+- Quality-session suitability loss limit: 18 points.
+- Ordinary-session loss limit: 22 points.
+
+Quality-session priority:
+- Key quality/race-specific sessions are never moved merely to improve purchase timing.
+- Only lower-priority sessions can be reallocated for spacing.
+- Ordinary-session loss limit: 8 points.
+- If ~12 weeks requires touching a protected quality session, the shorter purchase gap is accepted.
+
+The active policy is shown in the Shoes panel and identified in purchase-spacing rationale.
+Hard availability, lifecycle, retirement and Race Day rules are unchanged.

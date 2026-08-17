@@ -3,7 +3,7 @@
   "name": "AI Running Coach",
   "short_name": "Run Coach",
   "description": "Private, offline-first, race-specific adaptive running plans with transparent evidence and recovery tracking.",
-  "version": "14.5.7",
+  "version": "14.5.8",
   "build": 40503,
   "start_url": "./",
   "scope": "./",
