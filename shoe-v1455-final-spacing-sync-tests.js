@@ -8,5 +8,5 @@ assert(finalPass>raceRebalance);
 assert(!app.includes("Purchase spacing target: ${gap} days since the previous planned purchase"));
 assert(app.includes("b.purchaseDate=first.date;b.firstUseDate=first.date"));
 assert(app.includes("if(b.spacingReason)b.reason="));
-assert(app.includes('race-first-spacing-v4-final-ledger-sync'));
+assert(app.includes('race-first-spacing-v6-priority-choice'));
 console.log(JSON.stringify({passed:6,failed:0}));

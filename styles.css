@@ -5124,3 +5124,9 @@ body:has(#dashboard.progressPage.active),#mainContent:has(#dashboard.progressPag
 }
 #plan .sessionShoeCard .shoeSuitabilityDetails[open]>summary:after,
 #plan .sessionShoeCard .planShoeWhy[open]>summary:after{transform:rotate(225deg)!important}
+
+/* v14.5.7 — Shoes rotation-priority control */
+#shoes .shoePriorityControl{display:grid!important;grid-template-columns:1fr!important;gap:5px!important;margin-top:8px!important;padding-top:9px!important;border-top:1px solid rgba(80,210,219,.16)!important}
+#shoes .shoePriorityControl label{color:#9fb6bf!important;font-size:9px!important;font-weight:900!important;letter-spacing:.07em!important;text-transform:uppercase!important}
+#shoes .shoePriorityControl select{width:100%!important;min-height:40px!important;padding:8px 10px!important;border-radius:9px!important;background:#071d26!important;color:#eef9fb!important;border:1px solid rgba(80,210,219,.25)!important;font:inherit!important}
+#shoes .shoePriorityControl small{display:block!important;margin:0!important;color:#a9c0c8!important;line-height:1.4!important}

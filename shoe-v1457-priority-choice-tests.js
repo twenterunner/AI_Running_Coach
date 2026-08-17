@@ -1,0 +1,14 @@
+'use strict';
+const fs=require('fs'),assert=require('assert');
+const app=fs.readFileSync('app.js','utf8');
+const css=fs.readFileSync('styles.css','utf8');
+assert(app.includes("'purchase-spacing':{label:'Purchase spacing priority'"));
+assert(app.includes("'quality-session':{label:'Quality-session priority'"));
+assert(app.includes("function shoeRotationPriority()"));
+assert(app.includes("rotationPriority==='quality-session'?(quality?5:11):(quality?18:22)"));
+assert(app.includes("rotationPriority==='quality-session'?4.8:1.65"));
+assert(app.includes('shoeRotationPriority(),raceDate'));
+assert(app.includes('id="shoeRotationPriority"'));
+assert(app.includes("shoeRotationPriority:'Shoe rotation preference'"));
+assert(css.includes('v14.5.7 — Shoes rotation-priority control'));
+console.log(JSON.stringify({passed:9,failed:0}));
