@@ -2,7 +2,7 @@
 const assert=require('assert'),fs=require('fs');
 const app=fs.readFileSync('app.js','utf8'),css=fs.readFileSync('styles.css','utf8'),html=fs.readFileSync('index.html','utf8'),sw=fs.readFileSync('service-worker.js','utf8');
 
-assert(app.includes("engine:'session-suitability-v20-clean-reset'"));
+assert(app.includes("engine:'session-suitability-v21-race-final'"));
 for(const dead of ['shoePlannerCanSafelyCover','shoePlannerCleanupPurchases','shoePlannerRepairLifecycleCapacity','shoePlannerRebalanceWeek','shoePlannerCreatePair','lifecycleRemoveFuturePair','lifecycleContextualPurchaseProfile','lifecycleContextualRaceProfile']) assert(!app.includes(dead),`obsolete ${dead} remains`);
 assert(app.includes('weeklyMinimumShare:.25'));
 assert(app.includes('targetMinPairs:2'));
@@ -16,11 +16,11 @@ assert(app.includes('shoeEngineProjectedKm(pair)+km>Number(pair.retireKm)+1e-6')
 assert(app.includes('Future pairs appear only from their first-use date.'));
 assert(app.includes('function shoeEngineIsAvailable(pair,date)'));
 assert(app.includes("const availableOn=shoePlannerEntryDate(pair)||'9999-12-31';if(availableOn>plan.date)continue"));
-assert(css.includes('bottom:var(--nav-visual-bottom,0px)!important'));
-assert(css.includes('#plan .sessionShoeCard details[open]>:not(summary){margin-left:0!important;margin-right:0!important}'));
-assert(css.includes('grid-template-columns:minmax(0,1fr) 72px!important'));
-assert(app.includes('function syncMobileBottomNavViewport'));
-assert(app.includes("window.visualViewport?.addEventListener('scroll',syncMobileBottomNavViewport"));
-assert(html.includes('app.js?v=40300-shoe-reset'));
-assert(sw.includes("arc-v1430-build-40300"));
+assert(css.includes('height:86px!important'));
+assert(css.includes('#plan .sessionShoeCard details[open] > :not(summary)')); assert(css.includes('margin-left:0!important')); assert(css.includes('margin-right:0!important'));
+assert(css.includes('grid-template-columns:minmax(0,1fr) 76px!important'));
+assert(!app.includes('function syncMobileBottomNavViewport'));
+assert(!app.includes("visualViewport?.addEventListener('scroll',syncMobileBottomNavViewport"));
+assert(html.includes('app.js?v=40301'));
+assert(sw.includes("arc-v1431-build-40301"));
 console.log(JSON.stringify({passed:23,failed:0}));
