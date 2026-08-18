@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '14.10.11';
-  const BUILD = 41011;
+  const VERSION = '14.10.12';
+  const BUILD = 41012;
   const SCHEMA = 10400;
   const PRIMARY_STORAGE_KEY = 'arc_v10400_web';
   const MIRROR_STORAGE_KEY = 'arc_v10400_mirror';
@@ -6344,16 +6344,22 @@ function shoeEngineOwnedPairSeed(now){
 function shoeEngineRaceScenarios(now,raceDate,trainingSessions){
  const racePlan={id:'race-day-scenario',date:raceDate,type:'Race Day',distance:Number(state.setup?.raceDistance)||42.195,surface:'road'},override=shoeRacePairOverrideProfile(),owned=shoeEngineOwnedPairSeed(now),out=[];
  for(const p of owned){
+  // Automatic selection remains race-role based. An explicit runner override instead
+  // constrains the MODEL and lets the same suitability/lifecycle engine decide whether
+  // that physical pair is feasible; it is never rejected merely for lacking a race tag.
   if(!shoeEngineAutomaticRaceEligible(p))continue;
   const c=shoeEngineRaceCandidate(p,racePlan);if(c&&c.score>=58&&c.preRaceKm<c.window.maxKm-1e-6&&c.remaining>=Number(racePlan.distance)+SESSION_SHOE_RULES.minimumRaceLifeAfterStartKm)out.push({kind:'owned',pairId:p.id,profileKey:lifecycleProfileKey(p.profile),label:lifecyclePairLabel(p)})
  }
  const close=iso(new Date(dte(raceDate).getTime()-SESSION_SHOE_RULES.raceFamiliarisationLookbackDays*DAY)),prep=trainingSessions.filter(s=>s.date>=close&&s.date<raceDate&&!s.rehab&&Number(s.distance)>0).sort((a,b)=>a.date.localeCompare(b.date));
  if(prep.length){
-  const candidates=candidatePurchaseProfiles().filter(p=>lifecycleRoles(p).has('race')&&(!override||lifecycleProfileKey(p)===lifecycleProfileKey(override))).map(profile=>{const retireKm=lifecycleRetireKmForProfile(profile),score=shoeSuitabilityAssessment(profile,racePlan,{projectedKm:0,retireKm}).score;return{profile,score}}).filter(x=>x.score>=58).sort((a,b)=>b.score-a.score||purchaseProfileScore(b.profile)-purchaseProfileScore(a.profile)).slice(0,5);
+  const pool=override?[override]:candidatePurchaseProfiles().filter(p=>lifecycleRoles(p).has('race'));
+  const candidates=pool.map(profile=>{const retireKm=lifecycleRetireKmForProfile(profile),score=shoeSuitabilityAssessment(profile,racePlan,{projectedKm:0,retireKm}).score;return{profile,score}}).filter(x=>x.score>=58).sort((a,b)=>b.score-a.score||purchaseProfileScore(b.profile)-purchaseProfileScore(a.profile)).slice(0,5);
   for(const x of candidates)out.push({kind:'future',profile:x.profile,profileKey:lifecycleProfileKey(x.profile),entryDate:close,label:futureProfileDisplayName(x.profile),raceScore:x.score})
  }
  if(override){
-  const key=lifecycleProfileKey(override),filtered=out.filter(x=>x.profileKey===key);return filtered.length?filtered:out
+  // Never silently fall back to another model when the runner explicitly selected one.
+  // If this returns no scenario, the single engine reports the selected model as infeasible.
+  const key=lifecycleProfileKey(override);return out.filter(x=>x.profileKey===key)
  }
  // Deterministic de-duplication: one owned scenario per physical pair, one future scenario per model.
  const seenFuture=new Set();return out.filter(x=>x.kind==='owned'||(!seenFuture.has(x.profileKey)&&seenFuture.add(x.profileKey)))
@@ -6596,7 +6602,7 @@ function shoeSessionPlanHtml(){
 function shoeCurrentRotationTileHtml(life,active){const healthy=active.filter(s=>shoeForecast(s).status!=='retire').length;return`<details class="shoeKeyTile"><summary><div><small>CURRENT ROTATION</small><b>${active.length} active pair${active.length===1?'':'s'} · ${healthy===active.length?'healthy':'review lifecycle'}</b><span>${active.map(s=>`${shoeDisplayName(s)} ${Math.round(shoeMileage(s))} km`).join(' · ')||'No active shoes'}</span></div></summary><div class="shoeKeyDetail"><div class="shoeRotationGrid">${active.map(shoeRotationCard).join('')||'<div class="shoeEmpty">No active shoes.</div>'}</div></div></details>`}
 function shoeNextPurchaseTileHtml(life){const buys=life.purchases.filter(x=>x.role!=='race'),next=buys[0],pair=next?life.pairs.find(p=>p.id===next.pairId):null;const summary=next&&pair?`${lifecyclePairLabel(pair)} · ${fmtDate(next.purchaseDate)}`:'No purchase currently required';return`<details class="shoeKeyTile"><summary><div><small>NEXT PURCHASE</small><b>${esc(summary)}</b><span>${next?`${Math.max(0,Math.ceil((dte(next.purchaseDate)-today())/DAY))} days · first meaningful use`:'Current rotation covers the programme'}</span></div></summary><div class="shoeKeyDetail">${buys.length?buys.map((buy,n)=>{const p=life.pairs.find(x=>x.id===buy.pairId),sel=shoeFuturePairOverrideKeys()[n]||'';return`<div class="shoeOverrideRow"><div><small>FUTURE PAIR ${n+1}</small><b>${esc(p?lifecyclePairLabel(p):'Future pair')}</b><span>First meaningful use ${esc(fmtDate(buy.firstUseDate||buy.purchaseDate))}</span></div><label>Runner override<select data-future-pair-override="${n}">${shoeOverrideProfileOptions(sel,true)}</select></label></div>`}).join(''):'<div class="shoeEmpty">No future training purchase is currently required.</div>'}</div></details>`}
 
-function shoeRaceDayTileHtml(life){const pair=life.racePair,window=life.raceWindow,name=pair?lifecyclePairLabel(pair):'Race Day pair unavailable',km=pair?Math.round(shoeEngineRaceStartKm(life,pair)):0,sel=String(state.setup?.shoeRacePairOverride||'');return`<details class="shoeKeyTile"><summary><div><small>RACE-DAY SHOE</small><b>${esc(name)}</b><span>${pair?`~${km} km at race start${window?` · target ${Math.round(window.minKm)}–${Math.round(window.maxKm)} km`:''}`:'Planner error'}</span></div></summary><div class="shoeKeyDetail"><div class="shoeOverrideRow race"><div><small>RACE-DAY MODEL</small><b>${esc(name)}</b><span>Coach-selected unless you override it below.</span></div><label>Runner override<select id="shoeRacePairOverride">${shoeOverrideProfileOptions(sel,true)}</select></label></div></div></details>`}
+function shoeRaceDayTileHtml(life){const pair=life.racePair,window=life.raceWindow,override=shoeRacePairOverrideProfile(),name=pair?lifecyclePairLabel(pair):(override?futureProfileDisplayName(override):'Race Day pair unavailable'),km=pair?Math.round(shoeEngineRaceStartKm(life,pair)):0,sel=String(state.setup?.shoeRacePairOverride||''),unavailable=override?'Selected model cannot satisfy the current Race Day suitability, familiarisation or lifecycle constraints.':'No feasible Race Day pair is available under the current programme.';return`<details class="shoeKeyTile"><summary><div><small>RACE-DAY SHOE</small><b>${esc(name)}</b><span>${pair?`~${km} km at race start${window?` · target ${Math.round(window.minKm)}–${Math.round(window.maxKm)} km`:''}`:esc(unavailable)}</span></div></summary><div class="shoeKeyDetail"><div class="shoeOverrideRow race"><div><small>RACE-DAY MODEL</small><b>${esc(name)}</b><span>Coach-selected unless you override it below.</span></div><label>Runner override<select id="shoeRacePairOverride">${shoeOverrideProfileOptions(sel,true)}</select></label></div></div></details>`}
 function shoeRotationPlanTileHtml(life){const status=life.valid?'Plan feasible':'Plan requires attention';return`<section class="shoeKeyTile shoePlanTile shoePlanTileAlwaysOpen"><div class="shoePlanStaticHead"><div><small>ROTATION PLAN</small><b>${esc(status)}</b></div></div><div class="shoeKeyDetail"><article class="shoeChartCard">${shoeMileageChartHtml()}</article><div class="shoePlanAllocationFold"><details><summary>Programme allocation details</summary>${shoeSessionPlanHtml()}</details></div></div></section>`}
 function renderShoes(){const root=$('shoesContent');if(!root)return;
  // Shoes is intentionally lazy: do not run the whole-programme optimiser while another page is visible.
