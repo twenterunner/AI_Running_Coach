@@ -5456,3 +5456,19 @@ body:has(#dashboard.progressPage.active),#mainContent:has(#dashboard.progressPag
     border-radius:18px 18px 0 0!important;
   }
 }
+
+/* v14.10.4 — final mobile nav: float slightly above the viewport edge. */
+@media (max-width:759px){
+  :root{--mobile-nav-height:72px!important;--mobile-nav-bottom:6px!important}
+  #nav{
+    left:8px!important;right:8px!important;bottom:6px!important;
+    width:auto!important;max-width:none!important;
+    height:calc(72px + env(safe-area-inset-bottom))!important;
+    min-height:calc(72px + env(safe-area-inset-bottom))!important;
+    border:1px solid rgba(136,161,177,.13)!important;
+    border-radius:18px!important;
+    padding:5px 8px calc(5px + env(safe-area-inset-bottom))!important;
+  }
+  #mainContent,.page{padding-bottom:calc(106px + env(safe-area-inset-bottom))!important}
+  .moreNav{bottom:calc(86px + env(safe-area-inset-bottom))!important}
+}
