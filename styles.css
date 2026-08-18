@@ -5532,7 +5532,7 @@ body:has(#dashboard.progressPage.active),#mainContent:has(#dashboard.progressPag
   background:rgba(103,167,255,.07);
 }
 
-/* Progress · verified personal bests v14.10.14 */
+/* Progress · verified personal bests v14.10.15 */
 .personalBestsPanel{padding:16px}
 .personalBestsHead{margin-bottom:12px}
 .personalBestsGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
@@ -5543,3 +5543,60 @@ body:has(#dashboard.progressPage.active),#mainContent:has(#dashboard.progressPag
 .personalBestTile.empty small{color:var(--muted)}
 .personalBestTile.empty strong{color:var(--text-2)}
 @media (min-width:760px){.personalBestsGrid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+
+
+/* v14.10.16 — Progress spacing/typography cleanup */
+#dashboard.progressPage .progressSection > .kpis{
+  margin:0 0 12px!important;
+}
+#dashboard.progressPage .progressSection > .kpis .kpi{
+  display:grid!important;
+  grid-template-columns:1fr!important;
+  align-content:start!important;
+  gap:4px!important;
+  min-width:0!important;
+  min-height:112px!important;
+  padding:14px!important;
+  background:var(--progress-nested)!important;
+  border:1px solid var(--progress-nested-border)!important;
+  border-radius:11px!important;
+}
+#dashboard.progressPage .progressSection > .kpis .kpi>label{
+  display:block!important;
+  margin:0!important;
+  font-size:10px!important;
+  line-height:1.3!important;
+  font-weight:650!important;
+  letter-spacing:0!important;
+  color:#c6d9df!important;
+  overflow-wrap:anywhere!important;
+}
+#dashboard.progressPage .progressSection > .kpis .kpi>strong{
+  display:block!important;
+  margin:2px 0 0!important;
+  font-size:22px!important;
+  line-height:1.08!important;
+  font-weight:850!important;
+  letter-spacing:-.02em!important;
+  color:#fff!important;
+  overflow-wrap:anywhere!important;
+}
+#dashboard.progressPage .progressSection > .kpis .kpi>small{
+  display:block!important;
+  margin:2px 0 0!important;
+  font-size:9px!important;
+  line-height:1.35!important;
+  font-weight:600!important;
+  letter-spacing:0!important;
+  color:#8fc2ce!important;
+  overflow-wrap:anywhere!important;
+}
+#dashboard.progressPage .personalBestsPanel{
+  background:var(--progress-card)!important;
+  border:1px solid var(--progress-border)!important;
+  border-radius:18px!important;
+  box-shadow:none!important;
+  color:#fff!important;
+  padding:16px!important;
+  margin:0!important;
+}
