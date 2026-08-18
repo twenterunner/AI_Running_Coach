@@ -5387,3 +5387,65 @@ body:has(#dashboard.progressPage.active),#mainContent:has(#dashboard.progressPag
     max-width:calc(var(--nav-visible-width) - (2 * var(--nav-edge-gap)))!important;
   }
 }
+
+
+/* v14.8.3 — final single-source mobile dock geometry.
+   This final rule intentionally neutralises width/offset effects from historical
+   mobile navigation blocks. The dock is constrained to the actual visible width. */
+@media (max-width:759px){
+  #nav{
+    box-sizing:border-box!important;
+    position:fixed!important;
+    left:max(4px,var(--visual-viewport-left,0px))!important;
+    right:auto!important;
+    bottom:calc(var(--visual-viewport-bottom,0px) + max(2px,env(safe-area-inset-bottom)))!important;
+    width:calc(min(100dvw,var(--visual-viewport-width,100dvw)) - 8px)!important;
+    max-width:calc(min(100dvw,var(--visual-viewport-width,100dvw)) - 8px)!important;
+    min-width:0!important;
+    margin:0!important;
+    transform:none!important;
+    translate:none!important;
+    overflow:hidden!important;
+    display:grid!important;
+    grid-template-columns:repeat(5,minmax(0,1fr))!important;
+    gap:0!important;
+    padding:4px!important;
+  }
+  #nav>button,#nav>.moreToggle{
+    min-width:0!important;
+    width:100%!important;
+    max-width:100%!important;
+    margin:0!important;
+    padding-left:0!important;
+    padding-right:0!important;
+    overflow:hidden!important;
+  }
+  #nav .navLabel{
+    min-width:0!important;
+    max-width:100%!important;
+    width:100%!important;
+    font-size:10px!important;
+    white-space:nowrap!important;
+    overflow:hidden!important;
+    text-align:center!important;
+  }
+}
+
+/* Canonical Race Day start-line marker. */
+.shoeRaceStartMarker circle{
+  fill:var(--shoe-color);
+  stroke:#071722;
+  stroke-width:3;
+}
+.shoeRaceStartMarker line{
+  stroke:var(--shoe-color);
+  stroke-width:2;
+}
+.shoeRaceStartMarker text{
+  fill:#EAF6FA;
+  font-size:17px;
+  font-weight:800;
+  paint-order:stroke;
+  stroke:#073744;
+  stroke-width:4px;
+}
