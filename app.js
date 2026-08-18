@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '14.10.12';
-  const BUILD = 41012;
+  const VERSION = '14.10.14';
+  const BUILD = 41014;
   const SCHEMA = 10400;
   const PRIMARY_STORAGE_KEY = 'arc_v10400_web';
   const MIRROR_STORAGE_KEY = 'arc_v10400_mirror';
@@ -452,6 +452,10 @@ let rawState=loadStoredState();
 try{if(rawState&&CORE.LEGACY_STORAGE_KEYS.includes(migrationReport.source))localStorage.setItem('arc_v10400_migration_backup',JSON.stringify(rawState))}catch(err){recordDiagnostic('Pre-migration backup',err)}
 let state;try{state=normaliseState(rawState||defaults())}catch(err){recordDiagnostic('Migration failure',err);migrationReport.status='recovered defaults';migrationReport.warning=err.message;state=defaults()}
 function save(){reconcileShoeUsage();state.storageRevision=Math.max(0,Number(state.storageRevision)||0)+1;state.updatedAt=new Date().toISOString();const text=JSON.stringify(state);try{localStorage.setItem(STORAGE_KEY,text);localStorage.setItem(MIRROR_KEY,text);localStorage.setItem(MIGRATION_MARKER,'true');return true}catch(err){recordDiagnostic('Save failure',err);toast('Data could not be saved on this device.',true);return false}}
+// Persist derived/cache-backed state without manufacturing another data revision.
+// Used after the shoe optimiser has already run for the current persisted revision, so
+// auto-assignment output can be stored without invalidating and recomputing that same plan.
+function persistStateSnapshot(){state.updatedAt=new Date().toISOString();const text=JSON.stringify(state);try{localStorage.setItem(STORAGE_KEY,text);localStorage.setItem(MIRROR_KEY,text);localStorage.setItem(MIGRATION_MARKER,'true');return true}catch(err){recordDiagnostic('Derived-state persistence failure',err);toast('Data could not be saved on this device.',true);return false}}
 save();
 let lastModalFocus=null,modalWasOpen=false;
 function resetModalViewport(){const card=document.querySelector('#modal .modalCard');if(card)card.scrollTop=0;requestAnimationFrame(()=>{const c=document.querySelector('#modal .modalCard');if(c)c.scrollTop=0})}
@@ -3005,7 +3009,7 @@ function summariseCSV(rows){
    rpe:null,pain:null,recovery:null,temperature:null,notes:'Imported from Stryd CSV',
    drift:null,powerDrift:null,paceDrift:null,
    candidateDrift:analysis?.drift??null,candidatePowerDrift:analysis?.powerDrift??null,candidatePaceDrift:analysis?.paceDrift??null,
-   candidateStreamEvidence:analysis,streamEvidence:null,sourceFormat:'csv-timeseries'
+   candidateStreamEvidence:analysis,streamEvidence:null,sourceFormat:'csv-timeseries',fitRecords:records.map(r=>({t:r.t,hr:r.hr,speed:r.speed,power:r.power,distance:r.distance}))
  };
 }
 
@@ -3878,8 +3882,74 @@ function progressTrendState(canvas,count,singular,plural){
  return hasAny;
 }
 
+const PERSONAL_BEST_DISTANCES=Object.freeze([
+ {key:'1k',label:'1 km',meters:1000},
+ {key:'1mi',label:'1 mile',meters:1609.344},
+ {key:'5k',label:'5 km',meters:5000},
+ {key:'10k',label:'10 km',meters:10000},
+ {key:'half',label:'Half marathon',meters:21097.5},
+ {key:'marathon',label:'Marathon',meters:42195}
+]);
+function personalBestUploadedRun(run){
+ const fmt=String(run?.sourceFormat||'').toLowerCase(),id=String(run?.id||'');
+ return fmt==='fit-activity'||fmt==='csv-timeseries'||id.startsWith('fit-')||id.startsWith('stryd-');
+}
+function personalBestRecordSegments(records){
+ const rows=(Array.isArray(records)?records:[]).map(r=>({t:Number(r?.t),distance:Number(r?.distance)})).filter(r=>Number.isFinite(r.t)&&Number.isFinite(r.distance)).sort((a,b)=>a.t-b.t);
+ const segments=[];let current=[];
+ for(const row of rows){
+  const prev=current.at(-1);
+  if(prev&&(row.t<=prev.t||row.distance<prev.distance-3)){if(current.length>=2)segments.push(current);current=[]}
+  current.push(row)
+ }
+ if(current.length>=2)segments.push(current);
+ return segments
+}
+function personalBestRollingEffort(records,targetMeters){
+ let best=null;
+ for(const rows of personalBestRecordSegments(records)){
+  if(rows.at(-1).distance-rows[0].distance+1e-6<targetMeters)continue;
+  let j=1;
+  for(let i=0;i<rows.length-1;i++){
+   if(j<=i)j=i+1;
+   const target=rows[i].distance+targetMeters;
+   while(j<rows.length&&rows[j].distance<target)j++;
+   if(j>=rows.length)break;
+   const hi=rows[j],lo=rows[Math.max(i,j-1)],span=hi.distance-lo.distance;
+   if(!(span>0))continue;
+   const frac=clamp((target-lo.distance)/span,0,1),endT=lo.t+(hi.t-lo.t)*frac,seconds=endT-rows[i].t;
+   if(!(seconds>0))continue;
+   if(!best||seconds<best.seconds-1e-6)best={seconds,startSec:rows[i].t,endSec:endT,method:'rolling-stream'};
+  }
+ }
+ return best
+}
+function personalBestExactTotal(run,targetMeters){
+ const km=Number(run?.distanceKm),seconds=Number(run?.durationSec);if(!(km>0)||!(seconds>0))return null;
+ const targetKm=targetMeters/1000,toleranceKm=Math.max(.01,targetKm*.001);
+ if(Math.abs(km-targetKm)>toleranceKm)return null;
+ return{seconds,startSec:null,endSec:null,method:'exact-total'}
+}
+function personalBestSummary(){
+ const runs=(state.runs||[]).filter(personalBestUploadedRun).slice().sort((a,b)=>String(a.date||'').localeCompare(String(b.date||''))||String(a.id||'').localeCompare(String(b.id||'')));
+ const result={};for(const spec of PERSONAL_BEST_DISTANCES)result[spec.key]=null;
+ for(const run of runs){
+  for(const spec of PERSONAL_BEST_DISTANCES){
+   const stream=personalBestRollingEffort(run.fitRecords,spec.meters),candidate=stream||personalBestExactTotal(run,spec.meters);if(!candidate)continue;
+   const current=result[spec.key];
+   if(!current||candidate.seconds<current.seconds-1e-6)result[spec.key]={...candidate,key:spec.key,label:spec.label,meters:spec.meters,date:run.date,runId:run.id,sourceFormat:run.sourceFormat||null};
+  }
+ }
+ return result
+}
+function renderPersonalBests(){
+ const mount=$('personalBests');if(!mount)return;const best=personalBestSummary();
+ mount.innerHTML=PERSONAL_BEST_DISTANCES.map(spec=>{const row=best[spec.key];return`<article class="personalBestTile ${row?'hasBest':'empty'}"><small>${esc(spec.label)}</small><strong>${row?fmtTime(row.seconds):'—'}</strong><span>${row?fmtDate(row.date):'No verified effort yet'}</span></article>`}).join('');
+}
+
 function renderMetrics(){
  refreshSavedStreamMetrics();
+ renderPersonalBests();
  let rs=completedRuns().slice().sort((a,b)=>a.date.localeCompare(b.date));
  let efficiencyRuns=rs.filter(r=>Number.isFinite(metrics(r).efficiencyJ));
  let driftRuns=rs.filter(r=>Number.isFinite(r.powerDrift));
@@ -6576,7 +6646,7 @@ function shoeRotationCard(shoe){
 }
 function shoeRaceNowRecommendationsHtml(){const distances=[['5 km',5],['10 km',10],['Half marathon',21.0975],['Marathon',42.195]],active=(state.shoes||[]).filter(s=>s.status!=='retired');if(!active.length)return'<div class="shoeEmpty">Add shoes to compare race-distance choices.</div>';return`<div class="shoeRaceNowGrid">${distances.map(([label,distance])=>{const rec=shoeRecommendation({id:'race-now-'+distance,date:iso(today()),type:'Race rehearsal',distance,surface:'road'}),best=rec.best,alt=rec.alternative;if(!best)return`<article class="shoeRaceNowCard"><small>${label.toUpperCase()}</small><b>No race-suitable owned shoe</b></article>`;return`<article class="shoeRaceNowCard"><small>${label.toUpperCase()} TODAY</small><h4>${esc(shoeDisplayName(best.shoe))}</h4><b>${esc(best.label)}</b><p>${esc(best.reasons.slice(0,2).join(' · '))}</p>${best.warning?`<span class="shoeWarning">${esc(best.warning)}</span>`:''}${alt?`<span>Alternative: ${esc(shoeDisplayName(alt.shoe))}</span>`:''}</article>`}).join('')}</div>`}
 let shoeAutoAssignmentStamp=null;
-function ensureShoeAutoAssignments(){const stamp=[state.storageRevision||0,state.setup?.raceDate||'','session-suitability',state.setup?.footMechanics||'unknown',(state.plan||[]).length,(state.shoes||[]).map(s=>`${s.id}:${s.status}:${shoeMileage(s).toFixed(2)}`).join(','),(state.plannedShoeAssignments||[]).filter(a=>a.source==='user').map(a=>`${a.planId}:${a.shoeId}`).join(',')].join('|');if(shoeAutoAssignmentStamp===stamp)return;shoeAutoAssignments();shoeAutoAssignmentStamp=stamp}
+function ensureShoeAutoAssignments(){const stamp=[state.storageRevision||0,state.setup?.raceDate||'','session-suitability',state.setup?.footMechanics||'unknown',Number(state.setup?.bodyWeight)||0,String(state.setup?.shoeRacePairOverride||''),JSON.stringify(shoeFuturePairOverrideKeys()),(state.plan||[]).length,(state.shoes||[]).map(s=>`${s.id}:${s.status}:${shoeMileage(s).toFixed(2)}`).join(','),(state.plannedShoeAssignments||[]).filter(a=>a.source==='user').map(a=>`${a.planId}:${a.shoeId}`).join(',')].join('|');if(shoeAutoAssignmentStamp===stamp)return false;shoeAutoAssignments();shoeAutoAssignmentStamp=stamp;return true}
 function shoeSessionPlanHtml(){
  const life=freshShoeLifecyclePlan();
  const training=life.fixed.map(plan=>({plan,rehab:false}));
@@ -6621,7 +6691,25 @@ function renderShoes(){const root=$('shoesContent');if(!root)return;
  root.innerHTML=`<div class="sectionTitle shoesPageTitle"><div><span class="pageEyebrow">SHOE ROTATION</span><h2>Shoes</h2><p>Rotation, lifecycle & Race Day planning.</p></div><button id="addShoeBtn" class="primary small" type="button">Add running shoe</button></div>
  <div class="shoeKeyDashboard">${shoeCurrentRotationTileHtml(freshShoeLifecyclePlan(),active)}${shoeNextPurchaseTileHtml(freshShoeLifecyclePlan())}${shoeRaceDayTileHtml(freshShoeLifecyclePlan())}${shoeRotationPlanTileHtml(freshShoeLifecyclePlan())}</div>
  `;
- const recalcShoeStrategy=message=>{freshShoePlanCache={stamp:null,value:null};shoeAutoAssignmentStamp=null;invalidateShoeAssignmentCache();ensureShoeAutoAssignments();save();renderAll();toast(message)};
+ let shoeStrategyRecalcToken=0;
+ const recalcShoeStrategy=message=>{
+  const token=++shoeStrategyRecalcToken;
+  // The override itself is the one persisted decision change: bump the revision once.
+  freshShoePlanCache={stamp:null,value:null};shoeAutoAssignmentStamp=null;invalidateShoeAssignmentCache();save();invalidatePageRender();
+  // Yield before the expensive whole-programme calculation so the selection/tap paints immediately.
+  toast('Recalculating shoe plan…');
+  const run=()=>{
+   if(token!==shoeStrategyRecalcToken)return;
+   try{
+    ensureShoeAutoAssignments(); // computes the unified plan once for this exact revision
+    persistStateSnapshot();      // store derived auto assignments without invalidating that plan
+    invalidatePageRender();      // derived assignments affect Plan/Today/Shoes views
+    renderAll({force:true});      // active Shoes page reuses the already-populated lifecycle cache
+    toast(message);
+   }catch(err){recordDiagnostic('Shoe strategy recalculation',err);toast('Shoe plan could not be recalculated.',true)}
+  };
+  if(typeof requestAnimationFrame==='function')requestAnimationFrame(()=>setTimeout(run,0));else setTimeout(run,0);
+ };
  root.querySelectorAll('[data-future-pair-override]').forEach(sel=>sel.onchange=()=>{const idx=Number(sel.dataset.futurePairOverride),arr=shoeFuturePairOverrideKeys().slice();arr[idx]=sel.value||'';while(arr.length&& !arr[arr.length-1])arr.pop();state.setup={...state.setup,shoeFuturePairOverrides:arr};recalcShoeStrategy(sel.value?'Future shoe override applied. Shoe plan recalculated.':'Coach recommendation restored for this future pair.')} );const raceOverride=$('shoeRacePairOverride');if(raceOverride)raceOverride.onchange=()=>{state.setup={...state.setup,shoeRacePairOverride:raceOverride.value||''};recalcShoeStrategy(raceOverride.value?'Race Day shoe override applied. Race preparation recalculated.':'Coach Race Day recommendation restored.')};
  const savePurchase=$('saveRacePurchasePlan');if(savePurchase)savePurchase.onclick=()=>{const plan=raceShoePlan();saveRacePurchasePlan(plan);save();renderShoes();toast('Race-shoe purchase plan saved.')};root.querySelectorAll('[data-dismiss-shoe-purchase]').forEach(btn=>btn.onclick=()=>{const item=(state.plannedShoePurchases||[]).find(x=>x.id===btn.dataset.dismissShoePurchase);if(item)item.status='dismissed';save();renderShoes();toast('Purchase plan dismissed.')});
 }
