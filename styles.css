@@ -5309,3 +5309,81 @@ body:has(#dashboard.progressPage.active),#mainContent:has(#dashboard.progressPag
 }
 
 /* Large-screen behavior remains unchanged. */
+
+
+/* v14.8.2 — authoritative visible-viewport bottom navigation.
+   Uses VisualViewport width/offset rather than document/body width, preventing
+   the fifth item from falling outside Chrome's actually visible mobile area. */
+@media (max-width:759px){
+  :root{
+    --nav-edge-gap:6px;
+    --nav-visible-left:var(--visual-viewport-left,0px);
+    --nav-visible-width:var(--visual-viewport-width,100dvw);
+    --nav-bar-height:68px;
+  }
+
+  #nav{
+    position:fixed!important;
+    left:calc(var(--nav-visible-left) + var(--nav-edge-gap))!important;
+    right:auto!important;
+    bottom:calc(var(--visual-viewport-bottom,0px) + max(2px,env(safe-area-inset-bottom)))!important;
+    width:calc(var(--nav-visible-width) - (2 * var(--nav-edge-gap)))!important;
+    max-width:calc(var(--nav-visible-width) - (2 * var(--nav-edge-gap)))!important;
+    min-width:0!important;
+    height:var(--nav-bar-height)!important;
+    min-height:var(--nav-bar-height)!important;
+    margin:0!important;
+    padding:4px 5px!important;
+    box-sizing:border-box!important;
+    display:grid!important;
+    grid-template-columns:repeat(5,minmax(0,1fr))!important;
+    column-gap:2px!important;
+    overflow:hidden!important;
+    border-radius:18px!important;
+    transform:none!important;
+    translate:none!important;
+    z-index:2147483000!important;
+  }
+
+  #nav button,
+  #nav .moreToggle{
+    min-width:0!important;
+    max-width:100%!important;
+    width:100%!important;
+    height:58px!important;
+    min-height:58px!important;
+    margin:0!important;
+    padding:3px 0 5px!important;
+    box-sizing:border-box!important;
+    overflow:hidden!important;
+  }
+
+  #nav .navIcon{
+    width:27px!important;
+    height:27px!important;
+    min-width:0!important;
+    max-width:27px!important;
+  }
+
+  #nav .navLabel{
+    width:100%!important;
+    min-width:0!important;
+    max-width:100%!important;
+    overflow:hidden!important;
+    white-space:nowrap!important;
+    text-overflow:clip!important;
+    text-align:center!important;
+  }
+
+  #mainContent,
+  #mainContent>.page,
+  .page{
+    padding-bottom:calc(var(--nav-bar-height) + var(--visual-viewport-bottom,0px) + max(2px,env(safe-area-inset-bottom)) + 28px)!important;
+  }
+
+  .moreNav{
+    right:calc(var(--nav-edge-gap) + max(0px,var(--visual-viewport-left,0px)))!important;
+    bottom:calc(var(--nav-bar-height) + var(--visual-viewport-bottom,0px) + max(2px,env(safe-area-inset-bottom)) + 8px)!important;
+    max-width:calc(var(--nav-visible-width) - (2 * var(--nav-edge-gap)))!important;
+  }
+}
