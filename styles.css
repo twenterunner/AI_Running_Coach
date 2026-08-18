@@ -5545,7 +5545,7 @@ body:has(#dashboard.progressPage.active),#mainContent:has(#dashboard.progressPag
 @media (min-width:760px){.personalBestsGrid{grid-template-columns:repeat(3,minmax(0,1fr))}}
 
 
-/* v14.10.17 — Progress spacing/typography cleanup */
+/* v14.10.18 — Progress spacing/typography cleanup */
 #dashboard.progressPage .progressSection > .kpis{
   margin:0 0 12px!important;
 }
@@ -5602,7 +5602,7 @@ body:has(#dashboard.progressPage.active),#mainContent:has(#dashboard.progressPag
 }
 
 
-/* v14.10.17 — authoritative GUI consistency layer.
+/* v14.10.18 — authoritative GUI consistency layer.
    Presentation only: no model, plan, prediction, rehab or shoe-engine logic. */
 :root{
   --ui-main-radius:18px;
