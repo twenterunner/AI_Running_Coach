@@ -5545,7 +5545,7 @@ body:has(#dashboard.progressPage.active),#mainContent:has(#dashboard.progressPag
 @media (min-width:760px){.personalBestsGrid{grid-template-columns:repeat(3,minmax(0,1fr))}}
 
 
-/* v14.10.16 — Progress spacing/typography cleanup */
+/* v14.10.17 — Progress spacing/typography cleanup */
 #dashboard.progressPage .progressSection > .kpis{
   margin:0 0 12px!important;
 }
@@ -5599,4 +5599,260 @@ body:has(#dashboard.progressPage.active),#mainContent:has(#dashboard.progressPag
   color:#fff!important;
   padding:16px!important;
   margin:0!important;
+}
+
+
+/* v14.10.17 — authoritative GUI consistency layer.
+   Presentation only: no model, plan, prediction, rehab or shoe-engine logic. */
+:root{
+  --ui-main-radius:18px;
+  --ui-nested-radius:12px;
+  --ui-section-gap:24px;
+  --ui-card-gap:12px;
+  --ui-main-border:rgba(40,214,219,.34);
+  --ui-nested-border:rgba(136,161,177,.12);
+  --ui-eyebrow-size:10px;
+  --ui-support-size:11px;
+}
+
+/* Consistent page-title rhythm on secondary destinations. */
+#plan>.sectionTitle,
+#assessments>.sectionTitle,
+#coach>.sectionTitle,
+#injury>.sectionTitle,
+#recovery>.sectionTitle,
+#settings>.sectionTitle,
+#shoes .shoesPageTitle{
+  margin:6px 2px 20px!important;
+  align-items:center!important;
+  gap:14px!important;
+}
+#plan>.sectionTitle .pageEyebrow,
+#injury>.sectionTitle .pageEyebrow,
+#recovery>.sectionTitle .pageEyebrow,
+#settings .pageEyebrow,
+#shoes .pageEyebrow,
+#dashboard .pageEyebrow,
+#race .pageEyebrow{
+  font-size:var(--ui-eyebrow-size)!important;
+  line-height:1.2!important;
+  letter-spacing:.11em!important;
+}
+#plan>.sectionTitle p,
+#assessments>.sectionTitle p,
+#coach>.sectionTitle p,
+#injury>.sectionTitle p,
+#recovery>.sectionTitle p,
+#settings>.sectionTitle p,
+#shoes .shoesPageTitle p{
+  font-size:12px!important;
+  line-height:1.45!important;
+  max-width:650px;
+}
+
+/* Section headings: one visual grammar across Progress / Recovery / Rehab / Race / Settings / Shoes. */
+#dashboard .progressSectionHead small,
+#recovery .recoverySectionHead small,
+#injury .injuryRunnerSectionHead small,
+#race .raceDaySectionHead small,
+#settings .settingsSectionHead small,
+#shoes .shoeSectionHead small{
+  font-size:var(--ui-eyebrow-size)!important;
+  line-height:1.25!important;
+  letter-spacing:.10em!important;
+  font-weight:900!important;
+}
+#dashboard .progressSectionHead p,
+#recovery .recoverySectionHead p,
+#injury .injuryRunnerSectionHead p,
+#race .raceDaySectionHead p,
+#settings .settingsSectionHead p{
+  font-size:var(--ui-support-size)!important;
+  line-height:1.45!important;
+}
+#dashboard .progressSectionHead h3,
+#recovery .recoverySectionHead h3,
+#injury .injuryRunnerSectionHead h3,
+#race .raceDaySectionHead h3,
+#settings .settingsSectionHead h3,
+#shoes .shoeSectionHead h3{
+  line-height:1.16!important;
+  letter-spacing:-.02em!important;
+}
+
+/* Standard section cadence. */
+#dashboard .progressSection,
+#recovery .recoverySection,
+#injury .injuryRunnerSection,
+#race .raceDaySection,
+#shoes .shoeSection{
+  margin-bottom:var(--ui-section-gap)!important;
+}
+#injury .injuryRunnerSection{gap:var(--ui-card-gap)!important}
+#settings .settingsSection{border-radius:var(--ui-main-radius)!important}
+
+/* Canonical Level-1 main surfaces. */
+#dashboard .progressSection>.panel,
+#dashboard .personalBestsPanel,
+#recovery .recoverySection>article,
+#injury .injuryRunnerHero,
+#injury .injuryRunnerAssessment,
+#race .raceDaySection,
+#settings .settingsSection,
+#shoes .shoeSection{
+  border-radius:var(--ui-main-radius)!important;
+  box-shadow:none!important;
+}
+
+/* Canonical Level-2/metric surfaces. */
+#dashboard .kpis>*,
+#dashboard .personalBestTile,
+#recovery .recoveryQuickGrid>*,
+#injury .injuryRunnerPrimaryMetrics>*,
+#injury .injuryRunnerMetricRow>*,
+#injury .injuryRunnerParallelMetrics>*,
+#settings .settingsNested,
+#settings .settingsAppInfo>*,
+#shoes .shoeCard,
+#shoes .shoeEmpty,
+#shoes .shoeEngineStrategy,
+#shoes .raceShoePlanCard{
+  border-radius:var(--ui-nested-radius)!important;
+}
+
+/* Compact, consistent page-header actions; avoids oversized multi-line injury button. */
+#addInjuryBtn,#addAssessmentBtn{
+  width:auto!important;
+  max-width:158px!important;
+  min-height:44px!important;
+  padding:9px 13px!important;
+  border-radius:12px!important;
+  font-size:13px!important;
+  line-height:1.2!important;
+  text-align:center!important;
+  white-space:normal!important;
+  align-self:center!important;
+}
+
+/* Plan: retain approved layout while removing micro-type. */
+#plan .planHeroIdentity small,
+#plan .planSectionHead span,
+#plan .selectedWeekTop small,
+#plan .planAdaptationTop small{
+  font-size:10px!important;
+}
+#plan .planHeroIdentity p,
+#plan .planSectionHead p,
+#plan .selectedWeekTop p{
+  font-size:11px!important;
+  line-height:1.4!important;
+}
+#plan .planHeroMetrics small,
+#plan .selectedWeekMetrics small{
+  font-size:9px!important;
+  line-height:1.3!important;
+}
+#plan .planHeroMetrics span{
+  font-size:9px!important;
+  line-height:1.3!important;
+}
+#planCards{gap:10px!important}
+
+/* Progress: main-card treatment and KPI hierarchy remain uniform. */
+#dashboard .personalBestsPanel{
+  background:var(--progress-card)!important;
+  border:1px solid var(--progress-border)!important;
+  padding:16px!important;
+}
+#dashboard .personalBestTile{
+  min-height:100px!important;
+  padding:13px!important;
+  background:var(--progress-nested)!important;
+  border:1px solid var(--progress-nested-border)!important;
+}
+#dashboard .personalBestTile small{font-size:10px!important}
+#dashboard .personalBestTile span{font-size:11px!important;line-height:1.35!important}
+#dashboard .progressSection>.kpis{gap:10px!important;margin-bottom:12px!important}
+
+/* Injury/rehab: improve header balance without changing information architecture. */
+#injury .injuryRunnerPageTitle>div{min-width:0;flex:1 1 auto}
+#injury .injuryRunnerHeroTop small,
+#injury .injuryRunnerPrimaryMetrics small,
+#injury .injuryRunnerMetricRow small,
+#injury .injuryRunnerStageOverview small,
+#injury .injuryRunnerLimiter small,
+#injury .injuryRunnerAdherence small,
+#injury .injuryRunnerAssessmentTop small,
+#injury .injuryClinicalCompare small,
+#injury .injuryRunnerTrainingImpact small,
+#injury .injuryRunnerParallelCard>div>small,
+#injury .injuryRunnerParallelMetrics small{
+  font-size:10px!important;
+  line-height:1.25!important;
+}
+
+/* Foldouts: same touch target, padding and chevron rhythm across the app. */
+.page details:not(.workout)>summary{
+  min-height:48px!important;
+  padding-top:11px!important;
+  padding-bottom:11px!important;
+  line-height:1.3!important;
+}
+.page details:not(.workout)>summary b,
+.page details:not(.workout)>summary strong{
+  font-size:13px!important;
+  line-height:1.3!important;
+}
+.page details:not(.workout)>summary small{
+  font-size:10px!important;
+  line-height:1.3!important;
+}
+
+/* Buttons: common geometry, while preserving semantic colours. */
+.page :is(.primary,.secondary,.buttonLike,.filePick,button.small){
+  border-radius:12px!important;
+  line-height:1.2!important;
+}
+.page button.small{min-height:42px!important}
+
+/* More destinations use consistent top spacing and nested typography. */
+#coach .panel,#assessments .assessmentCard{border-radius:var(--ui-main-radius)!important}
+#settings .settingsEyebrow,#settings .settingsGroupHead small,#settings .settingsAppInfo small{font-size:10px!important}
+#settings .settingsSectionHead p{font-size:11px!important}
+#shoes .shoeSection{gap:12px!important}
+#shoes .shoeEmpty p{font-size:11px!important;line-height:1.45!important}
+
+/* Version/build is useful during development, but visually subordinate. */
+.brand-copy p{
+  font-size:9px!important;
+  line-height:1.25!important;
+  color:#8da7b6!important;
+  letter-spacing:.02em!important;
+}
+
+/* Mobile refinements. */
+@media(max-width:430px){
+  #mainContent{padding-left:14px!important;padding-right:14px!important}
+  #injury .injuryRunnerPageTitle,
+  #assessments>.sectionTitle{
+    align-items:flex-start!important;
+  }
+  #addInjuryBtn,#addAssessmentBtn{
+    flex:0 0 auto!important;
+    max-width:145px!important;
+    min-height:44px!important;
+    font-size:12px!important;
+    padding:9px 11px!important;
+  }
+  #dashboard .progressSectionHead,
+  #recovery .recoverySectionHead,
+  #injury .injuryRunnerSectionHead{
+    grid-template-columns:48px minmax(0,1fr)!important;
+    gap:11px!important;
+  }
+  #dashboard .progressSectionHead>span,
+  #recovery .recoverySectionHead>span,
+  #injury .injuryRunnerSectionHead>span{
+    width:48px!important;height:48px!important;
+  }
 }
