@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '14.10.20';
-  const BUILD = 41020;
+  const VERSION = '14.10.21';
+  const BUILD = 41021;
   const SCHEMA = 10400;
   const PRIMARY_STORAGE_KEY = 'arc_v10400_web';
   const MIRROR_STORAGE_KEY = 'arc_v10400_mirror';
@@ -2746,6 +2746,7 @@ function consolidatedTodayCoachBriefing(p){
    <article class="todayStatusCard ${ready.label==='Normal'?'good':ready.label==='Restricted'?'caution':'neutral'}"><h4>READINESS</h4><div class="statusRing">${todayPictogram('readiness')}</div><div class="statusCopy"><strong>${esc(ready.label)}</strong><p>${esc(readinessDetail)}</p></div></article>
    <article class="todayStatusCard ${Number(pain.max)>=3?'caution':'good'}"><h4>PAIN / INJURY</h4><div class="statusRing">${todayPictogram('pain')}</div><div class="statusCopy"><strong>${painValue}</strong><p>${esc(painText)}</p></div></article>
  </div>
+ ${todayShoeLifecycleAlertsHtml()}
  ${todayRehabCard(active)}
  ${todayWorkoutCard(p,injuryDay)}
  ${todayWeekCard(ast)}
@@ -6669,6 +6670,29 @@ function shoeSessionPlanHtml(){
    <div class="shoeRoleAllocation">${coverage.map(x=>`<div><b>${esc(shoeDisplayName(x.shoe))}</b><span>${x.count} session${x.count===1?'':'s'} · ${x.km.toFixed(1)} km planned</span><small>${[...x.types.entries()].sort((a,b)=>b[1]-a[1]).slice(0,3).map(([t,n])=>`${t} ×${n}`).join(' · ')}</small></div>`).join('')}</div>
   </div>`
 }
+function shoeLifecycleAlerts(life){
+ const alerts=[];if(!life||!life.valid)return alerts;
+ const now=today(),todayIso=iso(now),dayDiff=date=>date?Math.ceil((dte(date)-now)/DAY):null;
+ const buys=(life.purchases||[]).slice().filter(x=>x.purchaseDate||x.firstUseDate).sort((a,b)=>String(a.purchaseDate||a.firstUseDate).localeCompare(String(b.purchaseDate||b.firstUseDate)));
+ const next=buys[0];if(next){const date=next.purchaseDate||next.firstUseDate,days=dayDiff(date),pair=life.pairs.find(p=>p.id===next.pairId);if(days!=null&&days<=14){alerts.push({kind:'purchase',severity:days<=0?'due':days<=7?'urgent':'soon',title:days<=0?'Shoe purchase due now':`Shoe purchase due in ${days} day${days===1?'':'s'}`,detail:`${pair?lifecyclePairLabel(pair):'Planned pair'} · first meaningful use ${fmtDate(date)}`,date,pairId:next.pairId})}}
+ for(const pair of (life.pairs||[]).filter(p=>p.owned&&p.shoe?.status!=='retired')){
+  const current=Math.max(0,Number(shoeMileage(pair.shoe))||0),limit=Math.max(0,Number(pair.retireKm)||0),remaining=Math.max(0,limit-current),retireDate=pair.projectedRetireDate||pair.plannedRetireDate||null,days=dayDiff(retireDate);
+  const closeByKm=limit>0&&remaining<=75,closeByDate=days!=null&&days<=14;
+  if(!closeByKm&&!closeByDate)continue;
+  const severity=remaining<=0||(days!=null&&days<=0)?'due':remaining<=35||(days!=null&&days<=7)?'urgent':'soon';
+  const timing=days!=null&&days>=0?` · projected retirement ${days===0?'today':`in ${days} day${days===1?'':'s'}`}`:'';
+  alerts.push({kind:'retire',severity,title:severity==='due'?`${lifecyclePairLabel(pair)} at retirement point`:`${lifecyclePairLabel(pair)} nearing retirement`,detail:`~${Math.round(remaining)} km estimated life remaining${timing}`,date:retireDate,pairId:pair.id})
+ }
+ const rank={due:0,urgent:1,soon:2};return alerts.sort((a,b)=>(rank[a.severity]-rank[b.severity])||String(a.date||'9999').localeCompare(String(b.date||'9999'))).slice(0,3)
+}
+function shoeLifecycleAlertsHtml(life,{compact=false}={}){
+ const alerts=shoeLifecycleAlerts(life);if(!alerts.length)return'';
+ return`<section class="shoeLifecycleAlerts ${compact?'compact':''}" aria-label="Shoe lifecycle alerts">${alerts.map(a=>`<div class="shoeLifecycleAlert ${a.severity} ${a.kind}"><span class="shoeLifecycleAlertIcon">${todayPictogram('shoe')}</span><div><small>${a.kind==='purchase'?'SHOE PURCHASE':'SHOE LIFECYCLE'}</small><b>${esc(a.title)}</b><span>${esc(a.detail)}</span></div></div>`).join('')}</section>`
+}
+function todayShoeLifecycleAlertsHtml(){
+ if(!(state.shoes||[]).some(s=>s.status!=='retired'))return'';
+ try{return shoeLifecycleAlertsHtml(freshShoeLifecyclePlan(),{compact:true})}catch(err){recordDiagnostic('Today shoe lifecycle alert',err);return''}
+}
 function shoeCurrentRotationTileHtml(life,active){const healthy=active.filter(s=>shoeForecast(s).status!=='retire').length;return`<details class="shoeKeyTile"><summary><div><small>CURRENT ROTATION</small><b>${active.length} active pair${active.length===1?'':'s'} · ${healthy===active.length?'healthy':'review lifecycle'}</b><span>${active.map(s=>`${shoeDisplayName(s)} ${Math.round(shoeMileage(s))} km`).join(' · ')||'No active shoes'}</span></div></summary><div class="shoeKeyDetail"><div class="shoeRotationGrid">${active.map(shoeRotationCard).join('')||'<div class="shoeEmpty">No active shoes.</div>'}</div></div></details>`}
 function shoeNextPurchaseTileHtml(life){const allBuys=(life.purchases||[]).slice().sort((a,b)=>String(a.purchaseDate||a.firstUseDate||'').localeCompare(String(b.purchaseDate||b.firstUseDate||''))),next=allBuys[0],pair=next?life.pairs.find(p=>p.id===next.pairId):null,trainingBuys=allBuys.filter(x=>x.role!=='race');const summary=next&&pair?`${lifecyclePairLabel(pair)} · ${fmtDate(next.purchaseDate||next.firstUseDate)}`:'No purchase currently required';return`<details class="shoeKeyTile"><summary><div><small>NEXT PURCHASE</small><b>${esc(summary)}</b><span>${next?`${Math.max(0,Math.ceil((dte(next.purchaseDate||next.firstUseDate)-today())/DAY))} days · first meaningful use`:'Current rotation covers the programme'}</span></div></summary><div class="shoeKeyDetail">${trainingBuys.length?trainingBuys.map((buy,n)=>{const p=life.pairs.find(x=>x.id===buy.pairId),sel=shoeFuturePairOverrideKeys()[n]||'';return`<div class="shoeOverrideRow"><div><small>FUTURE TRAINING PAIR ${n+1}</small><b>${esc(p?lifecyclePairLabel(p):'Future pair')}</b><span>First meaningful use ${esc(fmtDate(buy.firstUseDate||buy.purchaseDate))}</span></div><label>Runner override<select data-future-pair-override="${n}">${shoeOverrideProfileOptions(sel,true)}</select></label></div>`}).join(''):'<div class="shoeEmpty">No future training purchase is currently required. Race-Day model overrides remain in the Race-Day shoe tile.</div>'}</div></details>`}
 
@@ -6690,7 +6714,7 @@ function renderShoes(){const root=$('shoesContent');if(!root)return;
  const plannedPurchase=(state.plannedShoePurchases||[]).filter(x=>x.status==='planned').map(x=>`<div class="shoeSavedPurchase"><span>PLANNED PURCHASE</span><b>${esc([x.brand,x.model,x.version].filter(Boolean).join(' '))}</b><small>${x.recommendedPurchaseStart&&x.recommendedPurchaseEnd?`${fmtDate(x.recommendedPurchaseStart)} – ${fmtDate(x.recommendedPurchaseEnd)}`:'Timing still uncertain'} · target race-day mileage ~${Math.round(Number(x.targetRaceDayMileage)||0)} km</small><button type="button" class="secondary small" data-dismiss-shoe-purchase="${esc(x.id)}">Dismiss plan</button></div>`).join('');
  const life=freshShoeLifecyclePlan();
  root.innerHTML=`<div class="sectionTitle shoesPageTitle"><div><span class="pageEyebrow">SHOE ROTATION</span><h2>Shoes</h2><p>Rotation, lifecycle & Race Day planning.</p></div><button id="addShoeBtn" class="primary small" type="button">Add running shoe</button></div>
- <div class="shoeKeyDashboard">${shoeCurrentRotationTileHtml(life,active)}${shoeNextPurchaseTileHtml(life)}${shoeRaceDayTileHtml(life)}${shoeRotationPlanTileHtml(life)}</div>
+ <div class="shoeKeyDashboard">${shoeLifecycleAlertsHtml(life)}${shoeCurrentRotationTileHtml(life,active)}${shoeNextPurchaseTileHtml(life)}${shoeRaceDayTileHtml(life)}${shoeRotationPlanTileHtml(life)}</div>
  `;
  const allocationDetails=root.querySelector('[data-shoe-allocation-details]');if(allocationDetails)allocationDetails.addEventListener('toggle',()=>{if(!allocationDetails.open)return;const body=allocationDetails.querySelector('[data-shoe-allocation-body]');if(body&&!body.dataset.loaded){body.dataset.loaded='1';body.innerHTML=shoeSessionPlanHtml();ensureAccessibleForms(body)}});
  let shoeStrategyRecalcToken=0;
@@ -6880,14 +6904,14 @@ function activatePage(page,anchor=null){if(!pages.some(p=>p[0]===page))return;if
 function positionMoreNav(){
  const menu=$('moreNav'),nav=$('nav');if(!menu||!nav||menu.classList.contains('hidden')||window.innerWidth>=760)return;
  const vv=window.visualViewport,viewW=Math.max(240,Number(vv?.width)||window.innerWidth),viewH=Math.max(320,Number(vv?.height)||window.innerHeight),viewL=Math.max(0,Number(vv?.offsetLeft)||0),viewT=Math.max(0,Number(vv?.offsetTop)||0),edge=8;
- // Fixed-position coordinates are expressed in layout-viewport space. VisualViewport
- // offsets keep the popover inside the actually visible rectangle after zoom/reflow.
+ // getBoundingClientRect() is already in layout-viewport coordinates. Do not add
+ // visualViewport.offsetTop to the nav rect; doing so can push the menu behind the
+ // bottom dock after a plan rebuild or scroll/layout change.
+ const navRect=nav.getBoundingClientRect(),navTop=Math.min(viewT+viewH,navRect.top),availableH=Math.max(140,navTop-viewT-edge*2),width=Math.min(330,Math.max(220,viewW-edge*2));
  menu.style.setProperty('right','auto','important');menu.style.setProperty('bottom','auto','important');
- menu.style.setProperty('width',`${Math.min(330,Math.max(220,viewW-edge*2))}px`,'important');
- menu.style.setProperty('max-width',`${Math.max(220,viewW-edge*2)}px`,'important');
- menu.style.setProperty('max-height',`${Math.max(180,viewH-110)}px`,'important');menu.style.setProperty('overflow-y','auto','important');
- const navRect=nav.getBoundingClientRect(),menuRect=menu.getBoundingClientRect(),left=Math.max(viewL+edge,Math.min(viewL+viewW-menuRect.width-edge,viewL+viewW-menuRect.width-edge));
- const navTop=viewT+navRect.top,desiredTop=navTop-menuRect.height-edge,top=Math.max(viewT+edge,Math.min(desiredTop,viewT+viewH-menuRect.height-edge));
+ menu.style.setProperty('width',`${width}px`,'important');menu.style.setProperty('max-width',`${Math.max(220,viewW-edge*2)}px`,'important');
+ menu.style.setProperty('height','auto','important');menu.style.setProperty('max-height',`${availableH}px`,'important');menu.style.setProperty('overflow-y','auto','important');
+ const menuRect=menu.getBoundingClientRect(),left=Math.max(viewL+edge,Math.min(viewL+viewW-menuRect.width-edge,viewL+viewW-menuRect.width-edge)),top=Math.max(viewT+edge,navTop-menuRect.height-edge);
  menu.style.setProperty('left',`${left}px`,'important');menu.style.setProperty('top',`${top}px`,'important');
 }
 renderNavigation();
