@@ -5457,18 +5457,23 @@ body:has(#dashboard.progressPage.active),#mainContent:has(#dashboard.progressPag
   }
 }
 
-/* v14.10.4 — final mobile nav: float slightly above the viewport edge. */
+/* v14.10.5 — responsive interaction + flush mobile dock. */
 @media (max-width:759px){
-  :root{--mobile-nav-height:72px!important;--mobile-nav-bottom:6px!important}
+  :root{--mobile-nav-bottom:0px!important}
   #nav{
-    left:8px!important;right:8px!important;bottom:6px!important;
-    width:auto!important;max-width:none!important;
-    height:calc(72px + env(safe-area-inset-bottom))!important;
-    min-height:calc(72px + env(safe-area-inset-bottom))!important;
-    border:1px solid rgba(136,161,177,.13)!important;
-    border-radius:18px!important;
-    padding:5px 8px calc(5px + env(safe-area-inset-bottom))!important;
+    left:8px!important;
+    right:8px!important;
+    bottom:0!important;
+    border-radius:18px 18px 0 0!important;
   }
-  #mainContent,.page{padding-bottom:calc(106px + env(safe-area-inset-bottom))!important}
-  .moreNav{bottom:calc(86px + env(safe-area-inset-bottom))!important}
+  #mainContent,.page{padding-bottom:calc(100px + env(safe-area-inset-bottom))!important}
+  .moreNav{bottom:calc(80px + env(safe-area-inset-bottom))!important}
+}
+#modal,#modal .modalCard,#modal #modalContent,#modal button{
+  pointer-events:auto!important;
+}
+#modal button{
+  touch-action:manipulation;
+  position:relative;
+  z-index:4;
 }
