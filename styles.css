@@ -5192,3 +5192,120 @@ body:has(#dashboard.progressPage.active),#mainContent:has(#dashboard.progressPag
 .shoePlanTileAlwaysOpen .shoePlanStaticHead small{letter-spacing:.08em;font-weight:800}
 .shoePlanTileAlwaysOpen .shoePlanStaticHead b{font-size:1.05rem}
 .shoePlanTileAlwaysOpen .shoePlanStaticHead span{opacity:.78}
+
+
+/* v14.7.9 — FINAL GLOBAL MOBILE NAVIGATION CONTRACT.
+   This block is intentionally last: it supersedes all historical navigation experiments.
+   The dock is anchored to the current visual viewport, incorporates device safe-area
+   clearance, and reserves equivalent content space on every primary tab/subpage. */
+@media (max-width:759px){
+  :root{
+    --app-nav-content-height:68px;
+    --app-nav-safe-bottom:max(env(safe-area-inset-bottom),var(--visual-viewport-bottom,0px));
+    --app-nav-total-height:calc(var(--app-nav-content-height) + var(--app-nav-safe-bottom));
+  }
+
+  html,body{
+    width:100%!important;
+    max-width:100%!important;
+    overflow-x:hidden!important;
+  }
+
+  #nav{
+    position:fixed!important;
+    inset:auto 0 0 0!important;
+    left:0!important;
+    right:0!important;
+    bottom:var(--visual-viewport-bottom,0px)!important;
+    width:100%!important;
+    max-width:100%!important;
+    min-width:0!important;
+    height:calc(var(--app-nav-content-height) + env(safe-area-inset-bottom))!important;
+    min-height:calc(var(--app-nav-content-height) + env(safe-area-inset-bottom))!important;
+    margin:0!important;
+    padding:4px 8px calc(4px + env(safe-area-inset-bottom))!important;
+    box-sizing:border-box!important;
+    display:grid!important;
+    grid-template-columns:repeat(5,minmax(0,1fr))!important;
+    gap:2px!important;
+    overflow:hidden!important;
+    border-left:0!important;
+    border-right:0!important;
+    border-bottom:0!important;
+    border-radius:18px 18px 0 0!important;
+    transform:none!important;
+    translate:none!important;
+    z-index:2147483000!important;
+    visibility:visible!important;
+    opacity:1!important;
+  }
+
+  #nav button{
+    width:100%!important;
+    max-width:100%!important;
+    min-width:0!important;
+    height:60px!important;
+    min-height:60px!important;
+    margin:0!important;
+    padding:3px 0 5px!important;
+    display:grid!important;
+    grid-template-rows:27px 16px!important;
+    align-content:center!important;
+    justify-items:center!important;
+    gap:3px!important;
+    box-sizing:border-box!important;
+    overflow:hidden!important;
+  }
+
+  #nav .navIcon{
+    width:27px!important;
+    height:27px!important;
+    min-width:0!important;
+    display:grid!important;
+    place-items:center!important;
+  }
+
+  #nav .navLabel{
+    display:block!important;
+    width:100%!important;
+    max-width:100%!important;
+    height:16px!important;
+    min-height:16px!important;
+    line-height:16px!important;
+    font-size:10px!important;
+    text-align:center!important;
+    white-space:nowrap!important;
+    overflow:hidden!important;
+    text-overflow:clip!important;
+  }
+
+  #nav button.active:after{bottom:1px!important}
+
+  /* All app pages get the same reserved scroll space; this also covers Settings,
+     Shoes, rehab pages and other destinations rendered inside mainContent. */
+  #mainContent,
+  #mainContent>.page,
+  .page{
+    padding-bottom:calc(var(--app-nav-content-height) + env(safe-area-inset-bottom) + var(--visual-viewport-bottom,0px) + 28px)!important;
+    box-sizing:border-box!important;
+  }
+
+  .moreNav{
+    position:fixed!important;
+    left:auto!important;
+    right:10px!important;
+    bottom:calc(var(--app-nav-content-height) + env(safe-area-inset-bottom) + var(--visual-viewport-bottom,0px) + 8px)!important;
+    width:min(330px,calc(100vw - 20px))!important;
+    max-width:calc(100vw - 20px)!important;
+    box-sizing:border-box!important;
+    z-index:2147482999!important;
+  }
+
+  body.modalOpen #nav,
+  body.onboardingOpen #nav{
+    visibility:hidden!important;
+    pointer-events:none!important;
+  }
+}
+
+/* Large-screen behavior remains unchanged. */
