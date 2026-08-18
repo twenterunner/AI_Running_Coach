@@ -5449,3 +5449,4 @@ body:has(#dashboard.progressPage.active),#mainContent:has(#dashboard.progressPag
   stroke:#073744;
   stroke-width:4px;
 }
+\n\n/* v14.8.8 — flush mobile dock. This final rule is authoritative. */\n@media (max-width:759px){\n  #nav{\n    bottom:var(--visual-viewport-bottom,0px)!important;\n    border-radius:18px 18px 0 0!important;\n    padding-bottom:max(4px,env(safe-area-inset-bottom))!important;\n  }\n  #mainContent,#mainContent>.page,.page{\n    padding-bottom:calc(var(--nav-bar-height) + var(--visual-viewport-bottom,0px) + env(safe-area-inset-bottom) + 24px)!important;\n  }\n  .moreNav{\n    bottom:calc(var(--nav-bar-height) + var(--visual-viewport-bottom,0px) + env(safe-area-inset-bottom) + 6px)!important;\n  }\n}\n
