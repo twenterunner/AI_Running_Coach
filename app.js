@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '14.10.9';
-  const BUILD = 41009;
+  const VERSION = '14.10.10';
+  const BUILD = 41010;
   const SCHEMA = 10400;
   const PRIMARY_STORAGE_KEY = 'arc_v10400_web';
   const MIRROR_STORAGE_KEY = 'arc_v10400_mirror';
@@ -5513,7 +5513,7 @@ function addAsicsSeries(family,versions,opts){versions.forEach(v=>ASICS_SHOE_PRO
 addAsicsSeries('GEL-NIMBUS',[24,25,26,27,28],v=>({roles:['daily','easy','recovery','long'],cushioning:5,responsiveness:v>=28?3:2,stability:4,protection:5,grip:3,efficiency:3,durability:4,comfort:5,weightClass:'heavy',preferredDistanceMaxKm:45,typicalReplacementLowKm:650,typicalReplacementHighKm:900,manufacturerPositioning:'Neutral, high-comfort/high-cushioning road trainer suited to longer-distance running.',profileConfidence:v>=28?'high':'medium'}));
 addAsicsSeries('GEL-CUMULUS',[24,25,26,27,28],v=>({roles:['daily','easy','steady','long'],cushioning:4,responsiveness:v>=28?4:3,stability:4,protection:4,grip:3,efficiency:3,durability:4,comfort:4,weightClass:'medium',typicalReplacementLowKm:650,typicalReplacementHighKm:900,manufacturerPositioning:'Neutral cushioned road trainer with a smooth, versatile ride.',profileConfidence:v>=28?'high':'medium'}));
 addAsicsSeries('NOVABLAST',[3,4,5,6],v=>({roles:['daily','easy','steady','long','progression','tempo'],cushioning:4,responsiveness:5,stability:3,protection:4,grip:v>=6?4:3,efficiency:4,durability:4,comfort:4,weightClass:'medium-light',preferredDistanceMaxKm:40,typicalReplacementLowKm:600,typicalReplacementHighKm:850,manufacturerPositioning:'Versatile neutral daily trainer focused on energetic cushioning and bounce for short- and long-distance training.',profileConfidence:v>=6?'high':'medium'}));
-addAsicsSeries('SUPERBLAST',[1,2,3],v=>({roles:['daily','steady','long','progression','tempo','threshold','race'],cushioning:5,responsiveness:5,stability:4,protection:5,grip:4,efficiency:5,durability:4,comfort:4,weightClass:'light',preferredDistanceMaxKm:50,typicalReplacementLowKm:650,typicalReplacementHighKm:900,manufacturerPositioning:'Light, highly cushioned and bouncy performance trainer positioned for everyday running and versatile faster/longer training.',profileConfidence:v>=3?'high':'medium'}));
+addAsicsSeries('SUPERBLAST',[1,2,3],v=>({roles:['daily','steady','long','progression','tempo','race'],cushioning:5,responsiveness:4,stability:4,protection:5,grip:4,efficiency:4,durability:4,comfort:4,weightClass:'light',preferredDistanceMaxKm:50,typicalReplacementLowKm:650,typicalReplacementHighKm:900,manufacturerPositioning:'Light, highly cushioned and bouncy performance trainer positioned for everyday running and versatile faster/longer training.',profileConfidence:v>=3?'high':'medium'}));
 addAsicsSeries('MEGABLAST',[1],{roles:['daily','easy','steady','long','progression','tempo','race'],cushioning:5,responsiveness:5,stability:3,protection:4,grip:5,efficiency:5,durability:4,comfort:4,weightClass:'light',preferredDistanceMaxKm:45,typicalReplacementLowKm:600,typicalReplacementHighKm:850,manufacturerPositioning:'Neutral, lightweight and exceptionally bouncy trainer for varied speeds and distances; ASICS also positions it for easy, long and tempo running.',profileConfidence:'high'});
 addAsicsSeries('SONICBLAST',[1],{roles:['daily','steady','progression','tempo','threshold','intervals'],cushioning:4,responsiveness:5,stability:3,protection:4,grip:4,efficiency:5,durability:4,comfort:4,weightClass:'light',plated:true,plateType:'ASTROPLATE (Pebax)',typicalReplacementLowKm:550,typicalReplacementHighKm:800,manufacturerPositioning:'Light, bouncy and responsive trainer positioned for faster training and daily use.',profileConfidence:'high'});
 addAsicsSeries('MAGIC SPEED',[2,3,4,5],v=>({roles:['tempo','threshold','intervals','race'],cushioning:3,responsiveness:5,stability:3,protection:3,grip:4,efficiency:5,durability:3,comfort:3,weightClass:'light',plated:true,plateType:'performance plate',preferredDistanceMinKm:5,preferredDistanceMaxKm:30,typicalReplacementLowKm:450,typicalReplacementHighKm:700,manufacturerPositioning:'Performance-oriented road shoe built for faster runs and racing.',profileConfidence:v>=5?'high':'medium'}));
@@ -5533,7 +5533,7 @@ function upsertCurrentAsicsProfile(family,version,opts){
  return profile
 }
 upsertCurrentAsicsProfile('NOVABLAST',6,{supportType:'neutral',footMechanics:['neutral','supination','unknown'],roles:['daily','easy','steady','long','progression','tempo'],cushioning:4,responsiveness:5,stability:3,protection:4,grip:4,efficiency:4,durability:4,comfort:4,weightClass:'medium-light',plated:false,preferredDistanceMinKm:3,preferredDistanceMaxKm:42.2,typicalReplacementLowKm:600,typicalReplacementHighKm:850,manufacturerPositioning:'Current neutral high-cushion road trainer positioned by ASICS for an energetic faster-feeling training ride.',evidenceSource:'Offline catalogue snapshot based on official ASICS NOVABLAST 6 specifications; practical workout suitability is app-derived.',profileConfidence:'high'});
-upsertCurrentAsicsProfile('SUPERBLAST',3,{supportType:'neutral',footMechanics:['neutral','supination','unknown'],roles:['daily','steady','long','progression','tempo','threshold','race'],cushioning:5,responsiveness:5,stability:4,protection:5,grip:4,efficiency:5,durability:4,comfort:4,weightClass:'light',plated:false,preferredDistanceMinKm:5,preferredDistanceMaxKm:50,typicalReplacementLowKm:650,typicalReplacementHighKm:900,manufacturerPositioning:'Current neutral high-cushion performance trainer positioned by ASICS for faster and longer everyday running.',evidenceSource:'Offline catalogue snapshot based on official ASICS SUPERBLAST 3 specifications; practical workout suitability is app-derived.',profileConfidence:'high'});
+upsertCurrentAsicsProfile('SUPERBLAST',3,{supportType:'neutral',footMechanics:['neutral','supination','unknown'],roles:['daily','steady','long','progression','tempo','race'],cushioning:5,responsiveness:4,stability:4,protection:5,grip:4,efficiency:4,durability:4,comfort:4,weightClass:'light',plated:false,preferredDistanceMinKm:5,preferredDistanceMaxKm:50,typicalReplacementLowKm:650,typicalReplacementHighKm:900,manufacturerPositioning:'Current neutral high-cushion performance trainer positioned by ASICS for faster and longer everyday running.',evidenceSource:'Offline catalogue snapshot based on official ASICS SUPERBLAST 3 specifications; practical workout suitability is app-derived.',profileConfidence:'high'});
 upsertCurrentAsicsProfile('GEL-NIMBUS',28,{supportType:'neutral',footMechanics:['neutral','supination','unknown'],roles:['daily','easy','recovery','long'],cushioning:5,responsiveness:3,stability:4,protection:5,grip:3,efficiency:3,durability:4,comfort:5,weightClass:'medium-heavy',plated:false,preferredDistanceMinKm:3,preferredDistanceMaxKm:50,typicalReplacementLowKm:650,typicalReplacementHighKm:900,manufacturerPositioning:'Current neutral maximum-cushion road trainer positioned by ASICS around comfort and smoother longer-distance running.',evidenceSource:'Offline catalogue snapshot based on official ASICS GEL-NIMBUS 28 specifications; practical workout suitability is app-derived.',profileConfidence:'high'});
 upsertCurrentAsicsProfile('GEL-CUMULUS',28,{supportType:'neutral',footMechanics:['neutral','supination','unknown'],roles:['daily','easy','steady','long'],cushioning:4,responsiveness:4,stability:4,protection:4,grip:3,efficiency:3,durability:4,comfort:4,weightClass:'medium',plated:false,preferredDistanceMinKm:3,preferredDistanceMaxKm:42.2,typicalReplacementLowKm:650,typicalReplacementHighKm:900,manufacturerPositioning:'Current neutral high-cushion road trainer positioned by ASICS for a lightweight, smooth underfoot experience.',evidenceSource:'Offline catalogue snapshot based on official ASICS GEL-CUMULUS 28 specifications; practical workout suitability is app-derived.',profileConfidence:'high'});
 upsertCurrentAsicsProfile('GEL-KAYANO',33,{neutral:false,supportType:'guided',footMechanics:['pronation','unknown'],roles:['daily','easy','recovery','steady','long'],cushioning:5,responsiveness:3,stability:5,protection:5,grip:4,efficiency:3,durability:5,comfort:5,weightClass:'medium-heavy',plated:false,preferredDistanceMinKm:3,preferredDistanceMaxKm:50,typicalReplacementLowKm:700,typicalReplacementHighKm:950,manufacturerPositioning:'Current premium ASICS guidance/support road trainer with high cushioning for daily and longer running.',evidenceSource:'Offline catalogue snapshot based on the current ASICS GEL-KAYANO 33 road portfolio; support/role interpretation is app-derived.',profileConfidence:'high'});
@@ -5756,16 +5756,8 @@ function candidatePurchaseProfiles(){
  })
 }
 function purchaseProfileScore(p){
- const d=Number(state.setup?.raceDistance)||42.2,raceRole=(p.roles||[]).includes('race'),longRole=(p.roles||[]).includes('long');
- let score=(p.efficiency||3)*7+(p.responsiveness||3)*6+(p.cushioning||3)*(d>=21?5:2)+(p.protection||3)*(d>=30?5:2)+(p.grip||3)*1.5+footMechanicsSessionAdjustment(p,'Race Day',false);
- if(raceRole)score+=d>=10?14:8;
- if(longRole&&d>=21)score+=8;
- if(p.plated&&d>=10)score+=6;
- if(d>Number(p.preferredDistanceMaxKm||999))score-=30;
- if(d<Number(p.preferredDistanceMinKm||0))score-=15;
- if(p.family==='METASPEED RAY'&&d>=30)score-=12;
- if(p.family==='SUPERBLAST'&&d>=30)score+=5;
- return score
+ const racePlan={id:'purchase-profile-score',date:state.setup?.raceDate||iso(today()),type:'Race Day',distance:Number(state.setup?.raceDistance)||42.195,surface:'road'};
+ return shoeSuitabilityAssessment(p,racePlan,{projectedKm:0,retireKm:lifecycleRetireKmForProfile(p)}).score
 }
 function recommendedPurchaseProfile(){return candidatePurchaseProfiles().sort((a,b)=>purchaseProfileScore(b)-purchaseProfileScore(a))[0]||null}
 
@@ -5868,19 +5860,8 @@ function shoeActualProgrammeSeries(shoe,startDate,endDate){const raw=shoeMileage
 function shoePlannedMileageSeries(shoe){const now=iso(today()),raceDate=state.setup?.raceDate||now,current=shoeMileage(shoe),events=[];(state.plan||[]).filter(p=>p.type!=='Rest'&&p.date>=now&&p.date<=raceDate).forEach(p=>{const a=plannedAssignment(p.id);if(a?.shoeId===shoe.id)events.push({date:p.date,km:Number(p.distance)||0,planId:p.id,type:p.type})});futureRehabShoeUsage(shoe.id,null).filter(x=>x.date>=now&&x.date<=raceDate).forEach(x=>events.push({date:x.date,km:Number(x.distanceKm)||0,type:'Rehab',rehab:true}));events.sort((a,b)=>a.date.localeCompare(b.date));const points=[{date:now,km:current,projected:true}];let km=current;events.forEach(e=>{km+=e.km;points.push({date:e.date,km,projected:true,planId:e.planId,type:e.type,rehab:e.rehab})});if(points.at(-1)?.date!==raceDate)points.push({date:raceDate,km,projected:true,raceDay:true});return points}
 function shoePlannedReplacementEvent(shoe){const f=shoeForecast(shoe),series=shoePlannedMileageSeries(shoe),already=shoeMileage(shoe)>=Number(f.low),cross=series.find((p,i)=>i>0&&Number(p.km)>=Number(f.low));const date=already?iso(today()):(cross?.date||null),method=already?'current mileage':cross?'planned assignments':null;if(!date)return null;const replacement=replacementProfileForShoe(shoe);return{shoe,date,km:cross?.km||shoeMileage(shoe),replacement,method,range:`${Math.round(f.low)}–${Math.round(f.high)} km`}}
 function shoePortfolioAllocationProfileScore(profile,plan){
- if(!profile||!plan)return 0;
- const req=SHOE_REQ[plan.type]||SHOE_REQ.Easy;
- let weighted=0,total=0;
- const add=(value,w)=>{weighted+=clamp(Number(value)||0,0,100)*w;total+=w};
- add(profile.workoutSuitability?.[plan.type]??shoeProfileWorkoutSuitability(profile,plan.type),3.4);
- add(shoeDistanceScore(profile,plan.distance),1.2);
- add(shoeSurfaceScore(profile,plan),1.6);
- const metric=(key,score)=>{if(req[key])add((Number(score)||0)/5*100,req[key]/6)};
- metric('cushioning',profile.cushioning);metric('protection',profile.protection);metric('responsiveness',profile.responsiveness);
- metric('efficiency',profile.efficiency);metric('grip',profile.grip);metric('stability',profile.stability);
- metric('durability',profile.durability);metric('comfort',profile.comfort);
- if(req.weight)add(({'ultra-light':5,'very-light':5,light:4,'medium-light':4,medium:3,'medium-heavy':2,heavy:1,unknown:3}[profile.weightClass]||3)/5*100,req.weight/6);
- return total?Math.round(weighted/total):50;
+ // Compatibility wrapper retained for old callers; there is only one authoritative scorer.
+ return shoeSuitabilityAssessment(profile,plan,{projectedKm:Number(plan?.distance)||0,retireKm:lifecycleRetireKmForProfile(profile)}).score
 }
 function plannedReplacementEvents(){
  // A physical pair is replaced at the first projected crossing of its conservative
@@ -6011,6 +5992,9 @@ function shoeSuitabilityAssessment(profile,plan,{rehab=false,shoe=null,projected
   if(declared.length&&!declared.includes(gait))foot=clamp(foot-(gait==='pronation'?14:10),0,100);
  }
  const runnerLoad=runnerMassSessionScore(profile,type,rehab);
+ // Unified runner × session compatibility. Weight and foot mechanics are not side bonuses:
+ // they interact with the demands of this exact workout inside the same authoritative score.
+ const runnerContext=clamp(Math.round((isRecovery||isLong)?foot*.56+runnerLoad*.44:isQuality?foot*.62+runnerLoad*.38:foot*.58+runnerLoad*.42),0,100);
  let rehabContext=null;
  if(rehab)rehabContext=clamp(Math.round(82+lifecycleInjuryFootwearAdjustment(profile)*.6),0,100);
  let lifecycle=100;
@@ -6027,15 +6011,19 @@ function shoeSuitabilityAssessment(profile,plan,{rehab=false,shoe=null,projected
   if(condition==='Upper damaged'||condition==='Causing discomfort')lifecycle=Math.min(lifecycle,20);
  }
  lifecycle=clamp(lifecycle,0,100);
- let weights={workout:19,distance:8,cushioning:12,response:12,stability:9,surface:6,foot:13,runnerLoad:10,lifecycle:11};
- if(isRecovery)weights={workout:14,distance:6,cushioning:18,response:3,stability:14,surface:5,foot:16,runnerLoad:15,lifecycle:6,rehab:3};
- else if(isQuality)weights={workout:22,distance:8,cushioning:6,response:22,stability:7,surface:6,foot:10,runnerLoad:8,lifecycle:11};
- else if(isLong)weights={workout:16,distance:9,cushioning:17,response:8,stability:10,surface:6,foot:14,runnerLoad:13,lifecycle:7};
+ let weights={workout:18,distance:7,cushioning:10,response:11,stability:8,surface:5,foot:9,runnerLoad:7,runnerContext:14,lifecycle:11};
+ if(isRecovery)weights={workout:13,distance:5,cushioning:15,response:3,stability:12,surface:4,foot:10,runnerLoad:9,runnerContext:22,lifecycle:5,rehab:2};
+ else if(isQuality)weights={workout:20,distance:7,cushioning:5,response:20,stability:6,surface:5,foot:7,runnerLoad:5,runnerContext:12,lifecycle:10};
+ else if(isLong)weights={workout:14,distance:8,cushioning:15,response:7,stability:9,surface:5,foot:9,runnerLoad:8,runnerContext:20,lifecycle:6};
  if(isHills&&!isRecovery){weights.surface+=6;weights.stability+=4;weights.workout=Math.max(10,weights.workout-5);weights.response=Math.max(5,weights.response-3);weights.lifecycle=Math.max(6,weights.lifecycle-2)}
- const values={workout,distance,cushioning,response,stability,surface,foot,runnerLoad,lifecycle,rehab:rehabContext};
+ const values={workout,distance,cushioning,response,stability,surface,foot,runnerLoad,runnerContext,lifecycle,rehab:rehabContext};
  let weighted=0,total=0;
  Object.entries(weights).forEach(([key,weight])=>{if(values[key]==null||weight<=0)return;weighted+=values[key]*weight;total+=weight});
  let score=clamp(Math.round(weighted/Math.max(1,total)),0,100);
+ // A material runner-context mismatch must be able to change ranking, not disappear in averaging.
+ // This stays inside the single suitability objective; it is not a repair or override.
+ const contextPenalty=(100-runnerContext)*((isRecovery||isLong) ? .24 : (isQuality ? .12 : .18));
+ score=clamp(Math.round(score-contextPenalty),0,100);
  // Never show a perfect total unless every positively weighted visible component is also perfect.
  if(score===100&&Object.entries(weights).some(([k,w])=>w>0&&values[k]!=null&&values[k]<100))score=99;
  const components=[
@@ -6047,6 +6035,7 @@ function shoeSuitabilityAssessment(profile,plan,{rehab=false,shoe=null,projected
   {key:'surface',label:'Surface / grip',value:surface,weight:weights.surface||0},
   {key:'foot',label:'Foot mechanics / pronation',value:foot,weight:weights.foot||0},
   {key:'runnerLoad',label:'Runner weight / load',value:runnerLoad,weight:weights.runnerLoad||0},
+  {key:'runnerContext',label:'Runner × session compatibility',value:runnerContext,weight:weights.runnerContext||0},
   ...(rehab?[{key:'rehab',label:'Rehabilitation context',value:rehabContext,weight:weights.rehab||0}]:[]),
   {key:'lifecycle',label:'Lifecycle / condition',value:lifecycle,weight:weights.lifecycle||0}
  ].filter(x=>x.weight>0);
@@ -6168,7 +6157,7 @@ function shoeEnginePortfolioPurchaseScore(profile,horizon,pairs,trigger){
   const before=existing.length?Math.max(...existing):0,after=Math.max(before,candidate),gain=Math.max(0,after-before);
   // Quality-session priority dominates the portfolio objective. Lower-value sessions
   // matter only enough to ensure broad usability.
-  const w=quality?importance*3.2:importance*.30;
+  const w=quality?importance*1.7:importance*.75;
   afterWeighted+=after*w;weight+=w;marginal+=gain*w;
   if(quality){
    candidateQuality+=candidate*importance;qualityMarginal+=gain*importance;
@@ -6193,10 +6182,10 @@ function shoeEnginePortfolioPurchaseScore(profile,horizon,pairs,trigger){
  // Duplicates are allowed, but a repeat family must earn its place through clear
  // marginal quality gain. A different family gets a modest diversity credit only
  // when it improves at least one quality category.
- const duplicatePenalty=sameFamily.length?(qualityGain<1.5?10:qualityGain<3?5:1.5):0;
+ const duplicatePenalty=sameFamily.length?(qualityGain<1.5?18:qualityGain<3?10:4):0;
  const diversityCredit=!sameFamily.length&&meaningfulCategories.length?Math.min(5,2+meaningfulCategories.length*1.25):0;
  const versatility=Number(profile.versatility||3)>=4?1:0;
- return{score:portfolio*.56+marginalNorm*6.2+qualityGain*3.2+coverageGain+complementBonus+diversityCredit+versatility-duplicatePenalty,portfolio,marginal:marginalNorm,qualityGain,categoryWins:meaningfulCategories,familyAlready:Boolean(sameFamily.length),duplicatePenalty,complementBonus}
+ return{score:portfolio*.62+marginalNorm*5.4+qualityGain*2.2+coverageGain+complementBonus+diversityCredit+versatility-duplicatePenalty,portfolio,marginal:marginalNorm,qualityGain,categoryWins:meaningfulCategories,familyAlready:Boolean(sameFamily.length),duplicatePenalty,complementBonus}
 }
 
 function shoeEngineRaceCriticalHorizonDays(){
@@ -6453,7 +6442,7 @@ function shoeEngineRunScenario(scenario,{now,raceDate,fixed,rehab,allSessions,tr
   if(!pick)pick=shoeEngineCreatePair(session,trainingSessions,pairs,purchases,events,'training','No existing or planned physical pair can safely cover this session. The same decision engine therefore introduces the minimum necessary replacement here.');
   if(pick)shoeEngineAddAssignment(pick,session,assignments,{rehab:rehabFlag,runnerOverride:Boolean(manualPair),raceFamiliarisation:Boolean(pick.id===racePair.id&&raceLocks.has(session.id)),why:manualPair?'Runner override retained.':pick.id===racePair.id&&raceLocks.has(session.id)?'Purposeful Race Day familiarisation selected inside the same whole-programme decision engine.':`Unified coach decision: best safe whole-programme choice for this session after suitability, lifecycle, race preservation and ownership-cost trade-offs (${shoeEngineAssessment(pick,session,{rehab:rehabFlag}).score}/100).`})
  }
- const result={strategy:'session-suitability',now,raceDate,fixed,allSessions,pairs,assignments,purchases,events,racePair,raceWindow:null,catalogueSource:'offline',catalogueVersion:OFFLINE_ASICS_CATALOGUE_VERSION,footMechanics:runnerFootMechanics(),engine:'coach-unified-v4-runner-context',scenario:{kind:scenario.kind,label:scenario.label||'',profileKey:scenario.profileKey||''}};
+ const result={strategy:'session-suitability',now,raceDate,fixed,allSessions,pairs,assignments,purchases,events,racePair,raceWindow:null,catalogueSource:'offline',catalogueVersion:OFFLINE_ASICS_CATALOGUE_VERSION,footMechanics:runnerFootMechanics(),engine:'coach-unified-v5-context-interaction',scenario:{kind:scenario.kind,label:scenario.label||'',profileKey:scenario.profileKey||''}};
  const c=shoeEngineRaceCandidate(racePair,{date:raceDate,type:'Race Day',distance:Number(state.setup?.raceDistance)||42.195,surface:'road'});result.raceWindow=c?.window||null;shoeEngineAddRaceDayRow(result,racePair);
  // Buying implies immediate meaningful use. This is canonicalisation of the chosen scenario's own decision, not a second optimiser.
  result.purchases=result.purchases.filter(b=>{const p=result.pairs.find(x=>x.id===b.pairId),first=p?.assignments.slice().filter(a=>!/^Race Day$/i.test(String(a.type||''))).sort((a,b)=>a.date.localeCompare(b.date))[0];return Boolean(p&&first)}).map(b=>{const p=result.pairs.find(x=>x.id===b.pairId),first=p.assignments.slice().filter(a=>!/^Race Day$/i.test(String(a.type||''))).sort((a,b)=>a.date.localeCompare(b.date))[0];b.purchaseDate=first.date;b.firstUseDate=first.date;p.plannedEntryDate=first.date;p.availableDate=first.date;p.purchaseDate=first.date;return b}).sort((a,b)=>a.purchaseDate.localeCompare(b.purchaseDate));
@@ -6465,14 +6454,14 @@ function freshShoeLifecyclePlan(){
  // Fast cache gate: rendering must not rebuild the complete future-session and rehab context
  // when no persisted decision input has changed. storageRevision is incremented by every save,
  // while explicit in-memory shoe-context edits already invalidate this cache before recalculation.
- const stamp=['coach-unified-v4-runner-context',state.storageRevision||0,now,raceDate,runnerFootMechanics(),Number(state.setup?.bodyWeight)||0,JSON.stringify(shoeFuturePairOverrideKeys()),String(state.setup?.shoeRacePairOverride||''),OFFLINE_ASICS_CATALOGUE_VERSION].join('|');
+ const stamp=['coach-unified-v5-context-interaction',state.storageRevision||0,now,raceDate,runnerFootMechanics(),Number(state.setup?.bodyWeight)||0,JSON.stringify(shoeFuturePairOverrideKeys()),String(state.setup?.shoeRacePairOverride||''),OFFLINE_ASICS_CATALOGUE_VERSION].join('|');
  if(freshShoePlanCache.stamp===stamp)return freshShoePlanCache.value;
  const manual=new Map((state.plannedShoeAssignments||[]).filter(a=>a.source==='user').map(a=>[a.planId,a.shoeId])),fixed=(state.plan||[]).filter(p=>p.type!=='Rest'&&p.date>=now&&p.date<=raceDate).map(p=>({...p,rehab:false,importance:shoeEngineSessionImportance(p)})).sort((a,b)=>a.date.localeCompare(b.date)),rehab=shoeEngineBuildRehabSessions(now,raceDate),allSessions=[...fixed,...rehab].sort((a,b)=>a.date.localeCompare(b.date)||Number(b.rehab)-Number(a.rehab)),trainingSessions=allSessions.filter(s=>!/^Race Day$/i.test(String(s.type||''))),injury=(state.injuries||[]).find(x=>x.id===state.activeInjuryPlanId);
  const scenarios=shoeEngineRaceScenarios(now,raceDate,trainingSessions),ctx={now,raceDate,fixed,rehab,allSessions,trainingSessions,manual,injury},results=scenarios.map(s=>shoeEngineRunScenario(s,ctx)).filter(Boolean).sort((a,b)=>(Number(b.valid)-Number(a.valid))||b.objectiveScore-a.objectiveScore||b.racePair.owned-a.racePair.owned||String(a.scenario?.label||'').localeCompare(String(b.scenario?.label||'')));
  let result=results[0]||null;
  if(!result){
   // No race scenario is feasible. Return an explicit invalid structure; never silently invent a late repair path.
-  result={strategy:'session-suitability',now,raceDate,fixed,allSessions,pairs:shoeEngineOwnedPairSeed(now),assignments:[],purchases:[],events:[],racePair:null,raceWindow:null,catalogueSource:'offline',catalogueVersion:OFFLINE_ASICS_CATALOGUE_VERSION,footMechanics:runnerFootMechanics(),engine:'coach-unified-v4-runner-context',validationIssues:[{code:'race-day-requirement-unsatisfied'}],softTargets:[],valid:false,hardInvariantFailures:1,objectiveScore:-Infinity}
+  result={strategy:'session-suitability',now,raceDate,fixed,allSessions,pairs:shoeEngineOwnedPairSeed(now),assignments:[],purchases:[],events:[],racePair:null,raceWindow:null,catalogueSource:'offline',catalogueVersion:OFFLINE_ASICS_CATALOGUE_VERSION,footMechanics:runnerFootMechanics(),engine:'coach-unified-v5-context-interaction',validationIssues:[{code:'race-day-requirement-unsatisfied'}],softTargets:[],valid:false,hardInvariantFailures:1,objectiveScore:-Infinity}
  }
  freshShoePlanCache={stamp,value:result};return result
 }
