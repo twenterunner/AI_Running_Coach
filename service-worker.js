@@ -1,11 +1,11 @@
-// AI Running Coach v14.8.5 · build 40805
+// AI Running Coach v14.8.7 · build 14.8.7
 'use strict';
 
-const CACHE = 'arc-v1485-build-40805';
+const CACHE = 'arc-v1485-build-14.8.7';
 const CACHE_PREFIX = 'arc-v';
 const APP_SHELL = './index.html';
 const ASSETS = [
-  './', './index.html', './styles.css?v=40805-combined-race-portfolio', './app.js?v=40805-combined-race-portfolio', './manifest.webmanifest?v=40805'
+  './', './index.html', './styles.css?v=14.8.7-combined-race-portfolio', './app.js?v=14.8.7-combined-race-portfolio', './manifest.webmanifest?v=14.8.7'
 ];
 
 self.addEventListener('install', event => {
