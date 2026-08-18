@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '14.10.19';
-  const BUILD = 41019;
+  const VERSION = '14.10.20';
+  const BUILD = 41020;
   const SCHEMA = 10400;
   const PRIMARY_STORAGE_KEY = 'arc_v10400_web';
   const MIRROR_STORAGE_KEY = 'arc_v10400_mirror';
@@ -6877,6 +6877,19 @@ function navButtonHtml(page,label,extra=''){return`<button ${extra} data-page="$
 function renderNavigation(){const current=document.querySelector('.page.active')?.id||'today';$('nav').innerHTML=primaryPages.map(p=>navButtonHtml(p[0],p[1])).join('')+secondaryPages.map(p=>navButtonHtml(p[0],p[1],'class="desktopSecondary"')).join('')+`<button id="moreNavBtn" class="moreToggle" type="button" aria-expanded="false" aria-controls="moreNav"><span class="navIcon">${navIcon('more')}</span><span class="navLabel">More</span></button>`;$('moreNav').innerHTML=secondaryPages.map(p=>`<button data-page="${p[0]}"><span class="navIcon">${navIcon(p[0])}</span><span>${p[1]}</span></button>`).join('');setActiveNavigation(current)}
 function setActiveNavigation(page){document.querySelectorAll('#nav [data-page],#moreNav [data-page]').forEach(button=>{const active=button.dataset.page===page;button.classList.toggle('active',active);if(active)button.setAttribute('aria-current','page');else button.removeAttribute('aria-current')});const more=$('moreNavBtn'),secondary=secondaryPages.some(item=>item[0]===page);more?.classList.toggle('active',secondary);if(secondary)more?.setAttribute('aria-current','page');else more?.removeAttribute('aria-current')}
 function activatePage(page,anchor=null){if(!pages.some(p=>p[0]===page))return;if(page==='plan'&&!state.weekView)state.weekView=currentWeek();document.querySelectorAll('.page').forEach(section=>section.classList.toggle('active',section.id===page));setActiveNavigation(page);$('moreNav').className='moreNav hidden';$('moreNavBtn')?.setAttribute('aria-expanded','false');if(!anchor)scrollTo(0,0);$('mainContent')?.focus({preventScroll:true});requestAnimationFrame(()=>{renderAll();if(anchor)requestAnimationFrame(()=>document.getElementById(anchor)?.scrollIntoView({behavior:'smooth',block:'start'}))})}
+function positionMoreNav(){
+ const menu=$('moreNav'),nav=$('nav');if(!menu||!nav||menu.classList.contains('hidden')||window.innerWidth>=760)return;
+ const vv=window.visualViewport,viewW=Math.max(240,Number(vv?.width)||window.innerWidth),viewH=Math.max(320,Number(vv?.height)||window.innerHeight),viewL=Math.max(0,Number(vv?.offsetLeft)||0),viewT=Math.max(0,Number(vv?.offsetTop)||0),edge=8;
+ // Fixed-position coordinates are expressed in layout-viewport space. VisualViewport
+ // offsets keep the popover inside the actually visible rectangle after zoom/reflow.
+ menu.style.setProperty('right','auto','important');menu.style.setProperty('bottom','auto','important');
+ menu.style.setProperty('width',`${Math.min(330,Math.max(220,viewW-edge*2))}px`,'important');
+ menu.style.setProperty('max-width',`${Math.max(220,viewW-edge*2)}px`,'important');
+ menu.style.setProperty('max-height',`${Math.max(180,viewH-110)}px`,'important');menu.style.setProperty('overflow-y','auto','important');
+ const navRect=nav.getBoundingClientRect(),menuRect=menu.getBoundingClientRect(),left=Math.max(viewL+edge,Math.min(viewL+viewW-menuRect.width-edge,viewL+viewW-menuRect.width-edge));
+ const navTop=viewT+navRect.top,desiredTop=navTop-menuRect.height-edge,top=Math.max(viewT+edge,Math.min(desiredTop,viewT+viewH-menuRect.height-edge));
+ menu.style.setProperty('left',`${left}px`,'important');menu.style.setProperty('top',`${top}px`,'important');
+}
 renderNavigation();
 document.documentElement.style.removeProperty('--nav-visual-bottom');
 $('nav').onclick=event=>{
@@ -6885,6 +6898,7 @@ $('nav').onclick=event=>{
  if(button.id==='moreNavBtn'){
   const open=$('moreNav').classList.toggle('hidden')===false;
   button.setAttribute('aria-expanded',String(open));
+  if(open)requestAnimationFrame(positionMoreNav);
   return;
  }
  if(button.dataset.page)activatePage(button.dataset.page);
@@ -7119,10 +7133,11 @@ function syncMobileViewportInsets(){
 }
 syncMobileViewportInsets();
 window.addEventListener('resize',syncMobileViewportInsets,{passive:true});
-window.addEventListener('orientationchange',()=>setTimeout(syncMobileViewportInsets,60),{passive:true});
+window.addEventListener('orientationchange',()=>setTimeout(()=>{syncMobileViewportInsets();positionMoreNav()},60),{passive:true});
+window.addEventListener('resize',()=>requestAnimationFrame(positionMoreNav),{passive:true});
 if(window.visualViewport){
- window.visualViewport.addEventListener('resize',syncMobileViewportInsets,{passive:true});
- window.visualViewport.addEventListener('scroll',syncMobileViewportInsets,{passive:true});
+ window.visualViewport.addEventListener('resize',()=>{syncMobileViewportInsets();requestAnimationFrame(positionMoreNav)},{passive:true});
+ window.visualViewport.addEventListener('scroll',()=>{syncMobileViewportInsets();requestAnimationFrame(positionMoreNav)},{passive:true});
 }
 
 const brandVersion=document.querySelector('.brand-copy p');if(brandVersion)brandVersion.textContent=`Race-specific adaptive planning · v${CORE.VERSION} · build ${CORE.BUILD}`;

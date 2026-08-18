@@ -5856,3 +5856,14 @@ body:has(#dashboard.progressPage.active),#mainContent:has(#dashboard.progressPag
     width:48px!important;height:48px!important;
   }
 }
+
+
+/* v14.10.20 — authoritative More popover viewport containment. */
+@media(max-width:759px){
+  .moreNav{
+    box-sizing:border-box!important;
+    width:min(330px,calc(100dvw - 16px))!important;
+    max-width:calc(100dvw - 16px)!important;
+    overscroll-behavior:contain;
+  }
+}
