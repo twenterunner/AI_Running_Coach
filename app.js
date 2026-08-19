@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '14.9.11';
-  const BUILD = 40911;
+  const VERSION = '14.9.12';
+  const BUILD = 40912;
   const SCHEMA = 10400;
   const PRIMARY_STORAGE_KEY = 'arc_v10400_web';
   const MIRROR_STORAGE_KEY = 'arc_v10400_mirror';
@@ -452,7 +452,6 @@ let rawState=loadStoredState();
 try{if(rawState&&CORE.LEGACY_STORAGE_KEYS.includes(migrationReport.source))localStorage.setItem('arc_v10400_migration_backup',JSON.stringify(rawState))}catch(err){recordDiagnostic('Pre-migration backup',err)}
 let state;try{state=normaliseState(rawState||defaults())}catch(err){recordDiagnostic('Migration failure',err);migrationReport.status='recovered defaults';migrationReport.warning=err.message;state=defaults()}
 function save(){reconcileShoeUsage();state.storageRevision=Math.max(0,Number(state.storageRevision)||0)+1;state.updatedAt=new Date().toISOString();const text=JSON.stringify(state);try{localStorage.setItem(STORAGE_KEY,text);localStorage.setItem(MIRROR_KEY,text);localStorage.setItem(MIGRATION_MARKER,'true');return true}catch(err){recordDiagnostic('Save failure',err);toast('Data could not be saved on this device.',true);return false}}
-save();
 let lastModalFocus=null,modalWasOpen=false;
 function resetModalViewport(){const card=document.querySelector('#modal .modalCard');if(card)card.scrollTop=0;requestAnimationFrame(()=>{const c=document.querySelector('#modal .modalCard');if(c)c.scrollTop=0})}
 function closeDialog(){const modal=$('modal');if(!modal||modal.classList.contains('hidden'))return;modal.className='modal hidden'}
@@ -477,13 +476,14 @@ function executionProfile(type){const b=baseType(type);if(['Specific long run','
 function expectedRpe(type){const b=baseType(type);return({Recovery:[1,3],Easy:[2,4],Steady:[4,6],Marathon:[5,7],Tempo:[7,8.5],Intervals:[7.5,9.5],Repetition:[8,10],'Long run':[3,6],'Fitness assessment':[9,10],Race:[8,10]})[b]||[2,6]}
 function scoreBand(score){return score>=95?'Excellent execution':score>=85?'Good execution':score>=70?'Useful session; improve control':score>=50?'Limited training benefit':'Session objective largely missed'}
 function targetMetricReliability(plan){if(!plan)return 0;const t=plan.type,b=baseType(t);if(['Recovery','Easy','Steady','Long run','Race'].includes(b)&&!['Progression','Specific long run','Race rehearsal'].includes(t))return .85;return .35}
+function intervalScoredWorkRows(analysis){if(!analysis)return[];if(Array.isArray(analysis.scoredWork)&&analysis.scoredWork.length)return analysis.scoredWork;const work=Array.isArray(analysis.work)?analysis.work:[],expected=Math.max(0,Number(analysis.expectedReps)||0);return expected>0?work.slice(0,expected):work}
 function workoutScoreDetails(run,plan=run?.planId?state.plan.find(p=>p.id===run.planId):null){
  if(!run)return null;
  const actualKm=Number(run.distanceKm)||0,dur=Number(run.durationSec)||0;
  if(!(actualKm>0&&dur>0))return null;
  const type=plan?.type||run.type||'Easy',b=baseType(type),family=workoutFamily(type),profile=executionProfile(type),plannedKm=plan?Math.max(.1,Number(plan.distance)||0):null,actualPace=dur/actualKm;
  const isShortIntervals=family==='interval'||b==='Repetition',isThreshold=family==='threshold',isTargetedLong=['Specific long run','Race rehearsal','Progression'].includes(type);
- const ia=run.intervalAnalysis?.structured&&run.intervalAnalysis?.usableForScore&&run.intervalAnalysis?.scoredWork?.length?run.intervalAnalysis:null;
+ const iaCandidate=run.intervalAnalysis,ia=iaCandidate?.structured&&iaCandidate?.usableForScore&&intervalScoredWorkRows(iaCandidate).length?iaCandidate:null;
  const components=[],add=(key,name,score,baseWeight,detail,reliability=1,scope='whole session')=>{if(Number.isFinite(score)&&baseWeight>0&&reliability>0)components.push({key,name,score:clamp(score,0,100),baseWeight,weight:baseWeight*reliability,detail,reliability,scope})};
  let completionRatio=null;
  if(plan){
@@ -493,8 +493,9 @@ function workoutScoreDetails(run,plan=run?.planId?state.plan.find(p=>p.id===run.
   add('distance','Distance execution',score,profile.distance,`${actualKm.toFixed(2)} km completed versus ${plannedKm.toFixed(2)} km planned. ${direction}`,1,'entire run');
  }
 
- const workPace=ia?ia.scoredWork.map(x=>x.paceScore).filter(Number.isFinite):[];
- const workPower=ia?ia.scoredWork.map(x=>x.powerScore).filter(Number.isFinite):[];
+ const scoredWork=intervalScoredWorkRows(ia);
+ const workPace=scoredWork.map(x=>x.paceScore).filter(Number.isFinite);
+ const workPower=scoredWork.map(x=>x.powerScore).filter(Number.isFinite);
  const useWorkTargets=!!ia&&(isShortIntervals||isThreshold||isTargetedLong);
 
  // Pace/power scope is workout-specific.
@@ -539,7 +540,7 @@ function workoutScoreDetails(run,plan=run?.planId?state.plan.find(p=>p.id===run.
  if(Number(run.avgHr)>0&&plan?.zone?.hr>0){
    let hr=Number(run.avgHr),reliability=1,scope='entire run',label='Heart-rate control';
    if(ia&&(isShortIntervals||isThreshold)){
-     const hrRows=ia.scoredWork.map(x=>Number(x.avgHr)).filter(v=>Number.isFinite(v)&&v>0);
+     const hrRows=scoredWork.map(x=>Number(x.avgHr)).filter(v=>Number.isFinite(v)&&v>0);
      if(hrRows.length>=2){
        const later=hrRows.slice(Math.floor(hrRows.length/2));hr=avg(later.length?later:hrRows);
        reliability=isShortIntervals?(b==='Repetition'?.25:.45):.7;scope='later detected work sections';label='Work-section heart-rate control';
@@ -3305,11 +3306,71 @@ function intervalFitAnalysis(laps,records,plan){
  if(lapCandidates.length>=3){const result=scoreDetectedIntervals(lapCandidates,plan,'FIT lap boundaries');result.usableForScore=false;result.quality='limited';result.reason+=` Record-stream detection found only ${detected.length}; lap boundaries are shown for inspection but are not trusted for execution scoring.`;return result}
  return{available:true,structured:true,work:[],expectedReps:Math.max(0,Number(plan?.repetitions)||0),detectedReps:detected.length,quality:'limited',usableForScore:false,source:'record stream',reason:'The FIT stream did not contain enough clearly separated work/recovery transitions for reliable interval scoring.'};
 }
+const COMPACT_ACTIVITY_STREAM_VERSION=1;
+const COMPACT_RECORD_TARGETS=[
+ {key:'1k',label:'1 km',km:1},
+ {key:'5k',label:'5 km',km:5},
+ {key:'10k',label:'10 km',km:10},
+ {key:'half',label:'Half marathon',km:21.0975},
+ {key:'marathon',label:'Marathon',km:42.195}
+];
+function compactStreamPoints(records){
+ const rows=(records||[]).map(r=>({t:Number(r.t),d:Number(r.distance)})).filter(r=>Number.isFinite(r.t)&&Number.isFinite(r.d)).sort((a,b)=>a.t-b.t);
+ if(rows.length<2)return[];
+ const d0=rows[0].d,t0=rows[0].t;let last=-Infinity;
+ return rows.map(r=>({t:r.t-t0,d:Math.max(0,(r.d-d0)/1000)})).filter(r=>{if(r.d+1e-6<last)return false;last=r.d;return true});
+}
+function compactTimeAtDistance(points,target){
+ if(!points.length||target<points[0].d-1e-9||target>points.at(-1).d+1e-9)return null;
+ let lo=0,hi=points.length-1;
+ while(lo<hi){const mid=(lo+hi)>>1;if(points[mid].d<target)lo=mid+1;else hi=mid}
+ const b=points[lo];if(Math.abs(b.d-target)<1e-9||lo===0)return b.t;
+ const a=points[lo-1],span=b.d-a.d;if(!(span>0))return b.t;
+ return a.t+(target-a.d)/span*(b.t-a.t);
+}
+function compactFastestSegment(records,targetKm){
+ const points=compactStreamPoints(records);if(points.length<2||points.at(-1).d<targetKm-0.01)return null;
+ const maxD=points.at(-1).d,candidates=new Set([0,Math.max(0,maxD-targetKm)]);
+ points.forEach(p=>{if(p.d>=0&&p.d+targetKm<=maxD+1e-9)candidates.add(p.d);const start=p.d-targetKm;if(start>=0)candidates.add(start)});
+ let best=null;
+ for(const startKm of candidates){const endKm=startKm+targetKm;if(endKm>maxD+1e-9)continue;const st=compactTimeAtDistance(points,startKm),et=compactTimeAtDistance(points,endKm);if(!Number.isFinite(st)||!Number.isFinite(et)||!(et>st))continue;const durationSec=et-st;if(!best||durationSec<best.durationSec)best={durationSec,startKm,endKm,source:'stream'};}
+ return best;
+}
+function compactStreamThirds(records){
+ const rows=(records||[]).filter(r=>Number.isFinite(Number(r.t)));if(rows.length<30)return null;
+ const start=Number(rows[0].t),end=Number(rows.at(-1).t),total=end-start;if(!(total>0))return null;
+ const segment=(lo,hi)=>{const part=rows.filter(r=>Number(r.t)>=start+total*lo&&Number(r.t)<=start+total*hi),powers=part.map(r=>Number(r.power)).filter(v=>v>0),hrs=part.map(r=>Number(r.hr)).filter(v=>v>0),speeds=part.map(r=>Number(r.speed)).filter(v=>v>0),power=avg(powers),hr=avg(hrs),speed=avg(speeds);return{power,hr,pace:speed>0?1000/speed:null,efficiency:Number.isFinite(power)&&Number.isFinite(hr)&&hr>0?power*60/hr:null}};
+ return{early:segment(0,.333),middle:segment(.333,.667),late:segment(.667,1)};
+}
+function compactRunActivityStream(run){
+ if(!run||!Array.isArray(run.fitRecords)||!run.fitRecords.length)return false;
+ const records=run.fitRecords,recordCount=records.length;
+ if(!run.streamEvidence){const analysis=streamAnalysis(records);if(analysis)run.streamEvidence=analysis}
+ if(!run.streamThirdsEvidence)run.streamThirdsEvidence=compactStreamThirds(records);
+ if(!Array.isArray(run.detectedWorkSegments))run.detectedWorkSegments=detectWorkSegments(records,null);
+ if(!Array.isArray(run.recordSegments)){
+   const total=Number(run.distanceKm)||0;
+   run.recordSegments=COMPACT_RECORD_TARGETS.map(cat=>{if(total<cat.km-0.01)return null;const seg=compactFastestSegment(records,cat.km);if(seg)return{key:cat.key,label:cat.label,km:cat.km,...seg};const tolerance=Math.max(.03,cat.km*.006);if(Number(run.durationSec)>0&&Math.abs(total-cat.km)<=tolerance)return{key:cat.key,label:cat.label,km:cat.km,durationSec:Number(run.durationSec),startKm:0,endKm:total,source:'whole-run'};return null}).filter(Boolean);
+ }
+ run.streamRecordCount=Number(run.streamRecordCount)||recordCount;
+ if(run.intervalAnalysis&&Array.isArray(run.intervalAnalysis.scoredWork))delete run.intervalAnalysis.scoredWork;
+ if(Array.isArray(run.detectedWorkSegments)&&run.detectedWorkSegments.length>=3)delete run.fitLaps;
+ run.streamStorageVersion=COMPACT_ACTIVITY_STREAM_VERSION;
+ run.streamCompacted=true;
+ delete run.fitRecords;
+ return true;
+}
+function compactHistoricalActivityStreams(){let changed=false;for(const run of state.runs||[])if(compactRunActivityStream(run))changed=true;return changed}
 function refreshIntervalAnalysis(run,plan){
  if(!run)return null;
- const records=run.fitRecords||[],laps=run.fitLaps||[];
- if(!records.length&&!laps.length)return null;
- return run.intervalAnalysis=intervalFitAnalysis(laps,records,plan);
+ const records=run.fitRecords||[],laps=run.fitLaps||[],derived=Array.isArray(run.detectedWorkSegments)?run.detectedWorkSegments:[];
+ if(records.length)return run.intervalAnalysis=intervalFitAnalysis(laps,records,plan);
+ const structured=plan&&['Intervals','Repetition','Threshold','Tempo','Marathon','Fitness assessment'].includes(baseType(plan.type));
+ if(!structured)return run.intervalAnalysis={available:true,structured:false,quality:'not applicable',reason:'The run is not matched to a structured workout.'};
+ if(derived.length>=3)return run.intervalAnalysis=scoreDetectedIntervals(derived,plan,'stored detected work segments');
+ const lapCandidates=(laps||[]).filter(l=>Number(l.durationSec)>15&&Number(l.distanceKm)>.04);
+ if(lapCandidates.length>=3){const result=scoreDetectedIntervals(lapCandidates,plan,'stored FIT lap boundaries');result.usableForScore=false;result.quality='limited';result.reason+=` Stored work-segment evidence found only ${derived.length}; lap boundaries are shown for inspection but are not trusted for execution scoring.`;return run.intervalAnalysis=result}
+ return run.intervalAnalysis={available:true,structured:true,work:[],expectedReps:Math.max(0,Number(plan?.repetitions)||0),detectedReps:derived.length,quality:'limited',usableForScore:false,source:'compact derived evidence',reason:'The stored activity evidence did not contain enough clearly separated work/recovery transitions for reliable interval scoring.'};
 }
 
 async function summariseFIT(file){
@@ -3633,15 +3694,9 @@ function comparableRunAnalysis(run){
    hrDelta:deltaPct(current.hr,baseline.hr),rpeDelta:Number.isFinite(current.rpe)&&Number.isFinite(baseline.rpe)?current.rpe-baseline.rpe:null};
 }
 function streamThirds(run){
- const records=(run.fitRecords||[]).filter(r=>Number.isFinite(Number(r.t)));
- if(records.length<30)return null;
- const start=records[0].t,end=records.at(-1).t,total=end-start;if(!(total>0))return null;
- const segment=(lo,hi)=>{
-   const rows=records.filter(r=>r.t>=start+total*lo&&r.t<=start+total*hi),powers=rows.map(r=>Number(r.power)).filter(v=>v>0),hrs=rows.map(r=>Number(r.hr)).filter(v=>v>0),speeds=rows.map(r=>Number(r.speed)).filter(v=>v>0);
-   const pw=avg(powers),hr=avg(hrs),speed=avg(speeds);
-   return{power:pw,hr,pace:speed>0?1000/speed:null,efficiency:Number.isFinite(pw)&&Number.isFinite(hr)&&hr>0?pw*60/hr:null};
- };
- return{early:segment(0,.333),middle:segment(.333,.667),late:segment(.667,1)};
+ if(run?.streamThirdsEvidence)return run.streamThirdsEvidence;
+ const records=(run?.fitRecords||[]).filter(r=>Number.isFinite(Number(r.t)));
+ return compactStreamThirds(records);
 }
 function workoutIntelligence(run){
  const plan=run.planId?state.plan.find(p=>p.id===run.planId):null,family=workoutFamily(plan?.type||run.type),details=workoutScoreDetails(run,plan),comp=comparableRunAnalysis(run),thirds=streamThirds(run),m=metrics(run);
@@ -3649,7 +3704,7 @@ function workoutIntelligence(run){
  const add=(kind,text)=>{findings.push({kind,text});(kind==='positive'?positives:cautions).push(text)};
  if(family==='interval'){
    const ia=run.intervalAnalysis;
-   if(ia?.usableForScore&&ia.scoredWork?.length){
+   if(ia?.usableForScore&&intervalScoredWorkRows(ia).length){
      if(ia.detectedReps===ia.expectedReps)add('positive',`All ${ia.expectedReps} prescribed repetitions were detected.`);
      else if(ia.extraReps>0)add('caution',`${ia.extraReps} extra repetition${ia.extraReps===1?'':'s'} added load beyond the prescription.`);
      else if(ia.missingReps>0)add('caution',`${ia.missingReps} prescribed repetition${ia.missingReps===1?' was':'s were'} not detected.`);
@@ -3710,7 +3765,7 @@ function logDataQuality(run){
  const missing=[];
  if(!Number.isFinite(Number(run.avgHr)))missing.push('HR');
  if(!Number.isFinite(Number(run.avgPower)))missing.push('power');
- const stream=Array.isArray(run.fitRecords)&&run.fitRecords.length>0;
+ const stream=Boolean((Array.isArray(run.fitRecords)&&run.fitRecords.length>0)||run.streamCompacted||run.streamEvidence||run.streamThirdsEvidence||run.streamRecordCount);
  const interval=run.intervalAnalysis?.structured;
  return{missing,stream,interval,complete:missing.length===0};
 }
@@ -3724,7 +3779,7 @@ function logHeroHtml(){
 function runSummaryHtml(r){
  const m=metrics(r),plan=r.planId?state.plan.find(p=>p.id===r.planId):null,q=logDataQuality(r);
  const completion=plan&&Number(plan.distance)>0?Number(r.distanceKm)/Number(plan.distance):null;
- const quality=q.missing.length?`Missing ${q.missing.join(' + ')}`:q.stream?'Detailed stream available':'Summary data complete';
+ const quality=q.missing.length?`Missing ${q.missing.join(' + ')}`:q.stream?'Detailed analysis retained':'Summary data complete';
  return`<section class="runSummaryHero runSummaryV3">
    <div class="runSummaryHead"><span class="runSummaryIcon">${logPictogram('log')}</span><div><small>${fmtDate(r.date)} · ${esc(matchSummary(r))}</small><h2>${esc(r.type)}</h2><p>${plan?`Matched to ${esc(plan.type)} · ${Number(plan.distance).toFixed(1)} km planned`:'Ad hoc / unmatched session'}</p></div></div>
    <div class="runMetricGridV3">
@@ -3736,7 +3791,7 @@ function runSummaryHtml(r){
     <div class="runMetricV3"><span>PAIN</span><strong>${Number.isFinite(Number(r.pain))?Number(r.pain).toFixed(0)+'/10':'Not entered'}</strong></div>
    </div>
    ${Number.isFinite(completion)?`<div class="runPlanCompare"><div><span>Planned distance completion</span><b>${Math.round(completion*100)}%</b></div><i><em style="width:${clamp(completion*100,0,120)}%"></em></i></div>`:''}
-   <div class="runDataQualityV3 ${q.missing.length?'partial':'good'}"><strong>${quality}</strong><p>${q.stream?'FIT/CSV record stream can support deeper analysis where relevant.':'No detailed record stream is stored for this session.'}</p></div>
+   <div class="runDataQualityV3 ${q.missing.length?'partial':'good'}"><strong>${quality}</strong><p>${q.stream?'Compact FIT/CSV-derived evidence is retained for records, interval analysis and physiological interpretation; the original activity stream is discarded after analysis.':'No detailed record stream is stored for this session.'}</p></div>
  </section>`;
 }
 function pathwayStatusClass(d,t){
@@ -3836,6 +3891,8 @@ function recordTimeAtDistance(points,target){
 }
 function fastestContinuousSegment(run,targetKm){
  const total=recordDistanceKm(run);if(!(total>=targetKm-0.01))return null;
+ const stored=(run?.recordSegments||[]).find(x=>Math.abs(Number(x.km)-Number(targetKm))<1e-6||x.key===COMPACT_RECORD_TARGETS.find(c=>Math.abs(c.km-targetKm)<1e-6)?.key);
+ if(stored&&Number(stored.durationSec)>0)return{durationSec:Number(stored.durationSec),startKm:Number(stored.startKm)||0,endKm:Number(stored.endKm)||targetKm,source:stored.source||'stream'};
  const points=recordStreamPoints(run);
  if(points.length>=2&&points.at(-1).d>=targetKm-0.01){
    const maxD=points.at(-1).d,candidates=new Set([0,Math.max(0,maxD-targetKm)]);
@@ -3921,11 +3978,12 @@ function migrateImportedPower(){
      changed=true;
    }
  });
- if(changed)save();
+ return changed;
 }
 function ensureRunStreamMetrics(run){
  if(!run)return false;
  if(Number.isFinite(run.powerDrift)&&run.streamEvidence)return false;
+ if(run.streamEvidence&&Number.isFinite(Number(run.streamEvidence.powerDrift))){run.drift=Number(run.streamEvidence.powerDrift);run.powerDrift=Number(run.streamEvidence.powerDrift);run.paceDrift=Number.isFinite(Number(run.streamEvidence.paceDrift))?Number(run.streamEvidence.paceDrift):null;return true}
  const records=Array.isArray(run.fitRecords)?run.fitRecords:null;
  if(records?.length){
    const analysis=streamAnalysis(records);
@@ -4015,8 +4073,10 @@ function deleteAssessmentAndRun(a){
  state.assessments=state.assessments.filter(x=>x.id!==a.id);
 }
 function migrateAssessmentRuns(){
+ const before=(state.runs||[]).length+(state.assessments||[]).filter(a=>a.runId).length;
  state.assessments.forEach(syncAssessmentRun);
- save();
+ const after=(state.runs||[]).length+(state.assessments||[]).filter(a=>a.runId).length;
+ return after!==before;
 }
 function renderAssessments(){$('assessmentList').innerHTML=state.assessments.slice().sort((a,b)=>b.date.localeCompare(a.date)).map(a=>`<div class="panel clickable" data-assessment="${a.id}"><div class="panelHead"><div><b>${fmtDate(a.date)} · ${a.distance.toFixed(1)} km</b><p class="muted">${fmtTime(a.time)} · ${pace(a.time/a.distance)} · ${a.valid?'Valid and applied to future targets':'Not applied'}<br>Also included in run history and training metrics</p></div><span class="status ${a.valid?'completed':'rest'}">${a.valid?'valid':'invalid'}</span></div></div>`).join('')||'<div class="panel">No fitness assessment results entered.</div>'}
 function renderCoach(){
@@ -7502,6 +7562,7 @@ $('activityFile').onchange=async e=>{
       if(errors.length){showFieldErrors(errors,{type:'#iType',rpe:'#iRpe',pain:'#iPain',hrv:'#iHrv',notes:'#iNotes'},$('importPreview'));throw Error(CORE.firstErrorMessage(errors))}
       applyRunMatch(preview,$('iPlanMatch').value,'user');
       refreshIntervalAnalysis(preview,preview.planId?state.plan.find(p=>p.id===preview.planId):null);
+      compactRunActivityStream(preview);
       let before=null;try{before=postRunCoachSnapshot(preview.date)}catch(e){console.warn('Coach pre-snapshot failed',e)}
       const savedRun={...preview},shoeId=$('iShoe')?$('iShoe').value||null:null,shoeBefore=shoeId?shoeMileage((state.shoes||[]).find(s=>s.id===shoeId)||{}):null;state.runs.push(savedRun);if($('iShoe'))assignRunShoe(savedRun,shoeId,'import');reconcileExactDateMatches();
       recordPredictionSnapshot(savedRun.date,savedRun.sourceFormat==='fit-activity'?'FIT import':'Stryd import',savedRun.id);
@@ -7554,8 +7615,8 @@ $('undoSettingsBtn').onclick=()=>{try{const prior=JSON.parse(localStorage.getIte
 function download(n,t,m){let a=document.createElement('a');a.href=URL.createObjectURL(new Blob([t],{type:m}));a.download=n;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
 $('planHealthBtn').onclick=()=>{renderPlanHealth();const ok=validatePlan(state.plan).valid;toast(ok?'Plan validation passed.':'Plan validation found issues.',!ok)};
 $('backupBtn').onclick=()=>download('ai-running-coach-backup.json',JSON.stringify(state,null,2),'application/json');$('restoreFile').onchange=e=>e.target.files[0]?.text().then(t=>{let candidate=JSON.parse(t);if(!validateBackup(candidate))throw new Error('Backup structure is incomplete.');let errors=validateSetup(candidate.setup);if(errors.length)throw new Error(errors[0]);candidate.schemaVersion=SCHEMA;candidate.plan=Array.isArray(candidate.plan)?candidate.plan:[];state=candidate;buildPlan();save();renderAll();toast('Backup restored and migrated.')}).catch(err=>toast(err?.message||'Invalid backup.',true));$('exportBtn').onclick=()=>download('run-log.csv',['Date,Type,Distance km,Duration sec,HR,Power,RPE,Pain,Previous-night Garmin HRV,Match status,Plan ID,Day offset,Notes',...state.runs.map(r=>[r.date,r.type,r.distanceKm,r.durationSec,r.avgHr,r.avgPower,r.rpe,r.pain,r.hrv??'',r.matchStatus||'',r.planId||'',r.dayOffset??'',`"${String(r.notes||'').replaceAll('"','""')}"`].join(','))].join('\n'),'text/csv');$('resetBtn').onclick=()=>{if(confirm('Delete all app data?')){state=defaults();buildPlan();save();renderAll();initOnboarding();toast('App reset. Enter your own details to start again.')}};
-$('restoreFile').onchange=async event=>{const input=event.target,file=input.files?.[0];if(!file)return;try{if(file.size>5*1024*1024)throw Error('Backup files must be 5 MB or smaller.');const raw=JSON.parse(await file.text());const rawCheck=CORE.validateBackup(raw,{today:iso(today())});if(!rawCheck.valid)throw Error(`Backup rejected: ${CORE.firstErrorMessage(rawCheck.errors)}`);const candidate=normaliseState(raw),normalizedCheck=CORE.validateBackup(candidate,{today:iso(today())});if(!normalizedCheck.valid)throw Error(`Backup rejected after normalization: ${CORE.firstErrorMessage(normalizedCheck.errors)}`);showDialog(`<h2>Preview backup restore</h2><p>Review the validated data before replacing the current local data.</p><dl class="restorePreview"><div><dt>Runs</dt><dd>${candidate.runs.length}</dd></div><div><dt>Assessments</dt><dd>${candidate.assessments.length}</dd></div><div><dt>Injuries</dt><dd>${candidate.injuries.length}</dd></div><div><dt>Shoes</dt><dd>${candidate.shoes.length}</dd></div><div><dt>Race</dt><dd>${esc(candidate.setup.raceName)} · ${esc(candidate.setup.raceDate)}</dd></div></dl><p class="note">A rollback copy of the current data will be kept on this device until the next restore.</p><div class="buttonRow"><button id="confirmRestore" class="primary" type="button">Restore this backup</button><button id="cancelRestore" class="secondary" type="button">Cancel</button></div>`,'Preview backup restore');$('confirmRestore').onclick=()=>{try{localStorage.setItem(BACKUP_KEY,JSON.stringify(state));state=candidate;state.onboardingComplete=true;buildPlan();save();closeDialog();input.value='';renderAll();toast('Backup restored. Undo is available in Settings.')}catch(err){toast(err.message||'The backup could not be restored.',true)}};$('cancelRestore').onclick=()=>{input.value='';closeDialog()}}catch(err){input.value='';toast(err.message||'Invalid backup.',true)}};
-$('undoRestoreBtn').onclick=()=>{try{const prior=JSON.parse(localStorage.getItem(BACKUP_KEY)||'null');if(!prior)throw Error('No backup restore is available to undo.');const candidate=normaliseState(prior),check=CORE.validateBackup(candidate,{today:iso(today())});if(!check.valid)throw Error(CORE.firstErrorMessage(check.errors));state=candidate;buildPlan();save();localStorage.removeItem(BACKUP_KEY);renderAll();toast('The data from before the restore have been recovered.')}catch(err){toast(err.message||'Restore rollback failed.',true)}};
+$('restoreFile').onchange=async event=>{const input=event.target,file=input.files?.[0];if(!file)return;try{if(file.size>5*1024*1024)throw Error('Backup files must be 5 MB or smaller.');const raw=JSON.parse(await file.text());const rawCheck=CORE.validateBackup(raw,{today:iso(today())});if(!rawCheck.valid)throw Error(`Backup rejected: ${CORE.firstErrorMessage(rawCheck.errors)}`);const candidate=normaliseState(raw),normalizedCheck=CORE.validateBackup(candidate,{today:iso(today())});if(!normalizedCheck.valid)throw Error(`Backup rejected after normalization: ${CORE.firstErrorMessage(normalizedCheck.errors)}`);showDialog(`<h2>Preview backup restore</h2><p>Review the validated data before replacing the current local data.</p><dl class="restorePreview"><div><dt>Runs</dt><dd>${candidate.runs.length}</dd></div><div><dt>Assessments</dt><dd>${candidate.assessments.length}</dd></div><div><dt>Injuries</dt><dd>${candidate.injuries.length}</dd></div><div><dt>Shoes</dt><dd>${candidate.shoes.length}</dd></div><div><dt>Race</dt><dd>${esc(candidate.setup.raceName)} · ${esc(candidate.setup.raceDate)}</dd></div></dl><p class="note">A rollback copy of the current data will be kept on this device until the next restore.</p><div class="buttonRow"><button id="confirmRestore" class="primary" type="button">Restore this backup</button><button id="cancelRestore" class="secondary" type="button">Cancel</button></div>`,'Preview backup restore');$('confirmRestore').onclick=()=>{try{localStorage.setItem(BACKUP_KEY,JSON.stringify(state));state=candidate;state.onboardingComplete=true;compactHistoricalActivityStreams();buildPlan();save();closeDialog();input.value='';renderAll();toast('Backup restored. Undo is available in Settings.')}catch(err){toast(err.message||'The backup could not be restored.',true)}};$('cancelRestore').onclick=()=>{input.value='';closeDialog()}}catch(err){input.value='';toast(err.message||'Invalid backup.',true)}};
+$('undoRestoreBtn').onclick=()=>{try{const prior=JSON.parse(localStorage.getItem(BACKUP_KEY)||'null');if(!prior)throw Error('No backup restore is available to undo.');const candidate=normaliseState(prior),check=CORE.validateBackup(candidate,{today:iso(today())});if(!check.valid)throw Error(CORE.firstErrorMessage(check.errors));state=candidate;compactHistoricalActivityStreams();buildPlan();save();localStorage.removeItem(BACKUP_KEY);renderAll();toast('The data from before the restore have been recovered.')}catch(err){toast(err.message||'Restore rollback failed.',true)}};
 let deferred;window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferred=e;$('installBtn').className='install'});$('installBtn').onclick=()=>deferred?.prompt();
 $('pillarCards')?.addEventListener('click',e=>{const card=e.target.closest('.pillarCard');if(!card||e.target.closest('summary'))return;const detail=card.querySelector('.pillarExplain');if(!detail)return;card.classList.toggle('open');detail.open=card.classList.contains('open');card.setAttribute('aria-expanded',String(detail.open))});
 $('pillarCards')?.addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&e.target.classList.contains('pillarCard')){e.preventDefault();e.target.click()}});
@@ -7589,9 +7650,10 @@ if(window.visualViewport){
 
 const brandVersion=document.querySelector('.brand-copy p');if(brandVersion)brandVersion.textContent=`Race-specific adaptive planning · v${CORE.VERSION} · build ${CORE.BUILD}`;
 if('serviceWorker'in navigator&&(location.protocol==='https:'||['localhost','127.0.0.1'].includes(location.hostname)))navigator.serviceWorker.register(`service-worker.js?v=${CORE.BUILD}-rev-sync`,{updateViaCache:'none'}).then(reg=>reg.update()).catch(()=>{});
-migrateAssessmentRuns();
-migrateImportedPower();
-if(reconcilePredictionHistory())save();
+const assessmentRunsMigrated=migrateAssessmentRuns();
+const importedPowerMigrated=migrateImportedPower();
+const compactedHistoricalStreams=compactHistoricalActivityStreams();
+if(assessmentRunsMigrated||importedPowerMigrated||compactedHistoricalStreams||reconcilePredictionHistory())save();
 renderAll();
 initOnboarding();
 console.info(`AI Running Coach v${CORE.VERSION} stable build ${BUILD}`);

@@ -5714,3 +5714,6 @@ body:has(#dashboard.progressPage.active),#mainContent:has(#dashboard.progressPag
 #shoes .shoeRetireTick line,
 #shoes .shoeRaceStartMarker line{stroke:var(--shoe-color)!important}
 #shoes .shoeRaceStartMarker circle{fill:var(--shoe-color)!important;stroke:var(--shoe-color)!important}
+
+/* v14.9.12 compact activity-storage information */
+#settings .settingsAppInfo span{display:block;margin-top:4px;font-size:9px;line-height:1.35;color:var(--muted)}
