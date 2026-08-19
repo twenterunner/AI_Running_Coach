@@ -3370,6 +3370,24 @@ body:has(#dashboard.progressPage.active),#mainContent:has(#dashboard.progressPag
 #injury .rehabCalendarSection{padding:16px;background:var(--card);border:1px solid rgba(136,161,177,.13);border-radius:18px}
 #injury .rehabCalendar{display:grid;gap:7px;margin-top:10px}
 #injury .rehabDay{border:1px solid rgba(136,161,177,.11);border-radius:12px;background:var(--nested);overflow:hidden}
+/* Rehab timeline temporal hierarchy: past / today / future. Status logic is unchanged. */
+#injury .rehabDay.rehabPast{background:linear-gradient(145deg,#121a21,#10171d);border-color:rgba(136,161,177,.16)}
+#injury .rehabDay.rehabPast>summary{background:rgba(8,14,19,.10)}
+#injury .rehabDay.rehabPast .rehabDate{background:#0c1319;border:1px solid rgba(136,161,177,.08)}
+#injury .rehabDay.rehabPast .rehabDate b{color:#81939f}#injury .rehabDay.rehabPast .rehabDate span{color:#b6c2c9}
+#injury .rehabDay.rehabPast .rehabDayTitle strong{color:#c4cfd5}#injury .rehabDay.rehabPast .rehabDayTitle small{color:#748995}
+#injury .rehabDay.rehabPast .checkinBadge,#injury .rehabDay.rehabPast .executionBadge{filter:saturate(.55);opacity:.78}
+#injury .rehabDay.rehabToday{background:linear-gradient(145deg,#0b5862 0%,#0a4552 58%,#0a3542 100%);border-color:rgba(61,214,198,.58);box-shadow:inset 3px 0 0 var(--teal),0 0 0 1px rgba(61,214,198,.06)}
+#injury .rehabDay.rehabToday>summary{background:rgba(3,28,36,.12)}
+#injury .rehabDay.rehabToday .rehabDate{background:rgba(4,27,35,.62);border:1px solid rgba(61,214,198,.22)}
+#injury .rehabDay.rehabToday .rehabDate b{color:var(--teal-2)}#injury .rehabDay.rehabToday .rehabDate span{color:#fff}
+#injury .rehabDay.rehabToday .rehabDayTitle strong{color:#fff}
+#injury .rehabTemporalBadge{display:inline-flex;align-items:center;padding:4px 7px;border-radius:999px;background:rgba(61,214,198,.12);border:1px solid rgba(61,214,198,.28);color:var(--teal-2);font-size:8px;font-weight:900;letter-spacing:.08em}
+#injury .rehabDay.rehabFuture{background:linear-gradient(145deg,#13263b 0%,#102236 58%,#0e1d2e 100%);border-color:rgba(103,167,255,.27)}
+#injury .rehabDay.rehabFuture>summary{background:rgba(16,34,54,.12)}
+#injury .rehabDay.rehabFuture .rehabDate{background:rgba(10,25,42,.74);border:1px solid rgba(103,167,255,.18)}
+#injury .rehabDay.rehabFuture .rehabDate b{color:#8eb9ff}#injury .rehabDay.rehabFuture .rehabDate span{color:#e8f1ff}
+#injury .rehabDay.rehabFuture .rehabDayTitle strong{color:#e7effa}#injury .rehabDay.rehabFuture .rehabDayTitle small{color:#8fa8bf}
 #injury .rehabDay>summary{padding:10px;grid-template-columns:42px 1fr auto;min-height:58px}
 #injury .rehabDate{width:42px;height:42px;border-radius:10px;background:#0b1821;display:grid;place-items:center;align-content:center}
 #injury .rehabDate b{font-size:8px;color:var(--teal-2)}#injury .rehabDate span{font-size:15px;font-weight:850;color:#fff}
@@ -5715,5 +5733,5 @@ body:has(#dashboard.progressPage.active),#mainContent:has(#dashboard.progressPag
 #shoes .shoeRaceStartMarker line{stroke:var(--shoe-color)!important}
 #shoes .shoeRaceStartMarker circle{fill:var(--shoe-color)!important;stroke:var(--shoe-color)!important}
 
-/* v14.9.12 compact activity-storage information */
+/* v14.9.13 compact activity-storage information */
 #settings .settingsAppInfo span{display:block;margin-top:4px;font-size:9px;line-height:1.35;color:var(--muted)}
