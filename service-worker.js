@@ -1,7 +1,7 @@
 // AI Running Coach v14.9.13 · build 40913
 'use strict';
 
-const CACHE = 'arc-v14913-build-40913';
+const CACHE = 'arc-v14913-build-40913-icons-4091301';
 const CACHE_PREFIX = 'arc-v';
 const APP_SHELL = './index.html';
 const ASSETS = [
@@ -9,7 +9,13 @@ const ASSETS = [
   './index.html',
   './styles.css?v=40913',
   './app.js?v=40913',
-  './manifest.webmanifest?v=40913'
+  './manifest.webmanifest?v=40913',
+  './icon-192.png?v=4091301',
+  './icon-512.png?v=4091301',
+  './apple-touch-icon.png?v=4091301',
+  './favicon-32x32.png?v=4091301',
+  './favicon-16x16.png?v=4091301',
+  './favicon.ico?v=4091301'
 ];
 
 self.addEventListener('install', event => {
@@ -51,6 +57,21 @@ self.addEventListener('fetch', event => {
 
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
+
+  const iconAssets = new Set([
+    '/AI_Running_Coach/icon-192.png',
+    '/AI_Running_Coach/icon-512.png',
+    '/AI_Running_Coach/apple-touch-icon.png',
+    '/AI_Running_Coach/favicon-32x32.png',
+    '/AI_Running_Coach/favicon-16x16.png',
+    '/AI_Running_Coach/favicon.ico'
+  ]);
+  if (iconAssets.has(url.pathname)) {
+    const fresh = new URL(request.url);
+    fresh.search = '?v=4091301';
+    event.respondWith(networkFirst(new Request(fresh.toString(), request)));
+    return;
+  }
 
   if (request.mode === 'navigate') {
     event.respondWith(networkFirst(request, APP_SHELL));
