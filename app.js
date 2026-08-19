@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '14.9.6';
-  const BUILD = 40906;
+  const VERSION = '14.9.7';
+  const BUILD = 40907;
   const SCHEMA = 10400;
   const PRIMARY_STORAGE_KEY = 'arc_v10400_web';
   const MIRROR_STORAGE_KEY = 'arc_v10400_mirror';
@@ -3886,7 +3886,7 @@ function progressRecordsHtml(){
  const records=verifiedSessionRecords();
  if(!records.length)return`<article class="panel progressBaseline"><b>Building your distance records</b><p>Your first verified run will start the 1 km, 5 km, 10 km, half-marathon, marathon and furthest-distance records whenever enough recorded distance is available.</p></article>`;
  const order=['1k','5k','10k','half','marathon','furthest'];records.sort((a,b)=>order.indexOf(a.key)-order.indexOf(b.key));
- return`<article class="panel progressRecordsPanel"><div class="panelHead"><div><h3>Your fastest verified performances</h3><p>1 km, 5 km, 10 km, half marathon and marathon use the fastest continuous section found inside any verified run. Furthest distance tracks your longest completed run. Tap a record to inspect its source session.</p></div></div><div class="progressRecordGrid">${records.map(rec=>{const r=rec.run,m=metrics(r),value=rec.key==='furthest'?`${recordDistanceKm(r).toFixed(2)} km`:fmtTime(rec.durationSec),sub=rec.key==='furthest'?`${fmtTime(r.durationSec)} · ${fmtDate(r.date)}`:`${rec.source==='stream'?'Best continuous section':'Whole run'} · ${fmtDate(r.date)}`;return`<details class="progressRecordTile" data-record-run="${esc(r.id)}"><summary><span class="progressRecordIdentity"><small>${esc(rec.label)}</small><strong>${value}</strong><span>${sub}</span></span><span class="progressRecordMark">${uiIcon('trophy')} RECORD</span></summary><div class="progressRecordFoldout">${runSummaryHtml(r)}${runRecordHtml(r)}${shoeEquipmentForRunHtml(r)}${workoutIntelligenceHtml(r)}${runExecutionBreakdownHtml(r)}</div></details>`}).join('')}</div></article>`;
+ return`<article class="panel progressRecordsPanel"><div class="panelHead"><div><h3>Your fastest verified performances</h3><p>1 km, 5 km, 10 km, half marathon and marathon use the fastest continuous section found inside any verified run. Furthest distance tracks your longest completed run. Tap a record to inspect its source session.</p></div></div><div class="progressRecordGrid">${records.map(rec=>{const r=rec.run,m=metrics(r),value=rec.key==='furthest'?`${recordDistanceKm(r).toFixed(2)} km`:fmtTime(rec.durationSec),sub=rec.key==='furthest'?`${fmtTime(r.durationSec)} · ${fmtDate(r.date)}`:`${rec.source==='stream'?'Best continuous section':'Whole run'} · ${fmtDate(r.date)}`;return`<details class="progressRecordTile" data-record-run="${esc(r.id)}"><summary><span class="progressRecordIdentity"><small>${esc(rec.label)}</small><strong>${value}</strong><span>${sub}</span></span><span class="progressRecordMark">${uiIcon('trophy')} RECORD</span></summary><div class="progressRecordFoldout">${runSummaryHtml(r)}${shoeEquipmentForRunHtml(r)}${workoutIntelligenceHtml(r)}${runExecutionBreakdownHtml(r)}</div></details>`}).join('')}</div></article>`;
 }
 function renderRuns(){
  if($('logHero'))$('logHero').innerHTML=logHeroHtml();
@@ -5625,7 +5625,78 @@ upsertCurrentAsicsProfile('NOOSA TRI',16,{supportType:'neutral',footMechanics:['
 upsertCurrentAsicsProfile('METASPEED SKY',4,{supportType:'neutral',footMechanics:['neutral','supination','unknown'],currentName:'METASPEED SKY TOKYO',roles:['race','tempo','intervals'],cushioning:4,responsiveness:5,stability:2,protection:3,grip:5,efficiency:5,durability:2,comfort:3,weightClass:'very-light',plated:true,plateType:'carbon',preferredDistanceMinKm:5,preferredDistanceMaxKm:42.2,typicalReplacementLowKm:300,typicalReplacementHighKm:500,manufacturerPositioning:'Current carbon-plated ASICS METASPEED SKY TOKYO race shoe.',evidenceSource:'Offline catalogue snapshot based on the current ASICS METASPEED portfolio; practical workout/race suitability is app-derived.',profileConfidence:'high'});
 upsertCurrentAsicsProfile('METASPEED EDGE',4,{supportType:'neutral',footMechanics:['neutral','supination','unknown'],currentName:'METASPEED EDGE TOKYO',roles:['race','tempo','intervals'],cushioning:4,responsiveness:5,stability:2,protection:3,grip:5,efficiency:5,durability:2,comfort:3,weightClass:'very-light',plated:true,plateType:'carbon',preferredDistanceMinKm:5,preferredDistanceMaxKm:42.2,typicalReplacementLowKm:300,typicalReplacementHighKm:500,manufacturerPositioning:'Current carbon-plated ASICS METASPEED EDGE TOKYO race shoe.',evidenceSource:'Offline catalogue snapshot based on the current ASICS METASPEED portfolio; practical workout/race suitability is app-derived.',profileConfidence:'high'});
 upsertCurrentAsicsProfile('METASPEED RAY',1,{supportType:'neutral',footMechanics:['neutral','supination','unknown'],currentName:'METASPEED RAY',roles:['race','intervals'],cushioning:3,responsiveness:5,stability:2,protection:2,grip:5,efficiency:5,durability:1,comfort:2,weightClass:'ultra-light',plated:true,plateType:'carbon',preferredDistanceMinKm:5,preferredDistanceMaxKm:21.1,typicalReplacementLowKm:220,typicalReplacementHighKm:400,manufacturerPositioning:'Current ultra-light ASICS METASPEED race model for highly performance-oriented runners.',evidenceSource:'Offline catalogue snapshot based on the current ASICS METASPEED portfolio; practical workout/race suitability is app-derived.',profileConfidence:'high'});
-const OFFLINE_ASICS_CATALOGUE_VERSION='2026-08-16';
+// RunRepeat lab/review calibration snapshot (2026-08-19).
+// Ratings remain normalized 1–5 inputs to the existing session-suitability engine.
+// Direct version-specific RunRepeat lab evidence is used where available; older catalogue
+// entries are conservatively calibrated from their RunRepeat review/series evidence rather
+// than pretending newer laboratory measurements apply unchanged to an older shoe.
+const RUNREPEAT_CALIBRATION_DATE='2026-08-19';
+function applyRunRepeatCalibration(profile){
+ const fam=profile.family,v=Number(profile.version)||0;
+ const patch={runRepeatCalibrated:true,runRepeatCalibrationDate:RUNREPEAT_CALIBRATION_DATE};
+ let evidence='RunRepeat review/lab evidence incorporated into app-derived suitability ratings.';
+ if(fam==='GEL-NIMBUS'){
+  Object.assign(patch,{cushioning:5,stability:4,protection:5,comfort:5,efficiency:v>=28?2:v>=26?2:3,responsiveness:v===25?3:2,grip:v>=28?5:v>=27?4:3,durability:4});
+  evidence=v===28?'RunRepeat Nimbus 28: high comfort/protection and wet traction, but weak energy return; easy/recovery bias strengthened.':v===27?'RunRepeat Nimbus 27: stable, shock-absorbing, comfort-focused and limited pace versatility.':'RunRepeat Nimbus-series/version review evidence: maximum-cushion comfort and protection, with conservative speed/efficiency scoring.';
+ }else if(fam==='GEL-CUMULUS'){
+  Object.assign(patch,{cushioning:4,stability:4,protection:4,comfort:v>=28?5:4,responsiveness:v>=28?2:3,efficiency:v>=28?2:3,grip:3,durability:v>=28?3:4});
+  evidence=v===28?'RunRepeat Cumulus 28: plush, smooth and stable with low energy return and outsole-durability concern.':'RunRepeat Cumulus-series/version evidence: reliable cushioned daily trainer; speed capability kept moderate.';
+ }else if(fam==='NOVABLAST'){
+  Object.assign(patch,{cushioning:4,protection:4,comfort:4,responsiveness:v>=5?4:4,efficiency:v>=5?4:3,stability:v===6?3:v>=5?4:3,grip:v>=6?5:v>=5?3:3,durability:v>=6?5:4});
+  evidence=v===6?'RunRepeat Novablast 6: lighter/agile, strong durability and ASICSGRIP, stable-neutral but narrower; energetic rather than elite energy return.':v===5?'RunRepeat Novablast 5: lighter, softer, bouncier and surprisingly stable; traction remains its weak point.':v===4?'RunRepeat Novablast 4: strong daily versatility with less performance than later versions.':'RunRepeat Novablast-series evidence applied conservatively to this legacy version.';
+ }else if(fam==='SUPERBLAST'){
+  Object.assign(patch,{cushioning:5,responsiveness:5,stability:4,protection:5,efficiency:5,comfort:4,grip:v>=2?5:4,durability:4});
+  evidence=v===3?'RunRepeat Superblast 3: elite versatility, protection, stability and traction; top-tier long/quality trainer.':v===2?'RunRepeat Superblast 2: exceptional speed/cushioning versatility, rigid-stable platform and improved outsole.':'RunRepeat Superblast: very light, remarkably stable, durable and capable across distances/paces.';
+ }else if(fam==='MEGABLAST'){
+  Object.assign(patch,{cushioning:5,responsiveness:5,stability:4,protection:5,grip:5,efficiency:5,durability:4,comfort:4,roles:['daily','easy','steady','long','progression','tempo','threshold','intervals','race']});
+  evidence='RunRepeat Megablast: outstanding energy return, exceptional impact protection, low weight, durable/grippy rubber and all-pace versatility.';
+ }else if(fam==='SONICBLAST'){
+  Object.assign(patch,{cushioning:5,responsiveness:5,stability:4,protection:5,grip:4,efficiency:4,durability:4,comfort:3,roles:['daily','steady','long','progression','tempo','threshold','intervals']});
+  evidence='RunRepeat Sonicblast: very high shock absorption, plated long-run/extended-interval strength and agile tempo bias; energy return below Megablast.';
+ }else if(fam==='MAGIC SPEED'){
+  Object.assign(patch,{cushioning:v>=5?4:3,protection:v>=5?4:3,responsiveness:v>=5?4:v===4?3:5,efficiency:v>=5?4:v===4?3:4,stability:v===3?4:3,grip:4,durability:v===4?4:3,comfort:3});
+  evidence=v===5?'RunRepeat Magic Speed 5: good protection and decent energy return, agile/direct geometry; better workout tool than pure racer.':v===4?'RunRepeat Magic Speed 4: durable but disappointing measured energy return; general-purpose performance score reduced.':v===3?'RunRepeat Magic Speed 3: very rigid carbon platform gives a peppy, stable fast-workout ride but can be harsh long.':'RunRepeat Magic Speed-series evidence applied conservatively to this legacy version.';
+ }else if(fam==='METASPEED SKY'){
+  Object.assign(patch,{cushioning:4,responsiveness:5,efficiency:5,grip:5,stability:2,protection:v>=4?4:3,durability:2,comfort:3});
+  evidence=v>=4?'RunRepeat Metaspeed Sky Tokyo: ~78% measured energy return, elite race response with intentionally low stability.':'RunRepeat Metaspeed Sky-series race evidence applied conservatively to this earlier version.';
+ }else if(fam==='METASPEED EDGE'){
+  Object.assign(patch,{cushioning:4,responsiveness:5,efficiency:5,grip:5,stability:v>=4?3:2,protection:v>=4?4:3,durability:2,comfort:3});
+  evidence=v>=4?'RunRepeat Metaspeed Edge Tokyo: strong shock absorption and elite racing response with a more structured/stable heel than Sky.':'RunRepeat Metaspeed Edge-series race evidence applied conservatively to this earlier version.';
+ }else if(fam==='METASPEED RAY'){
+  Object.assign(patch,{cushioning:4,responsiveness:5,efficiency:5,grip:5,stability:1,protection:3,durability:1,comfort:3,preferredDistanceMaxKm:21.1});
+  evidence='RunRepeat Metaspeed Ray: extreme low weight and energy return with stability pushed to the edge; race-only specialization strengthened.';
+ }else if(fam==='NOOSA TRI'){
+  Object.assign(patch,{cushioning:3,responsiveness:4,stability:3,protection:3,grip:v>=16?5:4,efficiency:4,durability:v>=16?3:4,comfort:3});
+  evidence=v===16?'RunRepeat Noosa Tri 16: lightweight, exceptional grip and versatile speedwork/daily use, but limited energy return and upper longevity.':v===15?'RunRepeat Noosa Tri 15: stable, versatile speedster suited to training and racing.':v===14?'RunRepeat Noosa Tri 14: light, nimble, comfortable and capable across paces, strongest at shorter work.':'RunRepeat Noosa Tri-series evidence conservatively applied to this version.';
+ }else if(fam==='GEL-PULSE'){
+  Object.assign(patch,{cushioning:v>=15?4:3,responsiveness:2,stability:5,protection:4,grip:v>=16?4:v>=15?2:3,efficiency:2,durability:4,comfort:4});
+  evidence=v===16?'RunRepeat Gel Pulse 16: lightweight, stable platform and grip-focused outsole; daily/easy role strengthened.':v===15?'RunRepeat Gel Pulse 15: remarkable stability and daily value, but weak tempo/race suitability and grip.':'RunRepeat Gel Pulse-series evidence conservatively applied to this legacy version.';
+ }else if(fam==='EVORIDE'){
+  Object.assign(patch,{cushioning:3,responsiveness:4,stability:3,protection:3,grip:3,efficiency:4,durability:4,comfort:3});
+  evidence='RunRepeat ASICS catalogue/series evidence plus legacy EvoRide review characteristics: lightweight, rolling efficiency-oriented trainer; calibration kept conservative where no current RunRepeat lab page exists.';
+ }else if(fam==='GLIDERIDE'){
+  Object.assign(patch,{cushioning:4,responsiveness:3,stability:4,protection:5,grip:3,efficiency:4,durability:4,comfort:4});
+  evidence='RunRepeat ASICS catalogue/series evidence: GlideRide is calibrated as a protective, stable, rocker-driven efficiency trainer rather than a speed shoe; legacy version inference is conservative.';
+ }else if(fam==='DYNABLAST'){
+  Object.assign(patch,{cushioning:v>=5?5:4,responsiveness:v>=5?2:3,stability:4,protection:v>=5?5:4,grip:v>=4?4:3,efficiency:v>=5?2:3,durability:4,comfort:4});
+  evidence=v===5?'RunRepeat Dynablast 5: outstanding shock absorption but moderate-low energy return; protection raised and speed/efficiency reduced.':v===4?'RunRepeat Dynablast 4: versatile, comfortable, fairly stable and reliably grippy daily trainer.':'RunRepeat Dynablast-series evidence conservatively applied to this legacy version.';
+ }else if(fam==='GEL-KAYANO'){
+  Object.assign(patch,{cushioning:5,responsiveness:3,stability:5,protection:5,grip:5,efficiency:3,durability:5,comfort:5});
+  evidence='RunRepeat Gel Kayano 33: softer dual-density ride, dependable grip and very high guidance/stability; daily/recovery/long role retained over speed.';
+ }else if(fam==='GT-2000'){
+  Object.assign(patch,{cushioning:4,responsiveness:3,stability:5,protection:4,grip:4,efficiency:3,durability:5,comfort:4});
+  evidence='RunRepeat GT 2000 14: outstanding durability, dependable traction and non-intrusive stability, but not a truly energetic ride.';
+ }else if(fam==='GT-1000'){
+  Object.assign(patch,{cushioning:3,responsiveness:2,stability:5,protection:4,grip:4,efficiency:2,durability:5,comfort:4});
+  evidence='RunRepeat GT 1000 14: dependable, steady supportive daily ride; stability/durability emphasized over bounce.';
+ }
+ const calibrated={...profile,...patch,evidenceSource:`${profile.evidenceSource||''} RunRepeat calibration: ${evidence}`.trim()};
+ calibrated.workoutSuitability={};SHOE_WORKOUT_KEYS.forEach(k=>calibrated.workoutSuitability[k]=shoeProfileWorkoutSuitability(calibrated,k));
+ return calibrated;
+}
+for(let i=0;i<ASICS_SHOE_PROFILES.length;i++)ASICS_SHOE_PROFILES[i]=applyRunRepeatCalibration(ASICS_SHOE_PROFILES[i]);
+
+const OFFLINE_ASICS_CATALOGUE_VERSION='2026-08-19-runrepeat';
 
 [['NOVABLAST',4],['NOVABLAST',5],['NOVABLAST',6],['GEL-NIMBUS',26],['GEL-NIMBUS',27],['GEL-NIMBUS',28]].forEach(([family,version])=>{const b=ASICS_SHOE_PROFILES.find(x=>x.family===family&&x.version===version);if(b)ASICS_SHOE_PROFILES.push({...b,variant:'TR',surfaces:['road','mixed'],grip:5,manufacturerPositioning:b.manufacturerPositioning+' TR variant adds mixed-surface/outsole capability.'})});
 function normalizeShoeFamily(text){return String(text||'').toUpperCase().replace(/[®™]/g,'').replace(/\s+/g,' ').trim().replace(/^ASICS\s+/,'')}

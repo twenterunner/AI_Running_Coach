@@ -5578,7 +5578,7 @@ body:has(#dashboard.progressPage.active),#mainContent:has(#dashboard.progressPag
 }
 
 
-/* v14.9.6 — record-card placement, record typography, compact Progress foldout, flush mobile dock. */
+/* v14.9.7 — record-card placement, record typography, compact Progress foldout, flush mobile dock. */
 /* Recent history: identity -> record -> workout score, all on the same top row. */
 #runs .logRunTop{
   grid-template-columns:46px minmax(0,1fr) auto auto!important;
