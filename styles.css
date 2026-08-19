@@ -5675,3 +5675,42 @@ body:has(#dashboard.progressPage.active),#mainContent:has(#dashboard.progressPag
     bottom:calc(var(--nav-bar-height) + env(safe-area-inset-bottom) + 6px)!important;
   }
 }
+
+/* v14.9.8 — lifecycle chart colour identity lock
+   Physical-pair colour is authoritative. Line style conveys only actual vs forecast. */
+#shoes .shoeActualLine{
+  stroke:var(--shoe-color)!important;
+  stroke-dasharray:none!important;
+  stroke-width:3.2!important;
+  opacity:1!important;
+}
+#shoes .shoePlannedLine,
+#shoes .shoeNewPairLine,
+#shoes .shoeRaceStrategyLine{
+  stroke:var(--shoe-color)!important;
+  stroke-dasharray:10 8!important;
+  stroke-width:3.2!important;
+  stroke-linecap:round!important;
+  stroke-linejoin:round!important;
+  opacity:1!important;
+}
+#shoes .shoeLegendSwatch,
+#shoes .shoeLegendSwatch.race{
+  background:var(--shoe-color)!important;
+  border:0!important;
+  box-shadow:none!important;
+  height:4px!important;
+}
+#shoes .shoeLegendSwatch.dotted{
+  height:0!important;
+  background:none!important;
+  border:0!important;
+  border-top:4px dashed var(--shoe-color)!important;
+}
+#shoes .shoeBuyTick path{fill:var(--shoe-color)!important;stroke:#08202b!important}
+#shoes .shoeBuyTick text,
+#shoes .shoeRetireTick text,
+#shoes .shoeRaceStartMarker text{fill:var(--shoe-color)!important}
+#shoes .shoeRetireTick line,
+#shoes .shoeRaceStartMarker line{stroke:var(--shoe-color)!important}
+#shoes .shoeRaceStartMarker circle{fill:var(--shoe-color)!important;stroke:var(--shoe-color)!important}
