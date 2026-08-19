@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '14.9.10';
-  const BUILD = 40910;
+  const VERSION = '14.9.11';
+  const BUILD = 40911;
   const SCHEMA = 10400;
   const PRIMARY_STORAGE_KEY = 'arc_v10400_web';
   const MIRROR_STORAGE_KEY = 'arc_v10400_mirror';
@@ -7525,12 +7525,19 @@ function validateBackup(obj){return obj&&typeof obj==='object'&&obj.setup&&Array
 $('saveSettings').onclick=()=>{let candidate={...state.setup};document.querySelectorAll('[data-setting]').forEach(el=>{let k=el.dataset.setting,t=el.dataset.type,v=el.value;if(t==='number')v=Number(v);if(t==='time')v=parseTime(v);if(t==='percent')v=Number(v)/100;candidate[k]=v});let errors=validateSetup(candidate);if(errors.length)return toast(errors[0],true);let selectedDays=[...document.querySelectorAll('[data-day]')].filter(el=>el.checked).length;if(selectedDays<1)return toast('Select at least one training day.',true);const baselineKeys=['planStart','raceDistance','targetTime','testDistance','testTime','currentWeekly','currentLongest','maxWeekly','peakLong'];const baselineChanged=baselineKeys.some(k=>String(candidate[k])!==String(state.setup[k]));state.setup=candidate;if(baselineChanged){state.programStartPrediction=initialProgrammePrediction(candidate);state.predictionHistory=[];}document.querySelectorAll('[data-day]').forEach(el=>state.days[Number(el.dataset.day)][1]=el.checked);let longRadio=document.querySelector('[data-long-day]:checked'),longIdx=longRadio?Number(longRadio.dataset.longDay):null;if(longIdx==null||!state.days[longIdx]?.[1])return toast('Select one enabled running day as the long-run day.',true);state.days.forEach((d,i)=>d[2]=i===longIdx?'Long run':'Adaptive');buildPlan();state.weekView=currentWeek();save();renderAll();toast('Settings saved. Training frequency and race outlook and preparation model were recalculated; future workouts rebuilt.')};
 function readSettingsDraft(){const candidate={...state.setup};document.querySelectorAll('[data-setting]').forEach(el=>{let value=el.value;const type=el.dataset.type;if(type==='number')value=el.value.trim()===''?null:Number(value);if(type==='time')value=parseTime(value);if(type==='percent')value=el.value.trim()===''?null:Number(value)/100;candidate[el.dataset.setting]=value});const longRadio=document.querySelector('[data-long-day]:checked'),longIdx=longRadio?Number(longRadio.dataset.longDay):null;const days=state.days.map((day,index)=>[day[0],Boolean(document.querySelector(`[data-day="${index}"]`)?.checked),index===longIdx?'Long run':day[2]==='Long run'?'Adaptive':day[2]]);return{candidate,days}}
 function applySettingsDraft(candidate,days){
- localStorage.setItem(UNDO_KEY,JSON.stringify(state));
  const baselineKeys=['planStart','raceDistance','targetTime','testDistance','testTime','currentWeekly','currentLongest','maxWeekly','peakLong'];
  const baselineChanged=baselineKeys.some(key=>String(candidate[key])!==String(state.setup[key]));
  const trainingKeys=['planStart','raceDate','raceName','raceDistance','targetTime','testDistance','testTime','currentWeekly','currentLongest','thresholdHr','criticalPower','bodyWeight','maxWeekly','growth','peakLong','taperDays'];
  const trainingChanged=trainingKeys.some(key=>String(candidate[key])!==String(state.setup[key]))||JSON.stringify(days)!==JSON.stringify(state.days);
  const shoeContextChanged=String(candidate.footMechanics||'unknown')!==String(state.setup?.footMechanics||'unknown');
+ // A shoe-context-only edit must not duplicate the full app state. Large FIT/CSV streams
+ // can put localStorage close to quota; the previous unconditional UNDO snapshot could
+ // throw QuotaExceededError before the setting was saved or the dialog could close.
+ // Keep the full rollback snapshot only for an actual training-plan rebuild.
+ if(trainingChanged){
+  try{localStorage.setItem(UNDO_KEY,JSON.stringify(state))}
+  catch(err){recordDiagnostic('Settings undo snapshot unavailable',err);localStorage.removeItem(UNDO_KEY)}
+ }
  state.setup={...candidate,raceName:CORE.cleanText(candidate.raceName,100).trim()||'Goal race',footMechanics:candidate.footMechanics||'unknown'};
  state.days=days;
  if(baselineChanged){state.programStartPrediction=initialProgrammePrediction(state.setup);state.predictionHistory=[]}
