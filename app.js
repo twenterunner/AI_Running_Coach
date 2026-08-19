@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '14.9.2';
-  const BUILD = 40902;
+  const VERSION = '14.9.3';
+  const BUILD = 40903;
   const SCHEMA = 10400;
   const PRIMARY_STORAGE_KEY = 'arc_v10400_web';
   const MIRROR_STORAGE_KEY = 'arc_v10400_mirror';
@@ -2484,6 +2484,7 @@ function uiIcon(kind){
   long:'<path d="M12 3a9 9 0 1 0 9 9"/><path d="M12 7v5l4 2"/><path d="M18 4h3v3"/>',
   recovery:'<path d="M5 12a7 7 0 1 0 2-5"/><path d="M5 4v5h5"/>',
   race:'<path d="M5 21V3M5 4h12l-3 4 3 4H5"/>',
+  trophy:'<path d="M8 4h8v4c0 3-1.8 5-4 5s-4-2-4-5V4z"/><path d="M8 6H5v2c0 2 1.2 3 3 3M16 6h3v2c0 2-1.2 3-3 3M12 13v4M8 20h8M10 17h4"/>',
   rest:'<path d="M15.5 4.5a7.5 7.5 0 1 0 4 13.8 7 7 0 0 1-4-13.8z"/><path d="M15 8h4l-4 4h4M18 13h3l-3 3h3"/>',
   pace:'<path d="M4 17l5-5 4 3 7-8"/><path d="M15 7h5v5"/>',
   load:'<path d="M4 18h16M6 18v-4M11 18V9M16 18V5"/>',
@@ -3839,7 +3840,7 @@ function sessionRecordInfo(run){
  const signature=recordSessionSignature(run);if(!signature)return null;
  const group=completedRuns().filter(r=>r.id!==run.id&&Number(r.durationSec)>0&&recordSessionSignature(r)===signature).slice().sort((a,b)=>String(a.date).localeCompare(String(b.date))||String(a.id).localeCompare(String(b.id)));
  const prior=group.filter(r=>String(r.date)<=String(run.date));
- if(!prior.length)return{signature,label:recordSessionLabel(run),isRecord:false,isFirst:true,previous:null,best:run,groupSize:1};
+ if(!prior.length)return{signature,label:recordSessionLabel(run),isRecord:true,isFirst:true,previous:null,best:run,groupSize:1,improvementSec:0};
  const previous=prior.slice().sort((a,b)=>Number(a.durationSec)-Number(b.durationSec))[0];
  const isRecord=Number(run.durationSec)<Number(previous.durationSec)-0.5;
  const all=[...group,run].sort((a,b)=>Number(a.durationSec)-Number(b.durationSec));
@@ -3848,7 +3849,7 @@ function sessionRecordInfo(run){
 function verifiedSessionRecords(){
  const groups=new Map();
  completedRuns().filter(r=>Number(r.durationSec)>0&&Number(r.distanceKm)>0).forEach(r=>{const key=recordSessionSignature(r);if(!key)return;const arr=groups.get(key)||[];arr.push(r);groups.set(key,arr)});
- return [...groups.values()].filter(rows=>rows.length>=2).map(rows=>{
+ return [...groups.values()].map(rows=>{
    const best=rows.slice().sort((a,b)=>Number(a.durationSec)-Number(b.durationSec)||String(b.date).localeCompare(String(a.date)))[0];
    const ordered=rows.slice().sort((a,b)=>String(a.date).localeCompare(String(b.date))||String(a.id).localeCompare(String(b.id))),idx=ordered.findIndex(r=>r.id===best.id),previousRows=idx>0?ordered.slice(0,idx):ordered.filter(r=>r.id!==best.id),previous=previousRows.length?previousRows.slice().sort((a,b)=>Number(a.durationSec)-Number(b.durationSec))[0]:null;
    return{signature:recordSessionSignature(best),label:recordSessionLabel(best),best,previous,count:rows.length,improvementSec:previous?Math.max(0,Number(previous.durationSec)-Number(best.durationSec)):0};
@@ -3857,13 +3858,13 @@ function verifiedSessionRecords(){
 function runRecordHtml(run,{compact=false}={}){
  const info=sessionRecordInfo(run);if(!info?.isRecord)return'';
  const prior=info.previous?fmtTime(info.previous.durationSec):'—',gain=Number(info.improvementSec)||0;
- if(compact)return`<span class="logRecordChip">${uiIcon('race')}<b>NEW RECORD</b><span>${esc(info.label)} · ${fmtTime(run.durationSec)}${gain>0?` · ${fmtTime(gain)} faster`:''}</span></span>`;
- return`<section class="runRecordCallout uiLevel2"><div class="runRecordHead"><span>${uiIcon('race')}</span><div><small>NEW VERIFIED DISTANCE RECORD</small><h3>${esc(info.label)}</h3></div></div><div class="runRecordMetrics"><div><small>NEW RECORD</small><strong>${fmtTime(run.durationSec)}</strong></div><div><small>PREVIOUS BEST</small><strong>${prior}</strong></div><div><small>IMPROVEMENT</small><strong>${gain>0?fmtTime(gain):'—'}</strong></div></div><p>Compared with completed runs at the same recorded distance, regardless of run type.</p></section>`;
+ if(compact)return`<span class="logRecordChip">${uiIcon('trophy')}<b>${info.isFirst?'DISTANCE RECORD':'NEW RECORD'}</b><span>${esc(info.label)} · ${fmtTime(run.durationSec)}${gain>0?` · ${fmtTime(gain)} faster`:''}</span></span>`;
+ return`<section class="runRecordCallout uiLevel2"><div class="runRecordHead"><span>${uiIcon('trophy')}</span><div><small>${info.isFirst?'FIRST VERIFIED DISTANCE RECORD':'NEW VERIFIED DISTANCE RECORD'}</small><h3>${esc(info.label)}</h3></div></div><div class="runRecordMetrics"><div><small>${info.isFirst?'RECORD TIME':'NEW RECORD'}</small><strong>${fmtTime(run.durationSec)}</strong></div><div><small>PREVIOUS BEST</small><strong>${prior}</strong></div><div><small>IMPROVEMENT</small><strong>${gain>0?fmtTime(gain):'—'}</strong></div></div><p>${info.isFirst?'This is the first verified performance recorded at this distance and therefore establishes the initial record.':'Compared with completed runs at the same recorded distance, regardless of run type.'}</p></section>`;
 }
 function progressRecordsHtml(){
  const records=verifiedSessionRecords();
- if(!records.length)return`<article class="panel progressBaseline"><b>Building your distance records</b><p>Once the same distance has been completed at least twice, the fastest verified performance will appear here.</p></article>`;
- return`<article class="panel progressRecordsPanel"><div class="panelHead"><div><h3>Your fastest verified performances</h3><p>Tap a record to inspect the session that produced it.</p></div></div><div class="progressRecordGrid">${records.map((rec,i)=>{const r=rec.best,m=metrics(r);return`<details class="progressRecordTile" data-record-run="${esc(r.id)}"><summary><span class="progressRecordIdentity"><small>${esc(rec.label)}</small><strong>${fmtTime(r.durationSec)}</strong><span>${pace(m.pace)} · ${fmtDate(r.date)} · ${rec.count} runs at this distance</span></span><span class="progressRecordMark">RECORD</span></summary><div class="progressRecordFoldout">${runSummaryHtml(r)}${runRecordHtml(r)}${shoeEquipmentForRunHtml(r)}${workoutIntelligenceHtml(r)}${runExecutionBreakdownHtml(r)}</div></details>`}).join('')}</div></article>`;
+ if(!records.length)return`<article class="panel progressBaseline"><b>Building your distance records</b><p>Your first verified completed run will establish the first distance record here.</p></article>`;
+ return`<article class="panel progressRecordsPanel"><div class="panelHead"><div><h3>Your fastest verified performances</h3><p>Tap a record to inspect the session that produced it.</p></div></div><div class="progressRecordGrid">${records.map((rec,i)=>{const r=rec.best,m=metrics(r);return`<details class="progressRecordTile" data-record-run="${esc(r.id)}"><summary><span class="progressRecordIdentity"><small>${esc(rec.label)}</small><strong>${fmtTime(r.durationSec)}</strong><span>${pace(m.pace)} · ${fmtDate(r.date)} · ${rec.count} ${rec.count===1?'run':'runs'} at this distance</span></span><span class="progressRecordMark">RECORD</span></summary><div class="progressRecordFoldout">${runSummaryHtml(r)}${runRecordHtml(r)}${shoeEquipmentForRunHtml(r)}${workoutIntelligenceHtml(r)}${runExecutionBreakdownHtml(r)}</div></details>`}).join('')}</div></article>`;
 }
 function renderRuns(){
  if($('logHero'))$('logHero').innerHTML=logHeroHtml();
