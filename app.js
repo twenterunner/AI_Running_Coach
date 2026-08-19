@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '14.9.3';
-  const BUILD = 40903;
+  const VERSION = '14.9.5';
+  const BUILD = 40905;
   const SCHEMA = 10400;
   const PRIMARY_STORAGE_KEY = 'arc_v10400_web';
   const MIRROR_STORAGE_KEY = 'arc_v10400_mirror';
@@ -3006,7 +3006,7 @@ function summariseCSV(rows){
    rpe:null,pain:null,recovery:null,temperature:null,notes:'Imported from Stryd CSV',
    drift:null,powerDrift:null,paceDrift:null,
    candidateDrift:analysis?.drift??null,candidatePowerDrift:analysis?.powerDrift??null,candidatePaceDrift:analysis?.paceDrift??null,
-   candidateStreamEvidence:analysis,streamEvidence:null,sourceFormat:'csv-timeseries'
+   candidateStreamEvidence:analysis,streamEvidence:null,sourceFormat:'csv-timeseries',fitRecords:records.map(r=>({t:r.t,hr:r.hr,speed:r.speed,power:r.power,distance:r.distance}))
  };
 }
 
@@ -3812,59 +3812,81 @@ function runExecutionBreakdownHtml(r){
  return`<details id="executionBreakdownFoldout" class="runExecutionBreakdown executionFoldout uiLevel3"><summary><span>Execution breakdown</span><small>Targets, reliability and component weighting</small></summary><div class="executionFoldoutBody">${runExecutionBreakdownBodyHtml(r)}</div></details>`;
 }
 function recordSessionPlan(run){return run?.planId?(state.plan||[]).find(p=>p.id===run.planId)||null:null}
-function recordDistanceKm(run){
- const distance=Number(run?.distanceKm);
- return Number.isFinite(distance)&&distance>0?distance:null;
+const DISTANCE_RECORD_CATEGORIES=[
+ {key:'1k',label:'1 km',km:1},
+ {key:'5k',label:'5 km',km:5},
+ {key:'10k',label:'10 km',km:10},
+ {key:'half',label:'Half marathon',km:21.0975},
+ {key:'marathon',label:'Marathon',km:42.195}
+];
+function recordDistanceKm(run){const d=Number(run?.distanceKm);return Number.isFinite(d)&&d>0?d:null}
+function recordStreamPoints(run){
+ const rows=(run?.fitRecords||[]).map(r=>({t:Number(r.t),d:Number(r.distance)})).filter(r=>Number.isFinite(r.t)&&Number.isFinite(r.d)).sort((a,b)=>a.t-b.t);
+ if(rows.length<2)return[];
+ const d0=rows[0].d,t0=rows[0].t;let last=-Infinity;
+ return rows.map(r=>({t:r.t-t0,d:Math.max(0,(r.d-d0)/1000)})).filter(r=>{if(r.d+1e-6<last)return false;last=r.d;return true});
 }
-function recordDistanceBucketKm(run){
- const distance=recordDistanceKm(run);
- return distance==null?null:Math.round(distance*10)/10;
+function recordTimeAtDistance(points,target){
+ if(!points.length||target<points[0].d-1e-9||target>points.at(-1).d+1e-9)return null;
+ let lo=0,hi=points.length-1;
+ while(lo<hi){const mid=(lo+hi)>>1;if(points[mid].d<target)lo=mid+1;else hi=mid}
+ const b=points[lo];if(Math.abs(b.d-target)<1e-9||lo===0)return b.t;
+ const a=points[lo-1],span=b.d-a.d;if(!(span>0))return b.t;
+ return a.t+(target-a.d)/span*(b.t-a.t);
 }
-function recordSessionSignature(run){
- const distance=recordDistanceBucketKm(run);
- // Distance records are deliberately independent of workout/run type. A 5.0 km
- // Race, Tempo, Easy or Fitness assessment all compete for the same 5.0 km record.
- // Recorded distance is used rather than prescribed distance so an incomplete run
- // cannot inherit the nominal distance of its planned workout.
- return distance==null?'':`distance|${distance.toFixed(1)}`;
+function fastestContinuousSegment(run,targetKm){
+ const total=recordDistanceKm(run);if(!(total>=targetKm-0.01))return null;
+ const points=recordStreamPoints(run);
+ if(points.length>=2&&points.at(-1).d>=targetKm-0.01){
+   const maxD=points.at(-1).d,candidates=new Set([0,Math.max(0,maxD-targetKm)]);
+   points.forEach(p=>{if(p.d>=0&&p.d+targetKm<=maxD+1e-9)candidates.add(p.d);const s=p.d-targetKm;if(s>=0)candidates.add(s)});
+   let best=null;
+   for(const sd of candidates){const ed=sd+targetKm;if(ed>maxD+1e-9)continue;const st=recordTimeAtDistance(points,sd),et=recordTimeAtDistance(points,ed);if(!Number.isFinite(st)||!Number.isFinite(et)||!(et>st))continue;const sec=et-st;if(!best||sec<best.durationSec)best={durationSec:sec,startKm:sd,endKm:ed,source:'stream'};}
+   if(best)return best;
+ }
+ // Whole-run fallback is only valid when the completed distance itself matches the standard distance closely.
+ const tolerance=Math.max(.03,targetKm*.006);
+ if(Number(run?.durationSec)>0&&Math.abs(total-targetKm)<=tolerance)return{durationSec:Number(run.durationSec),startKm:0,endKm:total,source:'whole-run'};
+ return null;
 }
-function recordSessionLabel(run){
- const distance=recordDistanceBucketKm(run);
- if(distance==null)return'Run';
- const standards=[[42.2,'Marathon'],[21.1,'Half marathon'],[10,'10 km'],[5,'5 km']];
- const standard=standards.find(([d])=>Math.abs(distance-d)<0.051);
- return standard?standard[1]:`${distance.toFixed(1)} km`;
+function distanceRecordPerformancesForRun(run){
+ if(!run||!(Number(run.durationSec)>0)||!(recordDistanceKm(run)>0))return[];
+ return DISTANCE_RECORD_CATEGORIES.map(cat=>{const seg=fastestContinuousSegment(run,cat.km);return seg?{...cat,run,durationSec:seg.durationSec,startKm:seg.startKm,endKm:seg.endKm,source:seg.source}:null}).filter(Boolean);
 }
-function sessionRecordInfo(run){
- if(!run||!(Number(run.durationSec)>0)||!(Number(run.distanceKm)>0))return null;
- const signature=recordSessionSignature(run);if(!signature)return null;
- const group=completedRuns().filter(r=>r.id!==run.id&&Number(r.durationSec)>0&&recordSessionSignature(r)===signature).slice().sort((a,b)=>String(a.date).localeCompare(String(b.date))||String(a.id).localeCompare(String(b.id)));
- const prior=group.filter(r=>String(r.date)<=String(run.date));
- if(!prior.length)return{signature,label:recordSessionLabel(run),isRecord:true,isFirst:true,previous:null,best:run,groupSize:1,improvementSec:0};
- const previous=prior.slice().sort((a,b)=>Number(a.durationSec)-Number(b.durationSec))[0];
- const isRecord=Number(run.durationSec)<Number(previous.durationSec)-0.5;
- const all=[...group,run].sort((a,b)=>Number(a.durationSec)-Number(b.durationSec));
- return{signature,label:recordSessionLabel(run),isRecord,isFirst:false,previous,best:all[0],groupSize:all.length,improvementSec:isRecord?Number(previous.durationSec)-Number(run.durationSec):0};
+function allDistanceRecordPerformances(){return completedRuns().flatMap(distanceRecordPerformancesForRun)}
+function distanceRecordLeaders(){
+ const perfs=allDistanceRecordPerformances(),out=[];
+ DISTANCE_RECORD_CATEGORIES.forEach(cat=>{const rows=perfs.filter(x=>x.key===cat.key).sort((a,b)=>a.durationSec-b.durationSec||String(a.run.date).localeCompare(String(b.run.date)));if(rows.length)out.push({...rows[0],count:rows.length,previous:rows[1]||null})});
+ const runs=completedRuns().filter(r=>Number(r.durationSec)>0&&recordDistanceKm(r)>0).sort((a,b)=>recordDistanceKm(b)-recordDistanceKm(a)||Number(a.durationSec)-Number(b.durationSec));
+ if(runs.length){const r=runs[0];out.push({key:'furthest',label:'Furthest distance',km:recordDistanceKm(r),run:r,durationSec:Number(r.durationSec),count:runs.length,previous:runs[1]?{run:runs[1],km:recordDistanceKm(runs[1]),durationSec:Number(runs[1].durationSec)}:null,source:'whole-run'})}
+ return out;
 }
-function verifiedSessionRecords(){
- const groups=new Map();
- completedRuns().filter(r=>Number(r.durationSec)>0&&Number(r.distanceKm)>0).forEach(r=>{const key=recordSessionSignature(r);if(!key)return;const arr=groups.get(key)||[];arr.push(r);groups.set(key,arr)});
- return [...groups.values()].map(rows=>{
-   const best=rows.slice().sort((a,b)=>Number(a.durationSec)-Number(b.durationSec)||String(b.date).localeCompare(String(a.date)))[0];
-   const ordered=rows.slice().sort((a,b)=>String(a.date).localeCompare(String(b.date))||String(a.id).localeCompare(String(b.id))),idx=ordered.findIndex(r=>r.id===best.id),previousRows=idx>0?ordered.slice(0,idx):ordered.filter(r=>r.id!==best.id),previous=previousRows.length?previousRows.slice().sort((a,b)=>Number(a.durationSec)-Number(b.durationSec))[0]:null;
-   return{signature:recordSessionSignature(best),label:recordSessionLabel(best),best,previous,count:rows.length,improvementSec:previous?Math.max(0,Number(previous.durationSec)-Number(best.durationSec)):0};
- }).sort((a,b)=>String(b.best.date).localeCompare(String(a.best.date))||Number(a.best.durationSec)-Number(b.best.durationSec));
+function runRecordAchievements(run){
+ if(!run)return[];
+ const own=distanceRecordPerformancesForRun(run),all=allDistanceRecordPerformances(),achievements=[];
+ own.forEach(perf=>{
+   const prior=all.filter(p=>p.key===perf.key&&p.run.id!==run.id&&(String(p.run.date)<String(run.date)||(String(p.run.date)===String(run.date)&&String(p.run.id)<String(run.id)))).sort((a,b)=>a.durationSec-b.durationSec)[0]||null;
+   if(!prior||perf.durationSec<prior.durationSec-.5)achievements.push({...perf,isFirst:!prior,previous:prior,improvementSec:prior?Math.max(0,prior.durationSec-perf.durationSec):0});
+ });
+ const priorFurthest=completedRuns().filter(r=>r.id!==run.id&&recordDistanceKm(r)>0&&(String(r.date)<String(run.date)||(String(r.date)===String(run.date)&&String(r.id)<String(run.id)))).sort((a,b)=>recordDistanceKm(b)-recordDistanceKm(a))[0]||null;
+ if(!priorFurthest||recordDistanceKm(run)>recordDistanceKm(priorFurthest)+.005)achievements.push({key:'furthest',label:'Furthest distance',km:recordDistanceKm(run),run,durationSec:Number(run.durationSec),source:'whole-run',isFirst:!priorFurthest,previous:priorFurthest?{run:priorFurthest,km:recordDistanceKm(priorFurthest),durationSec:Number(priorFurthest.durationSec)}:null,improvementKm:priorFurthest?Math.max(0,recordDistanceKm(run)-recordDistanceKm(priorFurthest)):0});
+ return achievements;
 }
+function sessionRecordInfo(run){const achievements=runRecordAchievements(run);return achievements.length?{isRecord:true,achievements}:null}
+function verifiedSessionRecords(){return distanceRecordLeaders()}
 function runRecordHtml(run,{compact=false}={}){
- const info=sessionRecordInfo(run);if(!info?.isRecord)return'';
- const prior=info.previous?fmtTime(info.previous.durationSec):'—',gain=Number(info.improvementSec)||0;
- if(compact)return`<span class="logRecordChip">${uiIcon('trophy')}<b>${info.isFirst?'DISTANCE RECORD':'NEW RECORD'}</b><span>${esc(info.label)} · ${fmtTime(run.durationSec)}${gain>0?` · ${fmtTime(gain)} faster`:''}</span></span>`;
- return`<section class="runRecordCallout uiLevel2"><div class="runRecordHead"><span>${uiIcon('trophy')}</span><div><small>${info.isFirst?'FIRST VERIFIED DISTANCE RECORD':'NEW VERIFIED DISTANCE RECORD'}</small><h3>${esc(info.label)}</h3></div></div><div class="runRecordMetrics"><div><small>${info.isFirst?'RECORD TIME':'NEW RECORD'}</small><strong>${fmtTime(run.durationSec)}</strong></div><div><small>PREVIOUS BEST</small><strong>${prior}</strong></div><div><small>IMPROVEMENT</small><strong>${gain>0?fmtTime(gain):'—'}</strong></div></div><p>${info.isFirst?'This is the first verified performance recorded at this distance and therefore establishes the initial record.':'Compared with completed runs at the same recorded distance, regardless of run type.'}</p></section>`;
+ const achievements=runRecordAchievements(run);if(!achievements.length)return'';
+ if(compact)return`<span class="logRecordChip" title="${esc(achievements.map(a=>a.key==='furthest'?`${a.label}: ${recordDistanceKm(run).toFixed(2)} km`:`${a.label}: ${fmtTime(a.durationSec)}`).join(' · '))}">${uiIcon('trophy')}<b>${achievements.length>1?`${achievements.length} RECORDS`:`${esc(achievements[0].label)} RECORD`}</b></span>`;
+ return`<section class="runRecordCallout uiLevel2"><div class="runRecordHead"><span>${uiIcon('trophy')}</span><div><small>${achievements.length>1?'VERIFIED RECORDS':'VERIFIED RECORD'}</small><h3>${achievements.map(a=>esc(a.label)).join(' · ')}</h3></div></div><div class="runRecordAchievementList">${achievements.map(a=>{
+   if(a.key==='furthest'){const prev=a.previous?.km;return`<div class="runRecordAchievement"><b>${esc(a.label)}</b><strong>${recordDistanceKm(run).toFixed(2)} km</strong><small>${a.isFirst?'First verified run establishes the initial furthest-distance record.':`Previous furthest ${Number(prev).toFixed(2)} km${a.improvementKm>0?` · +${a.improvementKm.toFixed(2)} km`:''}`}</small></div>`}
+   const previous=a.previous?.durationSec;return`<div class="runRecordAchievement"><b>${esc(a.label)}</b><strong>${fmtTime(a.durationSec)}</strong><small>${a.source==='stream'?`Fastest continuous ${esc(a.label)} section inside this run`: 'Whole-run performance'}${a.isFirst?' · first verified record':previous?` · previous ${fmtTime(previous)}${a.improvementSec>0?` · ${fmtTime(a.improvementSec)} faster`:''}`:''}</small></div>`;
+ }).join('')}</div><p>Fixed-distance records are independent of workout type and use the fastest continuous section available in the recorded activity stream. Furthest distance uses the completed run distance.</p></section>`;
 }
 function progressRecordsHtml(){
  const records=verifiedSessionRecords();
- if(!records.length)return`<article class="panel progressBaseline"><b>Building your distance records</b><p>Your first verified completed run will establish the first distance record here.</p></article>`;
- return`<article class="panel progressRecordsPanel"><div class="panelHead"><div><h3>Your fastest verified performances</h3><p>Tap a record to inspect the session that produced it.</p></div></div><div class="progressRecordGrid">${records.map((rec,i)=>{const r=rec.best,m=metrics(r);return`<details class="progressRecordTile" data-record-run="${esc(r.id)}"><summary><span class="progressRecordIdentity"><small>${esc(rec.label)}</small><strong>${fmtTime(r.durationSec)}</strong><span>${pace(m.pace)} · ${fmtDate(r.date)} · ${rec.count} ${rec.count===1?'run':'runs'} at this distance</span></span><span class="progressRecordMark">RECORD</span></summary><div class="progressRecordFoldout">${runSummaryHtml(r)}${runRecordHtml(r)}${shoeEquipmentForRunHtml(r)}${workoutIntelligenceHtml(r)}${runExecutionBreakdownHtml(r)}</div></details>`}).join('')}</div></article>`;
+ if(!records.length)return`<article class="panel progressBaseline"><b>Building your distance records</b><p>Your first verified run will start the 1 km, 5 km, 10 km, half-marathon, marathon and furthest-distance records whenever enough recorded distance is available.</p></article>`;
+ const order=['1k','5k','10k','half','marathon','furthest'];records.sort((a,b)=>order.indexOf(a.key)-order.indexOf(b.key));
+ return`<article class="panel progressRecordsPanel"><div class="panelHead"><div><h3>Your fastest verified performances</h3><p>1 km, 5 km, 10 km, half marathon and marathon use the fastest continuous section found inside any verified run. Furthest distance tracks your longest completed run. Tap a record to inspect its source session.</p></div></div><div class="progressRecordGrid">${records.map(rec=>{const r=rec.run,m=metrics(r),value=rec.key==='furthest'?`${recordDistanceKm(r).toFixed(2)} km`:fmtTime(rec.durationSec),sub=rec.key==='furthest'?`${fmtTime(r.durationSec)} · ${fmtDate(r.date)}`:`${rec.source==='stream'?'Best continuous section':'Whole run'} · ${fmtDate(r.date)}`;return`<details class="progressRecordTile" data-record-run="${esc(r.id)}"><summary><span class="progressRecordIdentity"><small>${esc(rec.label)}</small><strong>${value}</strong><span>${sub}</span></span><span class="progressRecordMark">${uiIcon('trophy')} RECORD</span></summary><div class="progressRecordFoldout">${runSummaryHtml(r)}${runRecordHtml(r)}${shoeEquipmentForRunHtml(r)}${workoutIntelligenceHtml(r)}${runExecutionBreakdownHtml(r)}</div></details>`}).join('')}</div></article>`;
 }
 function renderRuns(){
  if($('logHero'))$('logHero').innerHTML=logHeroHtml();
@@ -3882,8 +3904,7 @@ function renderRuns(){
      Number.isFinite(Number(r.powerDrift))?{label:'CARDIAC DRIFT',value:`${Number(r.powerDrift).toFixed(1)}%`,status:Math.abs(Number(r.powerDrift))<=5?'good':Math.abs(Number(r.powerDrift))<=8?'warn':'bad'}:null
    ].filter(Boolean);
    return`<article class="logRunCard clickable" role="button" tabindex="0" data-run="${r.id}" aria-label="Open ${esc(fmtDate(r.date))} ${esc(r.type)} run details">
-     <div class="logRunTop"><span class="logRunType ${typeCls}">${uiIcon(typeCls==='quality'?'quality':typeCls)}</span><div class="logRunIdentity"><small>${day} · ${date}</small><h3>${esc(r.type)}</h3><p>${plan?`Matched: ${esc(plan.type)}`:esc(matchSummary(r))}</p></div>${Number.isFinite(ws)?`<div class="logRunScore ${logStatusClass(ws)}" style="--score:${ws}"><strong>${Math.round(ws)}</strong><span>/100</span></div>`:'<span class="logRunArrow">›</span>'}</div>
-     ${recordInfo?.isRecord?`<div class="logRunRecordRow">${runRecordHtml(r,{compact:true})}</div>`:''}
+     <div class="logRunTop"><span class="logRunType ${typeCls}">${uiIcon(typeCls==='quality'?'quality':typeCls)}</span><div class="logRunIdentity"><small>${day} · ${date}</small><h3>${esc(r.type)}</h3><p>${plan?`Matched: ${esc(plan.type)}`:esc(matchSummary(r))}</p></div>${recordInfo?.isRecord?`<div class="logRunRecordInline">${runRecordHtml(r,{compact:true})}</div>`:''}${Number.isFinite(ws)?`<div class="logRunScore ${logStatusClass(ws)}" style="--score:${ws}"><strong>${Math.round(ws)}</strong><span>/100</span></div>`:'<span class="logRunArrow">›</span>'}</div>
      <div class="logRunPrimary"><span><small>DISTANCE</small><b>${Number(r.distanceKm).toFixed(2)} km</b></span><span><small>DURATION</small><b>${fmtTime(r.durationSec)}</b></span><span><small>PACE</small><b>${pace(m.pace)}</b></span></div>
      <div class="logRunSecondary">${secondaryMetrics.map(x=>`<span class="logMetricChip ${x.status||''}"><small>${x.label}</small><b>${x.value}</b></span>`).join('')}${compare?`<span class="logCompareChip ${cr.efficiencyDelta>=0?'good':'warn'}">${compare}</span>`:''}</div>
      ${q.missing.length?`<div class="logRunWarning">${uiIcon('warning')}<span>Partial data: ${q.missing.join(' and ')} not available</span></div>`:''}

@@ -5504,3 +5504,75 @@ body:has(#dashboard.progressPage.active),#mainContent:has(#dashboard.progressPag
   color:var(--muted)!important;
 }
 .logRecordChip .uiIcon{stroke:currentColor!important;fill:none!important}
+
+/* v14.9.5 — record placement, gold trophy and Progress record hierarchy. */
+:root{--record-gold:#f2c14e}
+
+/* History card: compact record tile sits between session identity and workout score. */
+.logRunRecordInline{flex:0 0 auto;align-self:center;margin-left:auto;margin-right:7px;min-width:0}
+.logRunRecordInline .logRecordChip{width:auto;max-width:128px;min-height:34px;padding:6px 8px;gap:5px;border-radius:10px;background:rgba(242,193,78,.09);border:1px solid rgba(242,193,78,.28);color:var(--record-gold)}
+.logRunRecordInline .logRecordChip .uiIcon{width:16px;height:16px;flex:0 0 16px;color:var(--record-gold)!important;stroke:var(--record-gold)!important}
+.logRunRecordInline .logRecordChip b{font-size:8px;line-height:1.15;letter-spacing:.055em;color:var(--record-gold)!important;white-space:normal;text-align:left}
+.logRunRecordInline .logRecordChip>span:not(.uiIcon){display:none!important}
+.logRunRecordRow{display:none!important}
+
+/* All trophy pictograms use the record-gold semantic color. */
+.logRecordChip .uiIcon,.runRecordHead>span,.progressRecordMark .uiIcon{color:var(--record-gold)!important;stroke:var(--record-gold)!important}
+.runRecordHead>span{background:rgba(242,193,78,.10)!important;border:1px solid rgba(242,193,78,.22)}
+.runRecordHead small{color:var(--record-gold)!important}
+.progressRecordMark .uiIcon{width:13px;height:13px;margin-right:3px;vertical-align:-2px}
+
+/* The records panel is a Level-1 Progress card, matching the other Level-1 tiles. */
+#dashboard.progressPage .progressRecordsPanel{
+  background:var(--progress-card)!important;
+  border:1px solid var(--progress-border)!important;
+  border-radius:18px!important;
+  box-shadow:none!important;
+  color:#fff!important;
+  padding:16px!important;
+  margin:12px 0!important;
+}
+#dashboard.progressPage .progressRecordsPanel .panelHead h3{font-size:20px!important;line-height:1.15!important;color:#fff!important}
+#dashboard.progressPage .progressRecordsPanel .panelHead p{font-size:10px!important;line-height:1.45!important;color:#c6d9df!important;margin-top:5px!important}
+
+/* Record rows are Level-2 nested tiles; opened content uses readable Level-3 typography. */
+#dashboard.progressPage .progressRecordTile{
+  background:var(--progress-nested)!important;
+  border:1px solid var(--progress-nested-border)!important;
+  border-radius:11px!important;
+}
+#dashboard.progressPage .progressRecordTile>summary{padding:12px!important;min-height:70px!important;background:transparent!important}
+#dashboard.progressPage .progressRecordIdentity small{font-size:9px!important;line-height:1.2!important;font-weight:900!important;letter-spacing:.075em!important;color:#8fc2ce!important}
+#dashboard.progressPage .progressRecordIdentity strong{font-size:19px!important;line-height:1.08!important;color:#fff!important;margin-top:2px}
+#dashboard.progressPage .progressRecordIdentity>span{font-size:9px!important;line-height:1.35!important;color:#a9c1cb!important;margin-top:2px}
+#dashboard.progressPage .progressRecordMark{display:inline-flex;align-items:center;white-space:nowrap;color:var(--record-gold)!important;background:rgba(242,193,78,.08)!important;border-color:rgba(242,193,78,.22)!important}
+#dashboard.progressPage .progressRecordFoldout{padding:2px 12px 12px!important}
+#dashboard.progressPage .progressRecordFoldout>section{margin:10px 0 0!important}
+#dashboard.progressPage .progressRecordFoldout .runSummaryHero{padding:13px!important;border-radius:12px!important;background:var(--progress-disclosure)!important;border:1px solid rgba(136,161,177,.12)!important}
+#dashboard.progressPage .progressRecordFoldout .runSummaryHead{grid-template-columns:36px minmax(0,1fr)!important;gap:9px!important;align-items:start!important}
+#dashboard.progressPage .progressRecordFoldout .runSummaryIcon{width:36px!important;height:36px!important}
+#dashboard.progressPage .progressRecordFoldout .runSummaryHead small{font-size:8px!important;line-height:1.35!important;color:#9cb5c0!important}
+#dashboard.progressPage .progressRecordFoldout .runSummaryHead h2{font-size:17px!important;line-height:1.15!important;margin:2px 0!important;color:#fff!important}
+#dashboard.progressPage .progressRecordFoldout .runSummaryHead p{font-size:9px!important;line-height:1.4!important;margin:2px 0 0!important;color:#b8ccd4!important}
+#dashboard.progressPage .progressRecordFoldout .runMetricGridV3{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:7px!important;margin-top:10px!important}
+#dashboard.progressPage .progressRecordFoldout .runMetricV3{padding:9px!important;min-height:0!important;border-radius:9px!important}
+#dashboard.progressPage .progressRecordFoldout .runMetricV3>span{font-size:7px!important;line-height:1.2!important;letter-spacing:.06em!important}
+#dashboard.progressPage .progressRecordFoldout .runMetricV3>strong{font-size:13px!important;line-height:1.15!important;margin-top:2px!important}
+#dashboard.progressPage .progressRecordFoldout .runMetricV3>small{font-size:8px!important;line-height:1.3!important;margin-top:2px!important}
+#dashboard.progressPage .progressRecordFoldout .runPlanCompare,#dashboard.progressPage .progressRecordFoldout .runDataQualityV3{font-size:9px!important;line-height:1.4!important}
+#dashboard.progressPage .progressRecordFoldout .runRecordCallout{padding:12px!important;border-radius:12px!important}
+#dashboard.progressPage .progressRecordFoldout .runRecordHead h3{font-size:15px!important;line-height:1.2!important;margin:2px 0 0!important}
+#dashboard.progressPage .progressRecordFoldout .runRecordAchievement{padding:9px!important}
+#dashboard.progressPage .progressRecordFoldout .runRecordAchievement b{font-size:9px!important;line-height:1.25!important}
+#dashboard.progressPage .progressRecordFoldout .runRecordAchievement strong{font-size:15px!important;line-height:1.15!important}
+#dashboard.progressPage .progressRecordFoldout .runRecordAchievement small{font-size:8px!important;line-height:1.4!important}
+#dashboard.progressPage .progressRecordFoldout details>summary{font-size:11px!important;line-height:1.35!important}
+#dashboard.progressPage .progressRecordFoldout p,#dashboard.progressPage .progressRecordFoldout li{font-size:10px!important;line-height:1.5!important}
+
+@media(max-width:520px){
+  .logRunTop{gap:7px!important}
+  .logRunRecordInline{margin-left:2px;margin-right:1px}
+  .logRunRecordInline .logRecordChip{max-width:92px;padding:5px 6px}
+  .logRunRecordInline .logRecordChip b{font-size:7px}
+  #dashboard.progressPage .progressRecordFoldout .runMetricGridV3{grid-template-columns:1fr 1fr!important}
+}
