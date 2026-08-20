@@ -5810,6 +5810,9 @@ body:has(#dashboard.progressPage.active),#mainContent:has(#dashboard.progressPag
 
 
 /* v14.9.18 — Injury trajectory consistency only */
-#injury .injuryTrajectory .phaseBand.future{opacity:.18}
-#injury .injuryTrajectory .phaseNumber.future,
-#injury .injuryTrajectory .phaseLabel.future{opacity:.42}
+
+
+/* v14.9.19 — Injury trajectory: nominal phase timing on a linear day axis */
+#injury .injuryTrajectory .nominalTimingLabel{fill:var(--muted);font-size:7px;font-weight:800;letter-spacing:.08em}
+#injury .injuryTrajectory .phaseDuration{fill:var(--muted);font-size:7px;font-weight:700}
+#injury .injuryTrajectory .actualPhaseLabel{font-size:7px}

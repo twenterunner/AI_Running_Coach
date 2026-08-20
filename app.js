@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '14.9.18';
-  const BUILD = 40918;
+  const VERSION = '14.9.19';
+  const BUILD = 40919;
   const SCHEMA = 10400;
   const PRIMARY_STORAGE_KEY = 'arc_v10400_web';
   const MIRROR_STORAGE_KEY = 'arc_v10400_mirror';
@@ -5127,41 +5127,24 @@ function injuryTrajectorySvg(i,p){
  const todayDay=clamp(Number(p.elapsed)||0,0,horizon),todayX=x(todayDay),nominalToday=clamp(Number(p.nominal)||0,0,100),observedToday=Number.isFinite(Number(p.completion))?clamp(Number(p.completion),0,100):null;
  const nominalPath=`M ${x(0)} ${y(0)} L ${x(horizon)} ${y(100)}`;
 
- // Derive ACTUAL phase-transition dates from demonstrated criteria. A phase never
- // starts on the graph until its criteria predecessor has actually been completed.
- const observedChecks=(p.checks||[]).filter(c=>CORE.isIsoDate(c.date)&&c.date<=iso(today()));
- const transitions=Array(INJURY_STAGES.length).fill(null);transitions[0]=0;
- observedChecks.forEach((c,idx)=>{
-   const prefix=observedChecks.slice(0,idx+1),stageAtCheck=injuryStageForChecks(i,prefix,p.diag);
-   const day=Math.min(todayDay,Math.max(0,Math.round((dte(c.date)-dte(i.date))/DAY)));
-   for(let s=1;s<=stageAtCheck;s++)if(transitions[s]===null)transitions[s]=day;
- });
- // If the engine is currently in a phase whose exact transition day predates retained
- // evidence, anchor it no later than Today, but never fabricate a later phase.
- if(transitions[p.stage]===null)transitions[p.stage]=Math.max(0,Math.min(todayDay,transitions[p.stage-1]??0));
-
- const phaseBounds=INJURY_STAGES.map((st,n)=>{
-   const start=transitions[n]!==null?transitions[n]:(n<=p.stage?0:todayDay);
-   let end;
-   if(n<p.stage) end=transitions[n+1]!==null?transitions[n+1]:todayDay;
-   else if(n===p.stage) end=todayDay;
-   else {
-     const futureCount=INJURY_STAGES.length-1-p.stage;
-     const futureIndex=n-p.stage-1;
-     const futureSpan=Math.max(0,horizon-todayDay);
-     const fs=todayDay+futureSpan*(futureIndex/Math.max(1,futureCount));
-     const fe=todayDay+futureSpan*((futureIndex+1)/Math.max(1,futureCount));
-     return {start:fs,end:fe,future:true};
-   }
-   return {start:Math.min(start,todayDay),end:Math.max(Math.min(end,todayDay),Math.min(start,todayDay)),future:false};
- });
-
+ // Nominal rehabilitation phase timing is plotted on the same LINEAR day axis as the
+ // observations. These proportions are the model's nominal pathway timing; they are not
+ // inferred from the athlete's demonstrated phase. Therefore a wider phase means the model
+ // expects more calendar time to be spent there.
+ const nominalPhaseFractions=[0,.12,.28,.46,.64,.82,1];
+ const nominalPhaseDays=nominalPhaseFractions.map(f=>f*horizon);
+ const phaseBounds=INJURY_STAGES.map((st,n)=>({
+   start:nominalPhaseDays[n],
+   end:nominalPhaseDays[n+1],
+   duration:Math.max(0,nominalPhaseDays[n+1]-nominalPhaseDays[n])
+ }));
  const phaseRects=INJURY_STAGES.map((st,n)=>{
    const b=phaseBounds[n],x0=x(b.start),x1=x(b.end),w=Math.max(2,x1-x0),cx=x0+w/2;
-   const cls=b.future?' future':'';
-   return `<rect class="phaseBand phase${n}${cls}" x="${x0}" y="${top}" width="${w}" height="${ch}"/><text class="phaseNumber${cls}" x="${cx}" y="18" text-anchor="middle">${n+1}</text><text class="phaseLabel${cls}" x="${cx}" y="38" text-anchor="middle">${esc(st.name)}</text>`;
+   const days=Math.max(1,Math.round(b.duration));
+   return `<rect class="phaseBand phase${n}" x="${x0}" y="${top}" width="${w}" height="${ch}"/><text class="phaseNumber" x="${cx}" y="15" text-anchor="middle">${n+1}</text><text class="phaseLabel" x="${cx}" y="32" text-anchor="middle">${esc(st.name)}</text><text class="phaseDuration" x="${cx}" y="47" text-anchor="middle">≈${days} d</text>`;
  }).join('');
- const phaseLines=phaseBounds.slice(1).map(b=>`<line class="phaseBoundary" x1="${x(b.start)}" y1="${top}" x2="${x(b.start)}" y2="${top+ch}"/>`).join('');
+ const phaseLines=nominalPhaseDays.slice(1,-1).map(day=>`<line class="phaseBoundary" x1="${x(day)}" y1="${top}" x2="${x(day)}" y2="${top+ch}"/>`).join('');
+ const nominalTimingLabel=`<text class="nominalTimingLabel" x="${left+4}" y="10">NOMINAL PHASE TIMING · LINEAR DAYS</text>`;
 
  // Observed dots are hard-clipped to Today. The score and phase are both reconstructed
  // only from evidence that existed on that observation date.
@@ -5175,10 +5158,10 @@ function injuryTrajectorySvg(i,p){
  if(!pts.length&&Number.isFinite(p.completion))pts.push({day:todayDay,score:p.completion,date:iso(today()),stage:p.stage});
  const observed=pts.map((q,n)=>`${n?'L':'M'} ${x(q.day)} ${y(q.score)}`).join(' ');
  const currentMarker=`<line class="currentDateLine" x1="${todayX}" y1="${top}" x2="${todayX}" y2="${top+ch}"/><text class="currentDateLabel" x="${todayX}" y="${H-36}" text-anchor="middle">Today</text>`;
- const currentBound=phaseBounds[p.stage],actualPhaseX=x((currentBound.start+currentBound.end)/2);
- const actualPhaseMarker=`<path class="actualPhasePointer" d="M ${actualPhaseX-7} 48 L ${actualPhaseX+7} 48 L ${actualPhaseX} 57 Z"/><text class="actualPhaseLabel" x="${actualPhaseX}" y="51" text-anchor="middle">CURRENT ${p.stage+1}</text>`;
+ const actualPhaseX=todayX;
+ const actualPhaseMarker=`<path class="actualPhasePointer" d="M ${actualPhaseX-7} 48 L ${actualPhaseX+7} 48 L ${actualPhaseX} 57 Z"/><text class="actualPhaseLabel" x="${Math.max(left+35,Math.min(W-right-35,actualPhaseX))}" y="57" text-anchor="middle">CURRENT ${p.stage+1}</text>`;
  const gap=observedToday===null?'':`<line class="trajectoryGap" x1="${todayX}" y1="${y(nominalToday)}" x2="${todayX}" y2="${y(observedToday)}"/><circle class="nominalTodayPoint" cx="${todayX}" cy="${y(nominalToday)}" r="5"><title>Nominal today · ${Math.round(nominalToday)}%</title></circle>`;
- return `<div class="injuryTrajectoryWrap"><svg class="injuryTrajectory" viewBox="0 0 ${W} ${H}" role="img" aria-label="Observed rehabilitation completion, nominal recovery and rehabilitation phases"><rect class="phaseLabelBand" x="${left}" y="0" width="${cw}" height="${labelBand}"/>${phaseRects}${phaseLines}${actualPhaseMarker}<line x1="${left}" y1="${y(25)}" x2="${W-right}" y2="${y(25)}"/><line x1="${left}" y1="${y(50)}" x2="${W-right}" y2="${y(50)}"/><line x1="${left}" y1="${y(75)}" x2="${W-right}" y2="${y(75)}"/>${currentMarker}<path class="nominalLine" d="${nominalPath}"/>${gap}<path class="actualLine" d="${observed}"/>${pts.map(q=>`<circle cx="${x(q.day)}" cy="${y(q.score)}" r="5"><title>${fmtDate(q.date)} · ${q.score}%</title></circle>`).join('')}<text x="${left}" y="${H-12}">Injury</text><text x="${W-right}" y="${H-12}" text-anchor="end">Nominal unrestricted training</text></svg><div class="injuryTrajectoryLegend"><span class="actual">Observed completion</span><span class="nominal">Nominal recovery</span><span class="phase">Recovery phases</span></div></div>`;
+ return `<div class="injuryTrajectoryWrap"><svg class="injuryTrajectory" viewBox="0 0 ${W} ${H}" role="img" aria-label="Observed rehabilitation completion, nominal recovery and rehabilitation phases"><rect class="phaseLabelBand" x="${left}" y="0" width="${cw}" height="${labelBand}"/>${nominalTimingLabel}${phaseRects}${phaseLines}${actualPhaseMarker}<line x1="${left}" y1="${y(25)}" x2="${W-right}" y2="${y(25)}"/><line x1="${left}" y1="${y(50)}" x2="${W-right}" y2="${y(50)}"/><line x1="${left}" y1="${y(75)}" x2="${W-right}" y2="${y(75)}"/>${currentMarker}<path class="nominalLine" d="${nominalPath}"/>${gap}<path class="actualLine" d="${observed}"/>${pts.map(q=>`<circle cx="${x(q.day)}" cy="${y(q.score)}" r="5"><title>${fmtDate(q.date)} · ${q.score}%</title></circle>`).join('')}<text x="${left}" y="${H-12}">Injury</text><text x="${W-right}" y="${H-12}" text-anchor="end">Nominal unrestricted training</text></svg><div class="injuryTrajectoryLegend"><span class="actual">Observed completion</span><span class="nominal">Nominal recovery</span><span class="phase">Recovery phases</span></div></div>`;
 }
 
 function clinicianAgreementBanner(diag){
