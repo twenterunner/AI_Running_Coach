@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '14.9.32';
-  const BUILD = 40932;
+  const VERSION = '14.9.33';
+  const BUILD = 40933;
   const SCHEMA = 10400;
   const PRIMARY_STORAGE_KEY = 'arc_v10400_web';
   const MIRROR_STORAGE_KEY = 'arc_v10400_mirror';
@@ -4124,6 +4124,106 @@ function renderTrainingDays(){
  box.innerHTML=`<div class="note trainingDayNote"><b>Set availability only</b><p class="muted compact">Tick the days you can run and select exactly one of those as the long-run day. The plan engine assigns every run type automatically according to race distance, phase and recovery.</p></div><div class="trainingDayHeader"><span>Day</span><span>Run</span><span>Long run</span></div>`+state.days.map((d,i)=>`<div class="trainingDayRow"><b>${d[0]}</b><label class="dayChoice"><input data-day="${i}" type="checkbox" ${d[1]?'checked':''}><span>Run</span></label><label class="dayChoice longChoice"><input data-long-day="${i}" name="longRunDay" type="radio" ${d[0]===longDay?'checked':''} ${d[1]?'':'disabled'}><span>Long</span></label></div>`).join('');
  box.querySelectorAll('[data-day]').forEach(cb=>cb.addEventListener('change',()=>{const i=Number(cb.dataset.day),radio=box.querySelector(`[data-long-day="${i}"]`);radio.disabled=!cb.checked;if(!cb.checked&&radio.checked){const replacement=[...box.querySelectorAll('[data-day]')].find(x=>x.checked);if(replacement)box.querySelector(`[data-long-day="${replacement.dataset.day}"]`).checked=true;}if(cb.checked&&![...box.querySelectorAll('[data-long-day]')].some(x=>x.checked))radio.checked=true;}));
 }
+function modelIntegrityDiagnostics(){
+ const items=[],add=(area,label,status,detail)=>items.push({area,label,status,detail:String(detail||'')});
+ const pass=(area,label,detail)=>add(area,label,'pass',detail),warn=(area,label,detail)=>add(area,label,'warn',detail),error=(area,label,detail)=>add(area,label,'error',detail);
+ const now=iso(today());
+
+ // DATA — reuse the canonical backup/state validator already used for restore safety.
+ try{
+  const dataCheck=CORE.validateBackup(state,{today:now});
+  if(dataCheck.valid)pass('Data','Stored state structure','Canonical state validation passed.');
+  else error('Data','Stored state structure',`${dataCheck.errors.length} validation issue${dataCheck.errors.length===1?'':'s'} · ${dataCheck.errors.slice(0,3).map(x=>x.message).join(' · ')}`);
+ }catch(err){error('Data','Stored state structure',`Validator could not complete: ${err?.message||err}`)}
+
+ // STORAGE — primary and mirror are intentionally written together by save().
+ try{
+  const primary=parseStored(localStorage.getItem(STORAGE_KEY)),mirror=parseStored(localStorage.getItem(MIRROR_KEY));
+  if(!primary&&!mirror)warn('Data','Primary / mirror storage','No current primary or mirror state was readable.');
+  else if(!primary||!mirror)warn('Data','Primary / mirror storage','Only one current storage copy is readable.');
+  else{
+   const sameRevision=Number(primary.storageRevision||0)===Number(mirror.storageRevision||0),sameUpdated=String(primary.updatedAt||'')===String(mirror.updatedAt||'');
+   if(sameRevision&&sameUpdated)pass('Data','Primary / mirror storage',`Both copies agree at revision ${Number(primary.storageRevision)||0}.`);
+   else warn('Data','Primary / mirror storage',`Copies differ · primary r${Number(primary.storageRevision)||0}, mirror r${Number(mirror.storageRevision)||0}.`);
+  }
+ }catch(err){warn('Data','Primary / mirror storage',`Storage comparison unavailable: ${err?.message||err}`)}
+
+ // PLAN — canonical plan validator includes workout component totals, enabled days, targets and IDs.
+ try{
+  const planCheck=validatePlan(state.plan);
+  if(planCheck.errors)error('Plan','Training-plan invariants',`${planCheck.errors} error${planCheck.errors===1?'':'s'} · ${planCheck.issues.filter(x=>x.severity==='error').slice(0,3).map(x=>x.message).join(' · ')}`);
+  else if(planCheck.warnings)warn('Plan','Training-plan invariants',`${planCheck.checked} workouts checked · ${planCheck.warnings} warning${planCheck.warnings===1?'':'s'}.`);
+  else pass('Plan','Training-plan invariants',`${planCheck.checked} workouts checked · no invariant failures.`);
+ }catch(err){error('Plan','Training-plan invariants',`Plan validation could not complete: ${err?.message||err}`)}
+
+ try{
+  const planIds=new Set((state.plan||[]).map(p=>p.id).filter(Boolean)),linked=(state.runs||[]).filter(r=>r.planId),orphan=linked.filter(r=>!planIds.has(r.planId));
+  if(orphan.length)warn('Plan','Run-to-plan links',`${orphan.length} completed run${orphan.length===1?'':'s'} reference a workout no longer present in the current plan.`);
+  else pass('Plan','Run-to-plan links',`${linked.length} linked completed run${linked.length===1?'':'s'} checked.`);
+ }catch(err){warn('Plan','Run-to-plan links',`Link check unavailable: ${err?.message||err}`)}
+
+ try{
+  const raceRows=(state.plan||[]).filter(p=>p.type==='Race Day'||p.date===state.setup?.raceDate);
+  const exact=raceRows.filter(p=>p.date===state.setup?.raceDate);
+  if(exact.length===1)pass('Plan','Race-date anchor',`Exactly one plan item anchors race day on ${state.setup.raceDate}.`);
+  else error('Plan','Race-date anchor',`${exact.length} plan items anchor the configured race date ${state.setup?.raceDate||'—'}; expected exactly one.`);
+ }catch(err){error('Plan','Race-date anchor',`Race-date check unavailable: ${err?.message||err}`)}
+
+ // REHAB — current phase and projected dates must be generated by the same canonical resolver.
+ try{
+  const active=(state.injuries||[]).find(i=>i.id===state.activeInjuryPlanId)||null;
+  if(!state.activeInjuryPlanId)pass('Rehab','Active rehabilitation reference','No active rehabilitation plan is selected.');
+  else if(!active)error('Rehab','Active rehabilitation reference','activeInjuryPlanId does not reference a stored injury.');
+  else pass('Rehab','Active rehabilitation reference',`${active.bodyRegion||active.location||'Active injury'} is linked correctly.`);
+  if(active){
+   const p=injuryPrediction(active),resolved=injuryStageForChecks(active,sortedChecks(active),workingDiagnosis(active));
+   if(Number(p.stage)===Number(resolved)&&p.stage>=0&&p.stage<INJURY_STAGES.length)pass('Rehab','Current phase consistency',`Prediction and criteria resolver both report Phase ${p.stage+1} · ${INJURY_STAGES[p.stage].name}.`);
+   else error('Rehab','Current phase consistency',`Prediction stage ${Number(p.stage)+1} does not match criteria-resolved stage ${Number(resolved)+1}.`);
+   const futureChecks=(active.checkIns||[]).filter(c=>CORE.isIsoDate(c.date)&&c.date>now);
+   if(futureChecks.length)error('Rehab','Observed check-in dates',`${futureChecks.length} rehabilitation observation${futureChecks.length===1?' is':'s are'} dated after today.`);
+   else pass('Rehab','Observed check-in dates',`${(active.checkIns||[]).length} check-in${(active.checkIns||[]).length===1?'':'s'} checked · none are in the future.`);
+   if(CORE.isIsoDate(p.fullDate)&&CORE.isIsoDate(p.windowStart)&&CORE.isIsoDate(p.windowEnd)&&p.fullDate>=now&&p.windowStart>=now&&p.windowEnd>=p.windowStart)pass('Rehab','Projected recovery dates',`Central ${p.fullDate} · window ${p.windowStart} to ${p.windowEnd}.`);
+   else error('Rehab','Projected recovery dates',`Projection dates are inconsistent: central ${p.fullDate||'—'}, window ${p.windowStart||'—'} to ${p.windowEnd||'—'}.`);
+  }
+ }catch(err){error('Rehab','Rehabilitation engine',`Rehabilitation consistency check could not complete: ${err?.message||err}`)}
+
+ // SHOES — use the final canonical lifecycle planner and its own hard-invariant validator.
+ try{
+  if(!(state.shoes||[]).length)pass('Shoes','Shoe ledger','No shoes are stored; lifecycle checks are not applicable yet.');
+  else{
+   const badMileage=(state.shoes||[]).filter(s=>!Number.isFinite(shoeMileage(s))||shoeMileage(s)<0);
+   if(badMileage.length)error('Shoes','Shoe ledger',`${badMileage.length} shoe${badMileage.length===1?' has':'s have'} invalid calculated mileage.`);
+   else pass('Shoes','Shoe ledger',`${state.shoes.length} physical pair${state.shoes.length===1?'':'s'} checked · calculated mileage is finite and non-negative.`);
+   const life=freshShoeLifecyclePlan();
+   if(life.validationIssues?.length)error('Shoes','Lifecycle hard invariants',`${life.validationIssues.length} hard failure${life.validationIssues.length===1?'':'s'} · ${life.validationIssues.slice(0,3).map(x=>x.code).join(' · ')}`);
+   else pass('Shoes','Lifecycle hard invariants',`${life.assignments.length} future assignment${life.assignments.length===1?'':'s'} checked · no hard lifecycle failures.`);
+   if(life.softTargets?.length)warn('Shoes','Rotation optimisation targets',`${life.softTargets.length} soft target${life.softTargets.length===1?'':'s'} currently not optimal · ${life.softTargets.slice(0,3).map(x=>x.code).join(' · ')}`);
+   else pass('Shoes','Rotation optimisation targets','Weekly balance and race-familiarisation soft targets are satisfied by the current forecast.');
+   if(life.racePair)pass('Shoes','Race-day physical pair',`${lifecyclePairLabel(life.racePair)} is the canonical Race Day pair.`);
+   else error('Shoes','Race-day physical pair','The lifecycle planner did not produce a Race Day physical pair.');
+  }
+ }catch(err){error('Shoes','Shoe lifecycle engine',`Shoe lifecycle check could not complete: ${err?.message||err}`)}
+
+ // PREDICTION — range/probability sanity without creating a second prediction model.
+ try{
+  const e=coachEngine(),models=[['Current',e.currentModel,e.pred],['Programme',e.projectedModel,e.projection?.predictedTime]];
+  for(const [name,m,central] of models){
+   const probabilityOk=Number.isFinite(Number(m?.probability))&&Number(m.probability)>=0&&Number(m.probability)<=100;
+   const rangeOk=Number.isFinite(Number(m?.rangeLow))&&Number.isFinite(Number(m?.rangeHigh))&&Number(m.rangeLow)<=Number(central)&&Number(central)<=Number(m.rangeHigh);
+   if(probabilityOk)pass('Prediction',`${name} probability bounds`,`${Math.round(Number(m.probability))}% is inside the valid 0–100% range.`);else error('Prediction',`${name} probability bounds`,`Probability is invalid: ${m?.probability??'—'}.`);
+   if(rangeOk)pass('Prediction',`${name} central estimate / range`,`Central estimate is contained within its displayed uncertainty range.`);else error('Prediction',`${name} central estimate / range`,'Central estimate is not contained within its model range.');
+  }
+ }catch(err){error('Prediction','Prediction engine',`Prediction consistency check could not complete: ${err?.message||err}`)}
+
+ const counts={pass:items.filter(x=>x.status==='pass').length,warn:items.filter(x=>x.status==='warn').length,error:items.filter(x=>x.status==='error').length};
+ return{items,counts,total:items.length,checkedAt:new Date()};
+}
+function renderModelDiagnostics(){
+ const host=$('modelDiagnostics');if(!host)return;
+ const report=modelIntegrityDiagnostics(),c=report.counts,status=c.error?'Issues detected':c.warn?'Checks passed with warnings':'All checks passed',cls=c.error?'bad':c.warn?'warn':'good';
+ const areas=['Data','Plan','Rehab','Shoes','Prediction'];
+ host.innerHTML=`<summary><div><small>MODEL INTEGRITY</small><b>${esc(status)}</b><span>${report.total} checks · ${c.pass} passed · ${c.warn} warnings · ${c.error} errors</span></div><span class="diagnosticStatus ${cls}">${c.error?c.error:c.warn?c.warn:'✓'}</span></summary><div class="modelDiagnosticsBody"><div class="diagnosticSummary"><div><small>PASSED</small><b>${c.pass}</b></div><div><small>WARNINGS</small><b>${c.warn}</b></div><div><small>ERRORS</small><b>${c.error}</b></div><div><small>LAST CHECKED</small><b>${report.checkedAt.toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'})}</b></div></div>${areas.map(area=>{const rows=report.items.filter(x=>x.area===area);if(!rows.length)return'';return`<section class="diagnosticGroup"><h4>${esc(area)}</h4>${rows.map(x=>`<div class="diagnosticRow ${x.status}"><span>${x.status==='pass'?'✓':x.status==='warn'?'•':'!'}</span><div><b>${esc(x.label)}</b><small>${esc(x.detail)}</small></div><em>${x.status==='pass'?'Pass':x.status==='warn'?'Warning':'Error'}</em></div>`).join('')}</section>`}).join('')}<p class="diagnosticNote">Diagnostics are read-only consistency checks. They do not change the training plan, rehabilitation state, predictions, shoe assignments or stored data.</p></div>`;
+}
 function renderSettings(){
  const groups=[
   {title:'Goal event',eyebrow:'ENTERED BY ATHLETE',fields:[['planStart','Plan start','date'],['raceDate','Race date','date'],['raceName','Race name','text'],['raceDistance','Race distance','number',1,200,'km'],['targetTime','Target time','time']]},
@@ -4140,7 +4240,7 @@ function renderSettings(){
  $('raceDateRecommendation')?.remove();$('raceDefaultsNote')?.remove();$('settingsGrid').insertAdjacentHTML('afterend',`<div id="raceDefaultsNote" class="settingsNested settingsModelNote"><b>${raceProfile(state.setup.raceDistance).label} training defaults</b><p class="muted compact">Changing race distance from 5 km through 100 km applies the existing conservative recreational defaults for weekly distance, long run, growth, taper, training frequency and session types.</p></div><div id="raceDateRecommendation" class="settingsNested settingsModelNote"></div>`);
  raceDistanceInput?.addEventListener('change',()=>{let d=Number(raceDistanceInput.value);if(!(d>0))return;let profile=raceProfile(d),values=raceProfileValues(d);Object.entries(values).forEach(([key,value])=>{let input=document.querySelector(`[data-setting="${key}"]`);if(input)input.value=key==='growth'?Math.round(value*100):value});applyRaceProfileDays(profile);renderTrainingDays();let r=showRecommendedDate(),dateInput=document.querySelector('[data-setting="raceDate"]');if(dateInput)dateInput.value=r.date;toast(`${profile.label} defaults and recommended race date ${fmtDate(r.date)} applied.`)});
  ['planStart','currentWeekly','currentLongest','maxWeekly','growth','peakLong','taperDays','testDistance','testTime','targetTime'].forEach(key=>document.querySelector(`[data-setting="${key}"]`)?.addEventListener('change',showRecommendedDate));
- showRecommendedDate();renderTrainingDays()
+ showRecommendedDate();renderTrainingDays();renderModelDiagnostics()
 }
 function weeklyCompletedLongs(){
  return Array.from({length:weeks()},(_,i)=>{

@@ -6051,3 +6051,35 @@ body:has(#dashboard.progressPage.active),#mainContent:has(#dashboard.progressPag
   min-height:0!important;
   padding:10px 12px!important;
 }
+
+
+/* v14.9.33 — App & Model Information diagnostics */
+#settings .modelDiagnostics{margin-top:10px;padding:0;overflow:hidden}
+#settings .modelDiagnostics>summary{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 16px;cursor:pointer;list-style:none}
+#settings .modelDiagnostics>summary::-webkit-details-marker{display:none}
+#settings .modelDiagnostics>summary>div{display:grid;gap:2px;min-width:0}
+#settings .modelDiagnostics>summary small{font-size:10px;font-weight:850;letter-spacing:.08em;color:var(--teal-2)}
+#settings .modelDiagnostics>summary b{font-size:16px}
+#settings .modelDiagnostics>summary span:not(.diagnosticStatus){font-size:11px;color:var(--muted)}
+#settings .diagnosticStatus{display:grid;place-items:center;min-width:32px;height:32px;border-radius:50%;font-size:13px;font-weight:900}
+#settings .diagnosticStatus.good{color:#78dfa0;background:rgba(120,223,160,.10);border:1px solid rgba(120,223,160,.28)}
+#settings .diagnosticStatus.warn{color:#e7b75f;background:rgba(231,183,95,.10);border:1px solid rgba(231,183,95,.28)}
+#settings .diagnosticStatus.bad{color:#ef897c;background:rgba(239,137,124,.10);border:1px solid rgba(239,137,124,.28)}
+#settings .modelDiagnosticsBody{padding:0 12px 12px}
+#settings .diagnosticSummary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px;margin-bottom:10px}
+#settings .diagnosticSummary>div{padding:8px;border-radius:9px;background:rgba(8,33,43,.52);border:1px solid rgba(129,178,189,.13)}
+#settings .diagnosticSummary small{display:block;font-size:7px;color:var(--muted);font-weight:800;letter-spacing:.06em}
+#settings .diagnosticSummary b{display:block;margin-top:2px;font-size:13px}
+#settings .diagnosticGroup{margin-top:8px}
+#settings .diagnosticGroup h4{margin:0 0 5px;font-size:11px;color:var(--text-2)}
+#settings .diagnosticRow{display:grid;grid-template-columns:23px minmax(0,1fr) auto;gap:7px;align-items:start;padding:7px 8px;margin-top:4px;border-radius:9px;background:rgba(8,31,41,.50);border:1px solid rgba(128,178,190,.11)}
+#settings .diagnosticRow>span{display:grid;place-items:center;width:21px;height:21px;border-radius:50%;font-size:11px;font-weight:900}
+#settings .diagnosticRow>div{min-width:0}
+#settings .diagnosticRow b{display:block;font-size:10px;line-height:1.25}
+#settings .diagnosticRow small{display:block;margin-top:2px;font-size:8px;line-height:1.35;color:var(--muted)}
+#settings .diagnosticRow em{font-size:8px;font-style:normal;font-weight:800}
+#settings .diagnosticRow.pass>span,#settings .diagnosticRow.pass>em{color:#78dfa0}
+#settings .diagnosticRow.warn>span,#settings .diagnosticRow.warn>em{color:#e7b75f}
+#settings .diagnosticRow.error>span,#settings .diagnosticRow.error>em{color:#ef897c}
+#settings .diagnosticNote{margin:10px 2px 2px;font-size:8px;line-height:1.4;color:var(--muted)}
+@media(max-width:520px){#settings .diagnosticSummary{grid-template-columns:repeat(2,minmax(0,1fr))}}
