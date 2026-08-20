@@ -5735,3 +5735,51 @@ body:has(#dashboard.progressPage.active),#mainContent:has(#dashboard.progressPag
 
 /* v14.9.13 compact activity-storage information */
 #settings .settingsAppInfo span{display:block;margin-top:4px;font-size:9px;line-height:1.35;color:var(--muted)}
+
+
+/* v14.9.16 — Injury tab only: integrated assessment + full recovery-stage criteria */
+#injury .injuryNameAssessmentFoldout{margin:1px 0 3px;border:0;background:transparent;overflow:visible}
+#injury .injuryNameAssessmentFoldout>summary{display:flex;align-items:center;gap:8px;width:max-content;max-width:100%;padding:0;min-height:0;cursor:pointer;list-style:none;font-size:25px;line-height:1.1;font-weight:850;letter-spacing:-.035em;color:#fff}
+#injury .injuryNameAssessmentFoldout>summary::-webkit-details-marker{display:none}
+#injury .injuryNameAssessmentFoldout>summary::after{content:'⌄';flex:0 0 auto;font-size:15px;line-height:1;color:var(--teal-2);transform:translateY(-1px);transition:transform .18s ease}
+#injury .injuryNameAssessmentFoldout[open]>summary::after{transform:rotate(180deg) translateY(1px)}
+#injury .injuryNameAssessmentBody{margin:10px 0 7px;padding:12px;border:1px solid rgba(61,214,198,.16);border-radius:14px;background:#0b1821}
+#injury .injuryNameAssessmentBody .injuryRunnerAssessmentTop{margin-bottom:10px}
+#injury .injuryNameAssessmentBody .injuryClinicalCompare,#injury .injuryNameAssessmentBody .injuryRunnerBaseline,#injury .injuryNameAssessmentBody .injuryRunnerClinicianTiming{margin-top:8px}
+#injury .injuryAssessmentReasoning{margin-top:10px;padding-top:9px;border-top:1px solid rgba(136,161,177,.12)}
+#injury .injuryAssessmentReasoning h5{margin:10px 0 5px;font-size:12px;color:#fff}
+#injury .injuryAssessmentReasoning ul{margin:5px 0 8px;padding-left:18px}
+#injury .injuryAssessmentReasoning li,#injury .injuryAssessmentReasoning p{font-size:11px;line-height:1.45;color:var(--text-2)}
+#injury .injuryRecoveryStages{display:grid;gap:10px}
+#injury .injuryRecoveryStage{border:1px solid rgba(136,161,177,.13);border-radius:16px;background:var(--panel);overflow:hidden}
+#injury .injuryRecoveryStage.current{border-color:rgba(61,214,198,.34);box-shadow:inset 3px 0 0 var(--teal-2)}
+#injury .injuryRecoveryStage.completed{background:rgba(31,47,57,.72)}
+#injury .injuryRecoveryStage.future{background:rgba(19,35,49,.72);border-color:rgba(94,135,168,.16)}
+#injury .injuryRecoveryStage>header{display:grid;grid-template-columns:34px minmax(0,1fr);gap:10px;align-items:start;padding:12px 12px 9px}
+#injury .injuryRecoveryStage>header>span{width:32px;height:32px;display:grid;place-items:center;border-radius:50%;background:#0b1821;color:var(--muted);font-size:11px;font-weight:900}
+#injury .injuryRecoveryStage.completed>header>span{color:var(--green);background:rgba(121,214,155,.08)}
+#injury .injuryRecoveryStage.current>header>span{color:var(--teal-2);background:rgba(61,214,198,.09)}
+#injury .injuryRecoveryStage.future>header>span{color:#85a9c1;background:rgba(83,124,153,.10)}
+#injury .injuryRecoveryStage header small{display:block;margin:0 0 2px;font-size:9px;line-height:1.2;font-weight:850;letter-spacing:.09em;color:var(--muted)}
+#injury .injuryRecoveryStage.completed header small{color:var(--green)}
+#injury .injuryRecoveryStage.current header small{color:var(--teal-2)}
+#injury .injuryRecoveryStage.future header small{color:#85a9c1}
+#injury .injuryRecoveryStage h4{margin:0;font-size:15px;line-height:1.25;color:#fff}
+#injury .injuryRecoveryStage header p{margin:3px 0 0;font-size:11px;line-height:1.4;color:var(--text-2)}
+#injury .injuryStageCriteriaList{display:grid;gap:6px;padding:0 10px 10px}
+#injury .injuryStageCriterion{display:grid;grid-template-columns:26px minmax(0,1fr) auto;gap:8px;align-items:center;padding:9px 10px;border-radius:11px;background:var(--nested);border:1px solid rgba(136,161,177,.09)}
+#injury .injuryStageCriterion>i{width:25px;height:25px;display:grid;place-items:center;border-radius:50%;font-style:normal;font-size:15px;font-weight:950;background:#0b1821}
+#injury .injuryStageCriterion.met>i{color:var(--green);background:rgba(121,214,155,.09)}
+#injury .injuryStageCriterion.pending>i{color:var(--amber);background:rgba(241,197,106,.09)}
+#injury .injuryStageCriterion.future>i{color:#85a9c1;background:rgba(83,124,153,.10)}
+#injury .injuryStageCriterion b{display:block;font-size:11px;line-height:1.3;color:#fff}
+#injury .injuryStageCriterion small{display:block;margin-top:2px;font-size:9px;line-height:1.35;color:var(--muted)}
+#injury .injuryStageCriterion em{font-style:normal;font-size:9px;font-weight:850;text-align:right;color:var(--muted)}
+#injury .injuryStageCriterion.met em{color:var(--green)}
+#injury .injuryStageCriterion.pending em{color:var(--amber)}
+#injury .injuryStageCriterion.future em{color:#85a9c1}
+@media(max-width:600px){
+ #injury .injuryNameAssessmentFoldout>summary{font-size:22px}
+ #injury .injuryStageCriterion{grid-template-columns:26px minmax(0,1fr)}
+ #injury .injuryStageCriterion em{grid-column:2;text-align:left}
+}

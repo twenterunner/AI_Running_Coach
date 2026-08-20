@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '14.9.15';
-  const BUILD = 40915;
+  const VERSION = '14.9.16';
+  const BUILD = 40916;
   const SCHEMA = 10400;
   const PRIMARY_STORAGE_KEY = 'arc_v10400_web';
   const MIRROR_STORAGE_KEY = 'arc_v10400_mirror';
@@ -5222,16 +5222,29 @@ function renderInjury(){
  const i=active,p=injuryPrediction(i),st=INJURY_STAGES[p.stage],diag=p.diag,next=Math.min(INJURY_STAGES.length-1,p.stage+1),criteria=criterionState(i,p,next),met=criteria.filter(x=>x.status==='met').length,unknown=criteria.filter(x=>x.status==='unknown').length,scoreInfo=recoveryScoreExplanation(i,p,comparisonFactors(i,p)),adherence7=rehabAdherenceSummary(i,7),adherence14=rehabAdherenceSummary(i,14),adherenceOverall=rehabAdherenceSummary(i,null),milestones=milestoneStatus(p),clinicalPlan=injuryCausePrevention(i,diag),timelineText=p.safetyHold?'Progression paused pending assessment':`${fmtDate(p.windowStart)}–${fmtDate(p.windowEnd)}`,progressValue=p.completion===null?null:clamp(Number(p.completion),0,100),trajectoryClass=injuryRunnerStatusClass(scoreInfo.status),run=p.snapshot?.run||{},lastRun=run.lastCompleted||null,todayPlan=buildRehabCalendar(i,p)[0];
  const stagePurpose=st.goal||'Follow the criteria-based rehabilitation stage.';
  const unmet=criteria.filter(c=>c.status!=='met');
+ const allRecoveryStagesHtml=INJURY_STAGES.map((stageDef,stageIndex)=>{
+  const stageCriteria=criterionState(i,p,stageIndex),phaseState=stageIndex<p.stage?'completed':stageIndex===p.stage?'current':'future';
+  const criteriaHtml=stageCriteria.map(c=>{
+   const future=phaseState==='future',completed=phaseState==='completed',status=future?'future':completed||c.status==='met'?'met':'pending';
+   const symbol=status==='met'?'✓':status==='pending'?'•':'◇';
+   const detail=future?'Required when this phase becomes active':completed?'Satisfied when this recovery phase was completed':c.progress?.text||(c.status==='unknown'?'Evidence not yet reported':c.status==='notMet'?'Current evidence does not yet meet this criterion':'Criterion met');
+   const label=status==='met'?'Met':status==='pending'?(c.status==='unknown'?'Not yet evidenced':'Not met'):'Future';
+   return `<div class="injuryStageCriterion ${status}"><i>${symbol}</i><span><b>${esc(c.label)}</b><small>${esc(detail)}</small></span><em>${label}</em></div>`;
+  }).join('');
+  const phaseLabel=phaseState==='completed'?'COMPLETED':phaseState==='current'?'CURRENT PHASE':'FUTURE PHASE';
+  return `<article class="injuryRecoveryStage ${phaseState}"><header><span>${stageIndex+1}</span><div><small>${phaseLabel}</small><h4>${esc(stageDef.name)}</h4><p>${esc(stageDef.goal)}</p></div></header><div class="injuryStageCriteriaList">${criteriaHtml}</div></article>`;
+ }).join('');
  const currentRestriction=p.safetyHold?'Progression paused pending clinical assessment':p.stage>=5?'Final return-to-training criteria phase':todayPlan?.running?'Running exposure is controlled by the rehabilitation plan':'Running exposure remains governed by rehabilitation stage criteria';
  const clinician=diag.verification;
  const clinicianBlock=clinician?`<div class="injuryClinicalCompare ${clinician.verdict}"><span><small>Clinician entered</small><b>${esc(clinician.entered)}</b></span><span><small>Independent app assessment</small><b>${esc(diag.name)}</b></span><p>${esc(clinician.status)}</p></div>`:`<div class="injuryRunnerBaseline compact"><b>No clinician diagnosis recorded</b><p>The app assessment remains a working symptom-pattern interpretation, not a medical diagnosis.</p></div>`;
+ const injuryAssessmentFoldout=`<details class="injuryNameAssessmentFoldout"><summary>${esc(i.location||i.bodyRegion||'Injury rehabilitation')}</summary><div class="injuryNameAssessmentBody"><div class="injuryRunnerAssessmentTop"><div><small>APP WORKING SYMPTOM PATTERN</small><strong>${esc(diag.name)}</strong><span>${esc(diag.strength)} match · ${esc(i.bodyRegion||'recorded region')}</span></div><span class="injuryFamilyPill">${esc((diag.family||'generic').replace('_',' '))}</span></div>${clinicianBlock}${Number.isFinite(nullableNumber(i.clinicianExpectedDays))?`<div class="injuryRunnerClinicianTiming"><small>CLINICIAN EXPECTED RECOVERY PERIOD</small><strong>${nullableNumber(i.clinicianExpectedDays)} days</strong><span>This clinician-entered expectation is already incorporated by the existing prognosis model.</span></div>`:''}<div class="injuryAssessmentReasoning"><h5>Why this pattern?</h5><ul>${diag.evidence.slice(0,6).map(x=>`<li>${esc(x)}</li>`).join('')}</ul>${diag.alternatives?.length?`<h5>Other compatible possibilities</h5><ul>${diag.alternatives.slice(0,5).map(x=>`<li>${esc(x)}</li>`).join('')}</ul>`:''}<div class="injuryRunnerTwoCol"><div><b>Possible contributors</b><ul>${clinicalPlan.causes.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div><div><b>Prevention / recurrence reduction</b><ul>${clinicalPlan.prevention.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div></div></div></div></details>`;
 
  box.innerHTML=`
  <div class="injuryRunnerDashboard">
   <section class="injuryRunnerSection injuryRunnerStatusSection">
    ${injuryRunnerSectionHead(1,'REHABILITATION STATUS','Where are you in rehabilitation?','Current stage, trajectory and expected return to unrestricted running.')}
    <article class="injuryRunnerHero ${trajectoryClass}">
-    <div class="injuryRunnerHeroTop"><span class="injuryRunnerHeroIcon">${uiIcon('rehab')}</span><div><small>ACTIVE RECOVERY PLAN</small><h3>${esc(i.location||i.bodyRegion||'Injury rehabilitation')}</h3><p>${esc(st.name)} · Stage ${p.stage+1} of ${INJURY_STAGES.length}</p></div><span class="injuryRunnerStageChip">Stage ${p.stage+1}</span></div>
+    <div class="injuryRunnerHeroTop"><span class="injuryRunnerHeroIcon">${uiIcon('rehab')}</span><div><small>ACTIVE RECOVERY PLAN</small>${injuryAssessmentFoldout}<p>${esc(st.name)} · Stage ${p.stage+1} of ${INJURY_STAGES.length}</p></div><span class="injuryRunnerStageChip">Stage ${p.stage+1}</span></div>
     <div class="injuryRunnerHeroLead"><strong>${esc(scoreInfo.label)}</strong><p>${esc(currentRestriction)}</p></div>
     <div class="injuryRunnerPrimaryMetrics">
      <div><small>Expected unrestricted running</small><strong>${p.safetyHold?'On hold':fmtDate(p.fullDate)}</strong><span>${p.safetyHold?'Clinical assessment required before progression':`Current model window ${timelineText}`}</span></div>
@@ -5249,14 +5262,9 @@ function renderInjury(){
    <div class="injuryRunnerProgramme">${rehabTodayFocusHtml(i,p)}<button data-injury-check="${i.id}" class="primary full injuryPrimaryAction">Complete today’s check-in</button>${rehabCalendarHtml(i,p)}</div>
   </section>
 
-  <section class="injuryRunnerSection">
-   ${injuryRunnerSectionHead(3,'CURRENT STAGE & CRITERIA','What is stopping progression?','Current-stage purpose and the criteria required before the next stage.')}
-   <article class="injuryRunnerCard">
-    <div class="injuryRunnerStageOverview"><div><small>CURRENT STAGE</small><strong>${esc(st.name)}</strong><p>${esc(stagePurpose)}</p></div><div><small>NEXT STAGE</small><strong>${esc(INJURY_STAGES[next].name)}</strong><p>${met}/${criteria.length} criteria met${unknown?` · ${unknown} not assessed`:''}</p></div></div>
-    <div class="injuryRunnerCriteria">${criteria.map(c=>`<div class="injuryRunnerCriterion ${c.status}"><i>${c.status==='met'?'✓':c.status==='notMet'?'○':'?'}</i><span><b>${esc(c.label)}</b>${c.progress?`<small>${esc(c.progress.text)}</small>`:c.status==='unknown'?'<small>Evidence not yet reported</small>':''}</span><em>${c.status==='met'?'Met':c.status==='notMet'?(c.progress&&c.progress.count>0?'In progress':'Not met'):'Not assessed'}</em></div>`).join('')}</div>
-    ${unmet.length?`<div class="injuryRunnerLimiter"><small>CURRENT PROGRESSION LIMITER${unmet.length>1?'S':''}</small><p>${unmet.slice(0,3).map(c=>esc(c.label)).join(' · ')}</p></div>`:''}
-    <details class="injuryRunnerDisclosure"><summary>View all rehabilitation stages</summary><div class="injuryRunnerStageList">${INJURY_STAGES.map((x,n)=>`<div class="${n<p.stage?'done':n===p.stage?'active':''}"><i>${n+1}</i><span><b>${esc(x.name)}</b><small>${esc(x.goal)}</small></span></div>`).join('')}</div></details>
-   </article>
+  <section class="injuryRunnerSection injuryRecoveryStagesSection">
+   ${injuryRunnerSectionHead(3,'RECOVERY STAGES & CRITERIA','What has been achieved, what remains, and what comes later?','All recovery phases and their progression criteria in one view. Current criteria are evidence-based; future criteria are shown without being scored as failures.')}
+   <div class="injuryRecoveryStages">${allRecoveryStagesHtml}</div>
   </section>
 
   <section class="injuryRunnerSection">
@@ -5304,33 +5312,13 @@ function renderInjury(){
   </section>
 
   <section class="injuryRunnerSection">
-   ${injuryRunnerSectionHead(8,'IMPACT ON RUNNING TRAINING','How is the injury affecting normal training?','Only the consequences that matter to return to the normal running programme.')}
-   <article class="injuryRunnerCard">
-    <div class="injuryRunnerTrainingImpact">
-     <span class="injuryRunnerImpactIcon">${uiIcon('run')}</span>
-     <div><small>CURRENT TRAINING CONTEXT</small><h4>${esc(currentRestriction)}</h4><p>${p.safetyHold?'The rehabilitation pathway is paused pending assessment.':p.stage>=5?'The pathway is in its final stage; unrestricted training still depends on the existing stage criteria being met.':lastRun?`A ${Number(lastRun.runMinutes)||0}-minute running exposure has been completed, but rehabilitation criteria still govern progression.`:'Running exposure has not yet been established as a completed rehabilitation milestone.'}</p></div>
-    </div>
-   </article>
-  </section>
-
-  <section class="injuryRunnerSection injuryAssessmentSection">
-   ${injuryRunnerSectionHead(9,'INJURY ASSESSMENT','Clinical context without dominating rehabilitation','App working pattern, clinician input and explanatory reasoning.')}
-   <article class="injuryRunnerCard">
-    <div class="injuryRunnerAssessmentTop"><div><small>APP WORKING SYMPTOM PATTERN</small><strong>${esc(diag.name)}</strong><span>${esc(diag.strength)} match · ${esc(i.bodyRegion||'recorded region')}</span></div><span class="injuryFamilyPill">${esc((diag.family||'generic').replace('_',' '))}</span></div>
-    ${clinicianBlock}${Number.isFinite(nullableNumber(i.clinicianExpectedDays))?`<div class="injuryRunnerClinicianTiming"><small>CLINICIAN EXPECTED RECOVERY PERIOD</small><strong>${nullableNumber(i.clinicianExpectedDays)} days</strong><span>This clinician-entered expectation is already incorporated by the existing prognosis model.</span></div>`:''}
-    <details class="injuryRunnerDisclosure"><summary>Why this pattern?</summary><ul>${diag.evidence.slice(0,6).map(x=>`<li>${esc(x)}</li>`).join('')}</ul>${diag.alternatives?.length?`<h5>Other compatible possibilities</h5><ul>${diag.alternatives.slice(0,5).map(x=>`<li>${esc(x)}</li>`).join('')}</ul>`:''}</details>
-    <details class="injuryRunnerDisclosure"><summary>Likely contributors and prevention</summary><div class="injuryRunnerTwoCol"><div><b>Possible contributors</b><ul>${clinicalPlan.causes.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div><div><b>Prevention / recurrence reduction</b><ul>${clinicalPlan.prevention.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div></div></details>
-   </article>
-  </section>
-
-  <section class="injuryRunnerSection">
-   ${injuryRunnerSectionHead(10,'REHABILITATION HISTORY','Review the evidence trail','Historical check-ins remain available without turning the default screen into a medical record.')}
+   ${injuryRunnerSectionHead(8,'REHABILITATION HISTORY','Review the evidence trail','Historical check-ins remain available without turning the default screen into a medical record.')}
    <article class="injuryRunnerCard">
     <details class="injuryRunnerDisclosure injuryRunnerHistoryDisclosure"><summary>${p.checks.length} rehabilitation check-in${p.checks.length===1?'':'s'}</summary><div class="checkInHistory">${p.checks.length?p.checks.slice().reverse().map(c=>`<button type="button" class="checkInHistoryRow" data-injury-check-edit="${i.id}" data-check-date="${c.date}"><span><b>${fmtDate(c.date)}</b><small>${Number.isFinite(c.pain)?`Pain ${c.pain}/10`:''}${Number.isFinite(c.walkPain)?`${Number.isFinite(c.pain)?' · ':''}walking ${c.walkPain}/10`:''}${Number.isFinite(c.runMinutes)?` · run ${c.runMinutes} min`:c.runStatus==='not_planned'?' · no run planned':c.runStatus==='not_assessed'?' · running not assessed':''}<br>Rehab: ${esc(rehabExecutionMeta(c).short)}</small></span><em>Edit</em></button>`).join(''):'<p class="injuryRunnerNeutral">No check-ins yet.</p>'}</div></details>
     <details class="injuryRunnerDisclosure"><summary>Initial versus latest symptoms</summary><div class="injuryRunnerTwoCol"><div><small>AT INJURY</small><b>Pain ${valueText(nullableNumber(i.initialPain))} · walking ${valueText(nullableNumber(i.initialWalkPain))}</b><p>${esc(i.initialSymptoms||'No symptom description recorded.')}</p></div><div><small>LATEST</small><b>Pain ${valueText(p.currentPain)} · walking ${valueText(p.walkPain)}</b><p>${esc(p.latest.symptoms||i.currentSymptoms||'No current symptom description recorded.')}</p></div></div></details>
     <div class="buttonRow injuryRunnerAdmin"><button data-injury-edit="${i.id}">Edit injury</button><button data-injury-delete="${i.id}" class="danger">Delete</button></div>
    </article>
-  </section>  ${parallel.length?`<section class="injuryRunnerSection injuryRunnerOtherAssessments">${injuryRunnerSectionHead(11,'OTHER ASSESSED INJURIES','Parallel assessments','These remain separate from the active rehabilitation plan.')}<div class="injuryRunnerParallelList">${parallel.map(other=>{const op=injuryPrediction(other),od=op.diag;return `<article class="injuryRunnerParallelCard"><div><small>PARALLEL ASSESSMENT</small><h3>${esc(other.location||other.bodyRegion||'Injury')}</h3><p>${esc(od.name)} · ${fmtDate(other.date)}</p></div><div class="injuryRunnerParallelMetrics"><span><small>Stage</small><b>${esc(INJURY_STAGES[op.stage].name)}</b></span><span><small>Central estimate</small><b>${op.safetyHold?'On hold':fmtDate(op.fullDate)}</b></span></div><button class="secondary full" data-activate-injury-plan="${other.id}">Switch to this recovery plan</button><details class="injuryRunnerDisclosure"><summary>Assessment actions</summary><div class="buttonRow"><button data-injury-edit="${other.id}">Edit assessment</button><button data-injury-delete="${other.id}" class="danger">Delete</button></div></details></article>`}).join('')}</div></section>`:''}
+  </section>  ${parallel.length?`<section class="injuryRunnerSection injuryRunnerOtherAssessments">${injuryRunnerSectionHead(9,'OTHER ASSESSED INJURIES','Parallel assessments','These remain separate from the active rehabilitation plan.')}<div class="injuryRunnerParallelList">${parallel.map(other=>{const op=injuryPrediction(other),od=op.diag;return `<article class="injuryRunnerParallelCard"><div><small>PARALLEL ASSESSMENT</small><h3>${esc(other.location||other.bodyRegion||'Injury')}</h3><p>${esc(od.name)} · ${fmtDate(other.date)}</p></div><div class="injuryRunnerParallelMetrics"><span><small>Stage</small><b>${esc(INJURY_STAGES[op.stage].name)}</b></span><span><small>Central estimate</small><b>${op.safetyHold?'On hold':fmtDate(op.fullDate)}</b></span></div><button class="secondary full" data-activate-injury-plan="${other.id}">Switch to this recovery plan</button><details class="injuryRunnerDisclosure"><summary>Assessment actions</summary><div class="buttonRow"><button data-injury-edit="${other.id}">Edit assessment</button><button data-injury-delete="${other.id}" class="danger">Delete</button></div></details></article>`}).join('')}</div></section>`:''}
  </div>`;
  sortInjurySectionsByDisplayedNumber();
 }
