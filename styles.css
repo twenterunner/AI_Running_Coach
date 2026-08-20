@@ -5905,3 +5905,24 @@ body:has(#dashboard.progressPage.active),#mainContent:has(#dashboard.progressPag
 #injury .injuryTrajectory .injuryPhaseBand.future{fill:rgba(216,184,98,.025)}
 #injury .injuryTrajectory .injuryPhaseBand.selected{fill:rgba(74,230,216,.20);stroke:rgba(74,230,216,.82);stroke-width:2}
 #injury .injuryTrajectory .injuryPhaseBand.future.selected{fill:rgba(216,184,98,.14);stroke:rgba(216,184,98,.84);stroke-width:2}
+
+
+/* v14.9.26 — Injury trajectory: current phase extends to anticipated phase end */
+#injury .injuryTrajectory .injuryPhaseBand.current{
+  fill:rgba(74,230,216,.075);
+}
+#injury .injuryTrajectory .currentDateLine{
+  stroke-width:1.5;
+}
+
+/* v14.9.27 — coordinated six-color recovery phases */
+#injury .injuryPhaseBandGroup .injuryPhaseBand{fill:var(--phase-fill)!important}
+#injury .injuryPhaseBandGroup .injuryPhaseBoundary{stroke:var(--phase-stroke)!important;opacity:.82}
+#injury .injuryPhaseBandGroup .injuryPhaseNumber,
+#injury .injuryPhaseBandGroup .injuryPhaseLabel{fill:var(--phase-text)!important}
+#injury .injuryPhaseBandGroup .injuryPhaseBand.selected{stroke:var(--phase-stroke)!important;stroke-width:2.4;fill:var(--phase-fill)!important;opacity:1}
+#injury .injuryPhaseStripItem{border-color:color-mix(in srgb,var(--phase-stroke) 62%,transparent)!important;background:var(--phase-fill)!important}
+#injury .injuryPhaseStripItem>i,
+#injury .injuryPhaseStripItem span>b{color:var(--phase-text)!important}
+#injury .injuryPhaseStripItem.selected{border-color:var(--phase-stroke)!important;box-shadow:inset 0 0 0 1px var(--phase-stroke)}
+#injury .injuryPhaseStripItem.selected>i{border-color:var(--phase-stroke)!important}

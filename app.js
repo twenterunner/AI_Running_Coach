@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '14.9.25';
-  const BUILD = 40925;
+  const VERSION = '14.9.27';
+  const BUILD = 40927;
   const SCHEMA = 10400;
   const PRIMARY_STORAGE_KEY = 'arc_v10400_web';
   const MIRROR_STORAGE_KEY = 'arc_v10400_mirror';
@@ -5167,24 +5167,33 @@ function injuryTrajectorySvg(i,p){
      const s=transitions[n]??0,e=transitions[n+1]??todayDay;
      return{start:s,end:Math.max(s,e),kind:'actual'};
    }
-   if(n===p.stage)return{start:transitions[n]??todayDay,end:todayDay,kind:'current'};
+   if(n===p.stage)return{start:transitions[n]??todayDay,end:projectedCurrentExit,kind:'current'};
    let s=projectedCurrentExit;
    for(let k=p.stage+1;k<n;k++)s+=nominalBounds[k].duration;
    const e=n===INJURY_STAGES.length-1?projectedTotal:Math.min(projectedTotal,s+nominalBounds[n].duration);
    return{start:Math.min(s,projectedTotal),end:Math.max(Math.min(s,projectedTotal),e),kind:'future'};
  });
 
- // Every phase remains visible with a boundary and label. Selected tile changes band shading only.
+ // Every phase has one semantic color shared by graph band, boundary, label and tile.
+ const phaseColors=[
+   {stroke:'#45d8cf',fill:'rgba(69,216,207,.13)',text:'#78eee7'},
+   {stroke:'#68d78d',fill:'rgba(104,215,141,.13)',text:'#91eaaa'},
+   {stroke:'#d5c95d',fill:'rgba(213,201,93,.13)',text:'#ece17d'},
+   {stroke:'#e6a55c',fill:'rgba(230,165,92,.13)',text:'#f3c17e'},
+   {stroke:'#d28acb',fill:'rgba(210,138,203,.14)',text:'#e8aae1'},
+   {stroke:'#819de5',fill:'rgba(129,157,229,.14)',text:'#a8baf1'}
+ ];
  const phaseBands=INJURY_STAGES.map((st,n)=>{
    const b=phaseBounds[n],x0=x(b.start),x1=x(b.end),w=Math.max(2,x1-x0),cx=x0+w/2;
-   return `<g class="injuryPhaseBandGroup ${b.kind}" data-phase-band="${n}">
+   const pc=phaseColors[n];
+   return `<g class="injuryPhaseBandGroup ${b.kind}" data-phase-band="${n}" style="--phase-stroke:${pc.stroke};--phase-fill:${pc.fill};--phase-text:${pc.text}">
      <rect class="injuryPhaseBand ${b.kind} ${n===p.stage?'selected':''}" x="${x0}" y="${top}" width="${w}" height="${ch}"><title>${esc(st.name)}</title></rect>
      <line class="injuryPhaseBoundary" x1="${x0}" x2="${x0}" y1="${top}" y2="${top+ch}"/>
      <text class="injuryPhaseNumber" x="${cx}" y="18" text-anchor="middle">${n+1}</text>
      <text class="injuryPhaseLabel" x="${cx}" y="38" text-anchor="middle">${esc(st.name)}</text>
    </g>`;
  }).join('');
- const finalBoundary=`<line class="injuryPhaseBoundary" x1="${x(projectedTotal)}" x2="${x(projectedTotal)}" y1="${top}" y2="${top+ch}"/>`;
+ const finalBoundary=`<line class="injuryPhaseBoundary" style="--phase-stroke:${phaseColors[5].stroke}" x1="${x(projectedTotal)}" x2="${x(projectedTotal)}" y1="${top}" y2="${top+ch}"/>`;
 
  const todayMarker=`<line class="currentDateLine" x1="${todayX}" y1="${top}" x2="${todayX}" y2="${top+ch}"/><text class="currentDateLabel" x="${todayX}" y="${H-30}" text-anchor="middle">Today</text>`;
  const yGrid=[0,25,50,75,100].map(v=>`<line class="grid" x1="${left}" x2="${W-right}" y1="${y(v)}" y2="${y(v)}"/><text class="axisText" x="${left-8}" y="${y(v)+4}" text-anchor="end">${v}%</text>`).join('');
@@ -5200,7 +5209,8 @@ function injuryTrajectorySvg(i,p){
    const metCount=stageCriteria.filter(c=>c.status==='met').length,totalCount=stageCriteria.length;
    const symbol=state==='completed'?'✓':String(n+1);
    const sub=state==='completed'?'Complete':state==='current'?(totalCount?`${metCount}/${totalCount} criteria met`:'Current phase'):'Future';
-   return `<button type="button" class="injuryPhaseStripItem ${state} ${n===p.stage?'selected':''}" data-injury-phase="${n}" aria-expanded="${n===p.stage?'true':'false'}"><i>${symbol}</i><span><b>${esc(st.name)}</b><small>${esc(sub)}</small></span><em class="phaseTileChevron" aria-hidden="true"></em></button>`;
+   const pc=phaseColors[n];
+   return `<button type="button" class="injuryPhaseStripItem ${state} ${n===p.stage?'selected':''}" style="--phase-stroke:${pc.stroke};--phase-fill:${pc.fill};--phase-text:${pc.text}" data-injury-phase="${n}" aria-expanded="${n===p.stage?'true':'false'}"><i>${symbol}</i><span><b>${esc(st.name)}</b><small>${esc(sub)}</small></span><em class="phaseTileChevron" aria-hidden="true"></em></button>`;
  }).join('');
 
  const phaseDetails=INJURY_STAGES.map((st,n)=>{
@@ -5217,8 +5227,8 @@ function injuryTrajectorySvg(i,p){
      return `<div class="injuryStageCriterion ${status}"><i>${symbol}</i><span><b>${esc(c.label)}</b><small>${esc(detail)}</small></span><em>${esc(label)}</em></div>`;
    }).join('');
    const phaseLabel=phaseState==='completed'?'COMPLETED':phaseState==='current'?'CURRENT PHASE':'FUTURE PHASE';
-   const timingLabel=phaseState==='completed'?'Actual timing':phaseState==='current'?'Actual so far':'Projected timing';
-   const timingText=`${phaseDate(b.start)} → ${phaseState==='current'?'Today':phaseDate(b.end)}`;
+   const timingLabel=phaseState==='completed'?'Actual timing':phaseState==='current'?'Current phase window':'Projected timing';
+   const timingText=phaseState==='current'?`${phaseDate(b.start)} → ${phaseDate(b.end)} · Today inside phase`:`${phaseDate(b.start)} → ${phaseDate(b.end)}`;
    const nominalText=`Nominal ${phaseDate(nb.start)} → ${phaseDate(nb.end)}`;
    return `<div class="injuryPhaseDetail ${phaseState}" data-phase-detail="${n}" ${n===p.stage?'':'hidden'}><header><span>${n+1}</span><div><small>${phaseLabel}</small><h4>${esc(st.name)}</h4><p>${esc(st.goal)}</p></div></header><div class="injuryPhaseTiming"><span><small>${timingLabel}</small><b>${timingText}</b></span><span><small>Nominal reference</small><b>${nominalText}</b></span></div><div class="injuryStageCriteriaList">${criteriaHtml}</div></div>`;
  }).join('');
