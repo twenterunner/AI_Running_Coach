@@ -1,4 +1,4 @@
-AI Running Coach v15.0.0 · build 50000
+AI Running Coach v15.0.1 · build 50001
 SHOE ENGINE IMPLEMENTATION / VERIFICATION REPORT
 Date: 2026-08-21
 
@@ -78,3 +78,10 @@ The previous inconsistency class is prevented by publishing one validated snapsh
 
 IMPORTANT HANDOVER LIMITATION
 This release contains the complete code change possible from the supplied baseline, but it would be inaccurate to certify the user's explicit acceptance requirement that “all existing regression tests pass” because those test files were not included in the upload. Re-run the repository's 54/72-scenario and browser suites against these files before treating that specific acceptance item as independently verified.
+
+
+V15.0.1 GRAPH FIX
+- Fixed missing retirement × marker on the shoe programme graph.
+- Marker now resolves from the same canonical physical-pair retirement/final-use state as the plotted mileage curve.
+- No shoe-planning decisions, mileage calculations or non-shoe UI were changed.
+- Targeted regression check added; static/regression suite: 11/11 PASS.

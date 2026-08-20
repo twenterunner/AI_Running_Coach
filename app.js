@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '15.0.0';
-  const BUILD = 50000;
+  const VERSION = '15.0.1';
+  const BUILD = 50001;
   const SCHEMA = 10400;
   const PRIMARY_STORAGE_KEY = 'arc_v10400_web';
   const MIRROR_STORAGE_KEY = 'arc_v10400_mirror';
@@ -8139,18 +8139,21 @@ function shoeGraphForecastPoints(pair,life){
 }
 function shoeGraphRetirementPoint(pair,life,forecastPoints){
  const pts=(forecastPoints||shoeGraphForecastPoints(pair,life)).slice().sort((a,b)=>String(a.date).localeCompare(String(b.date)));
- if(pair.projectedRetireDate||pair.plannedRetireDate||pair.isProjectedRetired){
-  // Ordinary training shoes retire exactly where their canonical curve stops.
-  // Race-reserved footwear may intentionally remain in inventory at low mileage.
+ const explicitlyRetired=Boolean(pair.projectedRetireDate||pair.plannedRetireDate||pair.isProjectedRetired||(pair.owned&&pair.shoe?.status==='retired'));
+ if(explicitlyRetired){
+  // The retirement marker must come from the same canonical physical-pair
+  // lifecycle state as the curve. For ordinary training pairs the marker sits
+  // on the final positive-use point; it is never inferred from an arbitrary
+  // daily/no-use graph extension.
   const rd=(pair!==life.racePair&&pair.role!=='race'&&pair.finalPlannedUseDate)
    ?pair.finalPlannedUseDate
    :(pair.projectedRetireDate||pair.plannedRetireDate||pair.finalPlannedUseDate||pts.at(-1)?.date);
   const before=pts.filter(p=>!rd||p.date<=rd),last=before.at(-1)||pts.at(-1);
-  return last?{date:rd||last.date,km:Number(last.km)}:null
- }
- if(pair.owned&&pair.shoe?.status==='retired'){
-  const actual=shoeActualProgrammeSeries(pair.shoe,state.setup?.planStart||life.now,life.now);
-  return actual.length?actual.at(-1):null
+  if(last)return{date:rd||last.date,km:Number(last.km)}
+  if(pair.owned&&pair.shoe?.status==='retired'){
+   const actual=shoeActualProgrammeSeries(pair.shoe,state.setup?.planStart||life.now,life.now);
+   return actual.length?actual.at(-1):null
+  }
  }
  return null
 }
