@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '14.9.30';
-  const BUILD = 40930;
+  const VERSION = '14.9.31';
+  const BUILD = 40931;
   const SCHEMA = 10400;
   const PRIMARY_STORAGE_KEY = 'arc_v10400_web';
   const MIRROR_STORAGE_KEY = 'arc_v10400_mirror';
@@ -736,7 +736,7 @@ function personalResponseSignal(run,model=personalResponseModel(run?.date||iso(t
 }
 function personalResponseModelHtml(){
  const m=personalResponseModel(),cards=m.dimensions.map(d=>`<article class="personalDimension ${d.confidence.rank<2?'immature':''}"><div class="personalDimHead"><div><small>${esc(d.name.toUpperCase())}</small><h4>${esc(d.status)}</h4></div><span>${esc(d.confidence.label)}</span></div><p>${esc(d.summary)}</p><div class="personalEvidenceCount">${d.count} observation${d.count===1?'':'s'} · ${esc(d.confidence.maturity)}</div><details><summary>Supporting observations</summary>${d.evidence.length?d.evidence.map(x=>`<p>${esc(x)}</p>`).join(''):'<p>Not enough evidence yet.</p>'}<p class="muted compact">This is an observed association in your own training history, not a causal claim.</p></details></article>`).join('');
- return`<section class="personalModelPanel"><div class="personalModelHead"><div><small>PERSONAL RESPONSE MODEL</small><h3>How your training response is being learned</h3></div><span>${esc(m.overallConfidence.label)} overall confidence</span></div><p>The model learns from repeated relationships between training load, workout execution, comparable-run physiology, long-run stability, pain and subsequent sessions. It deliberately learns slowly.</p>${m.strength||m.limiter?`<div class="personalModelSummary">${m.strength?`<div class="strength"><small>CURRENT STRENGTH</small><b>${esc(m.strength.name)} · ${esc(m.strength.status)}</b></div>`:''}${m.limiter?`<div class="limiter"><small>CURRENT LIMITER / WATCH</small><b>${esc(m.limiter.name)} · ${esc(m.limiter.status)}</b></div>`:''}</div>`:''}<div class="personalDimensionGrid">${cards}</div><div class="personalModelNote"><b>How it is used</b><p>Only Emerging-or-better personal patterns can add a small signal to the Training Decision Engine. The personal signal is capped at ±0.15 and cannot override pain/safety logic or Readiness.</p><p>${esc(m.note)}</p></div></section>`;
+ return`<section class="personalModelPanel"><div class="personalModelHead"><div><small>PERSONAL RESPONSE MODEL</small><h3>How your training response is being learned</h3></div><span>${esc(m.overallConfidence.label)} overall confidence</span></div><p>The model learns from repeated relationships between training load, workout execution, comparable-run physiology, long-run stability, pain and subsequent sessions. It deliberately learns slowly.</p>${m.strength||m.limiter?`<div class="personalModelSummary">${m.strength?`<div class="strength"><small>CURRENT STRENGTH</small><b>${esc(m.strength.name)} · ${esc(m.strength.status)}</b></div>`:''}${m.limiter?`<div class="limiter"><small>CURRENT LIMITER / WATCH</small><b>${esc(m.limiter.name)} · ${esc(m.limiter.status)}</b></div>`:''}</div>`:''}<div class="personalDimensionGrid">${cards}</div><details class="personalModelNote personalModelUsage"><summary>How it is used</summary><div class="personalModelUsageBody"><p>Only Emerging-or-better personal patterns can add a small signal to the Training Decision Engine. The personal signal is capped at ±0.15 and cannot override pain/safety logic or Readiness.</p><p>${esc(m.note)}</p></div></details></section>`;
 }
 
 function personalPathwaySignal(run,model,pathway){
@@ -2058,7 +2058,7 @@ function renderDashboard(){
  $('projectedProbability').textContent=fmtEstimate(engine.projection.predictedTime,engine.projectedModel.provisional);
  $('projectedProbabilityLabel').textContent=`Race-day scenario · ${paceEstimate(engine.projection.predictedTime,engine.projectedModel.provisional)}`;
  $('projectedPrediction').textContent=engine.projectedModel.provisional?'Provisional plan scenario · outcome depends on future execution evidence':`${Math.round(engine.projectedModel.probability)}% chance of target · ${engine.projectedModel.label}`;
- $('projectedRange').textContent=`Likely 70% range ${fmtEstimate(engine.projectedModel.rangeLow,engine.projectedModel.provisional)}–${fmtEstimate(engine.projectedModel.rangeHigh,engine.projectedModel.provisional)} · ${paceEstimate(engine.projectedModel.rangeLow,engine.projectedModel.provisional)}–${paceEstimate(engine.projectedModel.rangeHigh,engine.projectedModel.provisional)}`;
+ $('projectedRange').textContent=`Range ${fmtEstimate(engine.projectedModel.rangeLow,engine.projectedModel.provisional)}–${fmtEstimate(engine.projectedModel.rangeHigh,engine.projectedModel.provisional)} · ${paceEstimate(engine.projectedModel.rangeLow,engine.projectedModel.provisional)}–${paceEstimate(engine.projectedModel.rangeHigh,engine.projectedModel.provisional)}`;
  const gain=engine.projectedModel.probability-engine.currentModel.probability,targetMargin=engine.projection.predictedTime-state.setup.targetTime;
  const health=planHealthAssessment(c)||{score:0};
  const projectedFitness=Number(engine.projection?.projectedFitnessIndex);

@@ -5987,3 +5987,11 @@ body:has(#dashboard.progressPage.active),#mainContent:has(#dashboard.progressPag
   font-weight:900 !important;
   stroke-width:2.4px !important;
 }
+
+/* v14.9.31 — Progress adaptation spacing */
+#dashboard.progressPage .canonicalPathwayGrid>.adaptationVisualCard{padding-left:20px!important;padding-right:16px!important}
+#dashboard.progressPage .canonicalPathwayGrid>.adaptationVisualCard .canonicalPathMetrics.compact{gap:4px!important}
+#dashboard.progressPage .personalModelUsage{margin-top:10px!important;border-radius:11px!important;overflow:hidden!important}
+#dashboard.progressPage .personalModelUsage>summary{cursor:pointer!important;font-weight:800!important}
+#dashboard.progressPage .personalModelUsageBody{padding-top:8px!important}
+#dashboard.progressPage .personalModelUsageBody>p:last-child{margin-bottom:0!important}
