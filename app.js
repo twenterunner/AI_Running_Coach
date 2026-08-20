@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '14.9.33';
-  const BUILD = 40933;
+  const VERSION = '14.9.34';
+  const BUILD = 40934;
   const SCHEMA = 10400;
   const PRIMARY_STORAGE_KEY = 'arc_v10400_web';
   const MIRROR_STORAGE_KEY = 'arc_v10400_mirror';
@@ -4125,104 +4125,148 @@ function renderTrainingDays(){
  box.querySelectorAll('[data-day]').forEach(cb=>cb.addEventListener('change',()=>{const i=Number(cb.dataset.day),radio=box.querySelector(`[data-long-day="${i}"]`);radio.disabled=!cb.checked;if(!cb.checked&&radio.checked){const replacement=[...box.querySelectorAll('[data-day]')].find(x=>x.checked);if(replacement)box.querySelector(`[data-long-day="${replacement.dataset.day}"]`).checked=true;}if(cb.checked&&![...box.querySelectorAll('[data-long-day]')].some(x=>x.checked))radio.checked=true;}));
 }
 function modelIntegrityDiagnostics(){
- const items=[],add=(area,label,status,detail)=>items.push({area,label,status,detail:String(detail||'')});
- const pass=(area,label,detail)=>add(area,label,'pass',detail),warn=(area,label,detail)=>add(area,label,'warn',detail),error=(area,label,detail)=>add(area,label,'error',detail);
+ const items=[],add=(area,label,status,detail,action='',actionLevel='none')=>items.push({area,label,status,detail:String(detail||''),action:String(action||''),actionLevel});
+ const pass=(area,label,detail)=>add(area,label,'pass',detail,'No action needed.','none');
+ const warn=(area,label,detail,action='Review when convenient.')=>add(area,label,'warn',detail,action,'review');
+ const error=(area,label,detail,action='Review this issue before relying on the affected forecast.',actionLevel='action')=>add(area,label,'error',detail,action,actionLevel);
+ const fault=(area,label,detail)=>add(area,label,'error',detail,'Internal consistency fault — do not change training data to compensate. Recheck after refresh; if it persists, treat it as an app defect.','fault');
  const now=iso(today());
 
- // DATA — reuse the canonical backup/state validator already used for restore safety.
+ // DATA / STORAGE
  try{
   const dataCheck=CORE.validateBackup(state,{today:now});
   if(dataCheck.valid)pass('Data','Stored state structure','Canonical state validation passed.');
-  else error('Data','Stored state structure',`${dataCheck.errors.length} validation issue${dataCheck.errors.length===1?'':'s'} · ${dataCheck.errors.slice(0,3).map(x=>x.message).join(' · ')}`);
- }catch(err){error('Data','Stored state structure',`Validator could not complete: ${err?.message||err}`)}
-
- // STORAGE — primary and mirror are intentionally written together by save().
+  else fault('Data','Stored state structure',`${dataCheck.errors.length} validation issue${dataCheck.errors.length===1?'':'s'} · ${dataCheck.errors.slice(0,3).map(x=>x.message).join(' · ')}`);
+ }catch(err){fault('Data','Stored state structure',`Validator could not complete: ${err?.message||err}`)}
  try{
   const primary=parseStored(localStorage.getItem(STORAGE_KEY)),mirror=parseStored(localStorage.getItem(MIRROR_KEY));
-  if(!primary&&!mirror)warn('Data','Primary / mirror storage','No current primary or mirror state was readable.');
-  else if(!primary||!mirror)warn('Data','Primary / mirror storage','Only one current storage copy is readable.');
+  if(!primary&&!mirror)warn('Data','Primary / mirror storage','No current primary or mirror state was readable.','Create/export a backup before making major changes.');
+  else if(!primary||!mirror)warn('Data','Primary / mirror storage','Only one current storage copy is readable.','Export a backup. The next successful save should recreate both local copies.');
   else{
    const sameRevision=Number(primary.storageRevision||0)===Number(mirror.storageRevision||0),sameUpdated=String(primary.updatedAt||'')===String(mirror.updatedAt||'');
    if(sameRevision&&sameUpdated)pass('Data','Primary / mirror storage',`Both copies agree at revision ${Number(primary.storageRevision)||0}.`);
-   else warn('Data','Primary / mirror storage',`Copies differ · primary r${Number(primary.storageRevision)||0}, mirror r${Number(mirror.storageRevision)||0}.`);
+   else warn('Data','Primary / mirror storage',`Copies differ · primary r${Number(primary.storageRevision)||0}, mirror r${Number(mirror.storageRevision)||0}.`,'Save once, then rerun Diagnostics. If the revisions still differ, export a backup.');
   }
- }catch(err){warn('Data','Primary / mirror storage',`Storage comparison unavailable: ${err?.message||err}`)}
+ }catch(err){warn('Data','Primary / mirror storage',`Storage comparison unavailable: ${err?.message||err}`,'Rerun Diagnostics after a refresh.')}
 
- // PLAN — canonical plan validator includes workout component totals, enabled days, targets and IDs.
+ // PLAN
  try{
   const planCheck=validatePlan(state.plan);
-  if(planCheck.errors)error('Plan','Training-plan invariants',`${planCheck.errors} error${planCheck.errors===1?'':'s'} · ${planCheck.issues.filter(x=>x.severity==='error').slice(0,3).map(x=>x.message).join(' · ')}`);
-  else if(planCheck.warnings)warn('Plan','Training-plan invariants',`${planCheck.checked} workouts checked · ${planCheck.warnings} warning${planCheck.warnings===1?'':'s'}.`);
+  if(planCheck.errors)fault('Plan','Training-plan invariants',`${planCheck.errors} error${planCheck.errors===1?'':'s'} · ${planCheck.issues.filter(x=>x.severity==='error').slice(0,3).map(x=>x.message).join(' · ')}`);
+  else if(planCheck.warnings)warn('Plan','Training-plan invariants',`${planCheck.checked} workouts checked · ${planCheck.warnings} warning${planCheck.warnings===1?'':'s'}.`,'Review the plan warning details before the affected workout.');
   else pass('Plan','Training-plan invariants',`${planCheck.checked} workouts checked · no invariant failures.`);
- }catch(err){error('Plan','Training-plan invariants',`Plan validation could not complete: ${err?.message||err}`)}
-
+ }catch(err){fault('Plan','Training-plan invariants',`Plan validation could not complete: ${err?.message||err}`)}
+ try{
+  const ids=(state.plan||[]).map(p=>p.id).filter(Boolean),dupes=ids.filter((id,i)=>ids.indexOf(id)!==i);
+  if(dupes.length)fault('Plan','Unique workout IDs',`${new Set(dupes).size} duplicate workout ID${new Set(dupes).size===1?'':'s'} detected.`);
+  else pass('Plan','Unique workout IDs',`${ids.length} workout IDs checked · all are unique.`);
+ }catch(err){fault('Plan','Unique workout IDs',`ID check unavailable: ${err?.message||err}`)}
  try{
   const planIds=new Set((state.plan||[]).map(p=>p.id).filter(Boolean)),linked=(state.runs||[]).filter(r=>r.planId),orphan=linked.filter(r=>!planIds.has(r.planId));
-  if(orphan.length)warn('Plan','Run-to-plan links',`${orphan.length} completed run${orphan.length===1?'':'s'} reference a workout no longer present in the current plan.`);
+  if(orphan.length)warn('Plan','Run-to-plan links',`${orphan.length} completed run${orphan.length===1?'':'s'} reference a workout no longer present in the current plan.`,'Review the affected Log entries; do not delete the runs merely to clear this warning.');
   else pass('Plan','Run-to-plan links',`${linked.length} linked completed run${linked.length===1?'':'s'} checked.`);
- }catch(err){warn('Plan','Run-to-plan links',`Link check unavailable: ${err?.message||err}`)}
-
+ }catch(err){warn('Plan','Run-to-plan links',`Link check unavailable: ${err?.message||err}`,'Rerun Diagnostics after a refresh.')}
  try{
-  const raceRows=(state.plan||[]).filter(p=>p.type==='Race Day'||p.date===state.setup?.raceDate);
-  const exact=raceRows.filter(p=>p.date===state.setup?.raceDate);
+  const exact=(state.plan||[]).filter(p=>p.date===state.setup?.raceDate);
   if(exact.length===1)pass('Plan','Race-date anchor',`Exactly one plan item anchors race day on ${state.setup.raceDate}.`);
-  else error('Plan','Race-date anchor',`${exact.length} plan items anchor the configured race date ${state.setup?.raceDate||'—'}; expected exactly one.`);
- }catch(err){error('Plan','Race-date anchor',`Race-date check unavailable: ${err?.message||err}`)}
+  else fault('Plan','Race-date anchor',`${exact.length} plan items anchor the configured race date ${state.setup?.raceDate||'—'}; expected exactly one.`);
+ }catch(err){fault('Plan','Race-date anchor',`Race-date check unavailable: ${err?.message||err}`)}
+ try{
+  const byPlan=new Map(),duplicates=[];
+  for(const r of state.runs||[]){if(!r.planId)continue;if(byPlan.has(r.planId))duplicates.push(r.planId);else byPlan.set(r.planId,r.id||r.date)}
+  if(duplicates.length)fault('Plan','One activity per plan session',`${new Set(duplicates).size} plan session${new Set(duplicates).size===1?' is':'s are'} linked to more than one completed activity.`);
+  else pass('Plan','One activity per plan session',`${byPlan.size} completed plan-session link${byPlan.size===1?'':'s'} checked · no duplicate activity links.`);
+ }catch(err){fault('Plan','One activity per plan session',`Activity-link check unavailable: ${err?.message||err}`)}
 
- // REHAB — current phase and projected dates must be generated by the same canonical resolver.
+ // REHAB
  try{
   const active=(state.injuries||[]).find(i=>i.id===state.activeInjuryPlanId)||null;
   if(!state.activeInjuryPlanId)pass('Rehab','Active rehabilitation reference','No active rehabilitation plan is selected.');
-  else if(!active)error('Rehab','Active rehabilitation reference','activeInjuryPlanId does not reference a stored injury.');
+  else if(!active)fault('Rehab','Active rehabilitation reference','activeInjuryPlanId does not reference a stored injury.');
   else pass('Rehab','Active rehabilitation reference',`${active.bodyRegion||active.location||'Active injury'} is linked correctly.`);
   if(active){
    const p=injuryPrediction(active),resolved=injuryStageForChecks(active,sortedChecks(active),workingDiagnosis(active));
    if(Number(p.stage)===Number(resolved)&&p.stage>=0&&p.stage<INJURY_STAGES.length)pass('Rehab','Current phase consistency',`Prediction and criteria resolver both report Phase ${p.stage+1} · ${INJURY_STAGES[p.stage].name}.`);
-   else error('Rehab','Current phase consistency',`Prediction stage ${Number(p.stage)+1} does not match criteria-resolved stage ${Number(resolved)+1}.`);
+   else fault('Rehab','Current phase consistency',`Prediction stage ${Number(p.stage)+1} does not match criteria-resolved stage ${Number(resolved)+1}.`);
    const futureChecks=(active.checkIns||[]).filter(c=>CORE.isIsoDate(c.date)&&c.date>now);
-   if(futureChecks.length)error('Rehab','Observed check-in dates',`${futureChecks.length} rehabilitation observation${futureChecks.length===1?' is':'s are'} dated after today.`);
+   if(futureChecks.length)fault('Rehab','Observed check-in dates',`${futureChecks.length} rehabilitation observation${futureChecks.length===1?' is':'s are'} dated after today.`);
    else pass('Rehab','Observed check-in dates',`${(active.checkIns||[]).length} check-in${(active.checkIns||[]).length===1?'':'s'} checked · none are in the future.`);
-   if(CORE.isIsoDate(p.fullDate)&&CORE.isIsoDate(p.windowStart)&&CORE.isIsoDate(p.windowEnd)&&p.fullDate>=now&&p.windowStart>=now&&p.windowEnd>=p.windowStart)pass('Rehab','Projected recovery dates',`Central ${p.fullDate} · window ${p.windowStart} to ${p.windowEnd}.`);
-   else error('Rehab','Projected recovery dates',`Projection dates are inconsistent: central ${p.fullDate||'—'}, window ${p.windowStart||'—'} to ${p.windowEnd||'—'}.`);
+   if(CORE.isIsoDate(p.fullDate)&&CORE.isIsoDate(p.windowStart)&&CORE.isIsoDate(p.windowEnd)&&p.fullDate>=now&&p.windowStart>=now&&p.windowEnd>=p.windowStart&&p.fullDate>=p.windowStart&&p.fullDate<=p.windowEnd)pass('Rehab','Projected recovery dates',`Central ${p.fullDate} · window ${p.windowStart} to ${p.windowEnd}.`);
+   else fault('Rehab','Projected recovery dates',`Projection dates are inconsistent: central ${p.fullDate||'—'}, window ${p.windowStart||'—'} to ${p.windowEnd||'—'}.`);
   }
- }catch(err){error('Rehab','Rehabilitation engine',`Rehabilitation consistency check could not complete: ${err?.message||err}`)}
+ }catch(err){fault('Rehab','Rehabilitation engine',`Rehabilitation consistency check could not complete: ${err?.message||err}`)}
 
- // SHOES — use the final canonical lifecycle planner and its own hard-invariant validator.
+ // SHOES — canonical lifecycle output only; diagnostics never repair or rewrite it.
  try{
   if(!(state.shoes||[]).length)pass('Shoes','Shoe ledger','No shoes are stored; lifecycle checks are not applicable yet.');
   else{
    const badMileage=(state.shoes||[]).filter(s=>!Number.isFinite(shoeMileage(s))||shoeMileage(s)<0);
-   if(badMileage.length)error('Shoes','Shoe ledger',`${badMileage.length} shoe${badMileage.length===1?' has':'s have'} invalid calculated mileage.`);
+   if(badMileage.length)fault('Shoes','Shoe ledger',`${badMileage.length} shoe${badMileage.length===1?' has':'s have'} invalid calculated mileage.`);
    else pass('Shoes','Shoe ledger',`${state.shoes.length} physical pair${state.shoes.length===1?'':'s'} checked · calculated mileage is finite and non-negative.`);
-   const life=freshShoeLifecyclePlan();
-   if(life.validationIssues?.length)error('Shoes','Lifecycle hard invariants',`${life.validationIssues.length} hard failure${life.validationIssues.length===1?'':'s'} · ${life.validationIssues.slice(0,3).map(x=>x.code).join(' · ')}`);
-   else pass('Shoes','Lifecycle hard invariants',`${life.assignments.length} future assignment${life.assignments.length===1?'':'s'} checked · no hard lifecycle failures.`);
-   if(life.softTargets?.length)warn('Shoes','Rotation optimisation targets',`${life.softTargets.length} soft target${life.softTargets.length===1?'':'s'} currently not optimal · ${life.softTargets.slice(0,3).map(x=>x.code).join(' · ')}`);
-   else pass('Shoes','Rotation optimisation targets','Weekly balance and race-familiarisation soft targets are satisfied by the current forecast.');
-   if(life.racePair)pass('Shoes','Race-day physical pair',`${lifecyclePairLabel(life.racePair)} is the canonical Race Day pair.`);
-   else error('Shoes','Race-day physical pair','The lifecycle planner did not produce a Race Day physical pair.');
-  }
- }catch(err){error('Shoes','Shoe lifecycle engine',`Shoe lifecycle check could not complete: ${err?.message||err}`)}
+   const life=freshShoeLifecyclePlan(),pairById=new Map(life.pairs.map(p=>[p.id,p]));
+   if(life.validationIssues?.length){
+    const coverage=life.validationIssues.filter(x=>x.code==='fewer-than-two-serviceable-pairs');
+    const other=life.validationIssues.filter(x=>x.code!=='fewer-than-two-serviceable-pairs');
+    let detail=`${life.validationIssues.length} hard failure${life.validationIssues.length===1?'':'s'}.`;
+    let action='Open Shoes → Planned Rotation and review the lifecycle forecast.';
+    if(coverage.length){
+     const dates=coverage.map(x=>x.date).filter(Boolean).sort(),first=dates[0],last=dates.at(-1);
+     detail+=` ${coverage.length} future training date${coverage.length===1?' has':'s have'} fewer than 2 serviceable pairs${first?` · earliest ${first}${last&&last!==first?` · latest ${last}`:''}`:''}.`;
+     action=`Review Shoes → Planned Rotation. The canonical forecast needs purchase timing and/or mileage allocation that preserves at least 2 serviceable pairs from ${first||'the first affected date'} onward.`;
+    }
+    if(other.length)detail+=` Other: ${other.slice(0,3).map(x=>x.code).join(' · ')}.`;
+    error('Shoes','Lifecycle hard invariants',detail,action,'action');
+   }else pass('Shoes','Lifecycle hard invariants',`${life.assignments.length} future assignment${life.assignments.length===1?'':'s'} checked · no hard lifecycle failures.`);
 
- // PREDICTION — range/probability sanity without creating a second prediction model.
+   if(life.softTargets?.length){
+    const details=life.softTargets.slice(0,4).map(x=>{
+     const pair=pairById.get(x.pairId),name=pair?lifecyclePairLabel(pair):'pair';
+     if(x.code==='rotation-share-below-target')return `${name}: ${Number(x.km||0).toFixed(1)} km vs ${Number(x.target||0).toFixed(1)} km target in ${x.week}`;
+     if(x.code==='future-pair-underused-after-entry')return `${name}: ${Number(x.km||0).toFixed(1)} km vs ${Number(x.target||0).toFixed(1)} km target after entry (${x.week})`;
+     return `${x.code}${x.week?` (${x.week})`:''}`;
+    }).join(' · ');
+    warn('Shoes','Rotation optimisation targets',`${life.softTargets.length} soft target${life.softTargets.length===1?'':'s'} not optimal · ${details}.`,'No immediate safety action is required. Review Planned Rotation if you want to improve weekly sharing or delay an underused future purchase.');
+   }else pass('Shoes','Rotation optimisation targets','Weekly balance and race-familiarisation soft targets are satisfied by the current forecast.');
+   if(life.racePair)pass('Shoes','Race-day physical pair',`${lifecyclePairLabel(life.racePair)} is the canonical Race Day pair.`);
+   else error('Shoes','Race-day physical pair','The lifecycle planner did not produce a Race Day physical pair.','Open Shoes → Planned Rotation and review the Race Day pair forecast.','action');
+
+   // Graph/ledger continuity: every pair point must be monotonic and owned-pair start must equal current ledger mileage.
+   const graphFaults=[];
+   for(const p of life.pairs){
+    let prev=-Infinity;
+    for(const pt of p.points||[]){const km=Number(pt.km);if(Number.isFinite(km)&&km<prev-1e-6)graphFaults.push(`${lifecyclePairLabel(p)} decreases`);prev=km}
+    if(p.owned&&Math.abs(Number(p.currentKm||0)-Number(shoeMileage(p.shoe)||0))>.05)graphFaults.push(`${lifecyclePairLabel(p)} start ≠ ledger`);
+   }
+   if(graphFaults.length)fault('Shoes','Mileage graph / ledger continuity',graphFaults.slice(0,3).join(' · '));
+   else pass('Shoes','Mileage graph / ledger continuity',`${life.pairs.length} lifecycle curve${life.pairs.length===1?'':'s'} checked · current mileage anchors and graph progression are consistent.`);
+  }
+ }catch(err){fault('Shoes','Shoe lifecycle engine',`Shoe lifecycle check could not complete: ${err?.message||err}`)}
+
+ // PREDICTION
  try{
   const e=coachEngine(),models=[['Current',e.currentModel,e.pred],['Programme',e.projectedModel,e.projection?.predictedTime]];
   for(const [name,m,central] of models){
    const probabilityOk=Number.isFinite(Number(m?.probability))&&Number(m.probability)>=0&&Number(m.probability)<=100;
    const rangeOk=Number.isFinite(Number(m?.rangeLow))&&Number.isFinite(Number(m?.rangeHigh))&&Number(m.rangeLow)<=Number(central)&&Number(central)<=Number(m.rangeHigh);
-   if(probabilityOk)pass('Prediction',`${name} probability bounds`,`${Math.round(Number(m.probability))}% is inside the valid 0–100% range.`);else error('Prediction',`${name} probability bounds`,`Probability is invalid: ${m?.probability??'—'}.`);
-   if(rangeOk)pass('Prediction',`${name} central estimate / range`,`Central estimate is contained within its displayed uncertainty range.`);else error('Prediction',`${name} central estimate / range`,'Central estimate is not contained within its model range.');
+   if(probabilityOk)pass('Prediction',`${name} probability bounds`,`${Math.round(Number(m.probability))}% is inside the valid 0–100% range.`);else fault('Prediction',`${name} probability bounds`,`Probability is invalid: ${m?.probability??'—'}.`);
+   if(rangeOk)pass('Prediction',`${name} central estimate / range`,`Central estimate is contained within its displayed uncertainty range.`);else fault('Prediction',`${name} central estimate / range`,'Central estimate is not contained within its model range.');
   }
- }catch(err){error('Prediction','Prediction engine',`Prediction consistency check could not complete: ${err?.message||err}`)}
+  // Determinism check: two read-only evaluations with unchanged state must agree on critical outputs.
+  const e2=coachEngine(),sig=x=>JSON.stringify([Number(x.pred),Number(x.currentModel?.probability),Number(x.currentModel?.rangeLow),Number(x.currentModel?.rangeHigh),Number(x.projectedModel?.probability),Number(x.projectedModel?.rangeLow),Number(x.projectedModel?.rangeHigh)]);
+  if(sig(e)===sig(e2))pass('Prediction','Repeat calculation stability','Two consecutive prediction evaluations with unchanged state returned identical critical outputs.');
+  else fault('Prediction','Repeat calculation stability','Two consecutive prediction evaluations with unchanged state returned different critical outputs.');
+ }catch(err){fault('Prediction','Prediction engine',`Prediction consistency check could not complete: ${err?.message||err}`)}
 
  const counts={pass:items.filter(x=>x.status==='pass').length,warn:items.filter(x=>x.status==='warn').length,error:items.filter(x=>x.status==='error').length};
- return{items,counts,total:items.length,checkedAt:new Date()};
+ const priority=items.find(x=>x.status==='error')||items.find(x=>x.status==='warn')||null;
+ return{items,counts,total:items.length,priority,checkedAt:new Date()};
 }
 function renderModelDiagnostics(){
  const host=$('modelDiagnostics');if(!host)return;
- const report=modelIntegrityDiagnostics(),c=report.counts,status=c.error?'Issues detected':c.warn?'Checks passed with warnings':'All checks passed',cls=c.error?'bad':c.warn?'warn':'good';
- const areas=['Data','Plan','Rehab','Shoes','Prediction'];
- host.innerHTML=`<summary><div><small>MODEL INTEGRITY</small><b>${esc(status)}</b><span>${report.total} checks · ${c.pass} passed · ${c.warn} warnings · ${c.error} errors</span></div><span class="diagnosticStatus ${cls}">${c.error?c.error:c.warn?c.warn:'✓'}</span></summary><div class="modelDiagnosticsBody"><div class="diagnosticSummary"><div><small>PASSED</small><b>${c.pass}</b></div><div><small>WARNINGS</small><b>${c.warn}</b></div><div><small>ERRORS</small><b>${c.error}</b></div><div><small>LAST CHECKED</small><b>${report.checkedAt.toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'})}</b></div></div>${areas.map(area=>{const rows=report.items.filter(x=>x.area===area);if(!rows.length)return'';return`<section class="diagnosticGroup"><h4>${esc(area)}</h4>${rows.map(x=>`<div class="diagnosticRow ${x.status}"><span>${x.status==='pass'?'✓':x.status==='warn'?'•':'!'}</span><div><b>${esc(x.label)}</b><small>${esc(x.detail)}</small></div><em>${x.status==='pass'?'Pass':x.status==='warn'?'Warning':'Error'}</em></div>`).join('')}</section>`}).join('')}<p class="diagnosticNote">Diagnostics are read-only consistency checks. They do not change the training plan, rehabilitation state, predictions, shoe assignments or stored data.</p></div>`;
+ const report=modelIntegrityDiagnostics(),c=report.counts,status=c.error?'Action required':c.warn?'Review recommended':'All checks passed',cls=c.error?'bad':c.warn?'warn':'good';
+ const areas=['Data','Plan','Rehab','Shoes','Prediction'],p=report.priority;
+ const topAction=p?`<div class="diagnosticNext ${p.status}"><small>${p.status==='error'?'RECOMMENDED NEXT ACTION':'REVIEW RECOMMENDED'}</small><b>${esc(p.label)}</b><p>${esc(p.detail)}</p><strong>${esc(p.action)}</strong></div>`:`<div class="diagnosticNext pass"><small>RECOMMENDED NEXT ACTION</small><b>None</b><p>All current consistency checks passed.</p></div>`;
+ host.innerHTML=`<summary><div><small>MODEL INTEGRITY</small><b>${esc(status)}</b><span>${report.total} checks · ${c.pass} passed · ${c.warn} warnings · ${c.error} errors</span></div><span class="diagnosticStatus ${cls}">${c.error?c.error:c.warn?c.warn:'✓'}</span></summary><div class="modelDiagnosticsBody">${topAction}<div class="diagnosticSummary"><div><small>PASSED</small><b>${c.pass}</b></div><div><small>WARNINGS</small><b>${c.warn}</b></div><div><small>ERRORS</small><b>${c.error}</b></div><div><small>LAST CHECKED</small><b>${report.checkedAt.toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'})}</b></div></div>${areas.map(area=>{const rows=report.items.filter(x=>x.area===area);if(!rows.length)return'';return`<section class="diagnosticGroup"><h4>${esc(area)}</h4>${rows.map(x=>`<div class="diagnosticRow ${x.status}"><span>${x.status==='pass'?'✓':x.status==='warn'?'•':'!'}</span><div><b>${esc(x.label)}</b><small>${esc(x.detail)}</small>${x.status!=='pass'&&x.action?`<strong class="diagnosticAction">${esc(x.action)}</strong>`:''}</div><em>${x.status==='pass'?'Pass':x.actionLevel==='fault'?'App issue':x.status==='warn'?'Warning':'Action'}</em></div>`).join('')}</section>`}).join('')}<p class="diagnosticNote">Diagnostics are read-only consistency checks. They do not change the training plan, rehabilitation state, predictions, shoe assignments or stored data. “App issue” means the runner should not alter training data merely to clear the diagnostic.</p></div>`;
 }
 function renderSettings(){
  const groups=[
