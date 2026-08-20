@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '14.9.46';
-  const BUILD = 40946;
+  const VERSION = '14.9.47';
+  const BUILD = 40947;
   const SCHEMA = 10400;
   const PRIMARY_STORAGE_KEY = 'arc_v10400_web';
   const MIRROR_STORAGE_KEY = 'arc_v10400_mirror';
@@ -6432,7 +6432,25 @@ function lifecycleInjuryFootwearAdjustment(profile){
 }
 function lifecycleWorkoutFit(profile,plan){return lifecycleSessionSuitabilityScore(profile,plan,{rehab:/Rehab|Recovery|Walk/i.test(String(plan?.type||''))})}
 
+const SHOE_ROLE_CACHE=new WeakMap();
 function shoeCoachRequiredRole(plan,{rehab=false}={}){
+ if(plan&&typeof plan==='object'){
+  const cached=SHOE_ROLE_CACHE.get(plan),key=rehab?'r':'n';
+  if(cached&&cached[key])return cached[key];
+  const t=String(plan?.type||''),d=Math.max(0,Number(plan?.distance)||0);
+  let role;
+  if(/^Race Day$/i.test(t))role='race';
+  else if(rehab||/Rehab|Recovery|Walk|Shakeout/i.test(t))role='recovery';
+  else if(/VO₂|interval|Fartlek|Fitness assessment/i.test(t))role='intervals';
+  else if(/Threshold/i.test(t))role='threshold';
+  else if(/Race-pace|Marathon-specific|Half-marathon-specific|Specific|rehearsal/i.test(t))role='race-pace';
+  else if(/Hills/i.test(t))role='hills';
+  else if(/Tempo|Progression|strides/i.test(t))role='tempo';
+  else if(/Long run|Medium-long/i.test(t)||d>=18)role='long';
+  else if(/Easy/i.test(t))role='easy';
+  else role='daily';
+  const next=cached||{};next[key]=role;SHOE_ROLE_CACHE.set(plan,next);return role
+ }
  const t=String(plan?.type||''),d=Math.max(0,Number(plan?.distance)||0);
  if(/^Race Day$/i.test(t))return'race';
  if(rehab||/Rehab|Recovery|Walk|Shakeout/i.test(t))return'recovery';
@@ -7950,7 +7968,8 @@ function shoeEngineApplyCanonicalRotationExits(result){
   // The graph represents the planned ACTIVE ROTATION, not storage in a cupboard.
   // If an ordinary pair has no further canonical assignment, its curve ends at
   // its final use and that same point is the rotation-exit/retirement marker.
-  if(pair.plannedRetireDate!==last||pair.projectedRetireDate!==last||!pair.rotationExitCanonical)changed=true;
+  // Canonical graph exits are derived state. Do not signal them as an optimiser
+  // mutation: doing so can keep fixed-point lifecycle loops running unnecessarily.
   pair.plannedRetireDate=last;
   pair.projectedRetireDate=last;
   pair.isProjectedRetired=true;
