@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '14.9.48';
-  const BUILD = 40948;
+  const VERSION = '14.9.49';
+  const BUILD = 40949;
   const SCHEMA = 10400;
   const PRIMARY_STORAGE_KEY = 'arc_v10400_web';
   const MIRROR_STORAGE_KEY = 'arc_v10400_mirror';
@@ -6432,6 +6432,20 @@ function lifecycleInjuryFootwearAdjustment(profile){
 }
 function lifecycleWorkoutFit(profile,plan){return lifecycleSessionSuitabilityScore(profile,plan,{rehab:/Rehab|Recovery|Walk/i.test(String(plan?.type||''))})}
 
+let __shoeForecastRefreshQueued=false;
+function scheduleCanonicalShoeForecastRefresh(){
+ if(__shoeForecastRefreshQueued)return;
+ __shoeForecastRefreshQueued=true;
+ const run=()=>{
+   __shoeForecastRefreshQueued=false;
+   try{
+     if(typeof ensureCanonicalShoeForecast==='function')ensureCanonicalShoeForecast();
+     else if(typeof rebuildCanonicalShoeForecast==='function')rebuildCanonicalShoeForecast();
+   }catch(e){console.error('Deferred shoe forecast refresh failed',e)}
+ };
+ if(typeof requestIdleCallback==='function')requestIdleCallback(run,{timeout:1200});
+ else setTimeout(run,0);
+}
 function shoeCoachRequiredRole(plan,{rehab=false}={}){
  const t=String(plan?.type||''),d=Math.max(0,Number(plan?.distance)||0);
  if(/^Race Day$/i.test(t))return'race';
@@ -6444,6 +6458,21 @@ function shoeCoachRequiredRole(plan,{rehab=false}={}){
  if(/Long run|Medium-long/i.test(t)||d>=18)return'long';
  if(/Easy/i.test(t))return'easy';
  return'daily'
+}
+const __shoeModelRoleCache=new Map();
+function shoeCoachProfileRoles(profile){
+ const key=String(profile?.model||profile?.name||'').trim().toUpperCase();
+ if(key&&__shoeModelRoleCache.has(key))return __shoeModelRoleCache.get(key);
+ const roles=new Set();
+ const txt=(key+' '+String(profile?.category||'')+' '+String(profile?.type||'')).toLowerCase();
+ if(/meta|race|edge|sky/.test(txt))roles.add('race');
+ if(/superblast|megablast/.test(txt)){roles.add('long');roles.add('tempo');roles.add('race-pace');roles.add('daily')}
+ if(/novablast/.test(txt)){roles.add('easy');roles.add('daily');roles.add('long')}
+ if(/sonicblast/.test(txt)){roles.add('tempo');roles.add('threshold');roles.add('intervals')}
+ if(/nimbus|cumulus|kayano/.test(txt)){roles.add('easy');roles.add('recovery');roles.add('daily')}
+ if(!roles.size)roles.add('daily');
+ if(key)__shoeModelRoleCache.set(key,roles);
+ return roles;
 }
 function shoeCoachRoleTier(profile,plan,{rehab=false}={}){
  const need=shoeCoachRequiredRole(plan,{rehab}),roles=lifecycleRoles(profile),c=Number(profile?.cushioning||3),prot=Number(profile?.protection||3),resp=Number(profile?.responsiveness||3),plated=Boolean(profile?.plated);
