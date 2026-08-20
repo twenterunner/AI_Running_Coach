@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '14.9.19';
-  const BUILD = 40919;
+  const VERSION = '14.9.20';
+  const BUILD = 40920;
   const SCHEMA = 10400;
   const PRIMARY_STORAGE_KEY = 'arc_v10400_web';
   const MIRROR_STORAGE_KEY = 'arc_v10400_mirror';
@@ -5126,6 +5126,7 @@ function injuryTrajectorySvg(i,p){
  const horizon=Math.max(7,Number(p.nominalTotal)||7),x=d=>left+clamp(d/horizon,0,1)*cw,y=v=>top+(100-clamp(v,0,100))/100*ch;
  const todayDay=clamp(Number(p.elapsed)||0,0,horizon),todayX=x(todayDay),nominalToday=clamp(Number(p.nominal)||0,0,100),observedToday=Number.isFinite(Number(p.completion))?clamp(Number(p.completion),0,100):null;
  const nominalPath=`M ${x(0)} ${y(0)} L ${x(horizon)} ${y(100)}`;
+ const observedChecks=(p.checks||[]).filter(c=>CORE.isIsoDate(c.date)&&c.date<=iso(today()));
 
  // Nominal rehabilitation phase timing is plotted on the same LINEAR day axis as the
  // observations. These proportions are the model's nominal pathway timing; they are not
