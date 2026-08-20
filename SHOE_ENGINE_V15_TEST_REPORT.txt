@@ -1,4 +1,4 @@
-AI Running Coach v15.0.2 · build 50002
+AI Running Coach v15.0.3 · build 50003
 SHOE ENGINE IMPLEMENTATION / VERIFICATION REPORT
 Date: 2026-08-21
 
@@ -94,3 +94,11 @@ V15.0.2 NAVIGATION PERFORMANCE UPDATE
 - Other tabs use a single page renderer.
 - No layout, wording, calculations, training logic or shoe-planning decisions were changed by this navigation optimization.
 - Static/regression suite: 12/12 PASS.
+
+V15.0.3 SHOE GRAPH END-MARKER FIX
+- Corrected the missing X markers at outgoing shoe-curve endpoints.
+- True lifecycle retirement is labelled × RETIRE.
+- If a successor pair enters while the outgoing pair remains physically serviceable, the graph now shows × HANDOVER instead of falsely labelling it retired.
+- Marker position comes from the authoritative final positive-use point before the successor's first use or the canonical retirement point.
+- No training-plan, mileage, assignment, recovery, prediction, rehab, or non-shoe GUI logic changed.
+- Static/regression suite: 13/13 PASS.
