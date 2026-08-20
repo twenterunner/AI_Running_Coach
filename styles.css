@@ -5891,3 +5891,17 @@ body:has(#dashboard.progressPage.active),#mainContent:has(#dashboard.progressPag
 #injury .injuryTrajectory .injuryPhaseBand.future.selected{fill:rgba(216,184,98,.11);stroke:rgba(216,184,98,.78);stroke-width:2;stroke-dasharray:6 4}
 #injury .injuryTrajectoryLegend .phaseActual::before{background:rgba(74,230,216,.17);border:1px solid rgba(74,230,216,.45)}
 #injury .injuryTrajectoryLegend .phaseFuture::before{background:rgba(216,184,98,.09);border:1px dashed rgba(216,184,98,.55)}
+
+
+/* v14.9.25 — Injury trajectory: projected recovery extrapolation + persistent phase labels/boundaries */
+#injury .injuryTrajectory .projectedLine{fill:none;stroke:#d8b862;stroke-width:3;stroke-dasharray:8 6}
+#injury .injuryTrajectoryLegend .projected::before{background:#d8b862}
+#injury .injuryTrajectory .phaseLabelBand{fill:rgba(8,24,33,.82)}
+#injury .injuryTrajectory .injuryPhaseBoundary{stroke:rgba(132,176,188,.30);stroke-width:1}
+#injury .injuryTrajectory .injuryPhaseNumber{fill:var(--teal-2);font-size:8px;font-weight:900}
+#injury .injuryTrajectory .injuryPhaseLabel{fill:#dfeef1;font-size:7px;font-weight:800}
+#injury .injuryTrajectory .injuryPhaseBand.actual{fill:rgba(64,176,184,.045)}
+#injury .injuryTrajectory .injuryPhaseBand.current{fill:rgba(74,230,216,.07)}
+#injury .injuryTrajectory .injuryPhaseBand.future{fill:rgba(216,184,98,.025)}
+#injury .injuryTrajectory .injuryPhaseBand.selected{fill:rgba(74,230,216,.20);stroke:rgba(74,230,216,.82);stroke-width:2}
+#injury .injuryTrajectory .injuryPhaseBand.future.selected{fill:rgba(216,184,98,.14);stroke:rgba(216,184,98,.84);stroke-width:2}

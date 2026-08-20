@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '14.9.24';
-  const BUILD = 40924;
+  const VERSION = '14.9.25';
+  const BUILD = 40925;
   const SCHEMA = 10400;
   const PRIMARY_STORAGE_KEY = 'arc_v10400_web';
   const MIRROR_STORAGE_KEY = 'arc_v10400_mirror';
@@ -5118,17 +5118,16 @@ function rehabTodayFocusHtml(i,p){
 }
 
 function injuryTrajectorySvg(i,p){
- const W=720,H=300,left=48,right=18,top=24,bottom=56,cw=W-left-right,ch=H-top-bottom;
+ const W=720,H=320,left=48,right=18,labelBand=54,top=62,bottom=58,cw=W-left-right,ch=H-top-bottom;
  const nominalTotal=Math.max(7,Number(p.nominalTotal)||7),projectedTotal=Math.max(nominalTotal,Number(p.total)||nominalTotal,Number(p.elapsed)||0);
  const horizon=Math.max(7,projectedTotal),x=d=>left+clamp(d/horizon,0,1)*cw,y=v=>top+(100-clamp(v,0,100))/100*ch;
  const todayDay=clamp(Number(p.elapsed)||0,0,horizon),todayX=x(todayDay);
  const observedChecks=(p.checks||[]).filter(c=>CORE.isIsoDate(c.date)&&c.date<=iso(today()));
 
- // The nominal line is a fixed baseline. It does not move when the athlete progresses
- // faster or slower through individual rehabilitation phases.
+ // Fixed nominal baseline.
  const nominalPath=`M ${x(0)} ${y(0)} L ${x(nominalTotal)} ${y(100)}`;
 
- // Observed recovery exists only through Today.
+ // Observed recovery through Today only.
  const pts=observedChecks.map((c,idx)=>{
    const prefix=observedChecks.slice(0,idx+1);
    const score=injuryCompletionForChecks(i,prefix,p.diag,nullableNumber(i.initialPain),nullableNumber(i.initialWalkPain));
@@ -5138,21 +5137,23 @@ function injuryTrajectorySvg(i,p){
  if(!pts.length&&Number.isFinite(p.completion))pts.push({day:todayDay,score:p.completion,date:iso(today())});
  const observed=pts.map((q,n)=>`${n?'L':'M'} ${x(q.day)} ${y(q.score)}`).join(' ');
 
- // Reconstruct the dates on which the runner actually entered each demonstrated phase.
- // Completed/current phase widths therefore reflect the runner's real progression and can
- // be shorter or longer than nominal. The current phase simply grows while its criteria remain unmet.
+ // Extrapolation from the latest measured recovery point to the current anticipated
+ // unrestricted-running date. This is a projection, not an observed point.
+ const lastPt=pts.at(-1);
+ const projectedStartDay=lastPt?lastPt.day:todayDay;
+ const projectedStartScore=lastPt?lastPt.score:(Number.isFinite(p.completion)?p.completion:Math.round(clamp(todayDay/nominalTotal*100,0,100)));
+ const projectedPath=`M ${x(projectedStartDay)} ${y(projectedStartScore)} L ${x(projectedTotal)} ${y(100)}`;
+
+ // Reconstruct actual phase-entry dates from demonstrated criteria.
  const transitions=Array(INJURY_STAGES.length).fill(null);transitions[0]=0;
  observedChecks.forEach((c,idx)=>{
    const prefix=observedChecks.slice(0,idx+1),stageAtCheck=injuryStageForChecks(i,prefix,p.diag);
    const day=Math.min(todayDay,Math.max(0,Math.round((dte(c.date)-dte(i.date))/DAY)));
    for(let s=1;s<=stageAtCheck;s++)if(transitions[s]===null)transitions[s]=day;
  });
- if(transitions[p.stage]===null){
-   transitions[p.stage]=p.stage===0?0:Math.min(todayDay,transitions[p.stage-1]??todayDay);
- }
+ if(transitions[p.stage]===null)transitions[p.stage]=p.stage===0?0:Math.min(todayDay,transitions[p.stage-1]??todayDay);
 
- // Future phase timing starts from the current model projection only; it is visually
- // distinct from actual completed/current phase history.
+ // Future phases use the model projection, while completed/current phases use actual timing.
  const nominalFractions=[0,.12,.28,.46,.64,.82,1];
  const nominalBounds=INJURY_STAGES.map((st,n)=>({
    start:nominalTotal*nominalFractions[n],
@@ -5161,27 +5162,31 @@ function injuryTrajectorySvg(i,p){
  }));
  const futureNominalDuration=nominalBounds.slice(p.stage+1).reduce((sum,b)=>sum+b.duration,0);
  const projectedCurrentExit=Math.min(projectedTotal,Math.max(todayDay+1,projectedTotal-futureNominalDuration));
-
  const phaseBounds=INJURY_STAGES.map((st,n)=>{
    if(n<p.stage){
      const s=transitions[n]??0,e=transitions[n+1]??todayDay;
      return{start:s,end:Math.max(s,e),kind:'actual'};
    }
-   if(n===p.stage){
-     return{start:transitions[n]??todayDay,end:todayDay,kind:'current'};
-   }
+   if(n===p.stage)return{start:transitions[n]??todayDay,end:todayDay,kind:'current'};
    let s=projectedCurrentExit;
    for(let k=p.stage+1;k<n;k++)s+=nominalBounds[k].duration;
    const e=n===INJURY_STAGES.length-1?projectedTotal:Math.min(projectedTotal,s+nominalBounds[n].duration);
    return{start:Math.min(s,projectedTotal),end:Math.max(Math.min(s,projectedTotal),e),kind:'future'};
  });
 
+ // Every phase remains visible with a boundary and label. Selected tile changes band shading only.
  const phaseBands=INJURY_STAGES.map((st,n)=>{
-   const b=phaseBounds[n],x0=x(b.start),x1=x(b.end),w=Math.max(2,x1-x0);
-   return `<rect class="injuryPhaseBand ${b.kind} ${n===p.stage?'selected':''}" data-phase-band="${n}" x="${x0}" y="${top}" width="${w}" height="${ch}"><title>${esc(st.name)}</title></rect>`;
+   const b=phaseBounds[n],x0=x(b.start),x1=x(b.end),w=Math.max(2,x1-x0),cx=x0+w/2;
+   return `<g class="injuryPhaseBandGroup ${b.kind}" data-phase-band="${n}">
+     <rect class="injuryPhaseBand ${b.kind} ${n===p.stage?'selected':''}" x="${x0}" y="${top}" width="${w}" height="${ch}"><title>${esc(st.name)}</title></rect>
+     <line class="injuryPhaseBoundary" x1="${x0}" x2="${x0}" y1="${top}" y2="${top+ch}"/>
+     <text class="injuryPhaseNumber" x="${cx}" y="18" text-anchor="middle">${n+1}</text>
+     <text class="injuryPhaseLabel" x="${cx}" y="38" text-anchor="middle">${esc(st.name)}</text>
+   </g>`;
  }).join('');
+ const finalBoundary=`<line class="injuryPhaseBoundary" x1="${x(projectedTotal)}" x2="${x(projectedTotal)}" y1="${top}" y2="${top+ch}"/>`;
 
- const todayMarker=`<line class="currentDateLine" x1="${todayX}" y1="${top}" x2="${todayX}" y2="${top+ch}"/><text class="currentDateLabel" x="${todayX}" y="${H-28}" text-anchor="middle">Today</text>`;
+ const todayMarker=`<line class="currentDateLine" x1="${todayX}" y1="${top}" x2="${todayX}" y2="${top+ch}"/><text class="currentDateLabel" x="${todayX}" y="${H-30}" text-anchor="middle">Today</text>`;
  const yGrid=[0,25,50,75,100].map(v=>`<line class="grid" x1="${left}" x2="${W-right}" y1="${y(v)}" y2="${y(v)}"/><text class="axisText" x="${left-8}" y="${y(v)+4}" text-anchor="end">${v}%</text>`).join('');
  const xTicks=[0,.25,.5,.75,1].map(f=>{
    const day=Math.round(horizon*f),xx=x(day),label=f===0?'Injury':`Day ${day}`;
@@ -5219,11 +5224,12 @@ function injuryTrajectorySvg(i,p){
  }).join('');
 
  return `<div class="injuryTrajectoryWrap">
-   <svg class="injuryTrajectory injuryTrajectorySimple" viewBox="0 0 ${W} ${H}" role="img" aria-label="Observed rehabilitation recovery with actual phase durations over calendar time">
-    ${yGrid}${xTicks}${phaseBands}${todayMarker}<path class="nominalLine" d="${nominalPath}"/><path class="actualLine" d="${observed}"/>
+   <svg class="injuryTrajectory injuryTrajectorySimple" viewBox="0 0 ${W} ${H}" role="img" aria-label="Observed rehabilitation recovery, fixed nominal recovery, projected recovery and phase durations over calendar time">
+    <rect class="phaseLabelBand" x="${left}" y="0" width="${cw}" height="${labelBand}"/>${phaseBands}${finalBoundary}${yGrid}${xTicks}${todayMarker}
+    <path class="nominalLine" d="${nominalPath}"/><path class="actualLine" d="${observed}"/><path class="projectedLine" d="${projectedPath}"/>
     ${pts.map(q=>`<circle cx="${x(q.day)}" cy="${y(q.score)}" r="5"><title>${fmtDate(q.date)} · ${q.score}%</title></circle>`).join('')}
    </svg>
-   <div class="injuryTrajectoryLegend"><span class="actual">Observed recovery</span><span class="nominal">Fixed nominal recovery</span><span class="phaseActual">Actual phase duration</span><span class="phaseFuture">Future projection</span></div>
+   <div class="injuryTrajectoryLegend"><span class="actual">Observed recovery</span><span class="nominal">Fixed nominal recovery</span><span class="projected">Projected recovery</span><span class="phaseActual">Actual/current phases</span><span class="phaseFuture">Future phases</span></div>
    <div class="injuryPhaseStrip" aria-label="Criteria-based rehabilitation phase progress">${phaseStrip}</div>
    <div class="injuryPhaseDetailHost">${phaseDetails}</div>
   </div>`;
@@ -7461,10 +7467,10 @@ $('nav').innerHTML=pages.map((p,i)=>`<button data-page="${p[0]}" class="${i?'':'
   const alreadyOpen=phaseTile.classList.contains('selected')&&phaseTile.getAttribute('aria-expanded')==='true';
   wrap.querySelectorAll('[data-injury-phase]').forEach(btn=>{btn.classList.remove('selected');btn.setAttribute('aria-expanded','false')});
   wrap.querySelectorAll('[data-phase-detail]').forEach(el=>el.hidden=true);
-  wrap.querySelectorAll('[data-phase-band]').forEach(el=>el.classList.remove('selected'));
+  wrap.querySelectorAll('[data-phase-band] .injuryPhaseBand').forEach(el=>el.classList.remove('selected'));
   if(!alreadyOpen){
    phaseTile.classList.add('selected');phaseTile.setAttribute('aria-expanded','true');
-   const detail=wrap.querySelector(`[data-phase-detail="${n}"]`),band=wrap.querySelector(`[data-phase-band="${n}"]`);
+   const detail=wrap.querySelector(`[data-phase-detail="${n}"]`),band=wrap.querySelector(`[data-phase-band="${n}"] .injuryPhaseBand`);
    if(detail)detail.hidden=false;if(band)band.classList.add('selected');
   }
  }
