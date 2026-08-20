@@ -5807,3 +5807,9 @@ body:has(#dashboard.progressPage.active),#mainContent:has(#dashboard.progressPag
  #injury .injuryStageCriterion{grid-template-columns:22px minmax(0,1fr) auto}
  #injury .injuryStageCriterion em{grid-column:auto;text-align:right}
 }
+
+
+/* v14.9.18 — Injury trajectory consistency only */
+#injury .injuryTrajectory .phaseBand.future{opacity:.18}
+#injury .injuryTrajectory .phaseNumber.future,
+#injury .injuryTrajectory .phaseLabel.future{opacity:.42}

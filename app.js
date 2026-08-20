@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '14.9.17';
-  const BUILD = 40917;
+  const VERSION = '14.9.18';
+  const BUILD = 40918;
   const SCHEMA = 10400;
   const PRIMARY_STORAGE_KEY = 'arc_v10400_web';
   const MIRROR_STORAGE_KEY = 'arc_v10400_mirror';
@@ -4803,10 +4803,21 @@ function criterionState(i,p,stageIndex){const checks=sortedChecks(i),snap=longit
   return null;
  };
  return INJURY_STAGES[stageIndex].criteria.map(label=>{let t=tests[label],status=t?checkStatus(checks,t):'unknown',progress=progressFor(label);return{label,status,met:status==='met',progress};});}
+function injuryStageForChecks(i,checks,diag){
+ const scoped={...i,checkIns:(checks||[]).filter(c=>CORE.isIsoDate(c.date)&&c.date<=iso(today()))};
+ let stage=0;
+ for(let current=0;current<INJURY_STAGES.length-1;current++){
+  const criteria=criterionState(scoped,{},current);
+  if(criteria.length&&criteria.every(x=>x.status==='met'))stage=current+1;
+  else break;
+ }
+ if(diag?.urgent)stage=Math.min(stage,1);
+ return stage;
+}
 function injuryPrediction(i){
  const checks=sortedChecks(i),latest=checks.at(-1)||{},diag=workingDiagnosis(i),initialPain=nullableNumber(i.initialPain),walkInitially=nullableNumber(i.initialWalkPain);let nominalTotal=Number(diag.nominalDays)||56;const severityKnown=Number.isFinite(initialPain)||Number.isFinite(walkInitially)||i.pop||i.bruising;const severityFactor=!severityKnown?1:(initialPain>=8||i.pop||walkInitially>=8?1.18:initialPain>=6||i.bruising||walkInitially>=5?1.08:initialPain<=2&&walkInitially<=1?.88:1);nominalTotal=Math.round(nominalTotal*severityFactor);const baselineMin=Math.max(7,Math.round((Number(diag.minDays)||nominalTotal*.7)*severityFactor)),baselineMax=Math.max(baselineMin+7,Math.round((Number(diag.maxDays)||nominalTotal*1.5)*severityFactor));
  const snap=longitudinalSnapshot(i,checks),currentPain=Number.isFinite(snap.currentPain)?snap.currentPain:initialPain,walkPain=Number.isFinite(snap.walkPain)?snap.walkPain:walkInitially,elapsed=Math.max(0,Math.floor((today()-dte(i.date))/DAY));
- let stage=0;for(let current=0;current<INJURY_STAGES.length-1;current++){const c=criterionState(i,{currentPain,walkPain},current);if(c.length&&c.every(x=>x.status==='met'))stage=current+1;else break;}if(diag.urgent)stage=Math.min(stage,1);
+ const stage=injuryStageForChecks(i,checks,diag);
  const completion=injuryCompletionForChecks(i,checks,diag,initialPain,walkInitially),nominal=Math.round(clamp(elapsed/nominalTotal*100,0,100)),delta=completion===null?null:completion-nominal;
  const nominalRemaining=Math.max(7,nominalTotal-elapsed),stageRemaining=Math.max(7,Math.round(nominalTotal*[.94,.78,.60,.42,.25,.10][stage]));
  let trendRemaining=null,trendRate=null;if(checks.length>=2){const points=checks.map((c,idx)=>({day:Math.max(0,Math.round((dte(c.date)-dte(i.date))/DAY)),score:injuryCompletionForChecks(i,checks.slice(0,idx+1),diag,initialPain,walkInitially)})).filter(x=>Number.isFinite(x.score));if(points.length>=2){const first=points[0],last=points.at(-1),span=Math.max(1,last.day-first.day),gain=last.score-first.score;trendRate=gain/span;if(trendRate>.15)trendRemaining=Math.round((100-last.score)/trendRate);}}
@@ -4815,7 +4826,10 @@ function injuryPrediction(i){
  remaining=Math.max(7,Math.min(Math.max(14,Math.round(baselineMax*1.25)),remaining));const total=elapsed+remaining,central=new Date(today().getTime()+remaining*DAY),uncertainty=checks.length>=7?Math.max(7,Math.round(nominalTotal*.12)):checks.length>=3?Math.max(10,Math.round(nominalTotal*.18)):Math.max(14,Math.round(nominalTotal*.25)),rangeStartTotal=Math.max(elapsed+7,Math.max(baselineMin,total-uncertainty)),rangeEndTotal=Math.max(rangeStartTotal+7,Math.min(Math.round(baselineMax*1.25),total+uncertainty)),windowStart=iso(new Date(dte(i.date).getTime()+rangeStartTotal*DAY)),windowEnd=iso(new Date(dte(i.date).getTime()+rangeEndTotal*DAY)),confidence=checks.length>=7?'Moderate':checks.length>=3?'Developing':'Low';return{nominalTotal,baselineMin,baselineMax,total,elapsed,remaining,stage,fullDate:iso(central),windowStart,windowEnd,confidence,currentPain,walkPain,completion,nominal,delta,latest,checks,diag,safetyHold:diag.urgent,trendRate,snapshot:snap};
 }
 function injuryCompletionForChecks(i,checks,diag,initialPain,walkInitially){
- if(!checks.length)return null;const snap=longitudinalSnapshot(i,checks),currentPain=Number.isFinite(snap.currentPain)?snap.currentPain:initialPain,walkPain=Number.isFinite(snap.walkPain)?snap.walkPain:walkInitially;let stage=0;for(let target=1;target<INJURY_STAGES.length;target++){const c=criterionState({...i,checkIns:checks},{currentPain,walkPain},target);if(c.length&&c.every(x=>x.status==='met'))stage=target;else break;}if(diag.urgent)stage=Math.min(stage,1);
+ const observed=(checks||[]).filter(c=>CORE.isIsoDate(c.date)&&c.date<=iso(today()));
+ if(!observed.length)return null;
+ const snap=longitudinalSnapshot({...i,checkIns:observed},observed),currentPain=Number.isFinite(snap.currentPain)?snap.currentPain:initialPain,walkPain=Number.isFinite(snap.walkPain)?snap.walkPain:walkInitially;
+ const stage=injuryStageForChecks(i,observed,diag);
  const stageBase=[5,18,36,56,74,90][stage];let within=0;
  if(Number.isFinite(currentPain))within+=(3-currentPain)*1.6;
  if(Number.isFinite(walkPain))within+=(1-walkPain)*1.6;
@@ -5110,20 +5124,58 @@ function injuryTrajectorySvg(i,p){
     This guarantees that the plotted nominal value at Today is the same p.nominal used by
     recoveryScoreInfo() and by the "percentage points ahead/behind" interpretation. */
  const horizon=Math.max(7,Number(p.nominalTotal)||7),x=d=>left+clamp(d/horizon,0,1)*cw,y=v=>top+(100-clamp(v,0,100))/100*ch;
- const phaseFractions=[0,.12,.28,.46,.64,.82,1],phaseX=f=>left+clamp(f,0,1)*cw;
- const nominalPath=`M ${phaseX(0)} ${y(0)} L ${phaseX(1)} ${y(100)}`;
- const phaseRects=INJURY_STAGES.map((st,n)=>{
-   const x0=phaseX(phaseFractions[n]),x1=phaseX(phaseFractions[n+1]),w=Math.max(0,x1-x0),cx=x0+w/2;
-   return `<rect class="phaseBand phase${n}" x="${x0}" y="${top}" width="${w}" height="${ch}"/><text class="phaseNumber" x="${cx}" y="18" text-anchor="middle">${n+1}</text><text class="phaseLabel" x="${cx}" y="38" text-anchor="middle">${esc(st.name)}</text>`;
- }).join('');
- const phaseLines=phaseFractions.slice(1,-1).map(f=>`<line class="phaseBoundary" x1="${phaseX(f)}" y1="${top}" x2="${phaseX(f)}" y2="${top+ch}"/>`).join('');
- const pts=(p.checks||[]).map((c,idx)=>{const score=injuryCompletionForChecks(i,p.checks.slice(0,idx+1),p.diag,nullableNumber(i.initialPain),nullableNumber(i.initialWalkPain));return{day:Math.max(0,Math.round((dte(c.date)-dte(i.date))/DAY)),score,date:c.date};}).filter(q=>Number.isFinite(q.score));
- if(!pts.length&&Number.isFinite(p.completion))pts.push({day:p.elapsed,score:p.completion,date:iso(today())});
- const observed=pts.map((q,n)=>`${n?'L':'M'} ${x(q.day)} ${y(q.score)}`).join(' ');
  const todayDay=clamp(Number(p.elapsed)||0,0,horizon),todayX=x(todayDay),nominalToday=clamp(Number(p.nominal)||0,0,100),observedToday=Number.isFinite(Number(p.completion))?clamp(Number(p.completion),0,100):null;
- const nominalPhase=Math.min(INJURY_STAGES.length-1,phaseFractions.slice(1).findIndex(f=>todayDay/horizon<=f));
- const currentMarker=`<line class="currentDateLine" x1="${todayX}" y1="${top}" x2="${todayX}" y2="${top+ch}"/><text class="currentDateLabel" x="${todayX}" y="${H-36}" text-anchor="middle">Today · nominal phase ${nominalPhase+1}</text>`;
- const actualPhaseX=phaseX((phaseFractions[p.stage]+phaseFractions[p.stage+1])/2);
+ const nominalPath=`M ${x(0)} ${y(0)} L ${x(horizon)} ${y(100)}`;
+
+ // Derive ACTUAL phase-transition dates from demonstrated criteria. A phase never
+ // starts on the graph until its criteria predecessor has actually been completed.
+ const observedChecks=(p.checks||[]).filter(c=>CORE.isIsoDate(c.date)&&c.date<=iso(today()));
+ const transitions=Array(INJURY_STAGES.length).fill(null);transitions[0]=0;
+ observedChecks.forEach((c,idx)=>{
+   const prefix=observedChecks.slice(0,idx+1),stageAtCheck=injuryStageForChecks(i,prefix,p.diag);
+   const day=Math.min(todayDay,Math.max(0,Math.round((dte(c.date)-dte(i.date))/DAY)));
+   for(let s=1;s<=stageAtCheck;s++)if(transitions[s]===null)transitions[s]=day;
+ });
+ // If the engine is currently in a phase whose exact transition day predates retained
+ // evidence, anchor it no later than Today, but never fabricate a later phase.
+ if(transitions[p.stage]===null)transitions[p.stage]=Math.max(0,Math.min(todayDay,transitions[p.stage-1]??0));
+
+ const phaseBounds=INJURY_STAGES.map((st,n)=>{
+   const start=transitions[n]!==null?transitions[n]:(n<=p.stage?0:todayDay);
+   let end;
+   if(n<p.stage) end=transitions[n+1]!==null?transitions[n+1]:todayDay;
+   else if(n===p.stage) end=todayDay;
+   else {
+     const futureCount=INJURY_STAGES.length-1-p.stage;
+     const futureIndex=n-p.stage-1;
+     const futureSpan=Math.max(0,horizon-todayDay);
+     const fs=todayDay+futureSpan*(futureIndex/Math.max(1,futureCount));
+     const fe=todayDay+futureSpan*((futureIndex+1)/Math.max(1,futureCount));
+     return {start:fs,end:fe,future:true};
+   }
+   return {start:Math.min(start,todayDay),end:Math.max(Math.min(end,todayDay),Math.min(start,todayDay)),future:false};
+ });
+
+ const phaseRects=INJURY_STAGES.map((st,n)=>{
+   const b=phaseBounds[n],x0=x(b.start),x1=x(b.end),w=Math.max(2,x1-x0),cx=x0+w/2;
+   const cls=b.future?' future':'';
+   return `<rect class="phaseBand phase${n}${cls}" x="${x0}" y="${top}" width="${w}" height="${ch}"/><text class="phaseNumber${cls}" x="${cx}" y="18" text-anchor="middle">${n+1}</text><text class="phaseLabel${cls}" x="${cx}" y="38" text-anchor="middle">${esc(st.name)}</text>`;
+ }).join('');
+ const phaseLines=phaseBounds.slice(1).map(b=>`<line class="phaseBoundary" x1="${x(b.start)}" y1="${top}" x2="${x(b.start)}" y2="${top+ch}"/>`).join('');
+
+ // Observed dots are hard-clipped to Today. The score and phase are both reconstructed
+ // only from evidence that existed on that observation date.
+ const pts=observedChecks.map((c,idx)=>{
+   const prefix=observedChecks.slice(0,idx+1);
+   const score=injuryCompletionForChecks(i,prefix,p.diag,nullableNumber(i.initialPain),nullableNumber(i.initialWalkPain));
+   const day=Math.min(todayDay,Math.max(0,Math.round((dte(c.date)-dte(i.date))/DAY)));
+   const stage=injuryStageForChecks(i,prefix,p.diag);
+   return{day,score,date:c.date,stage};
+ }).filter(q=>Number.isFinite(q.score)&&q.day<=todayDay);
+ if(!pts.length&&Number.isFinite(p.completion))pts.push({day:todayDay,score:p.completion,date:iso(today()),stage:p.stage});
+ const observed=pts.map((q,n)=>`${n?'L':'M'} ${x(q.day)} ${y(q.score)}`).join(' ');
+ const currentMarker=`<line class="currentDateLine" x1="${todayX}" y1="${top}" x2="${todayX}" y2="${top+ch}"/><text class="currentDateLabel" x="${todayX}" y="${H-36}" text-anchor="middle">Today</text>`;
+ const currentBound=phaseBounds[p.stage],actualPhaseX=x((currentBound.start+currentBound.end)/2);
  const actualPhaseMarker=`<path class="actualPhasePointer" d="M ${actualPhaseX-7} 48 L ${actualPhaseX+7} 48 L ${actualPhaseX} 57 Z"/><text class="actualPhaseLabel" x="${actualPhaseX}" y="51" text-anchor="middle">CURRENT ${p.stage+1}</text>`;
  const gap=observedToday===null?'':`<line class="trajectoryGap" x1="${todayX}" y1="${y(nominalToday)}" x2="${todayX}" y2="${y(observedToday)}"/><circle class="nominalTodayPoint" cx="${todayX}" cy="${y(nominalToday)}" r="5"><title>Nominal today · ${Math.round(nominalToday)}%</title></circle>`;
  return `<div class="injuryTrajectoryWrap"><svg class="injuryTrajectory" viewBox="0 0 ${W} ${H}" role="img" aria-label="Observed rehabilitation completion, nominal recovery and rehabilitation phases"><rect class="phaseLabelBand" x="${left}" y="0" width="${cw}" height="${labelBand}"/>${phaseRects}${phaseLines}${actualPhaseMarker}<line x1="${left}" y1="${y(25)}" x2="${W-right}" y2="${y(25)}"/><line x1="${left}" y1="${y(50)}" x2="${W-right}" y2="${y(50)}"/><line x1="${left}" y1="${y(75)}" x2="${W-right}" y2="${y(75)}"/>${currentMarker}<path class="nominalLine" d="${nominalPath}"/>${gap}<path class="actualLine" d="${observed}"/>${pts.map(q=>`<circle cx="${x(q.day)}" cy="${y(q.score)}" r="5"><title>${fmtDate(q.date)} · ${q.score}%</title></circle>`).join('')}<text x="${left}" y="${H-12}">Injury</text><text x="${W-right}" y="${H-12}" text-anchor="end">Nominal unrestricted training</text></svg><div class="injuryTrajectoryLegend"><span class="actual">Observed completion</span><span class="nominal">Nominal recovery</span><span class="phase">Recovery phases</span></div></div>`;

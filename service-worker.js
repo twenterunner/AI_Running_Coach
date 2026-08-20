@@ -1,15 +1,15 @@
-// AI Running Coach v14.9.17 · build 40917
+// AI Running Coach v14.9.18 · build 40918
 'use strict';
 
-const CACHE = 'arc-v14916-build-40917';
+const CACHE = 'arc-v14916-build-40918';
 const CACHE_PREFIX = 'arc-v';
 const APP_SHELL = './index.html';
 const ASSETS = [
   './',
   './index.html',
-  './styles.css?v=40917',
-  './app.js?v=40917',
-  './manifest.webmanifest?v=40917',
+  './styles.css?v=40918',
+  './app.js?v=40918',
+  './manifest.webmanifest?v=40918',
   './icon-192.png?v=40915',
   './icon-512.png?v=40915',
   './apple-touch-icon.png?v=40915',
