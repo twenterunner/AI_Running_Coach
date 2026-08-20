@@ -5995,3 +5995,59 @@ body:has(#dashboard.progressPage.active),#mainContent:has(#dashboard.progressPag
 #dashboard.progressPage .personalModelUsage>summary{cursor:pointer!important;font-weight:800!important}
 #dashboard.progressPage .personalModelUsageBody{padding-top:8px!important}
 #dashboard.progressPage .personalModelUsageBody>p:last-child{margin-bottom:0!important}
+
+
+/* v14.9.32 — requested Recovery hierarchy + compact Progress adaptation cards */
+/* Recovery section 03: Level-1 teal container around the three Level-2 evidence cards. */
+#recovery #recoveryDrivers{
+  background:linear-gradient(180deg,rgba(10,105,119,.78),rgba(7,77,91,.78));
+  border:1px solid rgba(45,218,224,.42);
+  border-radius:18px;
+  padding:14px;
+  margin-top:4px;
+  box-shadow:none;
+}
+#recovery #recoveryDrivers .recoveryDriverGrid{gap:9px}
+#recovery #recoveryDrivers .recoveryNested{background:#152735}
+
+/* Progress section 06: reduce unused vertical space, preserving every value/foldout. */
+#dashboard.progressPage .canonicalPathwayGrid>.adaptationVisualCard{
+  padding-top:12px!important;
+  padding-bottom:10px!important;
+  display:flex!important;
+  flex-direction:column!important;
+  gap:7px!important;
+}
+#dashboard.progressPage .canonicalPathwayGrid>.adaptationVisualCard .canonicalPathHead{
+  margin:0!important;
+  min-height:0!important;
+}
+#dashboard.progressPage .canonicalPathwayGrid>.adaptationVisualCard .canonicalPathHead strong{
+  margin:0!important;
+}
+#dashboard.progressPage .canonicalPathwayGrid>.adaptationVisualCard .pathSpark{
+  margin:0!important;
+  min-height:0!important;
+  height:30px!important;
+  display:block!important;
+}
+#dashboard.progressPage .canonicalPathwayGrid>.adaptationVisualCard .pathSpark>.miniSparkline,
+#dashboard.progressPage .canonicalPathwayGrid>.adaptationVisualCard .pathSpark .miniSparkline{
+  height:30px!important;
+  min-height:30px!important;
+}
+#dashboard.progressPage .canonicalPathwayGrid>.adaptationVisualCard .canonicalPathMetrics.compact{
+  margin:0!important;
+  gap:4px!important;
+}
+#dashboard.progressPage .canonicalPathwayGrid>.adaptationVisualCard .canonicalPathMetrics.compact>div{
+  padding:9px 11px!important;
+  min-height:0!important;
+}
+#dashboard.progressPage .canonicalPathwayGrid>.adaptationVisualCard>details{
+  margin:0!important;
+}
+#dashboard.progressPage .canonicalPathwayGrid>.adaptationVisualCard>details>summary{
+  min-height:0!important;
+  padding:10px 12px!important;
+}
