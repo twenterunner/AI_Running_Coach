@@ -5741,8 +5741,8 @@ body:has(#dashboard.progressPage.active),#mainContent:has(#dashboard.progressPag
 #injury .injuryNameAssessmentFoldout{margin:1px 0 3px;border:0;background:transparent;overflow:visible}
 #injury .injuryNameAssessmentFoldout>summary{display:flex;align-items:center;gap:8px;width:max-content;max-width:100%;padding:0;min-height:0;cursor:pointer;list-style:none;font-size:25px;line-height:1.1;font-weight:850;letter-spacing:-.035em;color:#fff}
 #injury .injuryNameAssessmentFoldout>summary::-webkit-details-marker{display:none}
-#injury .injuryNameAssessmentFoldout>summary::after{content:'⌄';flex:0 0 auto;font-size:15px;line-height:1;color:var(--teal-2);transform:translateY(-1px);transition:transform .18s ease}
-#injury .injuryNameAssessmentFoldout[open]>summary::after{transform:rotate(180deg) translateY(1px)}
+#injury .injuryNameAssessmentFoldout>summary::after{content:'';flex:0 0 auto;width:9px;height:9px;border-right:2px solid var(--teal-2);border-bottom:2px solid var(--teal-2);transform:rotate(45deg) translateY(-2px);transition:transform .18s ease}
+#injury .injuryNameAssessmentFoldout[open]>summary::after{transform:rotate(225deg) translate(-2px,-1px)}
 #injury .injuryNameAssessmentBody{margin:10px 0 7px;padding:12px;border:1px solid rgba(61,214,198,.16);border-radius:14px;background:#0b1821}
 #injury .injuryNameAssessmentBody .injuryRunnerAssessmentTop{margin-bottom:10px}
 #injury .injuryNameAssessmentBody .injuryClinicalCompare,#injury .injuryNameAssessmentBody .injuryRunnerBaseline,#injury .injuryNameAssessmentBody .injuryRunnerClinicianTiming{margin-top:8px}
@@ -5841,3 +5841,22 @@ body:has(#dashboard.progressPage.active),#mainContent:has(#dashboard.progressPag
  #injury .injuryPhaseStrip{grid-template-columns:repeat(3,minmax(0,1fr))}
  #injury .injuryPhaseStripItem{padding:6px 4px}
 }
+
+
+/* v14.9.22 — Injury phases integrated into trajectory */
+#injury .injurySelectedPhaseWindow{fill:rgba(74,230,216,.075);stroke:rgba(74,230,216,.34);stroke-width:1.5}
+#injury .injuryTrajectoryLegend .selectedPhase::before{background:rgba(74,230,216,.18);border:1px solid rgba(74,230,216,.45)}
+#injury .injuryPhaseStripItem{appearance:none;font:inherit;color:inherit;cursor:pointer;position:relative}
+#injury .injuryPhaseStripItem.selected{border-color:rgba(74,230,216,.72);background:rgba(16,77,83,.42)}
+#injury .phaseTileChevron{display:block;width:7px;height:7px;margin:5px auto 0;border-right:1.5px solid currentColor;border-bottom:1.5px solid currentColor;transform:rotate(45deg);opacity:.55}
+#injury .injuryPhaseStripItem.selected .phaseTileChevron{transform:rotate(225deg);margin-top:8px;opacity:.95}
+#injury .injuryPhaseDetailHost{margin-top:7px}
+#injury .injuryPhaseDetail{border:1px solid rgba(74,230,216,.22);border-radius:12px;background:rgba(8,27,37,.72);overflow:hidden}
+#injury .injuryPhaseDetail>header{display:grid;grid-template-columns:30px minmax(0,1fr);gap:8px;padding:9px 10px 6px}
+#injury .injuryPhaseDetail>header>span{display:grid;place-items:center;width:28px;height:28px;border-radius:50%;background:rgba(74,230,216,.09);color:var(--teal-2);font-size:10px;font-weight:900}
+#injury .injuryPhaseDetail header small{display:block;font-size:8px;font-weight:850;letter-spacing:.08em;color:var(--muted)}
+#injury .injuryPhaseDetail header h4{margin:1px 0 0;font-size:14px;line-height:1.15}
+#injury .injuryPhaseDetail header p{margin:2px 0 0;font-size:9px;line-height:1.3;color:var(--text-2)}
+#injury .injuryPhaseDetail .injuryStageCriteriaList{padding:0 8px 8px}
+#injury .injuryPhaseDetail.completed{border-color:rgba(118,223,157,.20)}
+#injury .injuryPhaseDetail.future{border-color:rgba(115,154,183,.16)}

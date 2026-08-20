@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '14.9.21';
-  const BUILD = 40921;
+  const VERSION = '14.9.22';
+  const BUILD = 40922;
   const SCHEMA = 10400;
   const PRIMARY_STORAGE_KEY = 'arc_v10400_web';
   const MIRROR_STORAGE_KEY = 'arc_v10400_mirror';
@@ -5122,12 +5122,8 @@ function injuryTrajectorySvg(i,p){
  const horizon=Math.max(7,Number(p.nominalTotal)||7),x=d=>left+clamp(d/horizon,0,1)*cw,y=v=>top+(100-clamp(v,0,100))/100*ch;
  const todayDay=clamp(Number(p.elapsed)||0,0,horizon),todayX=x(todayDay),nominalToday=clamp(Number(p.nominal)||0,0,100),observedToday=Number.isFinite(Number(p.completion))?clamp(Number(p.completion),0,100):null;
  const observedChecks=(p.checks||[]).filter(c=>CORE.isIsoDate(c.date)&&c.date<=iso(today()));
-
- // Nominal recovery is expressed on a true linear day axis. The dashed line is the
- // model's expected percentage recovery over its original nominal duration.
  const nominalPath=`M ${x(0)} ${y(0)} L ${x(horizon)} ${y(100)}`;
 
- // Reconstruct every observed point only from evidence available by that check-in.
  const pts=observedChecks.map((c,idx)=>{
    const prefix=observedChecks.slice(0,idx+1);
    const score=injuryCompletionForChecks(i,prefix,p.diag,nullableNumber(i.initialPain),nullableNumber(i.initialWalkPain));
@@ -5146,22 +5142,48 @@ function injuryTrajectorySvg(i,p){
    return `<line class="xTick" x1="${xx}" x2="${xx}" y1="${top+ch}" y2="${top+ch+5}"/><text class="axisText xAxisText" x="${xx}" y="${H-10}" text-anchor="${f===0?'start':f===1?'end':'middle'}">${label}</text>`;
  }).join('');
 
- const criteria=criterionState(i,{currentPain:p.currentPain,walkPain:p.walkPain},p.stage);
- const metCount=criteria.filter(c=>c.status==='met').length,totalCount=criteria.length;
+ // Selecting a phase only inspects/highlights its NOMINAL calendar window.
+ // The actual rehabilitation stage remains exclusively p.stage / criteria-driven.
+ const nominalPhaseFractions=[0,.12,.28,.46,.64,.82,1];
+ const phaseHighlightRects=INJURY_STAGES.map((st,n)=>{
+   const x0=x(horizon*nominalPhaseFractions[n]),x1=x(horizon*nominalPhaseFractions[n+1]);
+   return `<rect class="injurySelectedPhaseWindow" data-phase-highlight="${n}" x="${x0}" y="${top}" width="${Math.max(2,x1-x0)}" height="${ch}" ${n===p.stage?'':'hidden'}/>`;
+ }).join('');
+
  const phaseStrip=INJURY_STAGES.map((st,n)=>{
    const state=n<p.stage?'completed':n===p.stage?'current':'future';
+   const stageCriteria=criterionState(i,{currentPain:p.currentPain,walkPain:p.walkPain},n);
+   const metCount=stageCriteria.filter(c=>c.status==='met').length,totalCount=stageCriteria.length;
    const symbol=state==='completed'?'✓':String(n+1);
    const sub=state==='completed'?'Complete':state==='current'?(totalCount?`${metCount}/${totalCount} criteria met`:'Current phase'):'Future';
-   return `<div class="injuryPhaseStripItem ${state}"><i>${symbol}</i><span><b>${esc(st.name)}</b><small>${esc(sub)}</small></span></div>`;
+   return `<button type="button" class="injuryPhaseStripItem ${state} ${n===p.stage?'selected':''}" data-injury-phase="${n}" aria-expanded="${n===p.stage?'true':'false'}"><i>${symbol}</i><span><b>${esc(st.name)}</b><small>${esc(sub)}</small></span><em class="phaseTileChevron" aria-hidden="true"></em></button>`;
+ }).join('');
+
+ const phaseDetails=INJURY_STAGES.map((st,n)=>{
+   const phaseState=n<p.stage?'completed':n===p.stage?'current':'future';
+   const stageCriteria=criterionState(i,{currentPain:p.currentPain,walkPain:p.walkPain},n);
+   const criteriaHtml=stageCriteria.map(c=>{
+     const future=phaseState==='future';
+     const partial=!future&&c.status!=='met'&&c.progress&&c.progress.count>0&&c.progress.count<c.progress.target;
+     const status=future?'future':c.status==='met'?'met':partial?'partial':'pending';
+     const symbol=status==='met'?'✓':status==='partial'?'◐':status==='pending'?'•':'◇';
+     const progressBadge=c.progress?`${Math.min(c.progress.count,c.progress.target)}/${c.progress.target}`:'';
+     const detail=future?'Required when this phase becomes active':c.progress?.text||(c.status==='unknown'?'Evidence not yet reported':c.status==='notMet'?'Current evidence does not yet meet this criterion':'Criterion met');
+     const label=status==='met'?'Met':status==='partial'?(progressBadge||'Partial'):status==='pending'?(c.status==='unknown'?'Pending':'Not met'):'Future';
+     return `<div class="injuryStageCriterion ${status}"><i>${symbol}</i><span><b>${esc(c.label)}</b><small>${esc(detail)}</small></span><em>${esc(label)}</em></div>`;
+   }).join('');
+   const phaseLabel=phaseState==='completed'?'COMPLETED':phaseState==='current'?'CURRENT PHASE':'FUTURE PHASE';
+   return `<div class="injuryPhaseDetail ${phaseState}" data-phase-detail="${n}" ${n===p.stage?'':'hidden'}><header><span>${n+1}</span><div><small>${phaseLabel}</small><h4>${esc(st.name)}</h4><p>${esc(st.goal)}</p></div></header><div class="injuryStageCriteriaList">${criteriaHtml}</div></div>`;
  }).join('');
 
  return `<div class="injuryTrajectoryWrap">
    <svg class="injuryTrajectory injuryTrajectorySimple" viewBox="0 0 ${W} ${H}" role="img" aria-label="Observed rehabilitation progress versus nominal recovery over calendar time">
-    ${yGrid}${xTicks}${currentMarker}<path class="nominalLine" d="${nominalPath}"/>${gap}<path class="actualLine" d="${observed}"/>
+    ${yGrid}${xTicks}${phaseHighlightRects}${currentMarker}<path class="nominalLine" d="${nominalPath}"/>${gap}<path class="actualLine" d="${observed}"/>
     ${pts.map(q=>`<circle cx="${x(q.day)}" cy="${y(q.score)}" r="5"><title>${fmtDate(q.date)} · ${q.score}%</title></circle>`).join('')}
    </svg>
-   <div class="injuryTrajectoryLegend"><span class="actual">Observed recovery</span><span class="nominal">Nominal recovery</span></div>
+   <div class="injuryTrajectoryLegend"><span class="actual">Observed recovery</span><span class="nominal">Nominal recovery</span><span class="selectedPhase">Selected phase nominal window</span></div>
    <div class="injuryPhaseStrip" aria-label="Criteria-based rehabilitation phase progress">${phaseStrip}</div>
+   <div class="injuryPhaseDetailHost">${phaseDetails}</div>
   </div>`;
 }
 function clinicianAgreementBanner(diag){
@@ -5271,21 +5293,6 @@ function renderInjury(){
  const i=active,p=injuryPrediction(i),st=INJURY_STAGES[p.stage],diag=p.diag,next=Math.min(INJURY_STAGES.length-1,p.stage+1),criteria=criterionState(i,p,next),met=criteria.filter(x=>x.status==='met').length,unknown=criteria.filter(x=>x.status==='unknown').length,scoreInfo=recoveryScoreExplanation(i,p,comparisonFactors(i,p)),adherence7=rehabAdherenceSummary(i,7),adherence14=rehabAdherenceSummary(i,14),adherenceOverall=rehabAdherenceSummary(i,null),milestones=milestoneStatus(p),clinicalPlan=injuryCausePrevention(i,diag),timelineText=p.safetyHold?'Progression paused pending assessment':`${fmtDate(p.windowStart)}–${fmtDate(p.windowEnd)}`,progressValue=p.completion===null?null:clamp(Number(p.completion),0,100),trajectoryClass=injuryRunnerStatusClass(scoreInfo.status),run=p.snapshot?.run||{},lastRun=run.lastCompleted||null,todayPlan=buildRehabCalendar(i,p)[0];
  const stagePurpose=st.goal||'Follow the criteria-based rehabilitation stage.';
  const unmet=criteria.filter(c=>c.status!=='met');
- const allRecoveryStagesHtml=INJURY_STAGES.map((stageDef,stageIndex)=>{
-  const stageCriteria=criterionState(i,p,stageIndex),phaseState=stageIndex<p.stage?'completed':stageIndex===p.stage?'current':'future';
-  const criteriaHtml=stageCriteria.map(c=>{
-   const future=phaseState==='future';
-   const partial=!future&&c.status!=='met'&&c.progress&&c.progress.count>0&&c.progress.count<c.progress.target;
-   const status=future?'future':c.status==='met'?'met':partial?'partial':'pending';
-   const symbol=status==='met'?'✓':status==='partial'?'◐':status==='pending'?'•':'◇';
-   const progressBadge=c.progress?`${Math.min(c.progress.count,c.progress.target)}/${c.progress.target}`:'';
-   const detail=future?'Required when this phase becomes active':c.progress?.text||(c.status==='unknown'?'Evidence not yet reported':c.status==='notMet'?'Current evidence does not yet meet this criterion':'Criterion met');
-   const label=status==='met'?'Met':status==='partial'?(progressBadge||'Partial'):status==='pending'?(c.status==='unknown'?'Pending':'Not met'):'Future';
-   return `<div class="injuryStageCriterion ${status}"><i>${symbol}</i><span><b>${esc(c.label)}</b><small>${esc(detail)}</small></span><em>${esc(label)}</em></div>`;
-  }).join('');
-  const phaseLabel=phaseState==='completed'?'COMPLETED':phaseState==='current'?'CURRENT PHASE':'FUTURE PHASE';
-  return `<article class="injuryRecoveryStage ${phaseState}"><header><span>${stageIndex+1}</span><div><small>${phaseLabel}</small><h4>${esc(stageDef.name)}</h4><p>${esc(stageDef.goal)}</p></div></header><div class="injuryStageCriteriaList">${criteriaHtml}</div></article>`;
- }).join('');
  const currentRestriction=p.safetyHold?'Progression paused pending clinical assessment':p.stage>=5?'Final return-to-training criteria phase':todayPlan?.running?'Running exposure is controlled by the rehabilitation plan':'Running exposure remains governed by rehabilitation stage criteria';
  const clinician=diag.verification;
  const clinicianBlock=clinician?`<div class="injuryClinicalCompare ${clinician.verdict}"><span><small>Clinician entered</small><b>${esc(clinician.entered)}</b></span><span><small>Independent app assessment</small><b>${esc(diag.name)}</b></span><p>${esc(clinician.status)}</p></div>`:`<div class="injuryRunnerBaseline compact"><b>No clinician diagnosis recorded</b><p>The app assessment remains a working symptom-pattern interpretation, not a medical diagnosis.</p></div>`;
@@ -5314,13 +5321,8 @@ function renderInjury(){
    <div class="injuryRunnerProgramme">${rehabTodayFocusHtml(i,p)}<button data-injury-check="${i.id}" class="primary full injuryPrimaryAction">Complete today’s check-in</button>${rehabCalendarHtml(i,p)}</div>
   </section>
 
-  <section class="injuryRunnerSection injuryRecoveryStagesSection">
-   ${injuryRunnerSectionHead(3,'RECOVERY STAGES & CRITERIA','What has been achieved, what remains, and what comes later?','All recovery phases and their progression criteria in one view. Current criteria are evidence-based; future criteria are shown without being scored as failures.')}
-   <div class="injuryRecoveryStages">${allRecoveryStagesHtml}</div>
-  </section>
-
   <section class="injuryRunnerSection">
-   ${injuryRunnerSectionHead(4,'REHABILITATION TRAJECTORY','Are you recovering as expected?','Observed rehabilitation progress compared with the model’s original nominal pathway.')}
+   ${injuryRunnerSectionHead(3,'REHABILITATION TRAJECTORY','Are you recovering as expected?','Observed rehabilitation progress compared with the model’s original nominal pathway.')}
    <article class="injuryRunnerCard">
     <div class="injuryRunnerCardHead"><div><h4>Observed versus nominal progression</h4><p>${p.completion===null?'A longitudinal trajectory needs rehabilitation check-ins.':`${p.elapsed} days since injury · ${esc(scoreInfo.label)}`}</p></div><span class="injuryRunnerStatus ${trajectoryClass}">${esc(scoreInfo.label)}</span></div>
     ${p.completion===null?`<div class="injuryRunnerBaseline"><b>Building your rehabilitation trajectory</b><p>No check-in-derived completion history is available yet. Calendar time alone is not shown as observed recovery.</p></div>`:injuryTrajectorySvg(i,p)}
@@ -5329,7 +5331,7 @@ function renderInjury(){
   </section>
 
   <section class="injuryRunnerSection">
-   ${injuryRunnerSectionHead(5,'PAIN & SYMPTOMS','Are symptoms actually improving?','Longitudinal symptom observations from rehabilitation check-ins.')}
+   ${injuryRunnerSectionHead(4,'PAIN & SYMPTOMS','Are symptoms actually improving?','Longitudinal symptom observations from rehabilitation check-ins.')}
    <article class="injuryRunnerCard">
     <div class="injuryRunnerMetricRow">
      <div><small>Latest pain</small><strong>${valueText(p.currentPain)}</strong><span>${p.snapshot?.painObs?.date?`Reported ${fmtDate(p.snapshot.painObs.date)}`:'Not reported in a check-in'}</span></div>
@@ -5341,7 +5343,7 @@ function renderInjury(){
   </section>
 
   <section class="injuryRunnerSection">
-   ${injuryRunnerSectionHead(6,'FUNCTION & RETURN TO RUN','What can you tolerate now?','Walking, impact and running capability accumulated through rehabilitation.')}
+   ${injuryRunnerSectionHead(5,'FUNCTION & RETURN TO RUN','What can you tolerate now?','Walking, impact and running capability accumulated through rehabilitation.')}
    <article class="injuryRunnerCard">
     <div class="injuryRunnerMetricRow">
      <div><small>Latest walking exposure</small><strong>${Number.isFinite(p.snapshot?.walkMinutes)?`${p.snapshot.walkMinutes} min`:'—'}</strong><span>${Number.isFinite(p.snapshot?.walkPain)?`Walking pain ${p.snapshot.walkPain}/10`:'Walking pain not reported'}</span></div>
@@ -5354,7 +5356,7 @@ function renderInjury(){
   </section>
 
   <section class="injuryRunnerSection">
-   ${injuryRunnerSectionHead(7,'REHABILITATION ADHERENCE','Are you completing the programme?','Execution of past scheduled rehabilitation days; future days are excluded.')}
+   ${injuryRunnerSectionHead(6,'REHABILITATION ADHERENCE','Are you completing the programme?','Execution of past scheduled rehabilitation days; future days are excluded.')}
    <article class="injuryRunnerCard">
     <div class="injuryRunnerAdherence">
      ${[[adherence7,'7 DAYS'],[adherence14,'14 DAYS'],[adherenceOverall,'OVERALL']].map(([a,label])=>`<div><small>${label}</small><strong>${a.score===null?'—':a.score+'%'}</strong><span>${a.scheduled?`${a.reported}/${a.scheduled} days reported${a.missed?` · ${a.missed} missed`:''}`:'No past scheduled days'}</span></div>`).join('')}
@@ -5364,13 +5366,13 @@ function renderInjury(){
   </section>
 
   <section class="injuryRunnerSection">
-   ${injuryRunnerSectionHead(8,'REHABILITATION HISTORY','Review the evidence trail','Historical check-ins remain available without turning the default screen into a medical record.')}
+   ${injuryRunnerSectionHead(7,'REHABILITATION HISTORY','Review the evidence trail','Historical check-ins remain available without turning the default screen into a medical record.')}
    <article class="injuryRunnerCard">
     <details class="injuryRunnerDisclosure injuryRunnerHistoryDisclosure"><summary>${p.checks.length} rehabilitation check-in${p.checks.length===1?'':'s'}</summary><div class="checkInHistory">${p.checks.length?p.checks.slice().reverse().map(c=>`<button type="button" class="checkInHistoryRow" data-injury-check-edit="${i.id}" data-check-date="${c.date}"><span><b>${fmtDate(c.date)}</b><small>${Number.isFinite(c.pain)?`Pain ${c.pain}/10`:''}${Number.isFinite(c.walkPain)?`${Number.isFinite(c.pain)?' · ':''}walking ${c.walkPain}/10`:''}${Number.isFinite(c.runMinutes)?` · run ${c.runMinutes} min`:c.runStatus==='not_planned'?' · no run planned':c.runStatus==='not_assessed'?' · running not assessed':''}<br>Rehab: ${esc(rehabExecutionMeta(c).short)}</small></span><em>Edit</em></button>`).join(''):'<p class="injuryRunnerNeutral">No check-ins yet.</p>'}</div></details>
     <details class="injuryRunnerDisclosure"><summary>Initial versus latest symptoms</summary><div class="injuryRunnerTwoCol"><div><small>AT INJURY</small><b>Pain ${valueText(nullableNumber(i.initialPain))} · walking ${valueText(nullableNumber(i.initialWalkPain))}</b><p>${esc(i.initialSymptoms||'No symptom description recorded.')}</p></div><div><small>LATEST</small><b>Pain ${valueText(p.currentPain)} · walking ${valueText(p.walkPain)}</b><p>${esc(p.latest.symptoms||i.currentSymptoms||'No current symptom description recorded.')}</p></div></div></details>
     <div class="buttonRow injuryRunnerAdmin"><button data-injury-edit="${i.id}">Edit injury</button><button data-injury-delete="${i.id}" class="danger">Delete</button></div>
    </article>
-  </section>  ${parallel.length?`<section class="injuryRunnerSection injuryRunnerOtherAssessments">${injuryRunnerSectionHead(9,'OTHER ASSESSED INJURIES','Parallel assessments','These remain separate from the active rehabilitation plan.')}<div class="injuryRunnerParallelList">${parallel.map(other=>{const op=injuryPrediction(other),od=op.diag;return `<article class="injuryRunnerParallelCard"><div><small>PARALLEL ASSESSMENT</small><h3>${esc(other.location||other.bodyRegion||'Injury')}</h3><p>${esc(od.name)} · ${fmtDate(other.date)}</p></div><div class="injuryRunnerParallelMetrics"><span><small>Stage</small><b>${esc(INJURY_STAGES[op.stage].name)}</b></span><span><small>Central estimate</small><b>${op.safetyHold?'On hold':fmtDate(op.fullDate)}</b></span></div><button class="secondary full" data-activate-injury-plan="${other.id}">Switch to this recovery plan</button><details class="injuryRunnerDisclosure"><summary>Assessment actions</summary><div class="buttonRow"><button data-injury-edit="${other.id}">Edit assessment</button><button data-injury-delete="${other.id}" class="danger">Delete</button></div></details></article>`}).join('')}</div></section>`:''}
+  </section>  ${parallel.length?`<section class="injuryRunnerSection injuryRunnerOtherAssessments">${injuryRunnerSectionHead(8,'OTHER ASSESSED INJURIES','Parallel assessments','These remain separate from the active rehabilitation plan.')}<div class="injuryRunnerParallelList">${parallel.map(other=>{const op=injuryPrediction(other),od=op.diag;return `<article class="injuryRunnerParallelCard"><div><small>PARALLEL ASSESSMENT</small><h3>${esc(other.location||other.bodyRegion||'Injury')}</h3><p>${esc(od.name)} · ${fmtDate(other.date)}</p></div><div class="injuryRunnerParallelMetrics"><span><small>Stage</small><b>${esc(INJURY_STAGES[op.stage].name)}</b></span><span><small>Central estimate</small><b>${op.safetyHold?'On hold':fmtDate(op.fullDate)}</b></span></div><button class="secondary full" data-activate-injury-plan="${other.id}">Switch to this recovery plan</button><details class="injuryRunnerDisclosure"><summary>Assessment actions</summary><div class="buttonRow"><button data-injury-edit="${other.id}">Edit assessment</button><button data-injury-delete="${other.id}" class="danger">Delete</button></div></details></article>`}).join('')}</div></section>`:''}
  </div>`;
  sortInjurySectionsByDisplayedNumber();
 }
@@ -7411,7 +7413,21 @@ function choosePlanShoe(planId){const plan=(state.plan||[]).find(p=>p.id===planI
 function renderAll(){[renderDashboard,renderToday,renderPlan,renderRuns,renderMetrics,renderAssessments,renderCoach,renderInjury,renderRecovery,renderRace,renderSettings,renderShoes,renderPlanHealth,renderMigrationReport].forEach(fn=>{try{fn()}catch(err){recordDiagnostic('Render failure in '+fn.name,err)}});try{renderProgressChartsStandalone()}catch(err){recordDiagnostic('Render failure in renderProgressChartsStandalone',err)}renderDiagnostics();ensureAccessibleForms();renderUndoButtons()}
 const pages=[['today','Today'],['plan','Plan'],['runs','Log'],['dashboard','Progress'],['assessments','Assessments'],['recovery','Recovery'],['injury','Injury'],['shoes','Shoes'],['race','Race day'],['settings','Settings']];
 document.body.addEventListener('change',e=>{const sel=e.target.closest?.('[data-rehab-shoe-plan]');if(!sel)return;const injury=(state.injuries||[]).find(x=>x.id===sel.dataset.rehabShoePlan);if(!injury)return;injury.plannedRehabShoes=injury.plannedRehabShoes||{};if(sel.value)injury.plannedRehabShoes[sel.dataset.rehabShoeDate]=sel.value;else delete injury.plannedRehabShoes[sel.dataset.rehabShoeDate];save();toast(sel.value?'Rehabilitation shoe planned.':'Rehabilitation shoe cleared.');});
-$('nav').innerHTML=pages.map((p,i)=>`<button data-page="${p[0]}" class="${i?'':'active'}">${p[1]}</button>`).join('');$('nav').onclick=e=>{let p=e.target.dataset.page;if(!p)return;document.querySelectorAll('.page').forEach(x=>x.classList.toggle('active',x.id===p));document.querySelectorAll('#nav button').forEach(x=>x.classList.toggle('active',x.dataset.page===p));renderAll();scrollTo(0,0)};document.body.onclick=e=>{if(e.target.id==='addShoeBtn'){openShoeForm();return}let sd=e.target.closest('[data-shoe-detail]');if(sd){openShoeDetail(sd.dataset.shoeDetail);return}let cps=e.target.closest('[data-choose-plan-shoe]');if(cps){choosePlanShoe(cps.dataset.choosePlanShoe);return}if(e.target.id==='addInjuryBtn'){openInjuryForm();return}let activate=e.target.closest('[data-activate-injury-plan]');if(activate){let id=activate.dataset.activateInjuryPlan,current=state.injuries.find(x=>x.id===state.activeInjuryPlanId),next=state.injuries.find(x=>x.id===id);if(next&&confirm(`Switch the active recovery plan from ${current?.location||'the current injury'} to ${next.location||'this injury'}? Only one plan can be followed at a time.`)){state.activeInjuryPlanId=id;save();renderInjury();toast('Active recovery plan switched.')}return;}let ib=e.target.closest('[data-injury-check]');if(ib){const injury=state.injuries.find(x=>x.id===ib.dataset.injuryCheck);if(injury){const existing=(injury.checkIns||[]).find(c=>c.date===iso(today()))||null;openInjuryCheck(injury,existing)}return}let ice=e.target.closest('[data-injury-check-edit]');if(ice){let injury=state.injuries.find(x=>x.id===ice.dataset.injuryCheckEdit),check=injury?.checkIns?.find(x=>x.date===ice.dataset.checkDate);if(injury&&check)openInjuryCheck(injury,check);return}let icd=e.target.closest('[data-injury-check-date]');if(icd){let injury=state.injuries.find(x=>x.id===icd.dataset.injuryCheckDate),check=injury?.checkIns?.find(x=>x.date===icd.dataset.checkDate)||null;if(injury)openInjuryCheck(injury,check,{date:icd.dataset.checkDate});return}let ie=e.target.closest('[data-injury-edit]');if(ie){openInjuryForm(state.injuries.find(x=>x.id===ie.dataset.injuryEdit));return}let idel=e.target.closest('[data-injury-delete]');if(idel){if(confirm('Delete this injury and its check-ins?')){state.injuries=state.injuries.filter(x=>x.id!==idel.dataset.injuryDelete);if(state.activeInjuryPlanId===idel.dataset.injuryDelete)state.activeInjuryPlanId=state.injuries[0]?.id||null;save();renderInjury()}return}const go=e.target.closest('[data-go]');if(go){closeDialog();activatePage(go.dataset.go,go.dataset.anchor||null);return}const scoreLink=e.target.closest('.wiScoreLink');if(scoreLink){setTimeout(()=>{const d=document.getElementById('executionBreakdownFoldout');if(d)d.open=true},0)}const planRunBtn=e.target.closest('[data-plan-run]');if(planRunBtn){openRunDetails(planRunBtn.dataset.planRun);return}let factorToggle=e.target.closest('.factorToggle');if(factorToggle){let tile=factorToggle.closest('.factorKpi'),open=tile.classList.toggle('open');factorToggle.setAttribute('aria-expanded',String(open));return}let w=e.target.closest('.workout');if(w&&!e.target.closest('button')){document.querySelectorAll('.workout[open]').forEach(x=>{if(x!==w)x.removeAttribute('open')});}};
+$('nav').innerHTML=pages.map((p,i)=>`<button data-page="${p[0]}" class="${i?'':'active'}">${p[1]}</button>`).join('');$('nav').onclick=e=>{let p=e.target.dataset.page;if(!p)return;document.querySelectorAll('.page').forEach(x=>x.classList.toggle('active',x.id===p));document.querySelectorAll('#nav button').forEach(x=>x.classList.toggle('active',x.dataset.page===p));renderAll();scrollTo(0,0)};document.body.onclick=e=>{if(e.target.id==='addShoeBtn'){openShoeForm();return}let sd=e.target.closest('[data-shoe-detail]');if(sd){openShoeDetail(sd.dataset.shoeDetail);return}let cps=e.target.closest('[data-choose-plan-shoe]');if(cps){choosePlanShoe(cps.dataset.choosePlanShoe);return}if(e.target.id==='addInjuryBtn'){openInjuryForm();return}let activate=e.target.closest('[data-activate-injury-plan]');if(activate){let id=activate.dataset.activateInjuryPlan,current=state.injuries.find(x=>x.id===state.activeInjuryPlanId),next=state.injuries.find(x=>x.id===id);if(next&&confirm(`Switch the active recovery plan from ${current?.location||'the current injury'} to ${next.location||'this injury'}? Only one plan can be followed at a time.`)){state.activeInjuryPlanId=id;save();renderInjury();toast('Active recovery plan switched.')}return;}let phaseTile=e.target.closest('[data-injury-phase]');if(phaseTile){
+ const wrap=phaseTile.closest('.injuryTrajectoryWrap'),n=Number(phaseTile.dataset.injuryPhase);
+ if(wrap&&Number.isInteger(n)){
+  const alreadyOpen=phaseTile.classList.contains('selected')&&phaseTile.getAttribute('aria-expanded')==='true';
+  wrap.querySelectorAll('[data-injury-phase]').forEach(btn=>{btn.classList.remove('selected');btn.setAttribute('aria-expanded','false')});
+  wrap.querySelectorAll('[data-phase-detail]').forEach(el=>el.hidden=true);
+  wrap.querySelectorAll('[data-phase-highlight]').forEach(el=>el.hidden=true);
+  if(!alreadyOpen){
+   phaseTile.classList.add('selected');phaseTile.setAttribute('aria-expanded','true');
+   const detail=wrap.querySelector(`[data-phase-detail="${n}"]`),highlight=wrap.querySelector(`[data-phase-highlight="${n}"]`);
+   if(detail)detail.hidden=false;if(highlight)highlight.hidden=false;
+  }
+ }
+ return;
+}let ib=e.target.closest('[data-injury-check]');if(ib){const injury=state.injuries.find(x=>x.id===ib.dataset.injuryCheck);if(injury){const existing=(injury.checkIns||[]).find(c=>c.date===iso(today()))||null;openInjuryCheck(injury,existing)}return}let ice=e.target.closest('[data-injury-check-edit]');if(ice){let injury=state.injuries.find(x=>x.id===ice.dataset.injuryCheckEdit),check=injury?.checkIns?.find(x=>x.date===ice.dataset.checkDate);if(injury&&check)openInjuryCheck(injury,check);return}let icd=e.target.closest('[data-injury-check-date]');if(icd){let injury=state.injuries.find(x=>x.id===icd.dataset.injuryCheckDate),check=injury?.checkIns?.find(x=>x.date===icd.dataset.checkDate)||null;if(injury)openInjuryCheck(injury,check,{date:icd.dataset.checkDate});return}let ie=e.target.closest('[data-injury-edit]');if(ie){openInjuryForm(state.injuries.find(x=>x.id===ie.dataset.injuryEdit));return}let idel=e.target.closest('[data-injury-delete]');if(idel){if(confirm('Delete this injury and its check-ins?')){state.injuries=state.injuries.filter(x=>x.id!==idel.dataset.injuryDelete);if(state.activeInjuryPlanId===idel.dataset.injuryDelete)state.activeInjuryPlanId=state.injuries[0]?.id||null;save();renderInjury()}return}const go=e.target.closest('[data-go]');if(go){closeDialog();activatePage(go.dataset.go,go.dataset.anchor||null);return}const scoreLink=e.target.closest('.wiScoreLink');if(scoreLink){setTimeout(()=>{const d=document.getElementById('executionBreakdownFoldout');if(d)d.open=true},0)}const planRunBtn=e.target.closest('[data-plan-run]');if(planRunBtn){openRunDetails(planRunBtn.dataset.planRun);return}let factorToggle=e.target.closest('.factorToggle');if(factorToggle){let tile=factorToggle.closest('.factorKpi'),open=tile.classList.toggle('open');factorToggle.setAttribute('aria-expanded',String(open));return}let w=e.target.closest('.workout');if(w&&!e.target.closest('button')){document.querySelectorAll('.workout[open]').forEach(x=>{if(x!==w)x.removeAttribute('open')});}};
 const navigationPages=pages.filter(item=>item[0]!=='assessments');
 const primaryPages=navigationPages.slice(0,4),secondaryPages=navigationPages.slice(4);
 function navIcon(page){
