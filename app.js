@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '14.9.16';
-  const BUILD = 40916;
+  const VERSION = '14.9.17';
+  const BUILD = 40917;
   const SCHEMA = 10400;
   const PRIMARY_STORAGE_KEY = 'arc_v10400_web';
   const MIRROR_STORAGE_KEY = 'arc_v10400_mirror';
@@ -4331,12 +4331,12 @@ function renderPlanHealth(){
 function renderMigrationReport(){const box=$('migrationReport');if(!box)return;const m=state.migration||migrationReport;box.innerHTML=`<div class="migrationStatus good"><b>Upgrade status: ${esc(m.status||'ready')}</b><span>Schema ${esc(m.from??'new')} → ${SCHEMA}</span><span>${Number(m.runs)||0} runs · ${Number(m.assessments)||0} assessments preserved</span><span>${Number(m.fieldsRecovered)||0} invalid or missing fields repaired</span><small>Storage source: ${esc(m.source||migrationReport.source||STORAGE_KEY)}</small></div>`;}
 
 const INJURY_STAGES=[
- {name:'Protect & settle',goal:'Calm symptoms and restore comfortable daily movement.',criteria:['Symptoms stable or improving','No new swelling or bruising','Walking pain ≤3/10']},
- {name:'Restore movement',goal:'Recover comfortable range of motion and basic muscle control.',criteria:['Walking pain ≤1/10','Current pain ≤3/10','Gentle double-leg loading tolerated']},
- {name:'Build capacity',goal:'Progress strength, control and tolerance to repeated loading.',criteria:['Current pain ≤2/10','Repeated bridge or hinge controlled','No worse the next morning']},
- {name:'Return to run',goal:'Reintroduce impact with controlled walk–run intervals.',criteria:['Walking pain 0/10','Gentle hopping tolerated','Pain remains ≤2/10','No next-morning flare']},
- {name:'Rebuild running',goal:'Increase easy continuous running before speed, hills or hard sessions.',criteria:['At least 10 minutes running tolerated','No altered gait','No next-morning flare']},
- {name:'Return to performance',goal:'Restore normal running volume, faster running and hills.',criteria:['At least 30 minutes easy running tolerated','Pain ≤1/10','No next-morning flare','Strength and impact confidence restored']}
+ {name:'Protect & settle',goal:'Calm symptoms and restore comfortable daily movement.',criteria:['Walking pain ≤1/10','Current pain ≤3/10','Gentle double-leg loading tolerated']},
+ {name:'Restore movement',goal:'Recover comfortable range of motion and basic muscle control.',criteria:['Current pain ≤2/10','Repeated bridge or hinge controlled','No worse the next morning']},
+ {name:'Build capacity',goal:'Progress strength, control and tolerance to repeated loading.',criteria:['Walking pain 0/10','Gentle hopping tolerated','Pain remains ≤2/10','No next-morning flare']},
+ {name:'Return to run',goal:'Reintroduce impact with controlled walk–run intervals.',criteria:['At least 10 minutes running tolerated','No altered gait','No next-morning flare']},
+ {name:'Rebuild running',goal:'Increase easy continuous running before speed, hills or hard sessions.',criteria:['At least 30 minutes easy running tolerated','Pain ≤1/10','No next-morning flare','Strength and impact confidence restored']},
+ {name:'Return to performance',goal:'Restore normal running volume, faster running and hills.',criteria:['Normal running volume tolerated','Faster running and hills tolerated','No symptom recurrence after normal training']}
 ];
 const INJURY_EXERCISES={
  hamstring:[
@@ -4750,7 +4750,10 @@ function criterionState(i,p,stageIndex){const checks=sortedChecks(i),snap=longit
  'No altered gait':{assessed:c=>known(c.alteredGait),pass:()=>run.successful.slice(-2).length>=2&&run.successful.slice(-2).every(c=>c.alteredGait===false)},
  'At least 30 minutes easy running tolerated':{assessed:c=>['completed','stopped','unable'].includes(c.runStatus)||Number.isFinite(c.runMinutes),pass:()=>run.successful.filter(c=>Number(c.runMinutes)>=30).length>=2},
  'Pain ≤1/10':{assessed:c=>Number.isFinite(c.pain),pass:()=>checks.filter(c=>Number.isFinite(c.pain)).slice(-2).length>=2&&checks.filter(c=>Number.isFinite(c.pain)).slice(-2).every(c=>c.pain<=1)},
- 'Strength and impact confidence restored':{assessed:c=>known(c.bridge)||known(c.hop)||Number.isFinite(c.confidence),pass:()=>checks.filter(c=>c.bridge===true&&c.hop===true&&Number(c.confidence)>=8).length>=2}
+ 'Strength and impact confidence restored':{assessed:c=>known(c.bridge)||known(c.hop)||Number.isFinite(c.confidence),pass:()=>checks.filter(c=>c.bridge===true&&c.hop===true&&Number(c.confidence)>=8).length>=2},
+ 'Normal running volume tolerated':{assessed:c=>['completed','stopped','unable'].includes(c.runStatus)||Number.isFinite(c.runMinutes),pass:()=>run.successful.filter(c=>Number(c.runMinutes)>=45).length>=2},
+ 'Faster running and hills tolerated':{assessed:c=>known(c.runIntensity)||known(c.hillsTolerated),pass:()=>checks.filter(c=>c.hillsTolerated===true||['tempo','interval','hills','quality'].includes(String(c.runIntensity||'').toLowerCase())).length>=2},
+ 'No symptom recurrence after normal training':{assessed:c=>known(c.nextDayWorse)||Number.isFinite(c.pain),pass:()=>stable.slice(-3).length>=3&&checks.filter(c=>Number.isFinite(c.pain)).slice(-3).every(c=>c.pain<=1)}
  };
  const progressFor=label=>{
   if(label==='Gentle hopping tolerated'){
@@ -4785,6 +4788,14 @@ function criterionState(i,p,stageIndex){const checks=sortedChecks(i),snap=longit
    const count=checks.filter(c=>Number.isFinite(c.pain)).slice(-2).filter(c=>c.pain<=1).length;
    return{count,target:2,text:`${Math.min(count,2)} of 2 recent pain checks`};
   }
+  if(label==='Normal running volume tolerated'){
+   const count=run.successful.filter(c=>Number(c.runMinutes)>=45).length;
+   return{count,target:2,text:`${Math.min(count,2)} of 2 normal-duration runs`};
+  }
+  if(label==='No symptom recurrence after normal training'){
+   const count=stable.slice(-3).length;
+   return{count,target:3,text:`${Math.min(count,3)} of 3 stable post-training responses`};
+  }
   if(label==='Strength and impact confidence restored'){
    const count=checks.filter(c=>c.bridge===true&&c.hop===true&&Number(c.confidence)>=8).length;
    return{count,target:2,text:`${Math.min(count,2)} of 2 combined assessments`};
@@ -4795,7 +4806,7 @@ function criterionState(i,p,stageIndex){const checks=sortedChecks(i),snap=longit
 function injuryPrediction(i){
  const checks=sortedChecks(i),latest=checks.at(-1)||{},diag=workingDiagnosis(i),initialPain=nullableNumber(i.initialPain),walkInitially=nullableNumber(i.initialWalkPain);let nominalTotal=Number(diag.nominalDays)||56;const severityKnown=Number.isFinite(initialPain)||Number.isFinite(walkInitially)||i.pop||i.bruising;const severityFactor=!severityKnown?1:(initialPain>=8||i.pop||walkInitially>=8?1.18:initialPain>=6||i.bruising||walkInitially>=5?1.08:initialPain<=2&&walkInitially<=1?.88:1);nominalTotal=Math.round(nominalTotal*severityFactor);const baselineMin=Math.max(7,Math.round((Number(diag.minDays)||nominalTotal*.7)*severityFactor)),baselineMax=Math.max(baselineMin+7,Math.round((Number(diag.maxDays)||nominalTotal*1.5)*severityFactor));
  const snap=longitudinalSnapshot(i,checks),currentPain=Number.isFinite(snap.currentPain)?snap.currentPain:initialPain,walkPain=Number.isFinite(snap.walkPain)?snap.walkPain:walkInitially,elapsed=Math.max(0,Math.floor((today()-dte(i.date))/DAY));
- let stage=0;for(let target=1;target<INJURY_STAGES.length;target++){const c=criterionState(i,{currentPain,walkPain},target);if(c.length&&c.every(x=>x.status==='met'))stage=target;else break;}if(diag.urgent)stage=Math.min(stage,1);
+ let stage=0;for(let current=0;current<INJURY_STAGES.length-1;current++){const c=criterionState(i,{currentPain,walkPain},current);if(c.length&&c.every(x=>x.status==='met'))stage=current+1;else break;}if(diag.urgent)stage=Math.min(stage,1);
  const completion=injuryCompletionForChecks(i,checks,diag,initialPain,walkInitially),nominal=Math.round(clamp(elapsed/nominalTotal*100,0,100)),delta=completion===null?null:completion-nominal;
  const nominalRemaining=Math.max(7,nominalTotal-elapsed),stageRemaining=Math.max(7,Math.round(nominalTotal*[.94,.78,.60,.42,.25,.10][stage]));
  let trendRemaining=null,trendRate=null;if(checks.length>=2){const points=checks.map((c,idx)=>({day:Math.max(0,Math.round((dte(c.date)-dte(i.date))/DAY)),score:injuryCompletionForChecks(i,checks.slice(0,idx+1),diag,initialPain,walkInitially)})).filter(x=>Number.isFinite(x.score));if(points.length>=2){const first=points[0],last=points.at(-1),span=Math.max(1,last.day-first.day),gain=last.score-first.score;trendRate=gain/span;if(trendRate>.15)trendRemaining=Math.round((100-last.score)/trendRate);}}
@@ -5110,9 +5121,12 @@ function injuryTrajectorySvg(i,p){
  if(!pts.length&&Number.isFinite(p.completion))pts.push({day:p.elapsed,score:p.completion,date:iso(today())});
  const observed=pts.map((q,n)=>`${n?'L':'M'} ${x(q.day)} ${y(q.score)}`).join(' ');
  const todayDay=clamp(Number(p.elapsed)||0,0,horizon),todayX=x(todayDay),nominalToday=clamp(Number(p.nominal)||0,0,100),observedToday=Number.isFinite(Number(p.completion))?clamp(Number(p.completion),0,100):null;
- const currentMarker=`<line class="currentDateLine" x1="${todayX}" y1="${top}" x2="${todayX}" y2="${top+ch}"/><text class="currentDateLabel" x="${todayX}" y="${H-36}" text-anchor="middle">Today</text>`;
+ const nominalPhase=Math.min(INJURY_STAGES.length-1,phaseFractions.slice(1).findIndex(f=>todayDay/horizon<=f));
+ const currentMarker=`<line class="currentDateLine" x1="${todayX}" y1="${top}" x2="${todayX}" y2="${top+ch}"/><text class="currentDateLabel" x="${todayX}" y="${H-36}" text-anchor="middle">Today · nominal phase ${nominalPhase+1}</text>`;
+ const actualPhaseX=phaseX((phaseFractions[p.stage]+phaseFractions[p.stage+1])/2);
+ const actualPhaseMarker=`<path class="actualPhasePointer" d="M ${actualPhaseX-7} 48 L ${actualPhaseX+7} 48 L ${actualPhaseX} 57 Z"/><text class="actualPhaseLabel" x="${actualPhaseX}" y="51" text-anchor="middle">CURRENT ${p.stage+1}</text>`;
  const gap=observedToday===null?'':`<line class="trajectoryGap" x1="${todayX}" y1="${y(nominalToday)}" x2="${todayX}" y2="${y(observedToday)}"/><circle class="nominalTodayPoint" cx="${todayX}" cy="${y(nominalToday)}" r="5"><title>Nominal today · ${Math.round(nominalToday)}%</title></circle>`;
- return `<div class="injuryTrajectoryWrap"><svg class="injuryTrajectory" viewBox="0 0 ${W} ${H}" role="img" aria-label="Observed rehabilitation completion, nominal recovery and rehabilitation phases"><rect class="phaseLabelBand" x="${left}" y="0" width="${cw}" height="${labelBand}"/>${phaseRects}${phaseLines}<line x1="${left}" y1="${y(25)}" x2="${W-right}" y2="${y(25)}"/><line x1="${left}" y1="${y(50)}" x2="${W-right}" y2="${y(50)}"/><line x1="${left}" y1="${y(75)}" x2="${W-right}" y2="${y(75)}"/>${currentMarker}<path class="nominalLine" d="${nominalPath}"/>${gap}<path class="actualLine" d="${observed}"/>${pts.map(q=>`<circle cx="${x(q.day)}" cy="${y(q.score)}" r="5"><title>${fmtDate(q.date)} · ${q.score}%</title></circle>`).join('')}<text x="${left}" y="${H-12}">Injury</text><text x="${W-right}" y="${H-12}" text-anchor="end">Nominal unrestricted training</text></svg><div class="injuryTrajectoryLegend"><span class="actual">Observed completion</span><span class="nominal">Nominal recovery</span><span class="phase">Recovery phases</span></div></div>`;
+ return `<div class="injuryTrajectoryWrap"><svg class="injuryTrajectory" viewBox="0 0 ${W} ${H}" role="img" aria-label="Observed rehabilitation completion, nominal recovery and rehabilitation phases"><rect class="phaseLabelBand" x="${left}" y="0" width="${cw}" height="${labelBand}"/>${phaseRects}${phaseLines}${actualPhaseMarker}<line x1="${left}" y1="${y(25)}" x2="${W-right}" y2="${y(25)}"/><line x1="${left}" y1="${y(50)}" x2="${W-right}" y2="${y(50)}"/><line x1="${left}" y1="${y(75)}" x2="${W-right}" y2="${y(75)}"/>${currentMarker}<path class="nominalLine" d="${nominalPath}"/>${gap}<path class="actualLine" d="${observed}"/>${pts.map(q=>`<circle cx="${x(q.day)}" cy="${y(q.score)}" r="5"><title>${fmtDate(q.date)} · ${q.score}%</title></circle>`).join('')}<text x="${left}" y="${H-12}">Injury</text><text x="${W-right}" y="${H-12}" text-anchor="end">Nominal unrestricted training</text></svg><div class="injuryTrajectoryLegend"><span class="actual">Observed completion</span><span class="nominal">Nominal recovery</span><span class="phase">Recovery phases</span></div></div>`;
 }
 
 function clinicianAgreementBanner(diag){
@@ -5225,11 +5239,14 @@ function renderInjury(){
  const allRecoveryStagesHtml=INJURY_STAGES.map((stageDef,stageIndex)=>{
   const stageCriteria=criterionState(i,p,stageIndex),phaseState=stageIndex<p.stage?'completed':stageIndex===p.stage?'current':'future';
   const criteriaHtml=stageCriteria.map(c=>{
-   const future=phaseState==='future',completed=phaseState==='completed',status=future?'future':completed||c.status==='met'?'met':'pending';
-   const symbol=status==='met'?'✓':status==='pending'?'•':'◇';
-   const detail=future?'Required when this phase becomes active':completed?'Satisfied when this recovery phase was completed':c.progress?.text||(c.status==='unknown'?'Evidence not yet reported':c.status==='notMet'?'Current evidence does not yet meet this criterion':'Criterion met');
-   const label=status==='met'?'Met':status==='pending'?(c.status==='unknown'?'Not yet evidenced':'Not met'):'Future';
-   return `<div class="injuryStageCriterion ${status}"><i>${symbol}</i><span><b>${esc(c.label)}</b><small>${esc(detail)}</small></span><em>${label}</em></div>`;
+   const future=phaseState==='future';
+   const partial=!future&&c.status!=='met'&&c.progress&&c.progress.count>0&&c.progress.count<c.progress.target;
+   const status=future?'future':c.status==='met'?'met':partial?'partial':'pending';
+   const symbol=status==='met'?'✓':status==='partial'?'◐':status==='pending'?'•':'◇';
+   const progressBadge=c.progress?`${Math.min(c.progress.count,c.progress.target)}/${c.progress.target}`:'';
+   const detail=future?'Required when this phase becomes active':c.progress?.text||(c.status==='unknown'?'Evidence not yet reported':c.status==='notMet'?'Current evidence does not yet meet this criterion':'Criterion met');
+   const label=status==='met'?'Met':status==='partial'?(progressBadge||'Partial'):status==='pending'?(c.status==='unknown'?'Pending':'Not met'):'Future';
+   return `<div class="injuryStageCriterion ${status}"><i>${symbol}</i><span><b>${esc(c.label)}</b><small>${esc(detail)}</small></span><em>${esc(label)}</em></div>`;
   }).join('');
   const phaseLabel=phaseState==='completed'?'COMPLETED':phaseState==='current'?'CURRENT PHASE':'FUTURE PHASE';
   return `<article class="injuryRecoveryStage ${phaseState}"><header><span>${stageIndex+1}</span><div><small>${phaseLabel}</small><h4>${esc(stageDef.name)}</h4><p>${esc(stageDef.goal)}</p></div></header><div class="injuryStageCriteriaList">${criteriaHtml}</div></article>`;
