@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '14.9.49';
-  const BUILD = 40949;
+  const VERSION = '14.9.50';
+  const BUILD = 40950;
   const SCHEMA = 10400;
   const PRIMARY_STORAGE_KEY = 'arc_v10400_web';
   const MIRROR_STORAGE_KEY = 'arc_v10400_mirror';
@@ -6432,20 +6432,6 @@ function lifecycleInjuryFootwearAdjustment(profile){
 }
 function lifecycleWorkoutFit(profile,plan){return lifecycleSessionSuitabilityScore(profile,plan,{rehab:/Rehab|Recovery|Walk/i.test(String(plan?.type||''))})}
 
-let __shoeForecastRefreshQueued=false;
-function scheduleCanonicalShoeForecastRefresh(){
- if(__shoeForecastRefreshQueued)return;
- __shoeForecastRefreshQueued=true;
- const run=()=>{
-   __shoeForecastRefreshQueued=false;
-   try{
-     if(typeof ensureCanonicalShoeForecast==='function')ensureCanonicalShoeForecast();
-     else if(typeof rebuildCanonicalShoeForecast==='function')rebuildCanonicalShoeForecast();
-   }catch(e){console.error('Deferred shoe forecast refresh failed',e)}
- };
- if(typeof requestIdleCallback==='function')requestIdleCallback(run,{timeout:1200});
- else setTimeout(run,0);
-}
 function shoeCoachRequiredRole(plan,{rehab=false}={}){
  const t=String(plan?.type||''),d=Math.max(0,Number(plan?.distance)||0);
  if(/^Race Day$/i.test(t))return'race';
@@ -8415,7 +8401,23 @@ function openShoeAdjustment(shoe){const current=shoeMileage(shoe);$('modalConten
 function choosePlanShoe(planId){const plan=(state.plan||[]).find(p=>p.id===planId);if(!plan)return;const current=plannedAssignment(planId)?.shoeId||shoeRecommendation(plan).best?.shoe.id||'';$('modalContent').innerHTML=`<h2>Choose another shoe</h2><p>${fmtDate(plan.date)} · ${esc(plan.type)} · ${Number(plan.distance).toFixed(1)} km</p><div class="field"><label>Planned shoe</label><select id="planShoeChoice"><option value="">Automatic recommendation</option>${shoeSelectOptions(current,false)}</select></div><button id="savePlanShoeChoice" class="primary full" type="button">Save shoe assignment</button>`;$('modal').className='modal shoeChoiceModal';$('savePlanShoeChoice').onclick=()=>{const id=$('planShoeChoice').value;if(id)setPlannedShoe(planId,id,'user');else{setPlannedShoe(planId,null);const rec=shoeRecommendation(plan);if(rec.best)setPlannedShoe(planId,rec.best.shoe.id,'auto')}save();closeDialog();renderAll();toast('Planned shoe assignment updated. Training plan unchanged.')}}
 /* === End Shoes module === */
 
-function renderAll(){[renderDashboard,renderToday,renderPlan,renderRuns,renderMetrics,renderAssessments,renderCoach,renderInjury,renderRecovery,renderRace,renderSettings,renderShoes,renderPlanHealth,renderMigrationReport].forEach(fn=>{try{fn()}catch(err){recordDiagnostic('Render failure in '+fn.name,err)}});try{renderProgressChartsStandalone()}catch(err){recordDiagnostic('Render failure in renderProgressChartsStandalone',err)}renderDiagnostics();ensureAccessibleForms();renderUndoButtons()}
+function renderAll(){
+ // Render only the active page. The previous implementation synchronously rendered
+ // every tab on every refresh, so the lifecycle shoe forecast could block Today even
+ // when Shoes was not open.
+ const page=document.querySelector('.page.active')?.id||'today';
+ const renderers={
+  dashboard:()=>{renderDashboard();try{renderProgressChartsStandalone()}catch(err){recordDiagnostic('Render failure in renderProgressChartsStandalone',err)}},
+  today:renderToday,plan:renderPlan,runs:renderRuns,metrics:renderMetrics,
+  assessments:renderAssessments,coach:renderCoach,injury:renderInjury,
+  recovery:renderRecovery,race:renderRace,settings:()=>{renderSettings();renderPlanHealth();renderMigrationReport()},
+  shoes:renderShoes
+ };
+ const fn=renderers[page]||renderToday;
+ try{fn()}catch(err){recordDiagnostic('Render failure in '+(fn.name||page),err)}
+ try{renderDiagnostics()}catch(err){}
+ ensureAccessibleForms();renderUndoButtons();
+}
 const pages=[['today','Today'],['plan','Plan'],['runs','Log'],['dashboard','Progress'],['assessments','Assessments'],['recovery','Recovery'],['injury','Injury'],['shoes','Shoes'],['race','Race day'],['settings','Settings']];
 document.body.addEventListener('change',e=>{const sel=e.target.closest?.('[data-rehab-shoe-plan]');if(!sel)return;const injury=(state.injuries||[]).find(x=>x.id===sel.dataset.rehabShoePlan);if(!injury)return;injury.plannedRehabShoes=injury.plannedRehabShoes||{};if(sel.value)injury.plannedRehabShoes[sel.dataset.rehabShoeDate]=sel.value;else delete injury.plannedRehabShoes[sel.dataset.rehabShoeDate];save();toast(sel.value?'Rehabilitation shoe planned.':'Rehabilitation shoe cleared.');});
 $('nav').innerHTML=pages.map((p,i)=>`<button data-page="${p[0]}" class="${i?'':'active'}">${p[1]}</button>`).join('');$('nav').onclick=e=>{let p=e.target.dataset.page;if(!p)return;document.querySelectorAll('.page').forEach(x=>x.classList.toggle('active',x.id===p));document.querySelectorAll('#nav button').forEach(x=>x.classList.toggle('active',x.dataset.page===p));renderAll();scrollTo(0,0)};document.body.onclick=e=>{if(e.target.id==='addShoeBtn'){openShoeForm();return}let sd=e.target.closest('[data-shoe-detail]');if(sd){openShoeDetail(sd.dataset.shoeDetail);return}let cps=e.target.closest('[data-choose-plan-shoe]');if(cps){choosePlanShoe(cps.dataset.choosePlanShoe);return}if(e.target.id==='addInjuryBtn'){openInjuryForm();return}let activate=e.target.closest('[data-activate-injury-plan]');if(activate){let id=activate.dataset.activateInjuryPlan,current=state.injuries.find(x=>x.id===state.activeInjuryPlanId),next=state.injuries.find(x=>x.id===id);if(next&&confirm(`Switch the active recovery plan from ${current?.location||'the current injury'} to ${next.location||'this injury'}? Only one plan can be followed at a time.`)){state.activeInjuryPlanId=id;save();renderInjury();toast('Active recovery plan switched.')}return;}let phaseTile=e.target.closest('[data-injury-phase]');if(phaseTile){
