@@ -1,21 +1,21 @@
-// AI Running Coach v14.9.29 · build 40929
+// AI Running Coach v14.9.30 · build 40930
 'use strict';
 
-const CACHE = 'arc-v14929-build-40929';
+const CACHE = 'arc-v14930-build-40930';
 const CACHE_PREFIX = 'arc-v';
 const APP_SHELL = './index.html';
 const ASSETS = [
   './',
   './index.html',
-  './styles.css?v=40929',
-  './app.js?v=40929',
-  './manifest.webmanifest?v=40929',
-  './icon-192.png?v=40929',
-  './icon-512.png?v=40929',
-  './apple-touch-icon.png?v=40929',
-  './favicon-32x32.png?v=40929',
-  './favicon-16x16.png?v=40929',
-  './favicon.ico?v=40929'
+  './styles.css?v=40930',
+  './app.js?v=40930',
+  './manifest.webmanifest?v=40930',
+  './icon-192.png?v=40930',
+  './icon-512.png?v=40930',
+  './apple-touch-icon.png?v=40930',
+  './favicon-32x32.png?v=40930',
+  './favicon-16x16.png?v=40930',
+  './favicon.ico?v=40930'
 ];
 
 self.addEventListener('install', event => {
@@ -68,7 +68,7 @@ self.addEventListener('fetch', event => {
   ]);
   if (iconAssets.has(url.pathname)) {
     const fresh = new URL(request.url);
-    fresh.search = '?v=40929';
+    fresh.search = '?v=40930';
     event.respondWith(networkFirst(new Request(fresh.toString(), request)));
     return;
   }

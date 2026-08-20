@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '14.9.29';
-  const BUILD = 40929;
+  const VERSION = '14.9.30';
+  const BUILD = 40930;
   const SCHEMA = 10400;
   const PRIMARY_STORAGE_KEY = 'arc_v10400_web';
   const MIRROR_STORAGE_KEY = 'arc_v10400_mirror';
@@ -5191,8 +5191,8 @@ function injuryTrajectorySvg(i,p){
      <rect class="injuryPhaseBand ${b.kind} ${n===p.stage?'selected':''}" x="${x0}" y="${top}" width="${w}" height="${ch}"><title>Phase ${n+1} · ${esc(st.name)}</title></rect>
      <line class="injuryPhaseBoundary" x1="${x0}" x2="${x0}" y1="${top}" y2="${top+ch}"/>
      <g class="injuryPhaseGraphLabelGroup" transform="rotate(-90 ${labelX} ${labelY})">
-       <text class="injuryPhaseGraphNumber" x="${labelX}" y="${labelY-7}" text-anchor="middle">PHASE ${n+1}</text>
-       <text class="injuryPhaseGraphLabel" x="${labelX}" y="${labelY+7}" text-anchor="middle">${esc(st.name)}</text>
+       <text class="injuryPhaseGraphNumber" x="${labelX}" y="${labelY-10}" text-anchor="middle">PHASE ${n+1}</text>
+       <text class="injuryPhaseGraphLabel" x="${labelX}" y="${labelY+10}" text-anchor="middle">${esc(st.name)}</text>
      </g>
    </g>`;
  }).join('');

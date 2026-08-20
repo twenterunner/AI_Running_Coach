@@ -5975,3 +5975,15 @@ body:has(#dashboard.progressPage.active),#mainContent:has(#dashboard.progressPag
   stroke-width:2px;
   stroke-linejoin:round;
 }
+
+/* v14.9.30 — larger vertical phase text */
+#injury .injuryTrajectory .injuryPhaseGraphLabel{
+  font-size:14px !important;
+  font-weight:900 !important;
+  stroke-width:2.8px !important;
+}
+#injury .injuryTrajectory .injuryPhaseGraphNumber{
+  font-size:10px !important;
+  font-weight:900 !important;
+  stroke-width:2.4px !important;
+}
