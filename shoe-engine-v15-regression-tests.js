@@ -8,7 +8,7 @@ function ok(name,fn){try{fn();console.log('PASS',name);return 1}catch(e){console
 let n=0;
 n+=ok('app syntax',()=>cp.execFileSync(process.execPath,['--check',__dirname+'/app.js']));
 n+=ok('service worker syntax',()=>cp.execFileSync(process.execPath,['--check',__dirname+'/service-worker.js']));
-n+=ok('version consistency',()=>{assert(app.includes("const VERSION = '15.0.1'"));assert(app.includes('const BUILD = 50001'));assert(html.includes('v15.0.1 · build 50001'));assert.equal(manifest.version,'15.0.1');assert.equal(manifest.build,50001);assert(sw.includes('v15.0.1 · build 50001'))});
+n+=ok('version consistency',()=>{assert(app.includes("const VERSION = '15.0.2'"));assert(app.includes('const BUILD = 50002'));assert(html.includes('v15.0.2 · build 50002'));assert.equal(manifest.version,'15.0.2');assert.equal(manifest.build,50002);assert(sw.includes('v15.0.2 · build 50002'))});
 n+=ok('authoritative snapshot present',()=>['SHOE_PLAN_SNAPSHOT_VERSION','publishAuthoritativeShoeSnapshot','actualMileageLedger','forecastAssignmentLedger','sessionAssignments','purchaseEvents','retirementEvents','inputFingerprint'].forEach(x=>assert(app.includes(x),x)));
 n+=ok('fail closed before cache publish',()=>{const i=app.indexOf("if(!result.valid){");const c=app.indexOf("freshShoePlanCache={stamp,value:published}",i);assert(i>0&&c>i)});
 n+=ok('deterministic production path',()=>{const shoe=app.slice(app.indexOf('/* === Shoes module'),app.indexOf('/* === End Shoes module'));assert(!/\bMath\.random\s*\(/.test(shoe));assert(!/genetic algorithm/i.test(shoe));});
@@ -17,4 +17,15 @@ n+=ok('purchase tied to first positive use',()=>{assert(app.includes("first=pair
 n+=ok('race-day 250 km hard check',()=>assert(app.includes("race-day-shoe-250km-or-more")));
 n+=ok('lifecycle overflow hard repair',()=>assert(app.includes('shoeEngineRepairLifecycleOverflow')));
 n+=ok('retirement X uses canonical lifecycle point',()=>{assert(app.includes('const explicitlyRetired=Boolean'));assert(app.includes('pair.finalPlannedUseDate'));assert(app.includes('× RETIRE'))});
-console.log(`Static/regression checks passed: ${n}/11`);
+n+=ok('tab navigation renders destination only',()=>{
+ const start=app.indexOf('function activatePage(page,anchor=null)');
+ const end=app.indexOf('renderNavigation();',start);
+ const body=app.slice(start,end);
+ assert(body.includes('renderPage(page)'));
+ assert(!body.includes('renderAll()'));
+ const rp=app.slice(app.indexOf('function renderPage(page)'),app.indexOf("const pages=",app.indexOf('function renderPage(page)')));
+ assert(rp.includes('today:[renderToday]'));
+ assert(rp.includes('shoes:[renderShoes]'));
+ assert(rp.includes('dashboard:[renderDashboard,renderMetrics,renderProgressChartsStandalone]'));
+});
+console.log(`Static/regression checks passed: ${n}/12`);
