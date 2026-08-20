@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '14.9.27';
-  const BUILD = 40927;
+  const VERSION = '14.9.28';
+  const BUILD = 40928;
   const SCHEMA = 10400;
   const PRIMARY_STORAGE_KEY = 'arc_v10400_web';
   const MIRROR_STORAGE_KEY = 'arc_v10400_mirror';
@@ -5118,7 +5118,7 @@ function rehabTodayFocusHtml(i,p){
 }
 
 function injuryTrajectorySvg(i,p){
- const W=720,H=320,left=48,right=18,labelBand=54,top=62,bottom=58,cw=W-left-right,ch=H-top-bottom;
+ const W=720,H=310,left=48,right=18,labelBand=8,top=18,bottom=58,cw=W-left-right,ch=H-top-bottom;
  const nominalTotal=Math.max(7,Number(p.nominalTotal)||7),projectedTotal=Math.max(nominalTotal,Number(p.total)||nominalTotal,Number(p.elapsed)||0);
  const horizon=Math.max(7,projectedTotal),x=d=>left+clamp(d/horizon,0,1)*cw,y=v=>top+(100-clamp(v,0,100))/100*ch;
  const todayDay=clamp(Number(p.elapsed)||0,0,horizon),todayX=x(todayDay);
@@ -5186,11 +5186,23 @@ function injuryTrajectorySvg(i,p){
  const phaseBands=INJURY_STAGES.map((st,n)=>{
    const b=phaseBounds[n],x0=x(b.start),x1=x(b.end),w=Math.max(2,x1-x0),cx=x0+w/2;
    const pc=phaseColors[n];
+   const phaseLabelLines={
+     'Protect & settle':['Protect &','settle'],
+     'Restore movement':['Restore','movement'],
+     'Build capacity':['Build','capacity'],
+     'Return to run':['Return to','run'],
+     'Rebuild running':['Rebuild','running'],
+     'Return to performance':['Return to','performance']
+   }[st.name]||[st.name,''];
+   const labelY=top+18;
    return `<g class="injuryPhaseBandGroup ${b.kind}" data-phase-band="${n}" style="--phase-stroke:${pc.stroke};--phase-fill:${pc.fill};--phase-text:${pc.text}">
-     <rect class="injuryPhaseBand ${b.kind} ${n===p.stage?'selected':''}" x="${x0}" y="${top}" width="${w}" height="${ch}"><title>${esc(st.name)}</title></rect>
+     <rect class="injuryPhaseBand ${b.kind} ${n===p.stage?'selected':''}" x="${x0}" y="${top}" width="${w}" height="${ch}"><title>Phase ${n+1} · ${esc(st.name)}</title></rect>
      <line class="injuryPhaseBoundary" x1="${x0}" x2="${x0}" y1="${top}" y2="${top+ch}"/>
-     <text class="injuryPhaseNumber" x="${cx}" y="18" text-anchor="middle">${n+1}</text>
-     <text class="injuryPhaseLabel" x="${cx}" y="38" text-anchor="middle">${esc(st.name)}</text>
+     <text class="injuryPhaseGraphLabel" x="${cx}" y="${labelY}" text-anchor="middle">
+       <tspan class="injuryPhaseGraphNumber" x="${cx}" dy="0">PHASE ${n+1}</tspan>
+       <tspan x="${cx}" dy="13">${esc(phaseLabelLines[0])}</tspan>
+       ${phaseLabelLines[1]?`<tspan x="${cx}" dy="12">${esc(phaseLabelLines[1])}</tspan>`:''}
+     </text>
    </g>`;
  }).join('');
  const finalBoundary=`<line class="injuryPhaseBoundary" style="--phase-stroke:${phaseColors[5].stroke}" x1="${x(projectedTotal)}" x2="${x(projectedTotal)}" y1="${top}" y2="${top+ch}"/>`;
@@ -5235,7 +5247,7 @@ function injuryTrajectorySvg(i,p){
 
  return `<div class="injuryTrajectoryWrap">
    <svg class="injuryTrajectory injuryTrajectorySimple" viewBox="0 0 ${W} ${H}" role="img" aria-label="Observed rehabilitation recovery, fixed nominal recovery, projected recovery and phase durations over calendar time">
-    <rect class="phaseLabelBand" x="${left}" y="0" width="${cw}" height="${labelBand}"/>${phaseBands}${finalBoundary}${yGrid}${xTicks}${todayMarker}
+    ${phaseBands}${finalBoundary}${yGrid}${xTicks}${todayMarker}
     <path class="nominalLine" d="${nominalPath}"/><path class="actualLine" d="${observed}"/><path class="projectedLine" d="${projectedPath}"/>
     ${pts.map(q=>`<circle cx="${x(q.day)}" cy="${y(q.score)}" r="5"><title>${fmtDate(q.date)} · ${q.score}%</title></circle>`).join('')}
    </svg>
