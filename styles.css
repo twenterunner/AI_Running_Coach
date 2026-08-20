@@ -5816,3 +5816,28 @@ body:has(#dashboard.progressPage.active),#mainContent:has(#dashboard.progressPag
 #injury .injuryTrajectory .nominalTimingLabel{fill:var(--muted);font-size:7px;font-weight:800;letter-spacing:.08em}
 #injury .injuryTrajectory .phaseDuration{fill:var(--muted);font-size:7px;font-weight:700}
 #injury .injuryTrajectory .actualPhaseLabel{font-size:7px}
+
+
+/* v14.9.21 — Injury trajectory: separate time progress from criteria phase progress */
+#injury .injuryTrajectorySimple{margin-top:2px}
+#injury .injuryTrajectorySimple .grid{stroke:rgba(159,196,205,.14);stroke-width:1}
+#injury .injuryTrajectorySimple .axisText{fill:var(--muted);font-size:8px;font-weight:700}
+#injury .injuryTrajectorySimple .xTick{stroke:rgba(159,196,205,.32);stroke-width:1}
+#injury .injuryTrajectoryLegend{padding-top:4px}
+#injury .injuryPhaseStrip{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:5px;margin-top:9px}
+#injury .injuryPhaseStripItem{min-width:0;padding:7px 5px;border:1px solid rgba(130,180,191,.16);border-radius:10px;background:rgba(10,34,45,.52);text-align:center}
+#injury .injuryPhaseStripItem i{display:flex;width:24px;height:24px;margin:0 auto 4px;align-items:center;justify-content:center;border-radius:50%;font-style:normal;font-size:10px;font-weight:900;background:rgba(123,170,181,.08);color:var(--muted)}
+#injury .injuryPhaseStripItem span{display:block;min-width:0}
+#injury .injuryPhaseStripItem b{display:block;font-size:8px;line-height:1.15;white-space:normal}
+#injury .injuryPhaseStripItem small{display:block;margin-top:2px;font-size:7px;line-height:1.15;color:var(--muted)}
+#injury .injuryPhaseStripItem.completed i{color:#76df9d;background:rgba(118,223,157,.10)}
+#injury .injuryPhaseStripItem.completed b{color:#b8e9c9}
+#injury .injuryPhaseStripItem.current{border-color:rgba(74,230,216,.68);box-shadow:inset 0 0 0 1px rgba(74,230,216,.12);background:rgba(16,77,83,.34)}
+#injury .injuryPhaseStripItem.current i{color:var(--teal-2);background:rgba(74,230,216,.12)}
+#injury .injuryPhaseStripItem.current b{color:#eafdfb}
+#injury .injuryPhaseStripItem.current small{color:var(--teal-2);font-weight:800}
+#injury .injuryPhaseStripItem.future{opacity:.58}
+@media(max-width:600px){
+ #injury .injuryPhaseStrip{grid-template-columns:repeat(3,minmax(0,1fr))}
+ #injury .injuryPhaseStripItem{padding:6px 4px}
+}
