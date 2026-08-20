@@ -5844,7 +5844,7 @@ body:has(#dashboard.progressPage.active),#mainContent:has(#dashboard.progressPag
 
 
 /* v14.9.22 — Injury phases integrated into trajectory */
-#injury .injurySelectedPhaseWindow{fill:rgba(74,230,216,.075);stroke:rgba(74,230,216,.34);stroke-width:1.5}
+
 #injury .injuryTrajectoryLegend .selectedPhase::before{background:rgba(74,230,216,.18);border:1px solid rgba(74,230,216,.45)}
 #injury .injuryPhaseStripItem{appearance:none;font:inherit;color:inherit;cursor:pointer;position:relative}
 #injury .injuryPhaseStripItem.selected{border-color:rgba(74,230,216,.72);background:rgba(16,77,83,.42)}
@@ -5863,14 +5863,14 @@ body:has(#dashboard.progressPage.active),#mainContent:has(#dashboard.progressPag
 
 
 /* v14.9.23 — Injury trajectory: delayed current phase pushes future phases/recovery */
-#injury .injuryTrajectory .projectedLine{fill:none;stroke:#d8b862;stroke-width:3;stroke-dasharray:8 6}
-#injury .injuryTrajectory .projectedEndLine{stroke:#d8b862;stroke-width:1.5;stroke-dasharray:4 4;opacity:.8}
-#injury .injuryTrajectory .projectedEndLabel{fill:#e5c977;font-size:8px;font-weight:850}
-#injury .injuryTrajectory .nominalEndLine{stroke:rgba(185,205,214,.40);stroke-width:1;stroke-dasharray:3 4}
-#injury .injuryTrajectory .nominalEndLabel{fill:var(--muted);font-size:8px;font-weight:750}
-#injury .injuryTrajectoryLegend .projected::before{background:#d8b862}
-#injury .injurySelectedPhaseWindow{fill:rgba(74,230,216,.10);stroke:rgba(74,230,216,.62);stroke-width:2}
-#injury .injurySelectedNominalWindow{fill:none;stroke:rgba(177,199,210,.44);stroke-width:1.3;stroke-dasharray:5 4}
+
+
+
+
+
+
+
+
 #injury .injuryPhaseTiming{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;padding:0 8px 7px}
 #injury .injuryPhaseTiming>span{padding:7px 8px;border-radius:9px;background:rgba(23,51,63,.62)}
 #injury .injuryPhaseTiming small{display:block;font-size:7px;line-height:1.2;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
@@ -5880,3 +5880,14 @@ body:has(#dashboard.progressPage.active),#mainContent:has(#dashboard.progressPag
 #injury .injuryPhaseProjectionCallout b{display:block;margin-top:2px;font-size:10px}
 #injury .injuryPhaseProjectionCallout span{display:block;margin-top:2px;font-size:8px;line-height:1.3;color:var(--text-2)}
 @media(max-width:600px){#injury .injuryPhaseTiming{grid-template-columns:1fr}}
+
+
+/* v14.9.24 — Injury trajectory: actual phase durations, direct tile-to-band highlight */
+#injury .injuryTrajectory .injuryPhaseBand{stroke:none;pointer-events:none}
+#injury .injuryTrajectory .injuryPhaseBand.actual{fill:rgba(64,176,184,.055)}
+#injury .injuryTrajectory .injuryPhaseBand.current{fill:rgba(74,230,216,.075)}
+#injury .injuryTrajectory .injuryPhaseBand.future{fill:rgba(216,184,98,.035);stroke:rgba(216,184,98,.18);stroke-width:1;stroke-dasharray:5 5}
+#injury .injuryTrajectory .injuryPhaseBand.selected{fill:rgba(74,230,216,.17);stroke:rgba(74,230,216,.78);stroke-width:2}
+#injury .injuryTrajectory .injuryPhaseBand.future.selected{fill:rgba(216,184,98,.11);stroke:rgba(216,184,98,.78);stroke-width:2;stroke-dasharray:6 4}
+#injury .injuryTrajectoryLegend .phaseActual::before{background:rgba(74,230,216,.17);border:1px solid rgba(74,230,216,.45)}
+#injury .injuryTrajectoryLegend .phaseFuture::before{background:rgba(216,184,98,.09);border:1px dashed rgba(216,184,98,.55)}
