@@ -1,0 +1,80 @@
+AI Running Coach v15.0.0 · build 50000
+SHOE ENGINE IMPLEMENTATION / VERIFICATION REPORT
+Date: 2026-08-21
+
+BASELINE
+- Supplied app.js: v14.9.45 · build 40945.
+- Supplied application files: app.js, index.html, manifest.webmanifest, service-worker.js and icon assets.
+- styles.css was referenced by index.html/service-worker.js but was NOT supplied.
+- The previously referenced 54-scenario, 72-scenario, browser-acceptance and shoe-engine test files were NOT supplied, so those suites could not be executed in this environment. They were not deleted, weakened or rewritten.
+
+ARCHITECTURE
+- Existing deterministic constrained lifecycle planner retained as the production solver.
+- Added one versioned authoritative immutable shoe-plan snapshot (snapshotVersion 1).
+- Snapshot contains input fingerprint, physical-pair state, authoritative actual mileage ledger, forecast assignment ledger, session decisions, purchases, retirements, projected mileage, Race Day assignment, explanations/alternatives and zero-failure validation record.
+- Snapshot is published only after final hard validation.
+- Input fingerprint excludes generic storageRevision and instead covers shoe-relevant plan, race, shoe, mileage/usage, linked-run, override and rehabilitation inputs.
+- Final validation is fail-closed: a failing candidate gets a bounded final hard-repair/fixed-point pass and full revalidation; a still-invalid result is rejected and is never cached/published.
+
+DATA / SCHEMA
+- SCHEMA remains 10400.
+- Primary/mirror storage keys remain unchanged.
+- Existing shoes, stable physical-pair IDs, shoeUsage, plannedShoeAssignments and plannedShoePurchases remain compatible.
+- No migration is required.
+- Historical data is preserved.
+
+REGRESSION LOCK
+- app.js diff operations versus supplied baseline: [('replace', 7, 9, 7, 9), ('insert', 7970, 7970, 7970, 8022), ('replace', 7971, 7972, 8023, 8024), ('replace', 8020, 8021, 8072, 8086)]
+- Apart from VERSION/BUILD, all app.js changes are confined to the Shoes module.
+- No non-shoe calculation, training-plan function, prediction model, recovery/HRV logic, injury/rehab progression logic, import interpretation, execution scoring, navigation structure or non-shoe UI markup was changed.
+- index.html, manifest and service-worker changes are version/cache-bust changes only.
+
+VALIDATION / TESTS EXECUTED
+- node --check app.js: PASS
+- node --check service-worker.js: PASS
+- v15 static/regression checks: 10/10 PASS
+  * version consistency
+  * authoritative snapshot fields
+  * fail-closed cache publication
+  * no Math.random production shoe path
+  * whole-session mileage/idempotency guard retained
+  * purchase tied to first positive use
+  * Race Day <250 km hard check retained
+  * lifecycle overflow hard repair retained
+- Chromium browser smoke attempt: BLOCKED BY CONTAINER GPU/DBus FAILURE before page launch.
+- Full 54-scenario suite: NOT RUN — file not supplied.
+- Full 72-scenario suite: NOT RUN — file not supplied.
+- Browser-acceptance suite: NOT RUN — file not supplied.
+- Existing external shoe-engine tests: NOT RUN — files not supplied.
+
+PERFORMANCE
+Synthetic fingerprint workload (180 future sessions, 6 shoes, 350 usage rows, 350 linked runs; 1000 iterations):
+- Baseline-style cache stamp construction: ~0.037 ms/call.
+- New complete shoe-input fingerprint construction + hash: ~2.285 ms/call.
+- Added fingerprint overhead: ~2.25 ms on this host.
+The expensive lifecycle solver remains memoised to one calculation per relevant input fingerprint. Full before/after browser planner timings could not be measured because the supplied baseline test/benchmark harness was absent and Chromium could not launch in this container.
+
+COACH-QUALITY REVIEW
+The existing professional-coach suitability and lexicographic lifecycle solver was preserved. v15 adds authoritative decision capture for every assigned session:
+- selected physical pair and score
+- concise reason
+- explanation codes
+- ordered eligible/serviceable alternatives
+- Race Day assignment and pre-race mileage
+- purchase necessity and rejected owned alternatives
+Automated coach-scenario execution could not be truthfully claimed without the missing scenario/test harness.
+
+FILES CHANGED
+- app.js: version/build; authoritative snapshot/fingerprint/ledger publication; final fail-closed validation/repair.
+- index.html: version/build/cache-bust only.
+- manifest.webmanifest: version/build/cache-bust only.
+- service-worker.js: version/build/cache name/cache-bust only.
+- icon assets: unchanged.
+- shoe-engine-v15-regression-tests.js: added verification script.
+- SHOE_ENGINE_V15_TEST_REPORT.txt: this report.
+
+RECURRENCE PREVENTION
+The previous inconsistency class is prevented by publishing one validated snapshot from the final ledger. Invalid candidates are not cached. The fingerprint makes repeated identical calculations stable while invalidating on shoe-relevant data changes. Purchases, assignments, graph points, retirements, Race Day data and explanations are captured from the same final physical-pair solution rather than independently recomputed for display.
+
+IMPORTANT HANDOVER LIMITATION
+This release contains the complete code change possible from the supplied baseline, but it would be inaccurate to certify the user's explicit acceptance requirement that “all existing regression tests pass” because those test files were not included in the upload. Re-run the repository's 54/72-scenario and browser suites against these files before treating that specific acceptance item as independently verified.
