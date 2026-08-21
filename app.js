@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '15.4.4';
-  const BUILD = 50404;
+  const VERSION = '15.4.5';
+  const BUILD = 50405;
   const SCHEMA = 10400;
   const PRIMARY_STORAGE_KEY = 'arc_v10400_web';
   const MIRROR_STORAGE_KEY = 'arc_v10400_mirror';
@@ -8328,7 +8328,16 @@ function shoeEngineCoachStageReplacementChain(result,manual){
       // replacement slightly earlier for an appropriate whole session.
       const need=Math.max(0,(Number(late.km)||0)-shoeEngineRemainingKm(tPreserve));
       let freed=0;
-      const earliest=iso(new Date(dte(firstEntry).getTime()-21*DAY));
+      // Root-cause fix v15.4.5: the former fixed 21-day donor window could not
+      // free enough lifecycle in a high-volume owned pair. That made the final
+      // four-pair staging pass mathematically incapable of changing the real
+      // replacement boundary even though its small synthetic tests passed.
+      // Advance replacement 1 only as far as needed/credible for a staged
+      // handover, bounded to 84 days, and require immediate meaningful use.
+      const weeklyKm=(result.assignments||[]).filter(r=>String(r.date)<String(firstEntry)&&String(r.date)>=iso(new Date(dte(firstEntry).getTime()-28*DAY))).reduce((s,r)=>s+(Number(r.km)||0),0)/4;
+      const needWeeks=Math.max(1,Math.ceil((need+Math.max(0,weeklyKm*.35))/Math.max(1,weeklyKm*.35)));
+      const maxAdvanceDays=Math.min(84,Math.max(28,targetGap+21,needWeeks*7));
+      const earliest=iso(new Date(dte(firstEntry).getTime()-maxAdvanceDays*DAY));
       const donors=rowsOf(tPreserve).filter(r=>String(r.date)>=String(earliest)&&String(r.date)<String(firstEntry)&&!r.runnerOverride&&!manual.has(r.planId)).slice().sort((a,b)=>b.date.localeCompare(a.date)||String(a.planId).localeCompare(String(b.planId)));
       for(const oldRow of donors){if(freed+1e-6>=need)break;if(!suitable(tFirst,oldRow,tPreserve,12))continue;const oldEntry=entry(tFirst);tFirst.plannedEntryDate=oldRow.date;tFirst.availableDate=oldRow.date;tFirst.purchaseDate=oldRow.date;if(shoeEngineMoveAssignment(oldRow,tFirst,trial.pairs,{ignorePlannedRetirement:true})){freed+=Number(oldRow.km)||0;movedEarly++}else{tFirst.plannedEntryDate=oldEntry;tFirst.availableDate=oldEntry;tFirst.purchaseDate=oldEntry}}
       if(freed+1e-6<need){
@@ -8348,7 +8357,7 @@ function shoeEngineCoachStageReplacementChain(result,manual){
     const purchaseGap=(dte(newSecond)-dte(newFirst))/DAY,ownedGap=(dte(presLast)-dte(leadLast))/DAY;
     if(purchaseGap<21||ownedGap<14)continue;
     shoeEngineApplyCanonicalRotationExits(trial);const hard=shoeEngineValidation(trial);if(hard.length)continue;
-    trial.repairLog=trial.repairLog||[];trial.repairLog.push({code:'coach-stage-replacement-chain',firstPairId:first.id,delayedPairId:second.id,preservedOwnedPairId:preserve.id,transitionedOwnedPairId:lead.id,oldGapDays:originalGap,newPurchaseGapDays:purchaseGap,ownedExitGapDays:ownedGap,firstEntry:newFirst,secondEntry:newSecond,preservedOwnedLastUse:presLast,movedEarlySessions:movedEarly,movedLaterSessions:movedLate});
+    trial.repairLog=trial.repairLog||[];trial.repairLog.push({code:'coach-stage-replacement-chain',firstPairId:first.id,delayedPairId:second.id,preservedOwnedPairId:preserve.id,transitionedOwnedPairId:lead.id,oldGapDays:originalGap,newPurchaseGapDays:purchaseGap,ownedExitGapDays:ownedGap,firstEntry:newFirst,secondEntry:newSecond,preservedOwnedLastUse:presLast,movedEarlySessions:movedEarly,movedLaterSessions:movedLate,adaptiveDonorWindow:true});
     commit(trial);changed=true;applied=true;break;
    }
   }
@@ -8708,7 +8717,7 @@ function shoeEngineCanonicalFinalizePortfolio(result,manual,weeks){
 function shoeEngineBuildRehabSessions(now,raceDate){const injury=(state.injuries||[]).find(x=>x.id===state.activeInjuryPlanId);if(!injury)return[];const progress=injuryPrediction(injury),rehabEnd=[raceDate,progress?.windowEnd||raceDate].filter(Boolean).sort()[0],rows=[];for(let d=new Date(dte(now).getTime()+DAY),guard=0;d<=dte(rehabEnd)&&guard<120;d=new Date(d.getTime()+DAY),guard++){const date=iso(d),day=rehabCalendarDay(injury,progress,date,rehabPlanDayIndex(injury,date));if(!rehabDayNeedsShoe(day))continue;const exp=rehabExpectedDistance(day),km=Math.max(0,Number(exp.totalKm)||0);if(km<=0)continue;rows.push({id:`rehab-shoe-${injury.id}-${date}`,date,type:'Rehab recovery',distance:km,surface:'road',rehab:true,walkMinutes:exp.walkMinutes,runMinutes:exp.runMinutes,importance:shoeEngineSessionImportance({type:'Rehab recovery',distance:km,runMinutes:exp.runMinutes},{rehab:true}),injuryId:injury.id})}return rows}
 
 const SHOE_PLAN_SNAPSHOT_VERSION=2;
-const SHOE_ENGINE_CACHE_VERSION='15.4.4-50404-staged-replacement-chain-r1';
+const SHOE_ENGINE_CACHE_VERSION='15.4.5-50405-staged-replacement-chain-r1';
 function shoeStableSerialize(value){
  if(value===null||typeof value!=='object')return JSON.stringify(value);
  if(Array.isArray(value))return'['+value.map(shoeStableSerialize).join(',')+']';
@@ -8783,7 +8792,7 @@ function freshShoeLifecyclePlan(){
   racePair:null,raceWindow:null,
   catalogueSource:'offline',catalogueVersion:OFFLINE_ASICS_CATALOGUE_VERSION,
   footMechanics:runnerFootMechanics(),
-  engine:'v15.4.4-staged-replacement-chain'
+  engine:'v15.4.5-staged-replacement-chain'
  };
  shoeEngineCanonicalFinalizePortfolio(result,manual,weeks);
 
