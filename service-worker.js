@@ -1,8 +1,8 @@
-// AI Running Coach v15.1.6 · build 50106
+// AI Running Coach v15.1.7 · build 50107
 'use strict';
 
 const BUILD = 50103;
-const CACHE = 'arc-v15106-build-50106';
+const CACHE = 'arc-v15106-build-50107';
 const CACHE_PREFIX = 'arc-v';
 const APP_SHELL = './index.html';
 const ASSETS = [

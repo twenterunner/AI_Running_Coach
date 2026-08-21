@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '15.1.6';
-  const BUILD = 50106;
+  const VERSION = '15.1.7';
+  const BUILD = 50107;
   const SCHEMA = 10400;
   const PRIMARY_STORAGE_KEY = 'arc_v10400_web';
   const MIRROR_STORAGE_KEY = 'arc_v10400_mirror';
@@ -7446,7 +7446,7 @@ function shoeEngineRepairLifecycleOverflow(result,manual){
     const score=shoeEngineAssessment(p,plan,{rehab:Boolean(row.rehab)}).score;if(score<SESSION_SHOE_RULES.safeSuitabilityFloor||from-score>(quality?2:8))return null;
     if(p.id===result.racePair?.id&&row.date<result.raceDate){const rp={date:result.raceDate,type:'Race Day',distance:Number(state.setup?.raceDistance)||42.195,surface:'road'},c=shoeEngineRaceCandidate(p,rp);if(!c)return null;const after=shoeEngineProjectedKmBefore(p,result.raceDate)+Number(row.km||0);if(after>c.window.maxKm+1e-6)return null}
     return{p,score}
-   }).filter(Boolean).sort((a,b)=>b.score-a.score);
+   }).filter(Boolean).sort((a,b)=>Number(b.p.owned)-Number(a.p.owned)||b.score-a.score||a.p.id.localeCompare(b.p.id));
    if(alternatives[0]&&shoeEngineMoveAssignment(row,alternatives[0].p,result.pairs)){row.rotationCompromise=true;row.why=`Lifecycle ceiling: ${lifecyclePairLabel(alternatives[0].p)} takes this session so ${lifecyclePairLabel(pair)} remains within its physical retirement limit.`;changed=repaired=true;break}
   }
   if(repaired)continue;
@@ -7581,12 +7581,16 @@ function shoeEngineTryRemoveFuturePair(result,redundant,manual){
  for(const row of rows){
   const plan=plans.get(row.planId);if(!plan){restore();return false}
   const currentScore=shoeEngineAssessment(redundant,plan,{rehab:Boolean(row.rehab)}).score;
-  const maxLoss=shoeEngineSessionImportance(plan,{rehab:Boolean(row.rehab)})>=86?2:8;
+  const quality=shoeEngineSessionImportance(plan,{rehab:Boolean(row.rehab)})>=86;
   const alternatives=result.pairs.filter(p=>p.id!==redundant.id)
    .filter(p=>shoeEngineCanCover(p,plan,{rehab:Boolean(row.rehab),allowRacePair:true}))
    .map(p=>{
     const score=shoeEngineAssessment(p,plan,{rehab:Boolean(row.rehab)}).score;
-    if(score<currentScore-maxLoss-1e-6)return null;
+    // Owned serviceable footwear has first refusal over a speculative purchase.
+    // Permit a modest suitability concession on ordinary training, but never below
+    // the engine's safe floor and keep quality-session concessions deliberately tight.
+    const maxLoss=p.owned?(quality?4:12):(quality?2:8);
+    if(score<SESSION_SHOE_RULES.safeSuitabilityFloor||score<currentScore-maxLoss-1e-6)return null;
     if(p.id===result.racePair?.id&&String(row.date)<String(result.raceDate)){
      const rp={date:result.raceDate,type:'Race Day',distance:Number(state.setup?.raceDistance)||42.195,surface:'road'};
      const c=shoeEngineRaceCandidate(p,rp);if(!c)return null;
@@ -7966,12 +7970,15 @@ function shoeEngineRepairDormantServiceablePairs(result,manual){
    const entry=pair.owned?result.now:(shoePlannerEntryDate(pair)||result.now),last=rows.length?rows.at(-1).date:entry;
    const remaining=shoeEngineRemainingKm(pair);
    if(remaining<Math.max(35,Number(pair.retireKm)*.06))continue;
-   const cutoff=iso(new Date(dte(last).getTime()+21*DAY));
+   // Owned shoes should not disappear from the rotation for weeks while a future
+   // purchase absorbs compatible mileage. Intervene earlier for owned pairs.
+   const cutoff=iso(new Date(dte(last).getTime()+(pair.owned?14:21)*DAY));
    if(cutoff>=result.raceDate)continue;
    const candidates=(result.assignments||[]).filter(row=>row.pairId!==pair.id&&row.date>=cutoff&&row.date<result.raceDate&&!row.runnerOverride&&!manual.has(row.planId)&&!row.raceFamiliarisation).map(row=>{
     const plan=plans.get(row.planId),donor=result.pairs.find(p=>p.id===row.pairId);if(!plan||!donor||!shoeEngineIsAvailable(pair,row.date)||!shoeEngineCanCover(pair,plan,{rehab:Boolean(row.rehab),allowRacePair:false}))return null;
     const to=shoeEngineAssessment(pair,plan,{rehab:Boolean(row.rehab)}).score,from=shoeEngineAssessment(donor,plan,{rehab:Boolean(row.rehab)}).score,quality=shoeEngineSessionImportance(plan,{rehab:Boolean(row.rehab)})>=86;
-    if(to<SESSION_SHOE_RULES.safeSuitabilityFloor||from-to>(quality?2:8))return null;
+    const maxLoss=pair.owned?(quality?4:12):(quality?2:8);
+    if(to<SESSION_SHOE_RULES.safeSuitabilityFloor||from-to>maxLoss)return null;
     // Prefer easy/lower-value sessions and the earliest point after the dormancy threshold.
     const cost=(quality?30:0)+Math.max(0,from-to)*3+Math.max(0,(dte(row.date)-dte(cutoff))/DAY)*.1;
     return{pair,row,cost}
@@ -8028,17 +8035,17 @@ function shoeEngineBeamWindowObjective(state,rows,pairById){
  }
  let continuityPenalty=0;
  for(let i=1;i<state.choice.length;i++)if(state.choice[i]!==state.choice[i-1])continuityPenalty+=0.1;
- return [state.suitabilityLoss,balancePenalty,continuityPenalty,state.lifecycleWaste];
+ return [state.avoidableFutureUse,state.suitabilityLoss,balancePenalty,continuityPenalty,state.lifecycleWaste];
 }
 function shoeEngineBeamOptimizeRows(result,rows,{excludePairId=null,apply=false,reason='Deterministic look-ahead optimiser'}={}){
  rows=(rows||[]).filter(Boolean).slice().sort((a,b)=>String(a.date).localeCompare(String(b.date))||String(a.planId).localeCompare(String(b.planId)));
- if(!rows.length)return{feasible:true,choices:new Map(),objective:[0,0,0,0],statesExplored:0};
+ if(!rows.length)return{feasible:true,choices:new Map(),objective:[0,0,0,0,0],statesExplored:0};
  const rowIds=new Set(rows.map(r=>r.planId)),plans=new Map((result.allSessions||[]).map(x=>[x.id,x]));
  const candidatePairs=result.pairs.filter(p=>p.id!==excludePairId&&p.role!=='race');
  const pairById=new Map(candidatePairs.map(p=>[p.id,p]));
  const outsideTotal=new Map(candidatePairs.map(p=>[p.id,(p.owned?Number(p.currentKm)||0:0)+(p.assignments||[]).filter(a=>!rowIds.has(a.planId)).reduce((n,a)=>n+(Number(a.km)||0),0)]));
  const outsideBefore=(pair,date)=>(pair.owned?Number(pair.currentKm)||0:0)+(pair.assignments||[]).filter(a=>!rowIds.has(a.planId)&&String(a.date)<String(date)).reduce((n,a)=>n+(Number(a.km)||0),0);
- let beam=[{choice:[],used:new Map(),suitabilityLoss:0,lifecycleWaste:0,objective:[0,0,0,0],key:''}],statesExplored=0;
+ let beam=[{choice:[],used:new Map(),avoidableFutureUse:0,suitabilityLoss:0,lifecycleWaste:0,objective:[0,0,0,0,0],key:''}],statesExplored=0;
  for(let idx=0;idx<rows.length;idx++){
   const row=rows[idx],plan=plans.get(row.planId)||{id:row.planId,date:row.date,type:row.type,distance:row.km,surface:row.surface||'road'},rehab=Boolean(row.rehab),km=Number(row.km)||0;
   const eligible=candidatePairs.filter(pair=>{
@@ -8047,10 +8054,16 @@ function shoeEngineBeamOptimizeRows(result,rows,{excludePairId=null,apply=false,
    const assessment=shoeSuitabilityAssessment(pair.profile,plan,{rehab,shoe:pair.owned?pair.shoe:null,projectedKm:outsideBefore(pair,row.date)+km,retireKm:pair.retireKm});
    return assessment.score>=SESSION_SHOE_RULES.safeSuitabilityFloor;
   }).map(pair=>({pair,score:shoeSuitabilityAssessment(pair.profile,plan,{rehab,shoe:pair.owned?pair.shoe:null,projectedKm:outsideBefore(pair,row.date)+km,retireKm:pair.retireKm}).score}))
-    .sort((a,b)=>b.score-a.score||a.pair.id.localeCompare(b.pair.id)).slice(0,SHOE_BEAM_CONFIG.maxCandidatesPerSession);
+    .sort((a,b)=>b.score-a.score||a.pair.id.localeCompare(b.pair.id));
   if(!eligible.length)return{feasible:false,choices:new Map(),objective:[Infinity],statesExplored};
-  const best=eligible[0].score,next=[];
-  for(const st of beam)for(const opt of eligible){
+  // Candidate pruning must never hide a serviceable owned pair merely because
+  // several future pairs score slightly higher. Keep all owned candidates plus
+  // the highest-ranked future candidates within the bounded search width.
+  const ownedEligible=eligible.filter(x=>x.pair.owned),futureEligible=eligible.filter(x=>!x.pair.owned).slice(0,SHOE_BEAM_CONFIG.maxCandidatesPerSession);
+  const bounded=[...ownedEligible,...futureEligible].sort((a,b)=>b.score-a.score||a.pair.id.localeCompare(b.pair.id));
+  const best=bounded[0].score,quality=shoeEngineSessionImportance(plan,{rehab})>=86;
+  const bestOwned=ownedEligible.length?Math.max(...ownedEligible.map(x=>x.score)):-Infinity,next=[];
+  for(const st of beam)for(const opt of bounded){
    statesExplored++;
    const pid=opt.pair.id,used=(st.used.get(pid)||0)+km,total=(outsideTotal.get(pid)||0)+used;
    if(total>Number(opt.pair.retireKm)+1e-6)continue;
@@ -8061,7 +8074,11 @@ function shoeEngineBeamOptimizeRows(result,rows,{excludePairId=null,apply=false,
    const materialLoss=Math.max(0,best-assessment.score-equiv);
    const usedMap=new Map(st.used);usedMap.set(pid,used);
    const lifeLeft=Math.max(0,Number(opt.pair.retireKm)-total);
-   const ns={choice:[...st.choice,pid],used:usedMap,suitabilityLoss:st.suitabilityLoss+materialLoss*(1+importance/100),lifecycleWaste:st.lifecycleWaste+lifeLeft/Math.max(1,Number(opt.pair.retireKm))*0.001,key:`${st.key}|${pid}`};
+   // A future pair is avoidable for this session when an owned, safe candidate is
+   // within the coach-approved concession. This criterion is evaluated before
+   // raw suitability so a small score advantage cannot prematurely abandon owned footwear.
+   const ownedConcession=quality?4:12,avoidableFuture=(!opt.pair.owned&&bestOwned>=opt.score-ownedConcession-1e-6)?km:0;
+   const ns={choice:[...st.choice,pid],used:usedMap,avoidableFutureUse:st.avoidableFutureUse+avoidableFuture,suitabilityLoss:st.suitabilityLoss+materialLoss*(1+importance/100),lifecycleWaste:st.lifecycleWaste+lifeLeft/Math.max(1,Number(opt.pair.retireKm))*0.001,key:`${st.key}|${pid}`};
    ns.objective=shoeEngineBeamWindowObjective(ns,rows.slice(0,idx+1),pairById);next.push(ns);
   }
   if(!next.length)return{feasible:false,choices:new Map(),objective:[Infinity],statesExplored};
