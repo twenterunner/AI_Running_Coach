@@ -1,0 +1,50 @@
+AI Running Coach v15.1.0 · build 50100
+
+DETERMINISTIC SHOE-ENGINE INTELLIGENCE UPGRADE
+
+Architecture
+- Retains the authoritative physical-pair ledger, hard eligibility filters, fail-closed validator, Race Day solver, purchase minimizer and immutable snapshot.
+- Adds a deterministic bounded beam-search assignment optimizer.
+- Search width: 24 states.
+- Rolling look-ahead: 42 days.
+- Maximum candidates considered per session: 4 safe eligible physical pairs.
+- Runner overrides, Race Day assignments, Race Day familiarisation assignments and the canonical Race Day pair are locked during soft optimization.
+- Winning window assignments are applied atomically.
+- Adds an independent counterfactual critic which challenges each future non-Race-Day purchase by searching for a feasible assignment without that physical pair. Existing portfolio minimization remains the final authority for removal.
+- Optimizer diagnostics and critic findings are persisted in the immutable shoe snapshot.
+
+Lexicographic decision order inside the look-ahead optimizer
+1. Hard constraints are eligibility gates and cannot be traded.
+2. Material session-suitability loss is minimized.
+3. Rotation-balance deviation is minimized only among materially equivalent suitability solutions.
+4. Unnecessary switching/continuity loss is minimized.
+5. Remaining lifecycle is used sensibly as the final tie-break.
+The approved 25% weekly share remains a soft target and cannot create a purchase.
+
+Why this is more robust
+The former session-by-session greedy choice could make a locally attractive decision without seeing its effect on later sessions. V15.1 evaluates bounded whole-horizon combinations and keeps the best deterministic partial plans. The critic then asks the inverse question for each planned purchase: can the programme remain feasible without it?
+
+Determinism
+All candidate ordering and beam ties have stable pair-ID tie-breaks. No random number, neural network, genetic algorithm, remote service or LLM is in the production decision path.
+
+Regression/data protection
+- Schema remains 10400; no migration.
+- Actual mileage ledger unchanged.
+- Training plan, workout prescriptions, prediction, recovery, rehab progression, FIT/CSV interpretation and non-shoe calculations unchanged.
+- Existing v15.0.5 graph endpoint-X behavior retained.
+- Existing v15.0.6 service-worker forced-update behavior retained.
+- Bottom-navigation lock retained.
+
+Verification performed
+- app.js syntax: PASS
+- service-worker.js syntax: PASS
+- v15.1 targeted regression checks: 20/20 PASS
+- Fixed-seed deterministic randomized beam stress: 500/500 feasible cases deterministic
+- Stress crashes: 0
+- Stress lifecycle overflows: 0
+- Seed: 15100
+- Average explored beam states per stress scenario: 1,414
+- 500-scenario stress runtime in the test environment: ~35.6 s (~71 ms/scenario)
+
+Test availability note
+The historical 54-scenario and 72-scenario suites requested in the original v15 specification are not present in the supplied/current v15.0.6 file set, so they could not truthfully be rerun here. The available current static/update regressions were superseded by the v15.1 20-check suite, and a new 500-scenario fixed-seed stress test was added.
