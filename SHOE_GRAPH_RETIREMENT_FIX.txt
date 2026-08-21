@@ -1,0 +1,23 @@
+AI Running Coach v15.0.4 · build 50004
+
+SHOE GRAPH RETIREMENT-X FIX
+
+Problem
+The graph renderer could only draw an X when a particular planner branch had already persisted a retirement flag. A physical pair could therefore reach its authoritative final serviceable programme use and have its curve stop without receiving a retirement X.
+
+Fix
+1. Added a final authoritative retirement-event pass after all assignment/repair/lifecycle work.
+2. For every non-race physical pair, the pass evaluates the final positive-use point against:
+   - manual retirement;
+   - lifecycle ceiling reached;
+   - whether any later suitable whole programme session still fits inside remaining physical lifecycle.
+3. If no later suitable whole session fits, that final positive-use point becomes the canonical retirement event.
+4. The graph now draws × RETIRE directly from projectedRetireDate/plannedRetireDate at that canonical final-ledger point.
+5. A successor handover remains distinct and is labelled × HANDOVER rather than falsely marking a still-serviceable pair as retired.
+
+Regression protection
+- Training plan, workouts, predictions, recovery, rehab, imports and non-shoe UI unchanged.
+- Schema remains 10400.
+- Navigation optimization from v15.0.2 retained.
+- JavaScript syntax checks PASS.
+- Targeted v15.0.4 regression checks: 10/10 PASS.

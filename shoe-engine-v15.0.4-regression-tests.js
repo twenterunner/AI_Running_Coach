@@ -1,0 +1,20 @@
+'use strict';
+const fs=require('fs'),assert=require('assert'),cp=require('child_process');
+const dir=__dirname;
+const app=fs.readFileSync(dir+'/app.js','utf8');
+const html=fs.readFileSync(dir+'/index.html','utf8');
+const manifest=JSON.parse(fs.readFileSync(dir+'/manifest.webmanifest','utf8'));
+const sw=fs.readFileSync(dir+'/service-worker.js','utf8');
+function ok(name,fn){try{fn();console.log('PASS',name);return 1}catch(e){console.error('FAIL',name,'-',e.message);process.exitCode=1;return 0}}
+let n=0;
+n+=ok('app syntax',()=>cp.execFileSync(process.execPath,['--check',dir+'/app.js']));
+n+=ok('service worker syntax',()=>cp.execFileSync(process.execPath,['--check',dir+'/service-worker.js']));
+n+=ok('version consistency',()=>{assert(app.includes("const VERSION = '15.0.4'"));assert(app.includes('const BUILD = 50004'));assert(html.includes('v15.0.4 · build 50004'));assert.equal(manifest.version,'15.0.4');assert.equal(manifest.build,50004);assert(sw.includes('v15.0.4 · build 50004'))});
+n+=ok('authoritative retirement pass exists',()=>{assert(app.includes('function shoeEngineEnsureCanonicalRetirementEvents(result)'));assert(app.includes("pair.projectedRetireDate=last"));assert(app.includes("pair.isProjectedRetired=true"))});
+n+=ok('retirement pass runs before final validation',()=>{const pass=app.indexOf('shoeEngineEnsureCanonicalRetirementEvents(result);');const validation=app.indexOf('result.validationIssues=shoeEngineValidation(result);',pass);assert(pass>0&&validation>pass)});
+n+=ok('graph retirement X uses canonical retirement date',()=>{const start=app.indexOf('function shoeGraphRetirementPoint');const end=app.indexOf('function shoeNonFlatSvgSegments',start);const body=app.slice(start,end);assert(body.includes('pair.projectedRetireDate||pair.plannedRetireDate'));assert(body.includes("kind:'retire'"))});
+n+=ok('retirement SVG is always an X',()=>{assert(app.includes("label=rp.kind==='handover'?'× HANDOVER':'× RETIRE'"));assert(app.includes('x1="${xx-10}" y1="${yy-10}" x2="${xx+10}" y2="${yy+10}"'));assert(app.includes('x1="${xx-10}" y1="${yy+10}" x2="${xx+10}" y2="${yy-10}"'))});
+n+=ok('handover remains distinct from retirement',()=>{assert(app.includes("kind:'handover'"));assert(app.includes('b.replacesPairId===pair.id'))});
+n+=ok('navigation optimization retained',()=>{const a=app.indexOf('function activatePage(page,anchor=null)');const b=app.indexOf('renderNavigation();',a);const body=app.slice(a,b);assert(body.includes('renderPage(page)'));assert(!body.includes('renderAll()'))});
+n+=ok('schema preserved',()=>assert(app.includes('const SCHEMA = 10400;')));
+console.log(`Regression checks passed: ${n}/10`);
