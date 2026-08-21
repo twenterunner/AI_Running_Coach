@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '15.1.4';
-  const BUILD = 50104;
+  const VERSION = '15.1.5';
+  const BUILD = 50105;
   const SCHEMA = 10400;
   const PRIMARY_STORAGE_KEY = 'arc_v10400_web';
   const MIRROR_STORAGE_KEY = 'arc_v10400_mirror';
@@ -7624,50 +7624,65 @@ function shoeEngineMinimizeFuturePortfolio(result,manual){
 
 function shoeEnginePhysicalRetirementAssessment(pair,result){
  if(!pair||!result)return{retired:false,date:null,km:0,reason:null};
- const rows=(pair.assignments||[]).filter(a=>Number(a.km)>0&&String(a.date)<String(result.raceDate)).slice().sort((a,b)=>a.date.localeCompare(b.date)||String(a.planId).localeCompare(String(b.planId)));
+ const rows=(pair.assignments||[]).filter(a=>Number(a.km)>0&&String(a.date)<String(result.raceDate))
+  .slice().sort((a,b)=>a.date.localeCompare(b.date)||String(a.planId).localeCompare(String(b.planId)));
  const manualRetired=Boolean(pair.owned&&pair.shoe?.status==='retired');
+ const projected=shoeEngineProjectedKm(pair);
  if(!rows.length){
   return manualRetired
    ?{retired:true,date:result.now,km:pair.owned?Number(pair.currentKm)||0:0,reason:'Runner marked the shoe retired.'}
-   :{retired:false,date:null,km:pair.owned?Number(pair.currentKm)||0:0,reason:null};
+   :{retired:false,date:null,km:projected,reason:null};
  }
- const last=rows.at(-1),projected=shoeEngineProjectedKm(pair),remaining=Math.max(0,Number(pair.retireKm)-projected);
+
+ const last=rows.at(-1),remaining=Math.max(0,Number(pair.retireKm)-projected);
  const lifecycleCeilingReached=projected>=Number(pair.retireKm)-1e-6;
- const future=(result.allSessions||[]).filter(plan=>String(plan.date)>String(last.date)&&String(plan.date)<String(result.raceDate)&&plan.type!=='Rest'&&!/^Race Day$/i.test(String(plan.type||''))&&Number(plan.distance)>0);
- const compatible=future.filter(plan=>{
-  const fit=lifecycleWorkoutFit(pair.profile,plan);
-  if(fit<SESSION_SHOE_RULES.safeWorkoutFitFloor)return false;
-  const assessment=shoeSuitabilityAssessment(pair.profile,plan,{
+
+ // Evaluate later programme sessions for category/safety compatibility WITHOUT
+ // lifecycle wear. This asks whether the shoe would otherwise be a legitimate
+ // choice if it had fresh lifecycle remaining.
+ const later=(result.allSessions||[])
+  .filter(plan=>String(plan.date)>String(last.date)&&String(plan.date)<=String(result.raceDate)&&plan.type!=='Rest'&&Number(plan.distance)>0)
+  .slice().sort((a,b)=>a.date.localeCompare(b.date)||String(a.id).localeCompare(String(b.id)));
+ const compatible=later.filter(plan=>{
+  if(/^Race Day$/i.test(String(plan.type||''))&&pair!==result.racePair)return false;
+  const freshFit=lifecycleWorkoutFit(pair.profile,plan);
+  if(freshFit<SESSION_SHOE_RULES.safeWorkoutFitFloor)return false;
+  const freshAssessment=shoeSuitabilityAssessment(pair.profile,plan,{
    rehab:Boolean(plan.rehab),shoe:null,projectedKm:0,retireKm:1e9
   });
-  return assessment.score>=SESSION_SHOE_RULES.safeSuitabilityFloor;
+  return freshAssessment.score>=SESSION_SHOE_RULES.safeSuitabilityFloor;
  });
- const nextCompatibleKm=compatible.length?Math.min(...compatible.map(plan=>Number(plan.distance)||Infinity)):Infinity;
- const cannotCoverAnotherCompatibleWholeSession=compatible.length>0&&remaining+1e-6<nextCompatibleKm;
 
- // A successor purchase can also prove physical retirement when its first
- // required session cannot fit inside the outgoing pair's remaining lifecycle.
- const successors=(result.purchases||[]).filter(b=>b.role!=='race'&&b.replacesPairId===pair.id)
-  .slice().sort((a,b)=>String(a.firstUseDate||a.purchaseDate).localeCompare(String(b.firstUseDate||b.purchaseDate)));
- let successorExhaustion=false;
- if(successors[0]){
-  const entry=successors[0].firstUseDate||successors[0].purchaseDate;
-  const trigger=(result.allSessions||[]).filter(plan=>String(plan.date)>=String(entry)&&Number(plan.distance)>0&&!/^Race Day$/i.test(String(plan.type||'')))
-   .slice().sort((a,b)=>a.date.localeCompare(b.date))[0];
-  if(trigger){
-   const fit=lifecycleWorkoutFit(pair.profile,trigger);
-   const assessment=shoeSuitabilityAssessment(pair.profile,trigger,{
-    rehab:Boolean(trigger.rehab),shoe:null,projectedKm:0,retireKm:1e9
-   });
-   successorExhaustion=fit>=SESSION_SHOE_RULES.safeWorkoutFitFloor&&assessment.score>=SESSION_SHOE_RULES.safeSuitabilityFloor&&remaining+1e-6<Number(trigger.distance||0);
-  }
+ // The retirement boundary is reached when the next otherwise-suitable WHOLE
+ // session cannot fit inside remaining lifecycle. The shoe retires at its final
+ // positive-use point; the overflowing session belongs wholly to another pair.
+ const blockedNext=compatible.find(plan=>(Number(plan.distance)||0)>remaining+1e-6)||null;
+ const cannotCoverNextSuitableWholeSession=Boolean(blockedNext);
+
+ // A lifecycle-linked successor purchase is corroborating evidence. Do not call
+ // category-driven or Race-Day-special purchases retirement unless the outgoing
+ // pair also lacks enough lifecycle for the successor's first otherwise-suitable
+ // whole session.
+ const successor=(result.purchases||[])
+  .filter(b=>b.role!=='race'&&b.replacesPairId===pair.id)
+  .slice().sort((a,b)=>String(a.firstUseDate||a.purchaseDate).localeCompare(String(b.firstUseDate||b.purchaseDate)))[0]||null;
+ let successorLifecycleBoundary=false;
+ if(successor){
+  const entry=successor.firstUseDate||successor.purchaseDate;
+  const trigger=compatible.find(plan=>String(plan.date)>=String(entry))||null;
+  if(trigger)successorLifecycleBoundary=(Number(trigger.distance)||0)>remaining+1e-6;
  }
- const retired=manualRetired||lifecycleCeilingReached||cannotCoverAnotherCompatibleWholeSession||successorExhaustion;
+
+ const retired=manualRetired||lifecycleCeilingReached||cannotCoverNextSuitableWholeSession||successorLifecycleBoundary;
  return{
-  retired,date:retired?last.date:null,km:projected,
+  retired,
+  date:retired?last.date:null,
+  km:projected,
+  blockedSessionId:blockedNext?.id||null,
+  blockedSessionDate:blockedNext?.date||null,
   reason:manualRetired?'Runner marked the shoe retired.'
    :lifecycleCeilingReached?'Physical lifecycle ceiling reached.'
-   :cannotCoverAnotherCompatibleWholeSession||successorExhaustion?'Remaining physical lifecycle cannot cover the next suitable whole programme session.':null
+   :retired?'Remaining physical lifecycle cannot cover the next otherwise-suitable whole programme session.':null
  };
 }
 
@@ -8334,10 +8349,12 @@ function shoeGraphForecastPoints(pair,life){
  return points
 }
 function shoeGraphRetirementPoint(pair,life,forecastPoints){
- const pts=(forecastPoints||shoeGraphForecastPoints(pair,life)).slice().sort((a,b)=>String(a.date).localeCompare(String(b.date)));
+ const pts=(forecastPoints||shoeGraphForecastPoints(pair,life)).slice()
+  .sort((a,b)=>String(a.date).localeCompare(String(b.date)));
  const physical=shoeEnginePhysicalRetirementAssessment(pair,life);
  if(!physical.retired||!physical.date)return null;
- const before=pts.filter(p=>String(p.date)<=String(physical.date)),last=before.at(-1)||pts.at(-1);
+ const sameOrBefore=pts.filter(p=>String(p.date)<=String(physical.date));
+ const last=sameOrBefore.at(-1)||pts.at(-1);
  if(last)return{date:physical.date,km:Number(last.km),reason:physical.reason};
  if(pair.owned&&pair.shoe?.status==='retired'){
   const actual=shoeActualProgrammeSeries(pair.shoe,state.setup?.planStart||life.now,life.now);
@@ -8840,8 +8857,7 @@ function positionMobileNavigation(){
  const left=vv?Number(vv.offsetLeft)||0:0;
  const width=vv?Number(vv.width)||window.innerWidth:window.innerWidth;
 
- // Fixed bottom is authoritative. Never calculate a top coordinate for the nav:
- // doing so can leave a stale gap when Android browser chrome/orientation changes.
+ // Main bar is always physically locked to the bottom edge.
  nav.style.setProperty('position','fixed','important');
  nav.style.setProperty('left',`${Math.round(left)}px`,'important');
  nav.style.setProperty('right','auto','important');
@@ -8853,30 +8869,33 @@ function positionMobileNavigation(){
  nav.style.setProperty('transform','none','important');
 
  if(more&&!more.classList.contains('hidden')){
+  // Dock the submenu to the main bar itself, not to page content or an
+  // independently calculated viewport position. Its bottom edge is always the
+  // main nav's top edge.
   requestAnimationFrame(()=>{
    if(more.classList.contains('hidden'))return;
    const navRect=nav.getBoundingClientRect();
    const visibleTop=vv?Number(vv.offsetTop)||0:0;
    const visibleHeight=vv?Number(vv.height)||window.innerHeight:window.innerHeight;
    const visibleBottom=visibleTop+visibleHeight;
-   const anchorTop=Math.min(navRect.top,visibleBottom);
-   const menuWidth=Math.min(360,Math.max(260,width-16));
+   const dockBottom=Math.min(navRect.top,visibleBottom);
+   const menuWidth=Math.min(420,Math.max(280,width-16));
    const menuLeft=Math.max(left+8,left+width-menuWidth-8);
-   const maxHeight=Math.max(120,Math.round(anchorTop-visibleTop-16));
-   const mh=Math.min(more.scrollHeight,maxHeight);
+   const maxHeight=Math.max(120,Math.round(dockBottom-visibleTop-8));
+
    more.style.setProperty('position','fixed','important');
    more.style.setProperty('left',`${Math.round(menuLeft)}px`,'important');
    more.style.setProperty('right','auto','important');
    more.style.setProperty('width',`${Math.round(menuWidth)}px`,'important');
    more.style.setProperty('max-width',`${Math.round(width-16)}px`,'important');
-   more.style.setProperty('bottom','auto','important');
+   more.style.setProperty('top','auto','important');
+   more.style.setProperty('bottom',`${Math.max(0,Math.round(visibleBottom-dockBottom))}px`,'important');
    more.style.setProperty('max-height',`${maxHeight}px`,'important');
    more.style.setProperty('overflow-y','auto','important');
-   more.style.setProperty('top',`${Math.max(visibleTop+8,Math.round(anchorTop-mh-8))}px`,'important');
+   more.style.setProperty('transform','translateY(0)','important');
   });
  }
 }
-
 function syncMobileViewportInsets(){
  const vv=window.visualViewport;
  const root=document.documentElement.style;
