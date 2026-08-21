@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '15.1.5';
-  const BUILD = 50105;
+  const VERSION = '15.1.6';
+  const BUILD = 50106;
   const SCHEMA = 10400;
   const PRIMARY_STORAGE_KEY = 'arc_v10400_web';
   const MIRROR_STORAGE_KEY = 'arc_v10400_mirror';
@@ -7673,7 +7673,8 @@ function shoeEnginePhysicalRetirementAssessment(pair,result){
   if(trigger)successorLifecycleBoundary=(Number(trigger.distance)||0)>remaining+1e-6;
  }
 
- const retired=manualRetired||lifecycleCeilingReached||cannotCoverNextSuitableWholeSession||successorLifecycleBoundary;
+ const explicitReplacement=Boolean(successor);
+ const retired=manualRetired||lifecycleCeilingReached||cannotCoverNextSuitableWholeSession||successorLifecycleBoundary||explicitReplacement;
  return{
   retired,
   date:retired?last.date:null,
@@ -7682,6 +7683,7 @@ function shoeEnginePhysicalRetirementAssessment(pair,result){
   blockedSessionDate:blockedNext?.date||null,
   reason:manualRetired?'Runner marked the shoe retired.'
    :lifecycleCeilingReached?'Physical lifecycle ceiling reached.'
+   :explicitReplacement?'This physical pair is the predecessor of a planned replacement and retires at its final positive use.'
    :retired?'Remaining physical lifecycle cannot cover the next otherwise-suitable whole programme session.':null
  };
 }
@@ -8852,49 +8854,16 @@ $('onboarding').addEventListener('keydown',event=>{if($('onboarding').classList.
 
 function positionMobileNavigation(){
  if(!(window.matchMedia?.('(max-width: 900px)').matches||window.matchMedia?.('(pointer: coarse)').matches))return;
- const nav=$('nav'),more=$('moreNav');if(!nav)return;
- const vv=window.visualViewport;
- const left=vv?Number(vv.offsetLeft)||0:0;
- const width=vv?Number(vv.width)||window.innerWidth:window.innerWidth;
-
- // Main bar is always physically locked to the bottom edge.
+ const nav=$('nav');if(!nav)return;
  nav.style.setProperty('position','fixed','important');
- nav.style.setProperty('left',`${Math.round(left)}px`,'important');
- nav.style.setProperty('right','auto','important');
+ nav.style.setProperty('left','0px','important');
+ nav.style.setProperty('right','0px','important');
  nav.style.setProperty('top','auto','important');
  nav.style.setProperty('bottom','0px','important');
- nav.style.setProperty('width',`${Math.round(width)}px`,'important');
+ nav.style.setProperty('width','100vw','important');
  nav.style.setProperty('max-width','none','important');
  nav.style.setProperty('margin','0','important');
  nav.style.setProperty('transform','none','important');
-
- if(more&&!more.classList.contains('hidden')){
-  // Dock the submenu to the main bar itself, not to page content or an
-  // independently calculated viewport position. Its bottom edge is always the
-  // main nav's top edge.
-  requestAnimationFrame(()=>{
-   if(more.classList.contains('hidden'))return;
-   const navRect=nav.getBoundingClientRect();
-   const visibleTop=vv?Number(vv.offsetTop)||0:0;
-   const visibleHeight=vv?Number(vv.height)||window.innerHeight:window.innerHeight;
-   const visibleBottom=visibleTop+visibleHeight;
-   const dockBottom=Math.min(navRect.top,visibleBottom);
-   const menuWidth=Math.min(420,Math.max(280,width-16));
-   const menuLeft=Math.max(left+8,left+width-menuWidth-8);
-   const maxHeight=Math.max(120,Math.round(dockBottom-visibleTop-8));
-
-   more.style.setProperty('position','fixed','important');
-   more.style.setProperty('left',`${Math.round(menuLeft)}px`,'important');
-   more.style.setProperty('right','auto','important');
-   more.style.setProperty('width',`${Math.round(menuWidth)}px`,'important');
-   more.style.setProperty('max-width',`${Math.round(width-16)}px`,'important');
-   more.style.setProperty('top','auto','important');
-   more.style.setProperty('bottom',`${Math.max(0,Math.round(visibleBottom-dockBottom))}px`,'important');
-   more.style.setProperty('max-height',`${maxHeight}px`,'important');
-   more.style.setProperty('overflow-y','auto','important');
-   more.style.setProperty('transform','translateY(0)','important');
-  });
- }
 }
 function syncMobileViewportInsets(){
  const vv=window.visualViewport;
