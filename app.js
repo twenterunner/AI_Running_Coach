@@ -7946,7 +7946,7 @@ function shoeEngineDelayDormantFutureEntries(result,manual){
  // feasible meaningful-use window. A new training pair must not receive a few
  // token sessions and then sit dormant for >28 days if those token sessions can
  // be safely absorbed by the existing portfolio.
- const MAX_DORMANT_GAP_DAYS=28,MAX_PREFIX_SESSIONS=4;
+ const MAX_DORMANT_GAP_DAYS=28,MAX_PREFIX_SESSIONS=8;
  let changed=false;
  const plans=new Map((result.allSessions||[]).map(x=>[x.id,x]));
  const raceId=result.racePair?.id||null;
@@ -7959,6 +7959,13 @@ function shoeEngineDelayDormantFutureEntries(result,manual){
    const gap=(dte(rows[i+1].date)-dte(rows[i].date))/DAY;
    if(gap>MAX_DORMANT_GAP_DAYS)return rows.slice(0,i+1);
   }
+  // Also catch low-density "dribble" use: a pair should not be bought weeks
+  // early merely to receive token mileage before it becomes a real rotation
+  // member. Find the first 28-day window with meaningful use and, when that
+  // point is at least three weeks after first use, test whether the sparse
+  // prefix can be absorbed safely by the existing portfolio.
+  const meaningfulAt=rows.findIndex((r,idx)=>{const ed=dte(r.date);ed.setDate(ed.getDate()+MAX_DORMANT_GAP_DAYS);const end=iso(ed),pairWindow=rows.slice(idx).filter(x=>x.date<=end),allWindow=(result.assignments||[]).filter(x=>x.date>=r.date&&x.date<=end&&!x.raceDayAssignment),totalKm=allWindow.reduce((n,x)=>n+Number(x.km||0),0),pairKm=pairWindow.reduce((n,x)=>n+Number(x.km||0),0),threshold=Math.max(8,Math.min(30,totalKm*.12));return pairWindow.length>=2&&pairKm+1e-6>=threshold});
+  if(meaningfulAt>0&&meaningfulAt<=MAX_PREFIX_SESSIONS&&(dte(rows[meaningfulAt].date)-dte(rows[0].date))/DAY>=21)return rows.slice(0,meaningfulAt);
   return[];
  };
  const candidates=result.pairs.filter(p=>!p.owned&&p.role!=='race'&&p.id!==raceId&&p.assignments?.length)
