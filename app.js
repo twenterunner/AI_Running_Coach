@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '15.3.1';
-  const BUILD = 50301;
+  const VERSION = '15.4.0';
+  const BUILD = 50400;
   const SCHEMA = 10400;
   const PRIMARY_STORAGE_KEY = 'arc_v10400_web';
   const MIRROR_STORAGE_KEY = 'arc_v10400_mirror';
@@ -7964,13 +7964,17 @@ function shoeEngineDelayDormantFutureEntries(result,manual){
   const trainingRows=rows.filter(a=>!a.rehab);
   if(!trainingRows.length)return rows.slice(0,Math.min(MAX_PREFIX_SESSIONS,rows.length));
 
+  const assignedTotal=trainingRows.reduce((n,x)=>n+(Number(x.km)||0),0);
   const meaningfulTrainingAt=trainingRows.findIndex((r,idx)=>{
    const ed=dte(r.date);ed.setDate(ed.getDate()+MAX_DORMANT_GAP_DAYS);const end=iso(ed);
    const pairWindow=trainingRows.slice(idx).filter(x=>x.date<=end);
    const allWindow=(result.assignments||[]).filter(x=>!x.rehab&&x.date>=r.date&&x.date<=end&&!x.raceDayAssignment);
    const totalKm=allWindow.reduce((n,x)=>n+Number(x.km||0),0);
    const pairKm=pairWindow.reduce((n,x)=>n+Number(x.km||0),0);
-   const threshold=Math.max(12,Math.min(30,totalKm*.12));
+   // Coach-standard entry: a purchase must become a real rotation member, not
+   // merely collect enough token mileage to look "active". Scale the threshold
+   // both to the programme window and to this pair's eventual workload.
+   const threshold=Math.max(20,Math.min(70,Math.max(totalKm*.12,assignedTotal*.08)));
    return pairWindow.length>=2&&pairKm+1e-6>=threshold;
   });
 
@@ -8002,6 +8006,7 @@ function shoeEngineDelayDormantFutureEntries(result,manual){
   let guard=0;
   while(guard++<4){
    const prefix=sparsePrefix(pair);if(!prefix.length)break;
+
    const trial=cloneResult(),decisions=[];let feasible=true;
    for(const src of prefix){
     const row=trial.assignments.find(r=>r.planId===src.planId&&r.date===src.date),plan=plans.get(src.planId);
@@ -8353,6 +8358,138 @@ function shoeEngineCounterfactualCritic(result,manual){
 }
 
 
+
+
+function shoeEngineEnsureMeaningfulFutureEntry(result,manual){
+ // Rehab sessions are short-horizon protected assignments. Future training-pair
+ // activation months later cannot improve them, and including them in this
+ // portfolio pass creates needless fixed-point churn.
+ if((result.rehabSessions||[]).length||(result.assignments||[]).some(r=>r.rehab))return false;
+ // If a future pair cannot be delayed because hard two-pair continuity genuinely
+ // requires it, the pair must actually enter the rotation. Buying it for one
+ // token session is not a professional strategy.
+ const plans=new Map((result.allSessions||[]).map(x=>[x.id,x])),raceId=result.racePair?.id||null;
+ let changed=false;
+ const future=result.pairs.filter(p=>!p.owned&&p.role!=='race'&&p.id!==raceId)
+  .slice().sort((a,b)=>String(shoePlannerEntryDate(a)||'').localeCompare(String(shoePlannerEntryDate(b)||''))||a.id.localeCompare(b.id));
+ for(const pair of future){
+  const rows=(pair.assignments||[]).filter(a=>Number(a.km)>0&&!a.raceDayAssignment&&!a.raceFamiliarisation)
+   .slice().sort((a,b)=>a.date.localeCompare(b.date)||String(a.planId).localeCompare(String(b.planId)));
+  if(!rows.length)continue;
+  const first=rows[0].date,end=iso(new Date(dte(first).getTime()+28*DAY));
+  const total=rows.reduce((n,a)=>n+(Number(a.km)||0),0);
+  const targetKm=Math.max(20,Math.min(70,total*.08));
+  let early=rows.filter(a=>a.date<=end),earlyKm=early.reduce((n,a)=>n+(Number(a.km)||0),0);
+  if(early.length>=2&&earlyKm+1e-6>=targetKm)continue;
+  const capacity=Math.max(0,Number(pair.retireKm)-shoeEngineProjectedKm(pair));
+  if(capacity<=0)continue;
+
+  const candidates=(result.assignments||[]).filter(row=>{
+   if(row.pairId===pair.id||row.pairId===raceId||row.runnerOverride||manual.has(row.planId)||row.raceDayAssignment||row.raceFamiliarisation)return false;
+   if(String(row.date)<String(first)||String(row.date)>String(end))return false;
+   const plan=plans.get(row.planId);if(!plan)return false;
+   const fit=lifecycleWorkoutFit(pair.profile,plan);if(fit<SESSION_SHOE_RULES.safeWorkoutFitFloor)return false;
+   const a=shoeEngineAssessment(pair,plan,{rehab:Boolean(row.rehab)});if(a.score<SESSION_SHOE_RULES.safeSuitabilityFloor)return false;
+   const donor=result.pairs.find(p=>p.id===row.pairId);if(!donor)return false;
+   const donorA=shoeEngineAssessment(donor,plan,{rehab:Boolean(row.rehab)}),quality=shoeEngineIsQualitySpecific(plan,{rehab:Boolean(row.rehab)}),maxLoss=quality?3:12;
+   return donorA.score-a.score<=maxLoss+1e-6;
+  }).map(row=>{
+   const plan=plans.get(row.planId),donor=result.pairs.find(p=>p.id===row.pairId);
+   const to=shoeEngineAssessment(pair,plan,{rehab:Boolean(row.rehab)}).score,from=shoeEngineAssessment(donor,plan,{rehab:Boolean(row.rehab)}).score;
+   return{row,donor,loss:from-to,importance:shoeEngineSessionImportance(plan,{rehab:Boolean(row.rehab)})};
+  }).sort((a,b)=>Number(a.donor.owned)-Number(b.donor.owned)||a.loss-b.loss||a.importance-b.importance||a.row.date.localeCompare(b.row.date)||a.row.planId.localeCompare(b.row.planId));
+
+  for(const c of candidates){
+   if(early.length>=2&&earlyKm+1e-6>=targetKm)break;
+   if(shoeEngineProjectedKm(pair)+(Number(c.row.km)||0)>Number(pair.retireKm)+1e-6)continue;
+   if(!shoeEngineMoveAssignment(c.row,pair,result.pairs))continue;
+   c.row.rotationCompromise=true;
+   c.row.why=`Professional-coach entry activation: ${lifecyclePairLabel(pair)} is required this early by hard rotation continuity, so it receives a meaningful appropriate session instead of sitting largely unused after purchase.`;
+   early.push(c.row);earlyKm+=Number(c.row.km)||0;changed=true;
+  }
+  if(changed){
+   result.repairLog=result.repairLog||[];
+   result.repairLog.push({code:'meaningful-future-entry',pairId:pair.id,entry:first,first28Km:earlyKm,targetKm});
+  }
+ }
+ return changed;
+}
+
+function shoeEngineGlobalPortfolioPrune(result,manual){
+ // Final professional-coach portfolio challenge:
+ // remove each future TRAINING pair in turn and rebuild every movable
+ // training/rehab assignment across the complete horizon. A pair survives only
+ // when the remaining physical portfolio cannot satisfy the same hard safety,
+ // lifecycle, continuity and Race Day constraints.
+ const protectedRow=row=>row.runnerOverride||manual.has(row.planId)||row.raceFamiliarisation||row.raceDayAssignment||/^Race Day$/i.test(String(row.type||''))||row.pairId===result.racePair?.id;
+ const signature=r=>JSON.stringify({
+  pairs:(r.pairs||[]).filter(p=>!p.owned&&p.role!=='race').map(p=>p.id).sort(),
+  a:(r.assignments||[]).map(x=>[x.planId,x.pairId]).sort((a,b)=>String(a[0]).localeCompare(String(b[0])))
+ });
+ const clone=source=>{
+  const c=JSON.parse(JSON.stringify(source)),raceId=source.racePair?.id||null;
+  c.racePair=raceId?c.pairs.find(p=>p.id===raceId)||null:null;
+  return c;
+ };
+ const commit=(target,trial)=>{
+  const raceId=trial.racePair?.id||null;
+  target.pairs=trial.pairs;target.assignments=trial.assignments;target.purchases=trial.purchases;target.events=trial.events;
+  target.racePair=raceId?target.pairs.find(p=>p.id===raceId)||null:null;
+  target.raceWindow=trial.raceWindow;target.repairLog=trial.repairLog||target.repairLog||[];
+ };
+ let changed=false,guard=0;
+ const prunePassLimit=(result.assignments||[]).some(r=>r.rehab)?1:Math.max(6,(result.pairs||[]).length*2);
+ while(guard++<prunePassLimit){
+  const candidates=result.pairs.filter(p=>!p.owned&&p.role!=='race'&&p.id!==result.racePair?.id)
+   .map(p=>({p,km:(p.assignments||[]).reduce((n,a)=>n+(Number(a.km)||0),0),entry:shoePlannerEntryDate(p)||''}))
+   .sort((a,b)=>a.km-b.km||String(b.entry).localeCompare(String(a.entry))||a.p.id.localeCompare(b.p.id));
+  let removedThisPass=false;
+  for(const c of candidates){
+   const pair=c.p,trial=clone(result),raceId=trial.racePair?.id||null;
+   trial.pairs=trial.pairs.filter(p=>p.id!==pair.id);
+   trial.purchases=(trial.purchases||[]).filter(x=>x.pairId!==pair.id);
+   trial.events=(trial.events||[]).filter(x=>x.pairId!==pair.id);
+   // During the counterfactual search, remaining future training pairs may move
+   // earlier. Their real purchase date is canonicalised back to first positive
+   // use after the complete assignment has been solved.
+   for(const p of trial.pairs){
+    if(!p.owned&&p.role!=='race'){
+     p.plannedEntryDate=trial.now;p.availableDate=trial.now;p.purchaseDate=trial.now;
+    }
+   }
+   // Challenge the complete use of THIS purchase across the whole horizon.
+   // Other assignments stay fixed, so their already-consumed lifecycle is part
+   // of the feasibility test. This is both stricter and dramatically faster than
+   // re-solving every shoe assignment in the programme.
+   const movable=trial.assignments.filter(row=>!protectedRow(row)&&row.pairId===pair.id);
+   if(!movable.length)continue;
+   const beam=shoeEngineBeamOptimizeRows(trial,movable,{apply:true,reason:'Global coach portfolio minimisation'});
+   if(!beam.feasible)continue;
+   // The removed pair no longer exists; all movable rows must now resolve to
+   // surviving physical pairs.
+   if(trial.assignments.some(r=>r.pairId===pair.id))continue;
+   shoeEngineCanonicalizePhysicalEntryDates(trial);
+   // Preserve hard two-pair continuity by redistributing to the remaining
+   // portfolio first; if that requires adding a replacement, no net reduction
+   // was achieved and the removal is rejected below.
+   shoeEngineGuaranteeTwoServiceablePairs(trial,manual);
+   shoeEngineCanonicalizePhysicalEntryDates(trial);
+   if(raceId)trial.racePair=trial.pairs.find(p=>p.id===raceId)||null;
+   if(trial.racePair&&!shoeEngineFinalizeRaceDay(trial))continue;
+   const hard=shoeEngineValidation(trial);
+   if(hard.length)continue;
+   const beforeCount=result.pairs.filter(p=>!p.owned&&p.role!=='race'&&p.id!==result.racePair?.id).length;
+   const afterCount=trial.pairs.filter(p=>!p.owned&&p.role!=='race'&&p.id!==trial.racePair?.id).length;
+   if(afterCount>=beforeCount)continue;
+   trial.repairLog=trial.repairLog||[];
+   trial.repairLog.push({code:'global-portfolio-prune',removedPairId:pair.id,beforeTrainingPurchases:beforeCount,afterTrainingPurchases:afterCount,statesExplored:beam.statesExplored});
+   commit(result,trial);changed=true;removedThisPass=true;break;
+  }
+  if(!removedThisPass)break;
+ }
+ return changed;
+}
+
 function shoeEngineCanonicalFinalizePortfolio(result,manual,weeks){
  // Soft objectives may redistribute only.
  shoeEngineRepairQualitySessionGuard(result,result.allSessions,manual);
@@ -8432,7 +8569,7 @@ function shoeEngineCanonicalFinalizePortfolio(result,manual,weeks){
 function shoeEngineBuildRehabSessions(now,raceDate){const injury=(state.injuries||[]).find(x=>x.id===state.activeInjuryPlanId);if(!injury)return[];const progress=injuryPrediction(injury),rehabEnd=[raceDate,progress?.windowEnd||raceDate].filter(Boolean).sort()[0],rows=[];for(let d=new Date(dte(now).getTime()+DAY),guard=0;d<=dte(rehabEnd)&&guard<120;d=new Date(d.getTime()+DAY),guard++){const date=iso(d),day=rehabCalendarDay(injury,progress,date,rehabPlanDayIndex(injury,date));if(!rehabDayNeedsShoe(day))continue;const exp=rehabExpectedDistance(day),km=Math.max(0,Number(exp.totalKm)||0);if(km<=0)continue;rows.push({id:`rehab-shoe-${injury.id}-${date}`,date,type:'Rehab recovery',distance:km,surface:'road',rehab:true,walkMinutes:exp.walkMinutes,runMinutes:exp.runMinutes,importance:shoeEngineSessionImportance({type:'Rehab recovery',distance:km,runMinutes:exp.runMinutes},{rehab:true}),injuryId:injury.id})}return rows}
 
 const SHOE_PLAN_SNAPSHOT_VERSION=2;
-const SHOE_ENGINE_CACHE_VERSION='15.3.1-50301-whole-horizon-coach-r2';
+const SHOE_ENGINE_CACHE_VERSION='15.4.0-50400-global-portfolio-coach-r1';
 function shoeStableSerialize(value){
  if(value===null||typeof value!=='object')return JSON.stringify(value);
  if(Array.isArray(value))return'['+value.map(shoeStableSerialize).join(',')+']';
@@ -8507,7 +8644,7 @@ function freshShoeLifecyclePlan(){
   racePair:null,raceWindow:null,
   catalogueSource:'offline',catalogueVersion:OFFLINE_ASICS_CATALOGUE_VERSION,
   footMechanics:runnerFootMechanics(),
-  engine:'v15.3.1-whole-horizon-coach-fixed-point'
+  engine:'v15.4.0-global-portfolio-coach'
  };
  shoeEngineCanonicalFinalizePortfolio(result,manual,weeks);
 
@@ -8592,25 +8729,25 @@ function freshShoeLifecyclePlan(){
    result.validationIssues=shoeEngineValidation(result);
   }
  }
- // FINAL coach-equivalent purchase-timing fixed point. Portfolio minimisation can
- // redistribute sessions back onto an early future pair, recreating exactly the
- // buy-now / sit-dormant pattern that the timing pass had just removed. Therefore
- // timing and portfolio minimisation are solved together until neither changes.
- let portfolioReduced=false,timingFixedPointChanged=false,coachTimingGuard=0;
- while(coachTimingGuard++<Math.max(8,result.pairs.length*3+2)){
+ // FINAL coach-equivalent portfolio fixed point.
+ // Purchase timing and number of future pairs are solved together. A plan is not
+ // publishable merely because every local handover is valid; every surviving
+ // training purchase must also survive a complete whole-horizon removal challenge.
+ let portfolioReduced=false,timingFixedPointChanged=false,globalPruned=false,coachTimingGuard=0;
+ while(coachTimingGuard++<6){
   const beforeSig=JSON.stringify({
    a:(result.assignments||[]).map(x=>[x.planId,x.pairId,x.date]),
    p:(result.purchases||[]).map(x=>[x.pairId,x.purchaseDate,x.firstUseDate])
   });
   const timingChanged=shoeEngineDelayDormantFutureEntries(result,manual);
   shoeEngineCanonicalizePhysicalEntryDates(result);
-  const before=result.pairs.filter(x=>!x.owned&&x.assignments?.length).length;
+  const before=result.pairs.filter(x=>!x.owned&&x.role!=='race'&&x.assignments?.length).length;
+  const pruned=shoeEngineGlobalPortfolioPrune(result,manual);
+  globalPruned=globalPruned||pruned;
   shoeEngineMinimizeFuturePortfolio(result,manual);
   shoeEngineCounterfactualCritic(result,manual);
-  const after=result.pairs.filter(x=>!x.owned&&x.assignments?.length).length;
+  const after=result.pairs.filter(x=>!x.owned&&x.role!=='race'&&x.assignments?.length).length;
   if(after<before)portfolioReduced=true;
-  // A minimisation/critic pass may have recreated sparse early use. Repair again
-  // before testing convergence, so the published ledger itself is the oracle.
   const timingChangedAfter=shoeEngineDelayDormantFutureEntries(result,manual);
   shoeEngineCanonicalizePhysicalEntryDates(result);
   timingFixedPointChanged=timingFixedPointChanged||timingChanged||timingChangedAfter;
@@ -8620,7 +8757,15 @@ function freshShoeLifecyclePlan(){
   });
   if(afterSig===beforeSig)break;
  }
- if(portfolioReduced||timingFixedPointChanged){
+ // One bounded post-convergence activation pass: if continuity genuinely forced
+ // an early purchase, give it real appropriate work immediately. This runs once,
+ // outside the portfolio fixed point, so it cannot create optimiser churn.
+ const postActivated=shoeEngineEnsureMeaningfulFutureEntry(result,manual);
+ if(postActivated){
+  shoeEngineGuaranteeTwoServiceablePairs(result,manual);
+  shoeEngineCanonicalizePhysicalEntryDates(result);
+ }
+ if(portfolioReduced||timingFixedPointChanged||globalPruned||postActivated){
   result.pairs.forEach(pair=>lifecycleRebuildPoints(pair,now,raceDate,fixed));
   shoeEngineEnsureCanonicalRetirementEvents(result);
  }
