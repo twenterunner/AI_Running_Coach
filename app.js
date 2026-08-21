@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '15.4.3';
-  const BUILD = 50403;
+  const VERSION = '15.4.4';
+  const BUILD = 50404;
   const SCHEMA = 10400;
   const PRIMARY_STORAGE_KEY = 'arc_v10400_web';
   const MIRROR_STORAGE_KEY = 'arc_v10400_mirror';
@@ -8282,6 +8282,81 @@ function shoeEngineCoachStaggerOwnedTransitions(result,manual){
  return changed;
 }
 
+
+function shoeEngineCoachStageReplacementChain(result,manual){
+ // Whole-portfolio transition rule. A coach-quality handover is staged:
+ //   owned A -> replacement 1, while owned B remains in service -> replacement 2.
+ // A solution that merely changes BUY labels but leaves both owned pairs ending
+ // together is rejected.
+ const plans=new Map((result.allSessions||[]).map(x=>[x.id,x]));
+ const raceId=result.racePair?.id||null;
+ const entry=p=>shoePlannerEntryDate(p)||result.now;
+ const rowsOf=p=>(p.assignments||[]).filter(a=>Number(a.km)>0&&!a.raceDayAssignment&&!a.raceFamiliarisation).slice().sort((a,b)=>a.date.localeCompare(b.date)||String(a.planId).localeCompare(String(b.planId)));
+ const lastUse=p=>rowsOf(p).at(-1)?.date||null;
+ const broad=p=>['daily','easy','recovery','steady','long','tempo'].filter(r=>lifecycleRoles(p.profile).has(r)).length>=3;
+ const cloneResult=()=>{const c=JSON.parse(JSON.stringify(result)),by=new Map(c.pairs.map(p=>[p.id,p]));for(const p of c.pairs)p.assignments=[];for(const row of c.assignments||[]){const q=by.get(row.pairId);if(q)q.assignments.push(row)}if(raceId)c.racePair=by.get(raceId)||null;return c};
+ const commit=trial=>{const rid=trial.racePair?.id||null;result.pairs=trial.pairs;result.assignments=trial.assignments;result.purchases=trial.purchases;result.events=trial.events;result.racePair=rid?result.pairs.find(p=>p.id===rid)||null:null;result.raceWindow=trial.raceWindow;result.repairLog=trial.repairLog||result.repairLog||[]};
+ const suitable=(pair,row,fromPair,maxLoss)=>{const plan=plans.get(row.planId)||{id:row.planId,date:row.date,type:row.type,distance:row.km,surface:row.surface||'road'},to=shoeEngineAssessment(pair,plan,{rehab:Boolean(row.rehab)}).score,from=fromPair?shoeEngineAssessment(fromPair,plan,{rehab:Boolean(row.rehab)}).score:to,quality=shoeEngineIsQualitySpecific(plan,{rehab:Boolean(row.rehab)});return to>=SESSION_SHOE_RULES.safeSuitabilityFloor&&from-to<=(quality?Math.min(4,maxLoss):maxLoss)+1e-6};
+ let changed=false,guard=0;
+ while(guard++<8){
+  const future=result.pairs.filter(p=>!p.owned&&p.role!=='race'&&p.id!==raceId&&rowsOf(p).length).slice().sort((a,b)=>String(entry(a)).localeCompare(String(entry(b)))||a.id.localeCompare(b.id));
+  const owned=result.pairs.filter(p=>p.owned&&p.role!=='race'&&p.shoe?.status!=='retired'&&broad(p)&&rowsOf(p).length).slice().sort((a,b)=>((Number(a.currentKm)||0)/Math.max(1,Number(a.retireKm)))-((Number(b.currentKm)||0)/Math.max(1,Number(b.retireKm)))||a.id.localeCompare(b.id));
+  if(future.length<2||owned.length<2)break;
+  let applied=false;
+  for(let i=1;i<future.length&&!applied;i++){
+   const first=future[i-1],second=future[i],firstEntry=entry(first),secondEntry=entry(second),originalGap=(dte(secondEntry)-dte(firstEntry))/DAY;
+   if(originalGap>=21)continue;
+   const preserve=owned[0],lead=owned.at(-1); // fresher pair persists; more-used pair transitions first
+   for(const targetGap of [35,28,21]){
+    const targetDate=iso(new Date(dte(firstEntry).getTime()+targetGap*DAY));if(targetDate>=result.raceDate||targetDate<=secondEntry)continue;
+    const trial=cloneResult(),by=new Map(trial.pairs.map(p=>[p.id,p])),tFirst=by.get(first.id),tSecond=by.get(second.id),tPreserve=by.get(preserve.id),tLead=by.get(lead.id);if(!tFirst||!tSecond||!tPreserve||!tLead)continue;
+    for(const p of trial.pairs.filter(p=>p.owned&&p.shoe?.status!=='retired')){p.plannedRetireDate=null;p.projectedRetireDate=null;p.isProjectedRetired=false;p.remainsActiveAfterForecast=true}
+    const earlySecond=rowsOf(tSecond).filter(r=>String(r.date)<String(targetDate)&&!r.runnerOverride&&!manual.has(r.planId));if(!earlySecond.length)continue;
+    let feasible=true,movedLate=0,movedEarly=0;
+    for(const late of earlySecond){
+     let plan=plans.get(late.planId)||{id:late.planId,date:late.date,type:late.type,distance:late.km,surface:late.surface||'road'};
+     const presLastNow=lastUse(tPreserve),leadLastNow=lastUse(tLead),ownedGapNow=presLastNow&&leadLastNow?(dte(presLastNow)-dte(leadLastNow))/DAY:0;
+     // Once the owned transition is visibly staged, remaining early work may move
+     // to the first replacement. This prevents the preserved owned pair from being
+     // overloaded merely to delay Buy 2.
+     if(ownedGapNow>=14&&suitable(tFirst,late,tSecond,12)&&shoeEngineCanCover(tFirst,plan,{rehab:Boolean(late.rehab),allowRacePair:false,ignorePlannedRetirement:true})){
+      if(!shoeEngineMoveAssignment(late,tFirst,trial.pairs,{ignorePlannedRetirement:true})){feasible=false;break}movedLate++;continue;
+     }
+     if(!suitable(tPreserve,late,tSecond,12)){feasible=false;break}
+     if(!shoeEngineCanCover(tPreserve,plan,{rehab:Boolean(late.rehab),allowRacePair:false,ignorePlannedRetirement:true})){
+      // Free physical capacity in the fresher owned pair by introducing the first
+      // replacement slightly earlier for an appropriate whole session.
+      const need=Math.max(0,(Number(late.km)||0)-shoeEngineRemainingKm(tPreserve));
+      let freed=0;
+      const earliest=iso(new Date(dte(firstEntry).getTime()-21*DAY));
+      const donors=rowsOf(tPreserve).filter(r=>String(r.date)>=String(earliest)&&String(r.date)<String(firstEntry)&&!r.runnerOverride&&!manual.has(r.planId)).slice().sort((a,b)=>b.date.localeCompare(a.date)||String(a.planId).localeCompare(String(b.planId)));
+      for(const oldRow of donors){if(freed+1e-6>=need)break;if(!suitable(tFirst,oldRow,tPreserve,12))continue;const oldEntry=entry(tFirst);tFirst.plannedEntryDate=oldRow.date;tFirst.availableDate=oldRow.date;tFirst.purchaseDate=oldRow.date;if(shoeEngineMoveAssignment(oldRow,tFirst,trial.pairs,{ignorePlannedRetirement:true})){freed+=Number(oldRow.km)||0;movedEarly++}else{tFirst.plannedEntryDate=oldEntry;tFirst.availableDate=oldEntry;tFirst.purchaseDate=oldEntry}}
+      if(freed+1e-6<need){
+       // If the owned pair cannot take more without compromising lifecycle, use
+       // the already-active first replacement rather than forcing a simultaneous
+       // second purchase.
+       if(suitable(tFirst,late,tSecond,12)&&shoeEngineCanCover(tFirst,plan,{rehab:Boolean(late.rehab),allowRacePair:false,ignorePlannedRetirement:true})&&shoeEngineMoveAssignment(late,tFirst,trial.pairs,{ignorePlannedRetirement:true})){movedLate++;continue}
+       feasible=false;break;
+      }
+     }
+     if(!shoeEngineMoveAssignment(late,tPreserve,trial.pairs,{ignorePlannedRetirement:true})){feasible=false;break}movedLate++;
+    }
+    if(!feasible)continue;
+    shoeEngineCanonicalizePhysicalEntryDates(trial);
+    const nFirst=trial.pairs.find(p=>p.id===first.id),nSecond=trial.pairs.find(p=>p.id===second.id),nPres=trial.pairs.find(p=>p.id===preserve.id),nLead=trial.pairs.find(p=>p.id===lead.id),newFirst=nFirst?entry(nFirst):null,newSecond=nSecond?entry(nSecond):null,presLast=nPres?lastUse(nPres):null,leadLast=nLead?lastUse(nLead):null;
+    if(!newFirst||!newSecond||String(newSecond)<String(targetDate)||!presLast||!leadLast)continue;
+    const purchaseGap=(dte(newSecond)-dte(newFirst))/DAY,ownedGap=(dte(presLast)-dte(leadLast))/DAY;
+    if(purchaseGap<21||ownedGap<14)continue;
+    shoeEngineApplyCanonicalRotationExits(trial);const hard=shoeEngineValidation(trial);if(hard.length)continue;
+    trial.repairLog=trial.repairLog||[];trial.repairLog.push({code:'coach-stage-replacement-chain',firstPairId:first.id,delayedPairId:second.id,preservedOwnedPairId:preserve.id,transitionedOwnedPairId:lead.id,oldGapDays:originalGap,newPurchaseGapDays:purchaseGap,ownedExitGapDays:ownedGap,firstEntry:newFirst,secondEntry:newSecond,preservedOwnedLastUse:presLast,movedEarlySessions:movedEarly,movedLaterSessions:movedLate});
+    commit(trial);changed=true;applied=true;break;
+   }
+  }
+  if(!applied)break;
+ }
+ return changed;
+}
+
 function shoeEngineLifecycleFixedPoint(result,manual){
  let changed=false;
  for(let pass=0;pass<8;pass++){
@@ -8633,7 +8708,7 @@ function shoeEngineCanonicalFinalizePortfolio(result,manual,weeks){
 function shoeEngineBuildRehabSessions(now,raceDate){const injury=(state.injuries||[]).find(x=>x.id===state.activeInjuryPlanId);if(!injury)return[];const progress=injuryPrediction(injury),rehabEnd=[raceDate,progress?.windowEnd||raceDate].filter(Boolean).sort()[0],rows=[];for(let d=new Date(dte(now).getTime()+DAY),guard=0;d<=dte(rehabEnd)&&guard<120;d=new Date(d.getTime()+DAY),guard++){const date=iso(d),day=rehabCalendarDay(injury,progress,date,rehabPlanDayIndex(injury,date));if(!rehabDayNeedsShoe(day))continue;const exp=rehabExpectedDistance(day),km=Math.max(0,Number(exp.totalKm)||0);if(km<=0)continue;rows.push({id:`rehab-shoe-${injury.id}-${date}`,date,type:'Rehab recovery',distance:km,surface:'road',rehab:true,walkMinutes:exp.walkMinutes,runMinutes:exp.runMinutes,importance:shoeEngineSessionImportance({type:'Rehab recovery',distance:km,runMinutes:exp.runMinutes},{rehab:true}),injuryId:injury.id})}return rows}
 
 const SHOE_PLAN_SNAPSHOT_VERSION=2;
-const SHOE_ENGINE_CACHE_VERSION='15.4.3-50403-coach-stagger-r1';
+const SHOE_ENGINE_CACHE_VERSION='15.4.4-50404-staged-replacement-chain-r1';
 function shoeStableSerialize(value){
  if(value===null||typeof value!=='object')return JSON.stringify(value);
  if(Array.isArray(value))return'['+value.map(shoeStableSerialize).join(',')+']';
@@ -8708,7 +8783,7 @@ function freshShoeLifecyclePlan(){
   racePair:null,raceWindow:null,
   catalogueSource:'offline',catalogueVersion:OFFLINE_ASICS_CATALOGUE_VERSION,
   footMechanics:runnerFootMechanics(),
-  engine:'v15.4.2-global-portfolio-coach'
+  engine:'v15.4.4-staged-replacement-chain'
  };
  shoeEngineCanonicalFinalizePortfolio(result,manual,weeks);
 
@@ -8846,7 +8921,16 @@ function freshShoeLifecyclePlan(){
   shoeEngineGuaranteeTwoServiceablePairs(result,manual);
   shoeEngineCanonicalizePhysicalEntryDates(result);
  }
- if(portfolioReduced||timingFixedPointChanged||globalPruned||postActivated||finalDormancyRepaired||transitionStaggered){
+ // The owned-only pass above cannot change future purchase boundaries. Challenge
+ // the actual replacement chain as the final soft decision before publication.
+ const replacementChainStaged=shoeEngineCoachStageReplacementChain(result,manual);
+ if(replacementChainStaged){
+  shoeEngineCanonicalizePhysicalEntryDates(result);
+  shoeEngineApplyCanonicalRotationExits(result);
+  shoeEngineGuaranteeTwoServiceablePairs(result,manual);
+  shoeEngineCanonicalizePhysicalEntryDates(result);
+ }
+ if(portfolioReduced||timingFixedPointChanged||globalPruned||postActivated||finalDormancyRepaired||transitionStaggered||replacementChainStaged){
   result.pairs.forEach(pair=>lifecycleRebuildPoints(pair,now,raceDate,fixed));
   shoeEngineEnsureCanonicalRetirementEvents(result);
  }
