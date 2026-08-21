@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '15.1.3';
-  const BUILD = 50103;
+  const VERSION = '15.1.4';
+  const BUILD = 50104;
   const SCHEMA = 10400;
   const PRIMARY_STORAGE_KEY = 'arc_v10400_web';
   const MIRROR_STORAGE_KEY = 'arc_v10400_mirror';
@@ -8837,40 +8837,42 @@ function positionMobileNavigation(){
  if(!(window.matchMedia?.('(max-width: 900px)').matches||window.matchMedia?.('(pointer: coarse)').matches))return;
  const nav=$('nav'),more=$('moreNav');if(!nav)return;
  const vv=window.visualViewport;
- const top=vv?Number(vv.offsetTop)||0:0;
- const height=vv?Number(vv.height)||window.innerHeight:window.innerHeight;
  const left=vv?Number(vv.offsetLeft)||0:0;
  const width=vv?Number(vv.width)||window.innerWidth:window.innerWidth;
- const navHeight=Math.max(82,Math.round(nav.getBoundingClientRect().height||88));
- const navTop=Math.max(top,Math.round(top+height-navHeight));
 
+ // Fixed bottom is authoritative. Never calculate a top coordinate for the nav:
+ // doing so can leave a stale gap when Android browser chrome/orientation changes.
  nav.style.setProperty('position','fixed','important');
  nav.style.setProperty('left',`${Math.round(left)}px`,'important');
  nav.style.setProperty('right','auto','important');
- nav.style.setProperty('top',`${navTop}px`,'important');
- nav.style.setProperty('bottom','auto','important');
+ nav.style.setProperty('top','auto','important');
+ nav.style.setProperty('bottom','0px','important');
  nav.style.setProperty('width',`${Math.round(width)}px`,'important');
  nav.style.setProperty('max-width','none','important');
  nav.style.setProperty('margin','0','important');
  nav.style.setProperty('transform','none','important');
 
  if(more&&!more.classList.contains('hidden')){
-  const menuWidth=Math.min(360,Math.max(260,width-16));
-  const menuLeft=Math.max(left+8,left+width-menuWidth-8);
-  const maxHeight=Math.max(160,Math.round(navTop-top-16));
-  more.style.setProperty('position','fixed','important');
-  more.style.setProperty('left',`${Math.round(menuLeft)}px`,'important');
-  more.style.setProperty('right','auto','important');
-  more.style.setProperty('width',`${Math.round(menuWidth)}px`,'important');
-  more.style.setProperty('max-width',`${Math.round(width-16)}px`,'important');
-  more.style.setProperty('bottom','auto','important');
-  more.style.setProperty('max-height',`${maxHeight}px`,'important');
-  more.style.setProperty('overflow-y','auto','important');
-  more.style.setProperty('top',`${Math.round(top+8)}px`,'important');
   requestAnimationFrame(()=>{
    if(more.classList.contains('hidden'))return;
+   const navRect=nav.getBoundingClientRect();
+   const visibleTop=vv?Number(vv.offsetTop)||0:0;
+   const visibleHeight=vv?Number(vv.height)||window.innerHeight:window.innerHeight;
+   const visibleBottom=visibleTop+visibleHeight;
+   const anchorTop=Math.min(navRect.top,visibleBottom);
+   const menuWidth=Math.min(360,Math.max(260,width-16));
+   const menuLeft=Math.max(left+8,left+width-menuWidth-8);
+   const maxHeight=Math.max(120,Math.round(anchorTop-visibleTop-16));
    const mh=Math.min(more.scrollHeight,maxHeight);
-   more.style.setProperty('top',`${Math.max(top+8,Math.round(navTop-mh-8))}px`,'important');
+   more.style.setProperty('position','fixed','important');
+   more.style.setProperty('left',`${Math.round(menuLeft)}px`,'important');
+   more.style.setProperty('right','auto','important');
+   more.style.setProperty('width',`${Math.round(menuWidth)}px`,'important');
+   more.style.setProperty('max-width',`${Math.round(width-16)}px`,'important');
+   more.style.setProperty('bottom','auto','important');
+   more.style.setProperty('max-height',`${maxHeight}px`,'important');
+   more.style.setProperty('overflow-y','auto','important');
+   more.style.setProperty('top',`${Math.max(visibleTop+8,Math.round(anchorTop-mh-8))}px`,'important');
   });
  }
 }
