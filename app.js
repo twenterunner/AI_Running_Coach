@@ -8733,7 +8733,7 @@ function shoeEngineCanonicalFinalizePortfolio(result,manual,weeks){
 function shoeEngineBuildRehabSessions(now,raceDate){const injury=(state.injuries||[]).find(x=>x.id===state.activeInjuryPlanId);if(!injury)return[];const progress=injuryPrediction(injury),rehabEnd=[raceDate,progress?.windowEnd||raceDate].filter(Boolean).sort()[0],rows=[];for(let d=new Date(dte(now).getTime()+DAY),guard=0;d<=dte(rehabEnd)&&guard<120;d=new Date(d.getTime()+DAY),guard++){const date=iso(d),day=rehabCalendarDay(injury,progress,date,rehabPlanDayIndex(injury,date));if(!rehabDayNeedsShoe(day))continue;const exp=rehabExpectedDistance(day),km=Math.max(0,Number(exp.totalKm)||0);if(km<=0)continue;rows.push({id:`rehab-shoe-${injury.id}-${date}`,date,type:'Rehab recovery',distance:km,surface:'road',rehab:true,walkMinutes:exp.walkMinutes,runMinutes:exp.runMinutes,importance:shoeEngineSessionImportance({type:'Rehab recovery',distance:km,runMinutes:exp.runMinutes},{rehab:true}),injuryId:injury.id})}return rows}
 
 const SHOE_PLAN_SNAPSHOT_VERSION=2;
-const SHOE_ENGINE_CACHE_VERSION='15.4.6-50406-three-way-lifecycle-staging-r1';
+const SHOE_ENGINE_CACHE_VERSION='15.4.7-50407-retirement-markers-r1';
 function shoeStableSerialize(value){
  if(value===null||typeof value!=='object')return JSON.stringify(value);
  if(Array.isArray(value))return'['+value.map(shoeStableSerialize).join(',')+']';
@@ -8808,7 +8808,7 @@ function freshShoeLifecyclePlan(){
   racePair:null,raceWindow:null,
   catalogueSource:'offline',catalogueVersion:OFFLINE_ASICS_CATALOGUE_VERSION,
   footMechanics:runnerFootMechanics(),
-  engine:'v15.4.6-three-way-lifecycle-staging'
+  engine:'v15.4.7-retirement-markers'
  };
  shoeEngineCanonicalFinalizePortfolio(result,manual,weeks);
 
@@ -9020,10 +9020,28 @@ function shoeGraphRetirementPoint(pair,life,forecastPoints){
  const pts=(forecastPoints||shoeGraphForecastPoints(pair,life)).slice()
   .sort((a,b)=>String(a.date).localeCompare(String(b.date)));
  const physical=shoeEnginePhysicalRetirementAssessment(pair,life);
- if(!physical.retired||!physical.date)return null;
- const sameOrBefore=pts.filter(p=>String(p.date)<=String(physical.date));
+ // Graph acceptance rule: every non-race physical pair that has a final planned
+ // positive-use date before Race Day gets a visible terminal X.  The lifecycle
+ // engine can intentionally leave a few unusable kilometres below the numeric
+ // ceiling because the next whole suitable session will not fit; the chart must
+ // still show where that physical pair leaves the programme instead of silently
+ // ending/flattening the curve.  Prefer the canonical physical-retirement date
+ // when available, otherwise use the final positive-use assignment.
+ let markerDate=physical.retired&&physical.date?physical.date:null;
+ let markerReason=physical.reason||null;
+ if(!markerDate&&pair!==life.racePair&&pair.role!=='race'){
+  const positive=(pair.assignments||[]).filter(a=>Number(a.km)>0&&String(a.date)<String(life.raceDate))
+   .slice().sort((a,b)=>String(a.date).localeCompare(String(b.date))||String(a.planId||'').localeCompare(String(b.planId||'')));
+  const finalUse=positive.at(-1)||null;
+  if(finalUse&&String(finalUse.date)<String(life.raceDate)){
+   markerDate=finalUse.date;
+   markerReason='Final planned use / lifecycle exit.';
+  }
+ }
+ if(!markerDate)return null;
+ const sameOrBefore=pts.filter(p=>String(p.date)<=String(markerDate));
  const last=sameOrBefore.at(-1)||pts.at(-1);
- if(last)return{date:physical.date,km:Number(last.km),reason:physical.reason};
+ if(last)return{date:markerDate,km:Number(last.km),reason:markerReason};
  if(pair.owned&&pair.shoe?.status==='retired'){
   const actual=shoeActualProgrammeSeries(pair.shoe,state.setup?.planStart||life.now,life.now);
   return actual.length?{...actual.at(-1),reason:physical.reason}:null;
