@@ -1,0 +1,34 @@
+AI Running Coach v15.1.1 · build 50101
+
+SHOE GRAPH + MOBILE NAVIGATION REVISIT
+
+SHOE GRAPH
+- The graph now uses one retirement marker only: × RETIRE.
+- Removed × FINAL USE completely.
+- Removed × HANDOVER completely.
+- A curve ending because the optimizer simply stops assigning that shoe is not a retirement and gets no X.
+- Retirement is now separated from "not used again":
+  * runner explicitly retired the shoe; or
+  * projected mileage reaches the physical lifecycle ceiling; or
+  * the pair has later suitable programme sessions but insufficient remaining lifecycle to cover even the shortest suitable whole session.
+- If there are no later suitable sessions for that shoe category, the pair remains serviceable and no retirement event is manufactured.
+- Graph X positions come only from the canonical physical retirement date in the final ledger.
+- Graph note now explicitly states: × = physical retirement.
+
+BOTTOM NAVIGATION
+- Mobile bottom navigation is fixed to viewport bottom: 0.
+- Full viewport width (100vw), left: 0, right: 0, no max-width, no floating rounded outer container.
+- Main content gets explicit bottom clearance so content is not obscured.
+- More submenu is fixed above the bottom nav, constrained to the visible viewport width and height, scrollable when needed, and kept on-screen.
+- Safe-area bottom inset is retained for devices that need it.
+
+REGRESSION / DATA
+- v15.1 deterministic beam-search + counterfactual critic retained.
+- v15.0.6 forced service-worker update mechanism retained.
+- Schema remains 10400.
+- No migration.
+- No training-plan, prediction, recovery, rehab progression, FIT/CSV interpretation or mileage-credit logic changed.
+- app.js syntax PASS.
+- service-worker.js syntax PASS.
+- v15.1.1 targeted regression suite: 14/14 PASS.
+- v15.1 fixed-seed 500-scenario deterministic optimizer stress retained/passes.

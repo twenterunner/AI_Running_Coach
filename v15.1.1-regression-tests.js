@@ -1,0 +1,24 @@
+'use strict';
+const fs=require('fs'),assert=require('assert'),cp=require('child_process');
+const dir=__dirname;
+const app=fs.readFileSync(dir+'/app.js','utf8');
+const html=fs.readFileSync(dir+'/index.html','utf8');
+const manifest=JSON.parse(fs.readFileSync(dir+'/manifest.webmanifest','utf8'));
+const sw=fs.readFileSync(dir+'/service-worker.js','utf8');
+function ok(name,fn){try{fn();console.log('PASS',name);return 1}catch(e){console.error('FAIL',name,'-',e.message);process.exitCode=1;return 0}}
+let n=0;
+n+=ok('app syntax',()=>cp.execFileSync(process.execPath,['--check',dir+'/app.js']));
+n+=ok('service worker syntax',()=>cp.execFileSync(process.execPath,['--check',dir+'/service-worker.js']));
+n+=ok('version consistency',()=>{assert(app.includes("const VERSION = '15.1.1'"));assert(app.includes('const BUILD = 50101'));assert(html.includes('v15.1.1 · build 50101'));assert.equal(manifest.version,'15.1.1');assert.equal(manifest.build,50101);assert(sw.includes('v15.1.1 · build 50101'))});
+n+=ok('graph contains retire X only',()=>{assert(app.includes('× RETIRE'));assert(!app.includes('× HANDOVER'));assert(!app.includes('× FINAL USE'));assert(!app.includes("kind:'handover'"));assert(!app.includes("kind:'final-use'"))});
+n+=ok('retirement graph resolver has no final-use fallback',()=>{const a=app.indexOf('function shoeGraphRetirementPoint');const b=app.indexOf('function shoeNonFlatSvgSegments',a);const body=app.slice(a,b);assert(body.includes('pair.projectedRetireDate||pair.plannedRetireDate'));assert(!body.includes('successor'));assert(!body.includes('final-use'));});
+n+=ok('no false retirement when simply unused later',()=>{const a=app.indexOf('function shoeEngineEnsureCanonicalRetirementEvents');const b=app.indexOf('function shoeEngineValidation',a);const body=app.slice(a,b);assert(body.includes('compatible.length>0&&remaining+1e-6<nextCompatibleKm'));assert(body.includes('compatible.length?Math.min'));assert(body.includes('pair.projectedRetireDate=null'));});
+n+=ok('retirement still recognizes manual and lifecycle exhaustion',()=>{assert(app.includes('manualRetired||lifecycleCeilingReached||cannotCoverAnotherCompatibleWholeSession'))});
+n+=ok('graph note defines X as physical retirement',()=>assert(app.includes('× = physical retirement.')));
+n+=ok('mobile nav fixed full viewport width',()=>{assert(html.includes('position:fixed !important;'));assert(html.includes('width:100vw !important;'));assert(html.includes('left:0 !important;'));assert(html.includes('right:0 !important;'));assert(html.includes('bottom:0 !important;'));assert(html.includes('border-radius:0 !important;'))});
+n+=ok('main content clears fixed nav',()=>assert(html.includes('padding-bottom:calc(var(--mobile-nav-height) + var(--mobile-nav-safe-bottom) + 16px)')));
+n+=ok('more submenu constrained to viewport',()=>{assert(html.includes('#moreNav{'));assert(html.includes('width:min(360px, calc(100vw - 16px))'));assert(html.includes('max-height:calc(100dvh - var(--mobile-nav-height)'));assert(html.includes('overflow-y:auto !important;'))});
+n+=ok('look-ahead optimizer retained',()=>{assert(app.includes('function shoeEngineBeamOptimizeRows'));assert(app.includes('function shoeEngineCounterfactualCritic'))});
+n+=ok('schema preserved',()=>assert(app.includes('const SCHEMA = 10400;')));
+n+=ok('service worker forced update retained',()=>{assert(sw.includes('Promise.allSettled'));assert(app.includes("navigator.serviceWorker.addEventListener('controllerchange'"))});
+console.log(`V15.1.1 regression checks passed: ${n}/14`);

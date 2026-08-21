@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '15.1.0';
-  const BUILD = 50100;
+  const VERSION = '15.1.1';
+  const BUILD = 50101;
   const SCHEMA = 10400;
   const PRIMARY_STORAGE_KEY = 'arc_v10400_web';
   const MIRROR_STORAGE_KEY = 'arc_v10400_mirror';
@@ -7629,26 +7629,55 @@ function shoeEngineEnsureCanonicalRetirementEvents(result){
   if(!rows.length)continue;
   const last=rows.at(-1).date;
   pair.finalPlannedUseDate=last;
+
   const projected=shoeEngineProjectedKm(pair);
+  const remaining=Math.max(0,Number(pair.retireKm)-projected);
   const future=(result.allSessions||[]).filter(plan=>String(plan.date)>String(last)&&String(plan.date)<String(result.raceDate)&&plan.type!=='Rest'&&!/^Race Day$/i.test(String(plan.type||''))&&Number(plan.distance)>0);
   const manualRetired=Boolean(pair.owned&&pair.shoe?.status==='retired');
-  const lifecycleExhausted=projected>=Number(pair.retireKm)-1e-6;
-  const futureFeasible=future.some(plan=>{
+  const lifecycleCeilingReached=projected>=Number(pair.retireKm)-1e-6;
+
+  // "Compatible" deliberately ignores remaining lifecycle. This separates
+  // physical retirement from the benign case where the plan simply has no
+  // later session that suits this shoe category.
+  const compatible=future.filter(plan=>{
    const fit=lifecycleWorkoutFit(pair.profile,plan);
    if(fit<SESSION_SHOE_RULES.safeWorkoutFitFloor)return false;
-   const distance=Number(plan.distance)||0;
-   if(projected+distance>Number(pair.retireKm)+1e-6)return false;
-   const assessment=shoeSuitabilityAssessment(pair.profile,plan,{rehab:Boolean(plan.rehab),shoe:pair.owned?pair.shoe:null,projectedKm:projected+distance,retireKm:pair.retireKm});
+   const assessment=shoeSuitabilityAssessment(pair.profile,plan,{
+    rehab:Boolean(plan.rehab),
+    shoe:pair.owned?pair.shoe:null,
+    projectedKm:projected+(Number(plan.distance)||0),
+    retireKm:pair.retireKm
+   });
    return assessment.score>=SESSION_SHOE_RULES.safeSuitabilityFloor;
   });
-  const strandedAtFinalUse=future.length>0&&!futureFeasible;
-  if(manualRetired||lifecycleExhausted||strandedAtFinalUse){
+  const nextCompatibleKm=compatible.length?Math.min(...compatible.map(plan=>Number(plan.distance)||Infinity)):Infinity;
+  const cannotCoverAnotherCompatibleWholeSession=compatible.length>0&&remaining+1e-6<nextCompatibleKm;
+  const physicallyRetired=manualRetired||lifecycleCeilingReached||cannotCoverAnotherCompatibleWholeSession;
+
+  if(physicallyRetired){
    if(pair.projectedRetireDate!==last||pair.plannedRetireDate!==last||!pair.isProjectedRetired)changed=true;
    pair.plannedRetireDate=last;
    pair.projectedRetireDate=last;
    pair.isProjectedRetired=true;
    pair.remainsActiveAfterForecast=false;
-   pair.retirementReason=manualRetired?'Runner marked the shoe retired.':lifecycleExhausted?'Physical lifecycle ceiling reached.':'No remaining suitable full programme session fits inside the pair’s physical lifecycle.';
+   pair.retirementReason=manualRetired
+    ?'Runner marked the shoe retired.'
+    :lifecycleCeilingReached
+     ?'Physical lifecycle ceiling reached.'
+     :'Remaining physical lifecycle cannot cover another suitable whole programme session.';
+  }else{
+   // A curve ending because the optimiser does not need the shoe again is not
+   // retirement. Clear only engine-derived retirement state; explicit manual
+   // retirement was handled above.
+   if(pair.isProjectedRetired||pair.projectedRetireDate||pair.plannedRetireDate){
+    pair.plannedRetireDate=null;
+    pair.projectedRetireDate=null;
+    pair.isProjectedRetired=false;
+    pair.remainsActiveAfterForecast=true;
+    pair.retirementReason=null;
+    pair.rotationExitCanonical=false;
+    changed=true;
+   }
   }
  }
  return changed;
@@ -8294,30 +8323,14 @@ function shoeGraphForecastPoints(pair,life){
 }
 function shoeGraphRetirementPoint(pair,life,forecastPoints){
  const pts=(forecastPoints||shoeGraphForecastPoints(pair,life)).slice().sort((a,b)=>String(a.date).localeCompare(String(b.date)));
- if(!pts.length)return null;
  const retirementDate=pair.projectedRetireDate||pair.plannedRetireDate||(pair.isProjectedRetired?pair.finalPlannedUseDate:null);
  if(retirementDate){
   const before=pts.filter(p=>String(p.date)<=String(retirementDate)),last=before.at(-1)||pts.at(-1);
-  return last?{date:retirementDate,km:Number(last.km),kind:'retire'}:null
+  return last?{date:retirementDate,km:Number(last.km)}:null
  }
  if(pair.owned&&pair.shoe?.status==='retired'){
   const actual=shoeActualProgrammeSeries(pair.shoe,state.setup?.planStart||life.now,life.now);
-  return actual.length?{...actual.at(-1),kind:'retire'}:null
- }
- const successor=(life.purchases||[]).filter(b=>b.role!=='race'&&b.replacesPairId===pair.id).slice().sort((a,b)=>String(a.firstUseDate||a.purchaseDate).localeCompare(String(b.firstUseDate||b.purchaseDate)))[0]||null;
- if(successor){
-  const successorDate=successor.firstUseDate||successor.purchaseDate;
-  const lastUse=(pair.assignments||[]).filter(a=>Number(a.km)>0&&String(a.date)<String(successorDate)).slice().sort((a,b)=>a.date.localeCompare(b.date)).at(-1);
-  const before=pts.filter(p=>!lastUse||String(p.date)<=String(lastUse.date)),last=before.at(-1)||pts.at(-1);
-  if(last)return{date:lastUse?.date||last.date,km:Number(last.km),kind:'handover'}
- }
- // Graph invariant: a curve may not simply disappear. If a non-race physical
- // pair's final positive-use point occurs before Race Day while it remains
- // serviceable, show that authoritative endpoint as FINAL USE. This is a visual
- // endpoint marker only; it does not retire or deactivate the physical pair.
- if(pair!==life.racePair&&pair.role!=='race'){
-  const last=pts.at(-1);
-  if(last&&String(last.date)<String(life.raceDate))return{date:last.date,km:Number(last.km),kind:'final-use'}
+  return actual.length?actual.at(-1):null
  }
  return null
 }
@@ -8346,14 +8359,19 @@ function shoeProgrammeMileageChartHtml(){
  const raceMileageMarker=life.racePair?(()=>{const km=shoeEngineRaceStartKm(life,life.racePair),col=colorById.get(life.racePair.id)||'#B58CFF',xx=x(raceDate),yy=y(km);return`<g class="shoeRaceStartMarker" style="--shoe-color:${col}"><circle cx="${xx}" cy="${yy}" r="7"/><line x1="${xx-10}" y1="${yy}" x2="${xx+10}" y2="${yy}"/><text x="${xx-10}" y="${Math.max(T+18,yy-13)}" text-anchor="end">START ${Math.round(km)} km</text></g>`})():'';
  const plottedPurchases=life.purchases.filter(p=>pairs.some(x=>x.id===p.pairId));
  const purchaseMarkers=plottedPurchases.map((buy,n)=>{const pair=pairs.find(x=>x.id===buy.pairId),date=buy.firstUseDate||buy.purchaseDate||pair.purchaseDate,xx=x(date),col=colorById.get(pair.id);return`<g class="shoeBuyTick" style="--shoe-color:${col}"><path d="M ${xx-6} ${H-B+5} L ${xx+6} ${H-B+5} L ${xx} ${H-B-7} Z"/><text x="${xx}" y="${H-B+24}" text-anchor="middle">BUY ${n+1}</text></g>`}).join('');
- const retirementMarkers=pairs.map(pair=>{const rp=shoeGraphRetirementPoint(pair,life,forecastById.get(pair.id));if(!rp||rp.date>raceDate)return'';const xx=x(rp.date),yy=y(rp.km),col=colorById.get(pair.id)||'#8FA9B8',label=rp.kind==='handover'?'× HANDOVER':rp.kind==='final-use'?'× FINAL USE':'× RETIRE';return`<g class="shoeRetireTick" style="--shoe-color:${col}"><line x1="${xx-10}" y1="${yy-10}" x2="${xx+10}" y2="${yy+10}" stroke="${col}" stroke-width="5"/><line x1="${xx-10}" y1="${yy+10}" x2="${xx+10}" y2="${yy-10}" stroke="${col}" stroke-width="5"/><text x="${xx}" y="${Math.max(T+18,yy-18)}" text-anchor="middle" fill="${col}" font-weight="900">${label}</text></g>`}).join('');
+ const retirementMarkers=pairs.map(pair=>{
+  const rp=shoeGraphRetirementPoint(pair,life,forecastById.get(pair.id));
+  if(!rp||rp.date>raceDate)return'';
+  const xx=x(rp.date),yy=y(rp.km),col=colorById.get(pair.id)||'#8FA9B8';
+  return`<g class="shoeRetireTick" style="--shoe-color:${col}"><line x1="${xx-10}" y1="${yy-10}" x2="${xx+10}" y2="${yy+10}" stroke="${col}" stroke-width="5"/><line x1="${xx-10}" y1="${yy+10}" x2="${xx+10}" y2="${yy-10}" stroke="${col}" stroke-width="5"/><text x="${xx}" y="${Math.max(T+18,yy-18)}" text-anchor="middle" fill="${col}" font-weight="900">× RETIRE</text></g>`;
+ }).join('');
  const historicalRetirementMarkers=actualSeries.filter(item=>item.shoe.status==='retired'&&!pairs.some(p=>p.owned&&p.shoe?.id===item.shoe.id)&&item.points.length).map(item=>{const last=item.points.at(-1),xx=x(last.date),yy=y(last.km),col='#8FA9B8';return`<g class="shoeRetireTick" style="--shoe-color:${col}"><line x1="${xx-9}" y1="${yy-9}" x2="${xx+9}" y2="${yy+9}" stroke="${col}" stroke-width="4"/><line x1="${xx-9}" y1="${yy+9}" x2="${xx+9}" y2="${yy-9}" stroke="${col}" stroke-width="4"/><text x="${xx}" y="${Math.max(T+16,yy-16)}" text-anchor="middle" fill="${col}" font-weight="900">× RETIRE</text></g>`}).join('');
 
  const raceX=x(raceDate),todayX=x(todayStr),targetBand=window&&life.racePair?(()=>{const yy1=y(window.maxKm),yy2=y(window.minKm),bx=Math.max(L,raceX-105);return`<g class="shoeRaceTargetBand"><rect x="${bx}" y="${yy1}" width="${raceX-bx}" height="${Math.max(5,yy2-yy1)}"/></g>`})():'';
  const rehabRows=life.assignments.filter(a=>a.rehab&&Number(a.km)>0),rehabBand=rehabRows.length?(()=>{const ds=rehabRows.map(a=>a.date).sort(),xx1=x(ds[0]),xx2=x(ds.at(-1));return`<g class="shoeRehabBand"><rect x="${xx1}" y="${T}" width="${Math.max(4,xx2-xx1)}" height="${H-T-B}"/><text x="${Math.min(W-R-6,xx1+8)}" y="${T+20}">REHAB</text></g>`})():'';
  const legend=pairs.map(pair=>`<span class="shoeLegendItem ${pair.owned?'':'future'} ${pair===life.racePair?'race':''}"><span class="shoeLegendSwatch ${pair.owned?'':'dotted'}" style="--shoe-color:${colorById.get(pair.id)}"></span><b>${esc(lifecyclePairLabel(pair))}</b><small>${pair.owned?'owned':pair===life.racePair?'Race Day':'planned'}</small></span>`).join('');
  const strategy='Session suitability';
- return`<div class="shoeChartWrap shoeProgrammeChart shoeCoachGraph"><div class="shoeChartRaceDate"><small>SHOE STRATEGY THROUGH RACE DAY</small><b>${esc(strategy)} · Race day ${esc(shoeChartDate(raceDate))}</b></div>${life.racePair?`<div class="shoeRaceStrategyCard"><small>RACE-DAY PAIR</small><b>${esc(lifecyclePairLabel(life.racePair))}</b><span>~${Math.round(shoeEngineRaceStartKm(life,life.racePair))} km projected · target ${Math.round(window?.minKm||0)}–${Math.round(window?.maxKm||0)} km</span></div>`:''}<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Physical shoe rotation through Race Day">${rehabBand}${targetBand}<g class="shoeGrid">${grid}</g><line class="shoeTodayLine" x1="${todayX}" y1="${T}" x2="${todayX}" y2="${H-B}"/><line class="shoeRaceLine" x1="${raceX}" y1="${T}" x2="${raceX}" y2="${H-B}"/>${actual}${future}${purchaseMarkers}${raceMileageMarker}${retirementMarkers}${historicalRetirementMarkers}<text class="xLab" x="${todayX}" y="${H-18}" text-anchor="start">TODAY</text><text class="xLab" x="${raceX}" y="${H-18}" text-anchor="end">RACE</text><text class="yTitle" transform="translate(32 ${H/2}) rotate(-90)" text-anchor="middle">Accumulated km</text></svg><div class="shoeChartLegend compact">${legend}</div><div class="shoeGraphNote"><b>Solid = actual logged mileage · dashed = future forecast.</b></div>${shoeRotationPlanHtml(life,colorById)}</div>`
+ return`<div class="shoeChartWrap shoeProgrammeChart shoeCoachGraph"><div class="shoeChartRaceDate"><small>SHOE STRATEGY THROUGH RACE DAY</small><b>${esc(strategy)} · Race day ${esc(shoeChartDate(raceDate))}</b></div>${life.racePair?`<div class="shoeRaceStrategyCard"><small>RACE-DAY PAIR</small><b>${esc(lifecyclePairLabel(life.racePair))}</b><span>~${Math.round(shoeEngineRaceStartKm(life,life.racePair))} km projected · target ${Math.round(window?.minKm||0)}–${Math.round(window?.maxKm||0)} km</span></div>`:''}<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Physical shoe rotation through Race Day">${rehabBand}${targetBand}<g class="shoeGrid">${grid}</g><line class="shoeTodayLine" x1="${todayX}" y1="${T}" x2="${todayX}" y2="${H-B}"/><line class="shoeRaceLine" x1="${raceX}" y1="${T}" x2="${raceX}" y2="${H-B}"/>${actual}${future}${purchaseMarkers}${raceMileageMarker}${retirementMarkers}${historicalRetirementMarkers}<text class="xLab" x="${todayX}" y="${H-18}" text-anchor="start">TODAY</text><text class="xLab" x="${raceX}" y="${H-18}" text-anchor="end">RACE</text><text class="yTitle" transform="translate(32 ${H/2}) rotate(-90)" text-anchor="middle">Accumulated km</text></svg><div class="shoeChartLegend compact">${legend}</div><div class="shoeGraphNote"><b>Solid = actual logged mileage · dashed = future forecast · × = physical retirement.</b></div>${shoeRotationPlanHtml(life,colorById)}</div>`
 }
 function shoeMileageChartHtml(){return shoeProgrammeMileageChartHtml()}
 function shoeRotationCard(shoe){
