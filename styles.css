@@ -5462,3 +5462,344 @@ body:has(#dashboard.progressPage.active),#mainContent:has(#dashboard.progressPag
 .runRecordCallout{padding:15px;margin:0 0 12px;border-radius:var(--r2);background:linear-gradient(145deg,rgba(121,214,155,.11),rgba(61,214,198,.055));border:1px solid rgba(121,214,155,.26)}.runRecordHead{display:flex;align-items:center;gap:10px}.runRecordHead>span{width:38px;height:38px;display:grid;place-items:center;border-radius:12px;background:rgba(121,214,155,.11);color:var(--green)}.runRecordHead svg{width:21px;height:21px}.runRecordHead small{display:block;font-size:9px;font-weight:900;letter-spacing:.1em;color:var(--green)}.runRecordHead h3{margin:2px 0 0;font-size:17px}.runRecordMetrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:12px}.runRecordMetrics>div{padding:10px;border-radius:11px;background:rgba(7,16,24,.32);border:1px solid rgba(121,214,155,.1)}.runRecordMetrics small{display:block;font-size:8px;letter-spacing:.07em}.runRecordMetrics strong{display:block;margin-top:3px;font-size:15px}.runRecordCallout>p{margin:10px 0 0;font-size:10px;color:var(--muted)}
 #progressRecords{margin:12px 0}.progressRecordsPanel{background:var(--card)}.progressRecordGrid{display:grid;gap:8px}.progressRecordTile{margin:0!important;border:1px solid rgba(136,161,177,.13)!important;background:var(--nested)!important;border-radius:14px!important}.progressRecordTile>summary{padding:12px 13px!important;background:transparent!important;min-height:68px}.progressRecordTile>summary:after{margin-left:6px}.progressRecordIdentity{display:flex;flex-direction:column;gap:2px;min-width:0}.progressRecordIdentity small{font-size:9px;font-weight:850;letter-spacing:.06em;color:var(--teal-2)}.progressRecordIdentity strong{font-size:20px;line-height:1.05}.progressRecordIdentity>span{font-size:9px;color:var(--muted)}.progressRecordMark{margin-left:auto;padding:5px 7px;border-radius:999px;background:rgba(121,214,155,.1);border:1px solid rgba(121,214,155,.2);font-size:8px;font-weight:900;letter-spacing:.08em;color:var(--green)}.progressRecordFoldout{padding:0 12px 12px}.progressRecordFoldout .runSummaryHero{margin-top:2px}.progressRecordFoldout .logEditFoldout{display:none}
 @media(max-width:520px){.runRecordMetrics{grid-template-columns:1fr 1fr}.runRecordMetrics>div:last-child{grid-column:1/-1}.logRecordChip{align-items:flex-start;flex-wrap:wrap}.logRecordChip span{flex:1 1 100%}.progressRecordIdentity strong{font-size:18px}}
+
+/* v14.9.3 — Progress section 04 KPI readability + distance-record trophy. */
+#dashboard.progressPage #kpis>.kpi{
+  display:flex!important;
+  flex-direction:column!important;
+  align-items:flex-start!important;
+  justify-content:flex-start!important;
+  gap:5px!important;
+  min-height:112px!important;
+  padding:14px!important;
+}
+#dashboard.progressPage #kpis>.kpi>label{
+  display:block!important;
+  width:100%!important;
+  margin:0!important;
+  font-size:11px!important;
+  line-height:1.3!important;
+  font-weight:700!important;
+  letter-spacing:0!important;
+  color:var(--text-2)!important;
+}
+#dashboard.progressPage #kpis>.kpi>strong{
+  display:block!important;
+  width:100%!important;
+  margin:2px 0 0!important;
+  font-size:22px!important;
+  line-height:1.1!important;
+  font-weight:850!important;
+  color:var(--text)!important;
+  overflow-wrap:anywhere!important;
+}
+#dashboard.progressPage #kpis>.kpi>small{
+  display:block!important;
+  width:100%!important;
+  margin:1px 0 0!important;
+  font-size:10px!important;
+  line-height:1.35!important;
+  font-weight:600!important;
+  letter-spacing:0!important;
+  color:var(--muted)!important;
+}
+.logRecordChip .uiIcon{stroke:currentColor!important;fill:none!important}
+
+/* v14.9.5 — record placement, gold trophy and Progress record hierarchy. */
+:root{--record-gold:#f2c14e}
+
+/* History card: compact record tile sits between session identity and workout score. */
+.logRunRecordInline{flex:0 0 auto;align-self:center;margin-left:auto;margin-right:7px;min-width:0}
+.logRunRecordInline .logRecordChip{width:auto;max-width:128px;min-height:34px;padding:6px 8px;gap:5px;border-radius:10px;background:rgba(242,193,78,.09);border:1px solid rgba(242,193,78,.28);color:var(--record-gold)}
+.logRunRecordInline .logRecordChip .uiIcon{width:16px;height:16px;flex:0 0 16px;color:var(--record-gold)!important;stroke:var(--record-gold)!important}
+.logRunRecordInline .logRecordChip b{font-size:8px;line-height:1.15;letter-spacing:.055em;color:var(--record-gold)!important;white-space:normal;text-align:left}
+.logRunRecordInline .logRecordChip>span:not(.uiIcon){display:none!important}
+.logRunRecordRow{display:none!important}
+
+/* All trophy pictograms use the record-gold semantic color. */
+.logRecordChip .uiIcon,.runRecordHead>span,.progressRecordMark .uiIcon{color:var(--record-gold)!important;stroke:var(--record-gold)!important}
+.runRecordHead>span{background:rgba(242,193,78,.10)!important;border:1px solid rgba(242,193,78,.22)}
+.runRecordHead small{color:var(--record-gold)!important}
+.progressRecordMark .uiIcon{width:13px;height:13px;margin-right:3px;vertical-align:-2px}
+
+/* The records panel is a Level-1 Progress card, matching the other Level-1 tiles. */
+#dashboard.progressPage .progressRecordsPanel{
+  background:var(--progress-card)!important;
+  border:1px solid var(--progress-border)!important;
+  border-radius:18px!important;
+  box-shadow:none!important;
+  color:#fff!important;
+  padding:16px!important;
+  margin:12px 0!important;
+}
+#dashboard.progressPage .progressRecordsPanel .panelHead h3{font-size:20px!important;line-height:1.15!important;color:#fff!important}
+#dashboard.progressPage .progressRecordsPanel .panelHead p{font-size:10px!important;line-height:1.45!important;color:#c6d9df!important;margin-top:5px!important}
+
+/* Record rows are Level-2 nested tiles; opened content uses readable Level-3 typography. */
+#dashboard.progressPage .progressRecordTile{
+  background:var(--progress-nested)!important;
+  border:1px solid var(--progress-nested-border)!important;
+  border-radius:11px!important;
+}
+#dashboard.progressPage .progressRecordTile>summary{padding:12px!important;min-height:70px!important;background:transparent!important}
+#dashboard.progressPage .progressRecordIdentity small{font-size:9px!important;line-height:1.2!important;font-weight:900!important;letter-spacing:.075em!important;color:#8fc2ce!important}
+#dashboard.progressPage .progressRecordIdentity strong{font-size:19px!important;line-height:1.08!important;color:#fff!important;margin-top:2px}
+#dashboard.progressPage .progressRecordIdentity>span{font-size:9px!important;line-height:1.35!important;color:#a9c1cb!important;margin-top:2px}
+#dashboard.progressPage .progressRecordMark{display:inline-flex;align-items:center;white-space:nowrap;color:var(--record-gold)!important;background:rgba(242,193,78,.08)!important;border-color:rgba(242,193,78,.22)!important}
+#dashboard.progressPage .progressRecordFoldout{padding:2px 12px 12px!important}
+#dashboard.progressPage .progressRecordFoldout>section{margin:10px 0 0!important}
+#dashboard.progressPage .progressRecordFoldout .runSummaryHero{padding:13px!important;border-radius:12px!important;background:var(--progress-disclosure)!important;border:1px solid rgba(136,161,177,.12)!important}
+#dashboard.progressPage .progressRecordFoldout .runSummaryHead{grid-template-columns:36px minmax(0,1fr)!important;gap:9px!important;align-items:start!important}
+#dashboard.progressPage .progressRecordFoldout .runSummaryIcon{width:36px!important;height:36px!important}
+#dashboard.progressPage .progressRecordFoldout .runSummaryHead small{font-size:8px!important;line-height:1.35!important;color:#9cb5c0!important}
+#dashboard.progressPage .progressRecordFoldout .runSummaryHead h2{font-size:17px!important;line-height:1.15!important;margin:2px 0!important;color:#fff!important}
+#dashboard.progressPage .progressRecordFoldout .runSummaryHead p{font-size:9px!important;line-height:1.4!important;margin:2px 0 0!important;color:#b8ccd4!important}
+#dashboard.progressPage .progressRecordFoldout .runMetricGridV3{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:7px!important;margin-top:10px!important}
+#dashboard.progressPage .progressRecordFoldout .runMetricV3{padding:9px!important;min-height:0!important;border-radius:9px!important}
+#dashboard.progressPage .progressRecordFoldout .runMetricV3>span{font-size:7px!important;line-height:1.2!important;letter-spacing:.06em!important}
+#dashboard.progressPage .progressRecordFoldout .runMetricV3>strong{font-size:13px!important;line-height:1.15!important;margin-top:2px!important}
+#dashboard.progressPage .progressRecordFoldout .runMetricV3>small{font-size:8px!important;line-height:1.3!important;margin-top:2px!important}
+#dashboard.progressPage .progressRecordFoldout .runPlanCompare,#dashboard.progressPage .progressRecordFoldout .runDataQualityV3{font-size:9px!important;line-height:1.4!important}
+#dashboard.progressPage .progressRecordFoldout .runRecordCallout{padding:12px!important;border-radius:12px!important}
+#dashboard.progressPage .progressRecordFoldout .runRecordHead h3{font-size:15px!important;line-height:1.2!important;margin:2px 0 0!important}
+#dashboard.progressPage .progressRecordFoldout .runRecordAchievement{padding:9px!important}
+#dashboard.progressPage .progressRecordFoldout .runRecordAchievement b{font-size:9px!important;line-height:1.25!important}
+#dashboard.progressPage .progressRecordFoldout .runRecordAchievement strong{font-size:15px!important;line-height:1.15!important}
+#dashboard.progressPage .progressRecordFoldout .runRecordAchievement small{font-size:8px!important;line-height:1.4!important}
+#dashboard.progressPage .progressRecordFoldout details>summary{font-size:11px!important;line-height:1.35!important}
+#dashboard.progressPage .progressRecordFoldout p,#dashboard.progressPage .progressRecordFoldout li{font-size:10px!important;line-height:1.5!important}
+
+@media(max-width:520px){
+  .logRunTop{gap:7px!important}
+  .logRunRecordInline{margin-left:2px;margin-right:1px}
+  .logRunRecordInline .logRecordChip{max-width:92px;padding:5px 6px}
+  .logRunRecordInline .logRecordChip b{font-size:7px}
+  #dashboard.progressPage .progressRecordFoldout .runMetricGridV3{grid-template-columns:1fr 1fr!important}
+}
+
+
+/* v14.9.7 — record-card placement, record typography, compact Progress foldout, flush mobile dock. */
+/* Recent history: identity -> record -> workout score, all on the same top row. */
+#runs .logRunTop{
+  grid-template-columns:46px minmax(0,1fr) auto auto!important;
+  align-items:center!important;
+}
+#runs .logRunRecordInline{
+  grid-column:auto!important;
+  align-self:center!important;
+  margin:0!important;
+}
+#runs .logRunScore{
+  grid-column:auto!important;
+  margin:0!important;
+}
+@media(max-width:520px){
+  #runs .logRunTop{grid-template-columns:42px minmax(0,1fr) auto auto!important;gap:6px!important}
+  #runs .logRunRecordInline .logRecordChip{max-width:82px!important;padding:5px!important}
+  #runs .logRunRecordInline .logRecordChip b{font-size:7px!important;line-height:1.1!important}
+  #runs .logRunRecordScore{width:48px!important;height:48px!important}
+}
+
+/* Record detail callout: each record is a deliberate three-line block, never run-on text. */
+.runRecordAchievementList{display:grid!important;gap:8px!important;margin-top:11px!important}
+.runRecordAchievement{
+  display:grid!important;
+  grid-template-columns:minmax(0,1fr) auto!important;
+  grid-template-areas:"label value" "detail detail"!important;
+  column-gap:10px!important;
+  row-gap:2px!important;
+  align-items:baseline!important;
+  padding:9px 10px!important;
+  border-radius:10px!important;
+  background:rgba(7,16,24,.24)!important;
+  border:1px solid rgba(242,193,78,.10)!important;
+}
+.runRecordAchievement>b{grid-area:label!important;display:block!important;margin:0!important;font-size:10px!important;line-height:1.2!important;color:#fff!important}
+.runRecordAchievement>strong{grid-area:value!important;display:block!important;margin:0!important;font-size:16px!important;line-height:1.1!important;color:#fff!important;text-align:right!important;white-space:nowrap!important}
+.runRecordAchievement>small{grid-area:detail!important;display:block!important;margin:0!important;font-size:9px!important;line-height:1.35!important;color:var(--muted)!important}
+.runRecordCallout>p{font-size:9px!important;line-height:1.4!important;margin:9px 0 0!important}
+
+/* Progress source-session foldout: explicitly establish the grid/flex layout outside the Log modal. */
+#dashboard.progressPage .progressRecordFoldout .runSummaryV3{display:block!important;margin-top:8px!important}
+#dashboard.progressPage .progressRecordFoldout .runMetricGridV3{
+  display:grid!important;
+  grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  gap:6px!important;
+  margin-top:8px!important;
+}
+#dashboard.progressPage .progressRecordFoldout .runMetricV3{
+  display:flex!important;
+  flex-direction:column!important;
+  align-items:flex-start!important;
+  justify-content:flex-start!important;
+  gap:2px!important;
+  min-width:0!important;
+  padding:8px!important;
+  min-height:58px!important;
+  background:rgba(3,31,43,.34)!important;
+  border:1px solid rgba(80,210,219,.12)!important;
+}
+#dashboard.progressPage .progressRecordFoldout .runMetricV3>span{display:block!important;margin:0!important;font-size:7px!important;line-height:1.1!important}
+#dashboard.progressPage .progressRecordFoldout .runMetricV3>strong{display:block!important;margin:1px 0 0!important;font-size:13px!important;line-height:1.08!important}
+#dashboard.progressPage .progressRecordFoldout .runMetricV3>small{display:block!important;margin:0!important;font-size:8px!important;line-height:1.2!important}
+#dashboard.progressPage .progressRecordFoldout .runDataQualityV3{margin-top:7px!important;padding:8px!important}
+#dashboard.progressPage .progressRecordFoldout .runDataQualityV3 strong{display:block!important;font-size:10px!important;line-height:1.2!important;margin:0 0 2px!important}
+#dashboard.progressPage .progressRecordFoldout .runDataQualityV3 p{margin:0!important;font-size:9px!important;line-height:1.35!important}
+#dashboard.progressPage .progressRecordFoldout .runRecordCallout{margin-top:8px!important;padding:10px!important}
+#dashboard.progressPage .progressRecordFoldout .runRecordAchievementList{gap:6px!important;margin-top:8px!important}
+#dashboard.progressPage .progressRecordFoldout .runRecordAchievement{padding:8px!important;row-gap:1px!important}
+#dashboard.progressPage .progressRecordFoldout .runRecordAchievement>b{font-size:8px!important;line-height:1.15!important}
+#dashboard.progressPage .progressRecordFoldout .runRecordAchievement>strong{font-size:13px!important;line-height:1.08!important}
+#dashboard.progressPage .progressRecordFoldout .runRecordAchievement>small{font-size:8px!important;line-height:1.25!important}
+#dashboard.progressPage .progressRecordFoldout>section{margin:8px 0 0!important}
+#dashboard.progressPage .progressRecordFoldout p,#dashboard.progressPage .progressRecordFoldout li{line-height:1.35!important}
+
+/* Mobile dock: viewport occlusion must never lift the primary nav above the physical viewport bottom. */
+@media(max-width:759px){
+  #nav{
+    position:fixed!important;
+    left:0!important;
+    right:0!important;
+    bottom:0!important;
+    width:100%!important;
+    margin:0!important;
+    border-radius:18px 18px 0 0!important;
+    transform:none!important;
+    translate:none!important;
+    padding-bottom:max(4px,env(safe-area-inset-bottom))!important;
+  }
+  #mainContent,#mainContent>.page,.page{
+    padding-bottom:calc(var(--nav-bar-height) + env(safe-area-inset-bottom) + 24px)!important;
+  }
+  .moreNav{
+    bottom:calc(var(--nav-bar-height) + env(safe-area-inset-bottom) + 6px)!important;
+  }
+}
+
+/* v14.9.8 — lifecycle chart colour identity lock
+   Physical-pair colour is authoritative. Line style conveys only actual vs forecast. */
+#shoes .shoeActualLine{
+  stroke:var(--shoe-color)!important;
+  stroke-dasharray:none!important;
+  stroke-width:3.2!important;
+  opacity:1!important;
+}
+#shoes .shoePlannedLine,
+#shoes .shoeNewPairLine,
+#shoes .shoeRaceStrategyLine{
+  stroke:var(--shoe-color)!important;
+  stroke-dasharray:10 8!important;
+  stroke-width:3.2!important;
+  stroke-linecap:round!important;
+  stroke-linejoin:round!important;
+  opacity:1!important;
+}
+#shoes .shoeLegendSwatch,
+#shoes .shoeLegendSwatch.race{
+  background:var(--shoe-color)!important;
+  border:0!important;
+  box-shadow:none!important;
+  height:4px!important;
+}
+#shoes .shoeLegendSwatch.dotted{
+  height:0!important;
+  background:none!important;
+  border:0!important;
+  border-top:4px dashed var(--shoe-color)!important;
+}
+#shoes .shoeBuyTick path{fill:var(--shoe-color)!important;stroke:#08202b!important}
+#shoes .shoeBuyTick text,
+#shoes .shoeRetireTick text,
+#shoes .shoeRaceStartMarker text{fill:var(--shoe-color)!important}
+#shoes .shoeRetireTick line,
+#shoes .shoeRaceStartMarker line{stroke:var(--shoe-color)!important}
+#shoes .shoeRaceStartMarker circle{fill:var(--shoe-color)!important;stroke:var(--shoe-color)!important}
+
+
+/* v15.1.8 — Injury trajectory presentation regression lock.
+   Restores the approved Injury/Rehab visual hierarchy for the enhanced
+   trajectory renderer without changing any rehabilitation calculations. */
+#injury .injuryTrajectoryWrap{
+  width:100%;max-width:none;box-sizing:border-box;margin-top:4px;
+  padding:10px!important;background:rgba(5,18,24,.48)!important;
+  border:1px solid rgba(61,214,198,.15)!important;border-radius:14px!important;
+  overflow:hidden!important;
+}
+#injury .injuryTrajectorySimple{display:block;width:100%!important;max-width:none!important;height:auto;margin:0}
+#injury .injuryTrajectorySimple .grid{stroke:rgba(136,161,177,.12)!important;stroke-width:1}
+#injury .injuryTrajectorySimple .xTick{stroke:rgba(136,161,177,.20)!important;stroke-width:1}
+#injury .injuryTrajectorySimple .axisText{fill:#91a8b1!important;font-size:9px!important;font-weight:700}
+#injury .injuryTrajectorySimple .currentDateLine{stroke:var(--amber)!important;stroke-width:1.7!important;stroke-dasharray:5 5!important}
+#injury .injuryTrajectorySimple .currentDateLabel{fill:#ffc36e!important;font-size:10px!important;font-weight:900!important}
+#injury .injuryTrajectorySimple .nominalLine{fill:none!important;stroke:#77e0d6!important;stroke-width:2.1!important;stroke-dasharray:7 6!important;opacity:.80}
+#injury .injuryTrajectorySimple .actualLine{fill:none!important;stroke:#45e0e4!important;stroke-width:3.4!important;stroke-linecap:round;stroke-linejoin:round}
+#injury .injuryTrajectorySimple .projectedLine{fill:none!important;stroke:#9bb1ff!important;stroke-width:2.4!important;stroke-dasharray:4 5!important;stroke-linecap:round;opacity:.95}
+#injury .injuryTrajectorySimple>circle{fill:#45e0e4!important;stroke:#08202b!important;stroke-width:2!important}
+#injury .injuryPhaseBand{fill:var(--phase-fill)!important;stroke:none!important}
+#injury .injuryPhaseBand.future{opacity:.52}
+#injury .injuryPhaseBand.current,#injury .injuryPhaseBand.selected{opacity:1}
+#injury .injuryPhaseBoundary{stroke:var(--phase-stroke)!important;stroke-width:1!important;opacity:.38}
+#injury .injuryPhaseGraphNumber{fill:var(--phase-text)!important;font-size:9px!important;font-weight:950!important;letter-spacing:.08em}
+#injury .injuryPhaseGraphLabel{fill:#eefafd!important;font-size:9px!important;font-weight:850!important}
+#injury .injuryTrajectoryLegend{display:flex!important;flex-wrap:wrap!important;gap:8px 14px!important;align-items:center;margin:9px 1px 0!important}
+#injury .injuryTrajectoryLegend span{display:inline-flex!important;align-items:center;gap:6px;font-size:9px!important;line-height:1.3;color:#c8dce3!important;font-weight:750}
+#injury .injuryTrajectoryLegend span:before{content:"";display:inline-block;width:22px;height:0;border-top:2px solid #45e0e4;border-radius:2px}
+#injury .injuryTrajectoryLegend .nominal:before{border-top-color:#77e0d6;border-top-style:dashed}
+#injury .injuryTrajectoryLegend .projected:before{border-top-color:#9bb1ff;border-top-style:dashed}
+#injury .injuryTrajectoryLegend .phaseActual:before{height:8px;border:1px solid rgba(69,224,228,.46);background:rgba(69,224,228,.15)}
+#injury .injuryTrajectoryLegend .phaseFuture:before{height:8px;border:1px solid rgba(155,177,255,.30);background:rgba(155,177,255,.08)}
+
+/* Phase tiles beneath the graph: compact, readable, and consistent with the approved Level-2 tiles. */
+#injury .injuryPhaseStrip{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:8px!important;margin-top:12px!important}
+#injury .injuryPhaseStripItem{appearance:none;-webkit-appearance:none;width:100%;min-width:0;display:grid!important;grid-template-columns:30px minmax(0,1fr) 10px!important;gap:8px;align-items:center;text-align:left;padding:10px!important;margin:0!important;background:rgba(5,18,24,.48)!important;border:1px solid rgba(61,214,198,.15)!important;border-radius:12px!important;color:#fff!important;box-shadow:none!important}
+#injury .injuryPhaseStripItem i{width:28px;height:28px;display:grid;place-items:center;border-radius:50%;font-style:normal;font-size:11px;font-weight:950;color:var(--phase-text);background:var(--phase-fill);border:1px solid color-mix(in srgb,var(--phase-stroke) 58%,transparent)}
+#injury .injuryPhaseStripItem span{display:block;min-width:0}
+#injury .injuryPhaseStripItem b{display:block;font-size:10px!important;line-height:1.25;color:#fff;overflow-wrap:anywhere}
+#injury .injuryPhaseStripItem small{display:block;margin-top:3px;font-size:8px!important;line-height:1.3;color:#9fb9c2!important}
+#injury .injuryPhaseStripItem.completed{opacity:.78}
+#injury .injuryPhaseStripItem.future{opacity:.62}
+#injury .injuryPhaseStripItem.current,#injury .injuryPhaseStripItem.selected{opacity:1;border-color:var(--phase-stroke)!important;background:linear-gradient(145deg,var(--phase-fill),rgba(5,18,24,.60))!important}
+#injury .phaseTileChevron{width:7px;height:7px;border-right:1.5px solid #9bbbc4;border-bottom:1.5px solid #9bbbc4;transform:rotate(45deg);justify-self:end}
+#injury .injuryPhaseStripItem[aria-expanded="true"] .phaseTileChevron{transform:rotate(225deg)}
+
+#injury .injuryPhaseDetailHost{margin-top:8px}
+#injury .injuryPhaseDetail{padding:13px;background:#0c1923;border:1px solid rgba(136,161,177,.12);border-radius:12px}
+#injury .injuryPhaseDetail[hidden]{display:none!important}
+#injury .injuryPhaseDetail>header{display:grid;grid-template-columns:36px minmax(0,1fr);gap:10px;align-items:start;margin-bottom:10px}
+#injury .injuryPhaseDetail>header>span{width:34px;height:34px;display:grid;place-items:center;border-radius:50%;background:rgba(61,214,198,.09);border:1px solid rgba(61,214,198,.20);font-size:12px;font-weight:950;color:#45e0e4}
+#injury .injuryPhaseDetail>header small{display:block;font-size:8px;font-weight:900;letter-spacing:.09em;color:#45e0e4}
+#injury .injuryPhaseDetail>header h4{margin:2px 0 2px;font-size:15px;line-height:1.2;color:#fff}
+#injury .injuryPhaseDetail>header p{margin:0;font-size:10px!important;line-height:1.4;color:#b9ced5}
+#injury .injuryPhaseTiming{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
+#injury .injuryPhaseTiming>span{padding:10px;background:rgba(5,18,24,.48);border:1px solid rgba(61,214,198,.12);border-radius:10px}
+#injury .injuryPhaseTiming small{display:block;margin-bottom:3px;font-size:8px;font-weight:850;letter-spacing:.07em;color:#7cded7}
+#injury .injuryPhaseTiming b{display:block;font-size:10px;line-height:1.35;color:#fff}
+#injury .injuryStageCriteriaList{display:grid;gap:6px}
+#injury .injuryStageCriterion{display:grid;grid-template-columns:24px minmax(0,1fr) auto;gap:8px;align-items:center;padding:9px;background:rgba(5,18,24,.42);border:1px solid rgba(136,161,177,.10);border-radius:10px}
+#injury .injuryStageCriterion i{width:22px;height:22px;display:grid;place-items:center;border-radius:50%;font-style:normal;font-size:10px;font-weight:900;background:rgba(61,214,198,.08);color:#a7ccd3}
+#injury .injuryStageCriterion.met i{background:rgba(121,214,155,.12);color:var(--green)}
+#injury .injuryStageCriterion.partial i{background:rgba(255,195,110,.11);color:var(--amber)}
+#injury .injuryStageCriterion b{display:block;font-size:10px;line-height:1.3;color:#fff}
+#injury .injuryStageCriterion small{display:block;margin-top:2px;font-size:8px;line-height:1.35;color:#9fb9c2}
+#injury .injuryStageCriterion em{font-style:normal;font-size:8px;font-weight:850;color:#a9c4ce;text-align:right}
+
+/* Tiles in sections immediately below the trajectory retain the agreed 2+1 mobile rhythm. */
+#injury .injuryRunnerMetricRow{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:9px!important}
+#injury .injuryRunnerMetricRow>div{min-height:84px;display:flex!important;flex-direction:column;justify-content:flex-start;gap:4px;padding:12px!important;background:rgba(5,18,24,.48)!important;border:1px solid rgba(61,214,198,.15)!important;border-radius:12px!important}
+#injury .injuryRunnerMetricRow small{font-size:9px!important;line-height:1.2;font-weight:850;letter-spacing:.08em;color:#7de4dd!important}
+#injury .injuryRunnerMetricRow strong{font-size:18px!important;line-height:1.15;color:#fff!important;overflow-wrap:anywhere}
+#injury .injuryRunnerMetricRow span{font-size:10px!important;line-height:1.35;color:#9fb9c2!important}
+
+@media(max-width:560px){
+ #injury .injuryTrajectoryWrap{padding:8px 4px 9px!important}
+ #injury .injuryPhaseStrip{grid-template-columns:1fr 1fr!important}
+ #injury .injuryPhaseStripItem{grid-template-columns:28px minmax(0,1fr) 9px!important;padding:9px!important}
+ #injury .injuryPhaseTiming{grid-template-columns:1fr!important}
+ #injury .injuryRunnerMetricRow{grid-template-columns:1fr 1fr!important}
+ #injury .injuryRunnerMetricRow>div:last-child{grid-column:1/-1!important}
+}
+@media(max-width:360px){
+ #injury .injuryPhaseStrip{grid-template-columns:1fr!important}
+ #injury .injuryRunnerMetricRow{grid-template-columns:1fr!important}
+ #injury .injuryRunnerMetricRow>div:last-child{grid-column:auto!important}
+}

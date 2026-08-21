@@ -1,0 +1,31 @@
+AI Running Coach v15.1.8 · build 50108
+Injury trajectory formatting restoration
+
+Scope
+- Restored formatting only for the Injury & Rehab rehabilitation trajectory and the metric/phase tiles directly associated with and below it.
+- No rehabilitation calculations, prognosis logic, stage criteria, check-in data, shoe logic, training plan logic, prediction logic, recovery logic, import logic, or storage schema were changed.
+
+Root cause verified
+- The v15.1.7 trajectory renderer emits enhanced UI classes for phase bands, projected recovery, phase-progress tiles, phase details, timing blocks, and stage-criterion rows.
+- The current stylesheet had no rules for those enhanced classes, so browser defaults were controlling their layout and visual hierarchy.
+- The earlier approved Injury styling was still present, but it targeted the preceding trajectory markup and therefore could not style the newly introduced elements.
+
+Restoration
+- Added an Injury-scoped presentation regression lock for all enhanced trajectory classes.
+- Re-established the approved dark-teal Level-1/Level-2 visual hierarchy.
+- Restored clear observed / nominal / projected line treatments and Today marker.
+- Restored compact phase tiles beneath the graph with current/completed/future states.
+- Restored phase-detail, timing, and criterion-row formatting.
+- Restored the mobile metric-tile layout beneath the trajectory: 2 + 1 at normal phone widths, single-column only on very narrow screens.
+- No global selectors were added; all restoration rules are scoped to #injury.
+
+Verification performed
+1. app.js passes Node syntax validation.
+2. service-worker.js passes Node syntax validation.
+3. manifest.webmanifest parses as valid JSON.
+4. All 14 enhanced trajectory classes emitted by the renderer now have matching stylesheet rules.
+5. app.js is byte-identical to v15.1.7 after normalising only VERSION and BUILD identifiers, confirming no application or rehabilitation logic changed.
+6. The historical approved Injury stylesheet is still an exact prefix of the later stylesheet; the failure was missing styles for the enhanced renderer, not loss of the prior approved rules.
+
+Environment limitation
+- A Chromium screenshot smoke test was attempted, but headless Chromium did not complete in this container because its system DBus/UPower startup did not become ready. The deterministic markup/CSS contract and syntax/regression checks above completed successfully.
