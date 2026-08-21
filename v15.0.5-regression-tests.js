@@ -1,0 +1,20 @@
+'use strict';
+const fs=require('fs'),assert=require('assert'),cp=require('child_process');
+const dir=__dirname;
+const app=fs.readFileSync(dir+'/app.js','utf8');
+const html=fs.readFileSync(dir+'/index.html','utf8');
+const manifest=JSON.parse(fs.readFileSync(dir+'/manifest.webmanifest','utf8'));
+const sw=fs.readFileSync(dir+'/service-worker.js','utf8');
+function ok(name,fn){try{fn();console.log('PASS',name);return 1}catch(e){console.error('FAIL',name,'-',e.message);process.exitCode=1;return 0}}
+let n=0;
+n+=ok('app syntax',()=>cp.execFileSync(process.execPath,['--check',dir+'/app.js']));
+n+=ok('service worker syntax',()=>cp.execFileSync(process.execPath,['--check',dir+'/service-worker.js']));
+n+=ok('version consistency',()=>{assert(app.includes("const VERSION = '15.0.5'"));assert(app.includes('const BUILD = 50005'));assert(html.includes('v15.0.5 · build 50005'));assert.equal(manifest.version,'15.0.5');assert.equal(manifest.build,50005);assert(sw.includes('v15.0.5 · build 50005'))});
+n+=ok('retirement x uses canonical retirement date',()=>{const a=app.indexOf('function shoeGraphRetirementPoint');const b=app.indexOf('function shoeNonFlatSvgSegments',a);const body=app.slice(a,b);assert(body.includes("kind:'retire'"));assert(body.includes('pair.projectedRetireDate||pair.plannedRetireDate'))});
+n+=ok('every pre-race non-race curve gets endpoint X',()=>{const a=app.indexOf('function shoeGraphRetirementPoint');const b=app.indexOf('function shoeNonFlatSvgSegments',a);const body=app.slice(a,b);assert(body.includes("kind:'final-use'"));assert(body.includes("String(last.date)<String(life.raceDate)"))});
+n+=ok('endpoint labels preserve semantics',()=>{assert(app.includes("rp.kind==='final-use'?'× FINAL USE':'× RETIRE'"));assert(app.includes("rp.kind==='handover'?'× HANDOVER'"))});
+n+=ok('X primitive has two crossing strokes',()=>{assert(app.includes('x1="${xx-10}" y1="${yy-10}" x2="${xx+10}" y2="${yy+10}"'));assert(app.includes('x1="${xx-10}" y1="${yy+10}" x2="${xx+10}" y2="${yy-10}"'))});
+n+=ok('mobile nav ignores browser chrome',()=>{assert(app.includes('const keyboardThreshold=Math.max(140,Math.round(layoutH*.18))'));assert(app.includes('occludedBottom=rawOcclusion>=keyboardThreshold?rawOcclusion:0'));assert(html.includes('#nav{bottom:0 !important;}'))});
+n+=ok('navigation optimization retained',()=>{const a=app.indexOf('function activatePage(page,anchor=null)');const b=app.indexOf('renderNavigation();',a);const body=app.slice(a,b);assert(body.includes('renderPage(page)'));assert(!body.includes('renderAll()'))});
+n+=ok('schema preserved',()=>assert(app.includes('const SCHEMA = 10400;')));
+console.log(`Regression checks passed: ${n}/10`);

@@ -1,0 +1,24 @@
+AI Running Coach v15.0.5 · build 50005
+
+FIXES
+
+1. Shoe graph endpoint X invariant
+Every non-race physical-pair curve that ends before Race Day now has a visible X at its authoritative final plotted ledger point.
+- × RETIRE = canonical physical lifecycle retirement.
+- × HANDOVER = successor pair takes over.
+- × FINAL USE = the plan stops assigning the still-serviceable pair before Race Day.
+The visual marker no longer depends on one particular retirement flag branch, and FINAL USE does not retire or deactivate the shoe.
+
+2. Bottom navigation lock
+Android visualViewport changes caused by browser chrome were being treated as bottom occlusion and could lift the navigation bar.
+- Normal browser/tool-bar changes are now ignored.
+- Only keyboard-sized viewport loss is treated as occlusion.
+- A mobile CSS guard pins #nav to bottom: 0 so the menu cannot drift upward with page content or browser-chrome changes.
+
+Regression
+- app.js syntax PASS
+- service-worker.js syntax PASS
+- targeted regression suite PASS 10/10
+- schema remains 10400
+- navigation performance optimization retained
+- no training, prediction, recovery, rehab, import, mileage-credit or non-shoe calculation changes

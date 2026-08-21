@@ -1,28 +1,36 @@
-// AI Running Coach v15.0.4 · build 50004
+// AI Running Coach v15.0.6 · build 50006
 'use strict';
 
-const CACHE = 'arc-v15004-build-50004';
+const BUILD = 50006;
+const CACHE = 'arc-v15006-build-50006';
 const CACHE_PREFIX = 'arc-v';
 const APP_SHELL = './index.html';
 const ASSETS = [
   './',
   './index.html',
-  './styles.css?v=50004',
-  './app.js?v=50004',
-  './manifest.webmanifest?v=50004',
-  './icon-192.png?v=50004',
-  './icon-512.png?v=50004',
-  './apple-touch-icon.png?v=50004',
-  './favicon-32x32.png?v=50004',
-  './favicon-16x16.png?v=50004',
-  './favicon.ico?v=50004'
+  './styles.css?v=50006',
+  './app.js?v=50006',
+  './manifest.webmanifest?v=50006',
+  './icon-192.png?v=50006',
+  './icon-512.png?v=50006',
+  './apple-touch-icon.png?v=50006',
+  './favicon-32x32.png?v=50006',
+  './favicon-16x16.png?v=50006',
+  './favicon.ico?v=50006'
 ];
+
+async function resilientPrecache() {
+  const cache = await caches.open(CACHE);
+  await Promise.allSettled(ASSETS.map(async asset => {
+    const request = new Request(asset, { cache: 'reload' });
+    const response = await fetch(request);
+    if (response.ok) await cache.put(request, response.clone());
+  }));
+}
 
 self.addEventListener('install', event => {
   event.waitUntil(
-    caches.open(CACHE)
-      .then(cache => cache.addAll(ASSETS))
-      .then(() => self.skipWaiting())
+    resilientPrecache().finally(() => self.skipWaiting())
   );
 });
 
@@ -36,6 +44,10 @@ self.addEventListener('activate', event => {
       ))
       .then(() => self.clients.claim())
   );
+});
+
+self.addEventListener('message', event => {
+  if (event.data?.type === 'SKIP_WAITING') self.skipWaiting();
 });
 
 async function networkFirst(request, fallback) {
@@ -58,23 +70,17 @@ self.addEventListener('fetch', event => {
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
 
-  const iconAssets = new Set([
-    '/AI_Running_Coach/icon-192.png',
-    '/AI_Running_Coach/icon-512.png',
-    '/AI_Running_Coach/apple-touch-icon.png',
-    '/AI_Running_Coach/favicon-32x32.png',
-    '/AI_Running_Coach/favicon-16x16.png',
-    '/AI_Running_Coach/favicon.ico'
-  ]);
-  if (iconAssets.has(url.pathname)) {
+  if (request.mode === 'navigate') {
     const fresh = new URL(request.url);
-    fresh.search = '?v=50004';
-    event.respondWith(networkFirst(new Request(fresh.toString(), request)));
+    fresh.searchParams.set('build', String(BUILD));
+    event.respondWith(networkFirst(new Request(fresh.toString(), request), APP_SHELL));
     return;
   }
 
-  if (request.mode === 'navigate') {
-    event.respondWith(networkFirst(request, APP_SHELL));
+  if (/\.(?:js|css|webmanifest)$/i.test(url.pathname)) {
+    const fresh = new URL(request.url);
+    fresh.searchParams.set('v', String(BUILD));
+    event.respondWith(networkFirst(new Request(fresh.toString(), request), request));
     return;
   }
 

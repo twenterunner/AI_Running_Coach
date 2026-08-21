@@ -1,0 +1,24 @@
+'use strict';
+const fs=require('fs'),assert=require('assert'),cp=require('child_process');
+const dir=__dirname;
+const app=fs.readFileSync(dir+'/app.js','utf8');
+const html=fs.readFileSync(dir+'/index.html','utf8');
+const manifest=JSON.parse(fs.readFileSync(dir+'/manifest.webmanifest','utf8'));
+const sw=fs.readFileSync(dir+'/service-worker.js','utf8');
+function ok(name,fn){try{fn();console.log('PASS',name);return 1}catch(e){console.error('FAIL',name,'-',e.message);process.exitCode=1;return 0}}
+let n=0;
+n+=ok('app syntax',()=>cp.execFileSync(process.execPath,['--check',dir+'/app.js']));
+n+=ok('service worker syntax',()=>cp.execFileSync(process.execPath,['--check',dir+'/service-worker.js']));
+n+=ok('version consistency',()=>{assert(app.includes("const VERSION = '15.0.6'"));assert(app.includes('const BUILD = 50006'));assert(html.includes('v15.0.6 · build 50006'));assert.equal(manifest.version,'15.0.6');assert.equal(manifest.build,50006);assert(sw.includes('v15.0.6 · build 50006'))});
+n+=ok('service worker install cannot be blocked by one asset',()=>{assert(sw.includes('Promise.allSettled'));assert(sw.includes('finally(() => self.skipWaiting())'))});
+n+=ok('old caches are purged on activate',()=>{assert(sw.includes("key.startsWith(CACHE_PREFIX) && key !== CACHE"));assert(sw.includes('caches.delete(key)'))});
+n+=ok('new worker claims existing clients',()=>assert(sw.includes('self.clients.claim()')));
+n+=ok('app reloads once on controller change',()=>{assert(app.includes("navigator.serviceWorker.addEventListener('controllerchange'"));assert(app.includes('location.reload()'));assert(app.includes('arc-sw-reloaded-'))});
+n+=ok('waiting worker is explicitly activated',()=>{assert(app.includes("postMessage({type:'SKIP_WAITING'"));assert(sw.includes("event.data?.type === 'SKIP_WAITING'"))});
+n+=ok('navigation fetch is build-versioned',()=>{assert(sw.includes("fresh.searchParams.set('build', String(BUILD))"))});
+n+=ok('js/css requests are build-versioned',()=>{assert(sw.includes("fresh.searchParams.set('v', String(BUILD))"))});
+n+=ok('html carries no-cache hints',()=>{assert(html.includes('no-cache, no-store, must-revalidate'));assert(html.includes('http-equiv="Pragma"'))});
+n+=ok('shoe endpoint-X invariant retained',()=>{assert(app.includes("kind:'final-use'"));assert(app.includes("× FINAL USE"));assert(app.includes("× RETIRE"))});
+n+=ok('bottom-nav lock retained',()=>assert(html.includes('#nav{bottom:0 !important;}')));
+n+=ok('schema preserved',()=>assert(app.includes('const SCHEMA = 10400;')));
+console.log(`Regression checks passed: ${n}/14`);

@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '15.0.4';
-  const BUILD = 50004;
+  const VERSION = '15.0.6';
+  const BUILD = 50006;
   const SCHEMA = 10400;
   const PRIMARY_STORAGE_KEY = 'arc_v10400_web';
   const MIRROR_STORAGE_KEY = 'arc_v10400_mirror';
@@ -8181,10 +8181,11 @@ function shoeGraphForecastPoints(pair,life){
 }
 function shoeGraphRetirementPoint(pair,life,forecastPoints){
  const pts=(forecastPoints||shoeGraphForecastPoints(pair,life)).slice().sort((a,b)=>String(a.date).localeCompare(String(b.date)));
+ if(!pts.length)return null;
  const retirementDate=pair.projectedRetireDate||pair.plannedRetireDate||(pair.isProjectedRetired?pair.finalPlannedUseDate:null);
  if(retirementDate){
   const before=pts.filter(p=>String(p.date)<=String(retirementDate)),last=before.at(-1)||pts.at(-1);
-  if(last)return{date:retirementDate,km:Number(last.km),kind:'retire'}
+  return last?{date:retirementDate,km:Number(last.km),kind:'retire'}:null
  }
  if(pair.owned&&pair.shoe?.status==='retired'){
   const actual=shoeActualProgrammeSeries(pair.shoe,state.setup?.planStart||life.now,life.now);
@@ -8196,6 +8197,14 @@ function shoeGraphRetirementPoint(pair,life,forecastPoints){
   const lastUse=(pair.assignments||[]).filter(a=>Number(a.km)>0&&String(a.date)<String(successorDate)).slice().sort((a,b)=>a.date.localeCompare(b.date)).at(-1);
   const before=pts.filter(p=>!lastUse||String(p.date)<=String(lastUse.date)),last=before.at(-1)||pts.at(-1);
   if(last)return{date:lastUse?.date||last.date,km:Number(last.km),kind:'handover'}
+ }
+ // Graph invariant: a curve may not simply disappear. If a non-race physical
+ // pair's final positive-use point occurs before Race Day while it remains
+ // serviceable, show that authoritative endpoint as FINAL USE. This is a visual
+ // endpoint marker only; it does not retire or deactivate the physical pair.
+ if(pair!==life.racePair&&pair.role!=='race'){
+  const last=pts.at(-1);
+  if(last&&String(last.date)<String(life.raceDate))return{date:last.date,km:Number(last.km),kind:'final-use'}
  }
  return null
 }
@@ -8224,7 +8233,7 @@ function shoeProgrammeMileageChartHtml(){
  const raceMileageMarker=life.racePair?(()=>{const km=shoeEngineRaceStartKm(life,life.racePair),col=colorById.get(life.racePair.id)||'#B58CFF',xx=x(raceDate),yy=y(km);return`<g class="shoeRaceStartMarker" style="--shoe-color:${col}"><circle cx="${xx}" cy="${yy}" r="7"/><line x1="${xx-10}" y1="${yy}" x2="${xx+10}" y2="${yy}"/><text x="${xx-10}" y="${Math.max(T+18,yy-13)}" text-anchor="end">START ${Math.round(km)} km</text></g>`})():'';
  const plottedPurchases=life.purchases.filter(p=>pairs.some(x=>x.id===p.pairId));
  const purchaseMarkers=plottedPurchases.map((buy,n)=>{const pair=pairs.find(x=>x.id===buy.pairId),date=buy.firstUseDate||buy.purchaseDate||pair.purchaseDate,xx=x(date),col=colorById.get(pair.id);return`<g class="shoeBuyTick" style="--shoe-color:${col}"><path d="M ${xx-6} ${H-B+5} L ${xx+6} ${H-B+5} L ${xx} ${H-B-7} Z"/><text x="${xx}" y="${H-B+24}" text-anchor="middle">BUY ${n+1}</text></g>`}).join('');
- const retirementMarkers=pairs.map(pair=>{const rp=shoeGraphRetirementPoint(pair,life,forecastById.get(pair.id));if(!rp||rp.date>raceDate)return'';const xx=x(rp.date),yy=y(rp.km),col=colorById.get(pair.id)||'#8FA9B8',label=rp.kind==='handover'?'× HANDOVER':'× RETIRE';return`<g class="shoeRetireTick" style="--shoe-color:${col}"><line x1="${xx-10}" y1="${yy-10}" x2="${xx+10}" y2="${yy+10}" stroke="${col}" stroke-width="5"/><line x1="${xx-10}" y1="${yy+10}" x2="${xx+10}" y2="${yy-10}" stroke="${col}" stroke-width="5"/><text x="${xx}" y="${Math.max(T+18,yy-18)}" text-anchor="middle" fill="${col}" font-weight="900">${label}</text></g>`}).join('');
+ const retirementMarkers=pairs.map(pair=>{const rp=shoeGraphRetirementPoint(pair,life,forecastById.get(pair.id));if(!rp||rp.date>raceDate)return'';const xx=x(rp.date),yy=y(rp.km),col=colorById.get(pair.id)||'#8FA9B8',label=rp.kind==='handover'?'× HANDOVER':rp.kind==='final-use'?'× FINAL USE':'× RETIRE';return`<g class="shoeRetireTick" style="--shoe-color:${col}"><line x1="${xx-10}" y1="${yy-10}" x2="${xx+10}" y2="${yy+10}" stroke="${col}" stroke-width="5"/><line x1="${xx-10}" y1="${yy+10}" x2="${xx+10}" y2="${yy-10}" stroke="${col}" stroke-width="5"/><text x="${xx}" y="${Math.max(T+18,yy-18)}" text-anchor="middle" fill="${col}" font-weight="900">${label}</text></g>`}).join('');
  const historicalRetirementMarkers=actualSeries.filter(item=>item.shoe.status==='retired'&&!pairs.some(p=>p.owned&&p.shoe?.id===item.shoe.id)&&item.points.length).map(item=>{const last=item.points.at(-1),xx=x(last.date),yy=y(last.km),col='#8FA9B8';return`<g class="shoeRetireTick" style="--shoe-color:${col}"><line x1="${xx-9}" y1="${yy-9}" x2="${xx+9}" y2="${yy+9}" stroke="${col}" stroke-width="4"/><line x1="${xx-9}" y1="${yy+9}" x2="${xx+9}" y2="${yy-9}" stroke="${col}" stroke-width="4"/><text x="${xx}" y="${Math.max(T+16,yy-16)}" text-anchor="middle" fill="${col}" font-weight="900">× RETIRE</text></g>`}).join('');
 
  const raceX=x(raceDate),todayX=x(todayStr),targetBand=window&&life.racePair?(()=>{const yy1=y(window.maxKm),yy2=y(window.minKm),bx=Math.max(L,raceX-105);return`<g class="shoeRaceTargetBand"><rect x="${bx}" y="${yy1}" width="${raceX-bx}" height="${Math.max(5,yy2-yy1)}"/></g>`})():'';
@@ -8685,10 +8694,14 @@ function syncMobileViewportInsets(){
  let occludedBottom=0,visibleLeft=0,visibleWidth=Math.max(1,window.innerWidth||document.documentElement.clientWidth||1);
  if(vv){
   const layoutH=Math.max(document.documentElement.clientHeight||0,window.innerHeight||0);
-  occludedBottom=Math.max(0,Math.round(layoutH-(vv.height+vv.offsetTop)));
+  const rawOcclusion=Math.max(0,Math.round(layoutH-(vv.height+vv.offsetTop)));
+  // Android browser/tool bars can change visualViewport by tens of pixels while
+  // scrolling. Treat only a keyboard-sized loss of viewport as true bottom
+  // occlusion; otherwise the fixed bottom navigation must remain at bottom: 0.
+  const keyboardThreshold=Math.max(140,Math.round(layoutH*.18));
+  occludedBottom=rawOcclusion>=keyboardThreshold?rawOcclusion:0;
   visibleLeft=Math.max(0,Number(vv.offsetLeft)||0);
   visibleWidth=Math.max(1,Number(vv.width)||visibleWidth);
-  if(occludedBottom<3)occludedBottom=0;
  }
  const root=document.documentElement.style;
  root.setProperty('--visual-viewport-bottom',`${occludedBottom}px`);
@@ -8704,7 +8717,28 @@ if(window.visualViewport){
 }
 
 const brandVersion=document.querySelector('.brand-copy p');if(brandVersion)brandVersion.textContent=`Race-specific adaptive planning · v${CORE.VERSION} · build ${CORE.BUILD}`;
-if('serviceWorker'in navigator&&(location.protocol==='https:'||['localhost','127.0.0.1'].includes(location.hostname)))navigator.serviceWorker.register(`service-worker.js?v=${CORE.BUILD}-rev-sync`,{updateViaCache:'none'}).then(reg=>reg.update()).catch(()=>{});
+if('serviceWorker'in navigator&&(location.protocol==='https:'||['localhost','127.0.0.1'].includes(location.hostname))){
+ const reloadKey=`arc-sw-reloaded-${CORE.BUILD}`;
+ navigator.serviceWorker.addEventListener('controllerchange',()=>{
+  if(sessionStorage.getItem(reloadKey))return;
+  sessionStorage.setItem(reloadKey,'1');
+  location.reload();
+ });
+ navigator.serviceWorker.register(`service-worker.js?v=${CORE.BUILD}-rev-sync`,{updateViaCache:'none'})
+  .then(async reg=>{
+   await reg.update().catch(()=>{});
+   if(reg.waiting)reg.waiting.postMessage({type:'SKIP_WAITING',build:CORE.BUILD});
+   reg.addEventListener('updatefound',()=>{
+    const worker=reg.installing;
+    if(!worker)return;
+    worker.addEventListener('statechange',()=>{
+     if(worker.state==='installed'&&navigator.serviceWorker.controller){
+      worker.postMessage({type:'SKIP_WAITING',build:CORE.BUILD});
+     }
+    });
+   });
+  }).catch(()=>{});
+}
 const assessmentRunsMigrated=migrateAssessmentRuns();
 const importedPowerMigrated=migrateImportedPower();
 const compactedHistoricalStreams=compactHistoricalActivityStreams();

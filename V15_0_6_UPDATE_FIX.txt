@@ -1,0 +1,23 @@
+AI Running Coach v15.0.6 · build 50006
+
+UPDATE / CACHE FIX
+
+Root cause addressed
+The previous service worker installed the complete app shell with cache.addAll(). If any single shell asset was unavailable or stale during installation, the entire new worker installation could fail and the previous build would continue controlling the PWA.
+
+Changes
+- Service-worker precaching now uses independent asset fetches with Promise.allSettled(), so one failed asset cannot block activation.
+- New workers call skipWaiting() and claim existing clients immediately.
+- The app explicitly tells a waiting worker to activate.
+- A controllerchange event reloads the open PWA once per build, moving it onto the newly activated worker.
+- Navigation requests are build-versioned.
+- JS/CSS/manifest requests are forced to the current build version.
+- Old arc-v caches are removed during activation.
+- HTML includes no-cache hints.
+- Existing v15.0.5 shoe endpoint-X and bottom-navigation fixes are retained.
+- Schema remains 10400.
+
+Verification
+- app.js syntax PASS
+- service-worker.js syntax PASS
+- targeted update regression suite PASS 14/14
