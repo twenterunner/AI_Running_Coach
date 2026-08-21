@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '15.1.1';
-  const BUILD = 50101;
+  const VERSION = '15.1.3';
+  const BUILD = 50103;
   const SCHEMA = 10400;
   const PRIMARY_STORAGE_KEY = 'arc_v10400_web';
   const MIRROR_STORAGE_KEY = 'arc_v10400_mirror';
@@ -7621,62 +7621,74 @@ function shoeEngineMinimizeFuturePortfolio(result,manual){
 }
 
 
+
+function shoeEnginePhysicalRetirementAssessment(pair,result){
+ if(!pair||!result)return{retired:false,date:null,km:0,reason:null};
+ const rows=(pair.assignments||[]).filter(a=>Number(a.km)>0&&String(a.date)<String(result.raceDate)).slice().sort((a,b)=>a.date.localeCompare(b.date)||String(a.planId).localeCompare(String(b.planId)));
+ const manualRetired=Boolean(pair.owned&&pair.shoe?.status==='retired');
+ if(!rows.length){
+  return manualRetired
+   ?{retired:true,date:result.now,km:pair.owned?Number(pair.currentKm)||0:0,reason:'Runner marked the shoe retired.'}
+   :{retired:false,date:null,km:pair.owned?Number(pair.currentKm)||0:0,reason:null};
+ }
+ const last=rows.at(-1),projected=shoeEngineProjectedKm(pair),remaining=Math.max(0,Number(pair.retireKm)-projected);
+ const lifecycleCeilingReached=projected>=Number(pair.retireKm)-1e-6;
+ const future=(result.allSessions||[]).filter(plan=>String(plan.date)>String(last.date)&&String(plan.date)<String(result.raceDate)&&plan.type!=='Rest'&&!/^Race Day$/i.test(String(plan.type||''))&&Number(plan.distance)>0);
+ const compatible=future.filter(plan=>{
+  const fit=lifecycleWorkoutFit(pair.profile,plan);
+  if(fit<SESSION_SHOE_RULES.safeWorkoutFitFloor)return false;
+  const assessment=shoeSuitabilityAssessment(pair.profile,plan,{
+   rehab:Boolean(plan.rehab),shoe:null,projectedKm:0,retireKm:1e9
+  });
+  return assessment.score>=SESSION_SHOE_RULES.safeSuitabilityFloor;
+ });
+ const nextCompatibleKm=compatible.length?Math.min(...compatible.map(plan=>Number(plan.distance)||Infinity)):Infinity;
+ const cannotCoverAnotherCompatibleWholeSession=compatible.length>0&&remaining+1e-6<nextCompatibleKm;
+
+ // A successor purchase can also prove physical retirement when its first
+ // required session cannot fit inside the outgoing pair's remaining lifecycle.
+ const successors=(result.purchases||[]).filter(b=>b.role!=='race'&&b.replacesPairId===pair.id)
+  .slice().sort((a,b)=>String(a.firstUseDate||a.purchaseDate).localeCompare(String(b.firstUseDate||b.purchaseDate)));
+ let successorExhaustion=false;
+ if(successors[0]){
+  const entry=successors[0].firstUseDate||successors[0].purchaseDate;
+  const trigger=(result.allSessions||[]).filter(plan=>String(plan.date)>=String(entry)&&Number(plan.distance)>0&&!/^Race Day$/i.test(String(plan.type||'')))
+   .slice().sort((a,b)=>a.date.localeCompare(b.date))[0];
+  if(trigger){
+   const fit=lifecycleWorkoutFit(pair.profile,trigger);
+   const assessment=shoeSuitabilityAssessment(pair.profile,trigger,{
+    rehab:Boolean(trigger.rehab),shoe:null,projectedKm:0,retireKm:1e9
+   });
+   successorExhaustion=fit>=SESSION_SHOE_RULES.safeWorkoutFitFloor&&assessment.score>=SESSION_SHOE_RULES.safeSuitabilityFloor&&remaining+1e-6<Number(trigger.distance||0);
+  }
+ }
+ const retired=manualRetired||lifecycleCeilingReached||cannotCoverAnotherCompatibleWholeSession||successorExhaustion;
+ return{
+  retired,date:retired?last.date:null,km:projected,
+  reason:manualRetired?'Runner marked the shoe retired.'
+   :lifecycleCeilingReached?'Physical lifecycle ceiling reached.'
+   :cannotCoverAnotherCompatibleWholeSession||successorExhaustion?'Remaining physical lifecycle cannot cover the next suitable whole programme session.':null
+ };
+}
+
 function shoeEngineEnsureCanonicalRetirementEvents(result){
  let changed=false;
  for(const pair of result.pairs||[]){
   if(pair===result.racePair||pair.role==='race')continue;
   const rows=(pair.assignments||[]).filter(a=>Number(a.km)>0&&String(a.date)<String(result.raceDate)).slice().sort((a,b)=>a.date.localeCompare(b.date));
-  if(!rows.length)continue;
-  const last=rows.at(-1).date;
-  pair.finalPlannedUseDate=last;
-
-  const projected=shoeEngineProjectedKm(pair);
-  const remaining=Math.max(0,Number(pair.retireKm)-projected);
-  const future=(result.allSessions||[]).filter(plan=>String(plan.date)>String(last)&&String(plan.date)<String(result.raceDate)&&plan.type!=='Rest'&&!/^Race Day$/i.test(String(plan.type||''))&&Number(plan.distance)>0);
-  const manualRetired=Boolean(pair.owned&&pair.shoe?.status==='retired');
-  const lifecycleCeilingReached=projected>=Number(pair.retireKm)-1e-6;
-
-  // "Compatible" deliberately ignores remaining lifecycle. This separates
-  // physical retirement from the benign case where the plan simply has no
-  // later session that suits this shoe category.
-  const compatible=future.filter(plan=>{
-   const fit=lifecycleWorkoutFit(pair.profile,plan);
-   if(fit<SESSION_SHOE_RULES.safeWorkoutFitFloor)return false;
-   const assessment=shoeSuitabilityAssessment(pair.profile,plan,{
-    rehab:Boolean(plan.rehab),
-    shoe:pair.owned?pair.shoe:null,
-    projectedKm:projected+(Number(plan.distance)||0),
-    retireKm:pair.retireKm
-   });
-   return assessment.score>=SESSION_SHOE_RULES.safeSuitabilityFloor;
-  });
-  const nextCompatibleKm=compatible.length?Math.min(...compatible.map(plan=>Number(plan.distance)||Infinity)):Infinity;
-  const cannotCoverAnotherCompatibleWholeSession=compatible.length>0&&remaining+1e-6<nextCompatibleKm;
-  const physicallyRetired=manualRetired||lifecycleCeilingReached||cannotCoverAnotherCompatibleWholeSession;
-
-  if(physicallyRetired){
-   if(pair.projectedRetireDate!==last||pair.plannedRetireDate!==last||!pair.isProjectedRetired)changed=true;
-   pair.plannedRetireDate=last;
-   pair.projectedRetireDate=last;
+  if(rows.length)pair.finalPlannedUseDate=rows.at(-1).date;
+  const physical=shoeEnginePhysicalRetirementAssessment(pair,result);
+  if(physical.retired){
+   if(pair.projectedRetireDate!==physical.date||pair.plannedRetireDate!==physical.date||!pair.isProjectedRetired)changed=true;
+   pair.plannedRetireDate=physical.date;
+   pair.projectedRetireDate=physical.date;
    pair.isProjectedRetired=true;
    pair.remainsActiveAfterForecast=false;
-   pair.retirementReason=manualRetired
-    ?'Runner marked the shoe retired.'
-    :lifecycleCeilingReached
-     ?'Physical lifecycle ceiling reached.'
-     :'Remaining physical lifecycle cannot cover another suitable whole programme session.';
-  }else{
-   // A curve ending because the optimiser does not need the shoe again is not
-   // retirement. Clear only engine-derived retirement state; explicit manual
-   // retirement was handled above.
+   pair.retirementReason=physical.reason;
+  }else if(!(pair.owned&&pair.shoe?.status==='retired')){
    if(pair.isProjectedRetired||pair.projectedRetireDate||pair.plannedRetireDate){
-    pair.plannedRetireDate=null;
-    pair.projectedRetireDate=null;
-    pair.isProjectedRetired=false;
-    pair.remainsActiveAfterForecast=true;
-    pair.retirementReason=null;
-    pair.rotationExitCanonical=false;
-    changed=true;
+    pair.plannedRetireDate=null;pair.projectedRetireDate=null;pair.isProjectedRetired=false;
+    pair.remainsActiveAfterForecast=true;pair.retirementReason=null;pair.rotationExitCanonical=false;changed=true;
    }
   }
  }
@@ -8323,14 +8335,13 @@ function shoeGraphForecastPoints(pair,life){
 }
 function shoeGraphRetirementPoint(pair,life,forecastPoints){
  const pts=(forecastPoints||shoeGraphForecastPoints(pair,life)).slice().sort((a,b)=>String(a.date).localeCompare(String(b.date)));
- const retirementDate=pair.projectedRetireDate||pair.plannedRetireDate||(pair.isProjectedRetired?pair.finalPlannedUseDate:null);
- if(retirementDate){
-  const before=pts.filter(p=>String(p.date)<=String(retirementDate)),last=before.at(-1)||pts.at(-1);
-  return last?{date:retirementDate,km:Number(last.km)}:null
- }
+ const physical=shoeEnginePhysicalRetirementAssessment(pair,life);
+ if(!physical.retired||!physical.date)return null;
+ const before=pts.filter(p=>String(p.date)<=String(physical.date)),last=before.at(-1)||pts.at(-1);
+ if(last)return{date:physical.date,km:Number(last.km),reason:physical.reason};
  if(pair.owned&&pair.shoe?.status==='retired'){
   const actual=shoeActualProgrammeSeries(pair.shoe,state.setup?.planStart||life.now,life.now);
-  return actual.length?actual.at(-1):null
+  return actual.length?{...actual.at(-1),reason:physical.reason}:null;
  }
  return null
 }
@@ -8587,8 +8598,9 @@ function navIcon(page){
 function navButtonHtml(page,label,extra=''){return`<button ${extra} data-page="${page}"><span class="navIcon">${navIcon(page)}</span><span class="navLabel">${label}</span></button>`}
 function renderNavigation(){const current=document.querySelector('.page.active')?.id||'today';$('nav').innerHTML=primaryPages.map(p=>navButtonHtml(p[0],p[1])).join('')+secondaryPages.map(p=>navButtonHtml(p[0],p[1],'class="desktopSecondary"')).join('')+`<button id="moreNavBtn" class="moreToggle" type="button" aria-expanded="false" aria-controls="moreNav"><span class="navIcon">${navIcon('more')}</span><span class="navLabel">More</span></button>`;$('moreNav').innerHTML=secondaryPages.map(p=>`<button data-page="${p[0]}"><span class="navIcon">${navIcon(p[0])}</span><span>${p[1]}</span></button>`).join('');setActiveNavigation(current)}
 function setActiveNavigation(page){document.querySelectorAll('#nav [data-page],#moreNav [data-page]').forEach(button=>{const active=button.dataset.page===page;button.classList.toggle('active',active);if(active)button.setAttribute('aria-current','page');else button.removeAttribute('aria-current')});const more=$('moreNavBtn'),secondary=secondaryPages.some(item=>item[0]===page);more?.classList.toggle('active',secondary);if(secondary)more?.setAttribute('aria-current','page');else more?.removeAttribute('aria-current')}
-function activatePage(page,anchor=null){if(!pages.some(p=>p[0]===page))return;if(page==='plan')state.weekView=currentWeek();document.querySelectorAll('.page').forEach(section=>section.classList.toggle('active',section.id===page));setActiveNavigation(page);$('moreNav').className='moreNav hidden';$('moreNavBtn')?.setAttribute('aria-expanded','false');renderPage(page);if(anchor){requestAnimationFrame(()=>document.getElementById(anchor)?.scrollIntoView({behavior:'smooth',block:'start'}))}else scrollTo(0,0);$('mainContent')?.focus({preventScroll:true})}
+function activatePage(page,anchor=null){if(!pages.some(p=>p[0]===page))return;if(page==='plan')state.weekView=currentWeek();document.querySelectorAll('.page').forEach(section=>section.classList.toggle('active',section.id===page));setActiveNavigation(page);$('moreNav').className='moreNav hidden';$('moreNavBtn')?.setAttribute('aria-expanded','false');renderPage(page);requestAnimationFrame(positionMobileNavigation);if(anchor){requestAnimationFrame(()=>document.getElementById(anchor)?.scrollIntoView({behavior:'smooth',block:'start'}))}else scrollTo(0,0);$('mainContent')?.focus({preventScroll:true})}
 renderNavigation();
+requestAnimationFrame(positionMobileNavigation);
 document.documentElement.style.removeProperty('--nav-visual-bottom');
 $('nav').onclick=event=>{
  const button=event.target.closest('button');
@@ -8820,24 +8832,62 @@ function onboardingDraft(){const profile=raceProfile(Number($('obRaceDistance').
 function initOnboarding(){if(state.onboardingComplete)return setOnboardingOpen(false);$('obRaceDate').value=state.setup.raceDate;const form=$('onboardingForm'),submit=form.querySelector('[type="submit"]'),summary=$('onboardingErrors');form.addEventListener('input',()=>{form.dataset.reviewed='';submit.textContent='Review and create my plan';summary.className='formErrors hidden';summary.textContent=''});form.onsubmit=event=>{event.preventDefault();const{setup,days}=onboardingDraft(),errors=refineTimeErrors([...CORE.validateSetup(setup),...CORE.validateDays(days)],[{field:'targetTime',label:'Target time',value:$('obTargetTime').value},{field:'testTime',label:'Recent test time',value:$('obTestTime').value}]);if(!$('obConfirm').checked)errors.push({field:'confirm',message:'Confirm that the values are yours before creating the plan.'});const mapping={raceName:'#obRaceName',raceDate:'#obRaceDate',raceDistance:'#obRaceDistance',targetTime:'#obTargetTime',currentWeekly:'#obCurrentWeekly',currentLongest:'#obCurrentLongest',bodyWeight:'#obBodyWeight',testDistance:'#obTestDistance',testTime:'#obTestTime',thresholdHr:'#obThresholdHr',criticalPower:'#obCriticalPower',confirm:'#obConfirm'};if(errors.length){showFieldErrors(errors,mapping,form);summary.className='formErrors';summary.setAttribute('role','alert');summary.textContent=CORE.firstErrorMessage(errors);return toast(CORE.firstErrorMessage(errors),true)}if(form.dataset.reviewed!=='true'){form.dataset.reviewed='true';summary.className='onboardingReview';summary.setAttribute('role','status');summary.innerHTML=`<b>Review your plan inputs</b><p>${esc(setup.raceName)} · ${esc(setup.raceDistance)} km on ${esc(fmtDate(setup.raceDate))}</p><p>Target ${esc(fmtTime(setup.targetTime))}; recent ${esc(setup.testDistance)} km in ${esc(fmtTime(setup.testTime))}; ${esc(setup.currentWeekly)} km/week.</p>`;submit.textContent='Create my plan';submit.focus();return}state.setup=setup;state.days=days;state.onboardingComplete=true;state.programStartPrediction=initialProgrammePrediction(setup);state.predictionHistory=[];buildPlan();save();setOnboardingOpen(false);renderAll();toast('Your personal plan is ready. Today is your starting view.')};setOnboardingOpen(true)}
 $('onboarding').addEventListener('keydown',event=>{if($('onboarding').classList.contains('hidden'))return;if(event.key==='Escape'){event.preventDefault();toast('Complete first-time setup before using the coach.',true);$('onboardingTitle').focus?.();return}if(event.key!=='Tab')return;const focusable=[...$('onboarding').querySelectorAll('button,input,select,textarea,[tabindex]:not([tabindex="-1"])')].filter(el=>!el.disabled&&el.offsetParent!==null);if(!focusable.length)return;const first=focusable[0],last=focusable.at(-1);if(event.shiftKey&&document.activeElement===first){event.preventDefault();last.focus()}else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first.focus()}});
 
+
+function positionMobileNavigation(){
+ if(!(window.matchMedia?.('(max-width: 900px)').matches||window.matchMedia?.('(pointer: coarse)').matches))return;
+ const nav=$('nav'),more=$('moreNav');if(!nav)return;
+ const vv=window.visualViewport;
+ const top=vv?Number(vv.offsetTop)||0:0;
+ const height=vv?Number(vv.height)||window.innerHeight:window.innerHeight;
+ const left=vv?Number(vv.offsetLeft)||0:0;
+ const width=vv?Number(vv.width)||window.innerWidth:window.innerWidth;
+ const navHeight=Math.max(82,Math.round(nav.getBoundingClientRect().height||88));
+ const navTop=Math.max(top,Math.round(top+height-navHeight));
+
+ nav.style.setProperty('position','fixed','important');
+ nav.style.setProperty('left',`${Math.round(left)}px`,'important');
+ nav.style.setProperty('right','auto','important');
+ nav.style.setProperty('top',`${navTop}px`,'important');
+ nav.style.setProperty('bottom','auto','important');
+ nav.style.setProperty('width',`${Math.round(width)}px`,'important');
+ nav.style.setProperty('max-width','none','important');
+ nav.style.setProperty('margin','0','important');
+ nav.style.setProperty('transform','none','important');
+
+ if(more&&!more.classList.contains('hidden')){
+  const menuWidth=Math.min(360,Math.max(260,width-16));
+  const menuLeft=Math.max(left+8,left+width-menuWidth-8);
+  const maxHeight=Math.max(160,Math.round(navTop-top-16));
+  more.style.setProperty('position','fixed','important');
+  more.style.setProperty('left',`${Math.round(menuLeft)}px`,'important');
+  more.style.setProperty('right','auto','important');
+  more.style.setProperty('width',`${Math.round(menuWidth)}px`,'important');
+  more.style.setProperty('max-width',`${Math.round(width-16)}px`,'important');
+  more.style.setProperty('bottom','auto','important');
+  more.style.setProperty('max-height',`${maxHeight}px`,'important');
+  more.style.setProperty('overflow-y','auto','important');
+  more.style.setProperty('top',`${Math.round(top+8)}px`,'important');
+  requestAnimationFrame(()=>{
+   if(more.classList.contains('hidden'))return;
+   const mh=Math.min(more.scrollHeight,maxHeight);
+   more.style.setProperty('top',`${Math.max(top+8,Math.round(navTop-mh-8))}px`,'important');
+  });
+ }
+}
+
 function syncMobileViewportInsets(){
  const vv=window.visualViewport;
- let occludedBottom=0,visibleLeft=0,visibleWidth=Math.max(1,window.innerWidth||document.documentElement.clientWidth||1);
- if(vv){
-  const layoutH=Math.max(document.documentElement.clientHeight||0,window.innerHeight||0);
-  const rawOcclusion=Math.max(0,Math.round(layoutH-(vv.height+vv.offsetTop)));
-  // Android browser/tool bars can change visualViewport by tens of pixels while
-  // scrolling. Treat only a keyboard-sized loss of viewport as true bottom
-  // occlusion; otherwise the fixed bottom navigation must remain at bottom: 0.
-  const keyboardThreshold=Math.max(140,Math.round(layoutH*.18));
-  occludedBottom=rawOcclusion>=keyboardThreshold?rawOcclusion:0;
-  visibleLeft=Math.max(0,Number(vv.offsetLeft)||0);
-  visibleWidth=Math.max(1,Number(vv.width)||visibleWidth);
- }
  const root=document.documentElement.style;
- root.setProperty('--visual-viewport-bottom',`${occludedBottom}px`);
- root.setProperty('--visual-viewport-left',`${visibleLeft}px`);
- root.setProperty('--visual-viewport-width',`${visibleWidth}px`);
+ const layoutWidth=Math.max(1,window.innerWidth||document.documentElement.clientWidth||1);
+ const height=vv?Math.max(1,Math.round(vv.height)):Math.max(1,window.innerHeight||document.documentElement.clientHeight||1);
+ const top=vv?Math.max(0,Math.round(vv.offsetTop||0)):0;
+ const left=vv?Math.max(0,Math.round(vv.offsetLeft||0)):0;
+ const width=vv?Math.max(1,Math.round(vv.width||layoutWidth)):layoutWidth;
+ root.setProperty('--app-visible-top',`${top}px`);
+ root.setProperty('--app-visible-height',`${height}px`);
+ root.setProperty('--app-visible-left',`${left}px`);
+ root.setProperty('--app-visible-width',`${width}px`);
+ requestAnimationFrame(positionMobileNavigation);
 }
 syncMobileViewportInsets();
 window.addEventListener('resize',syncMobileViewportInsets,{passive:true});

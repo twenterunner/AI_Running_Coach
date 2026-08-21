@@ -3,11 +3,11 @@
 <head>
 <meta charset="utf-8"><meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"><meta http-equiv="Pragma" content="no-cache"><meta http-equiv="Expires" content="0"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,interactive-widget=resizes-content">
 <meta name="theme-color" content="#07111D"><title>AI Running Coach</title>
-<link rel="manifest" href="manifest.webmanifest?v=50101"><link rel="stylesheet" href="styles.css?v=50101">
-<link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png?v=50101">
-<link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png?v=50101">
-<link rel="icon" href="favicon.ico?v=50101">
-<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=50101">
+<link rel="manifest" href="manifest.webmanifest?v=50103"><link rel="stylesheet" href="styles.css?v=50103">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png?v=50103">
+<link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png?v=50103">
+<link rel="icon" href="favicon.ico?v=50103">
+<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=50103">
 <meta property="og:image" content="github-banner.png">
 
 
@@ -28,18 +28,21 @@
 
 
 <style id="mobileNavBottomLock">
-@media (max-width: 900px){
+@media (max-width: 900px), (pointer: coarse){
   :root{
     --mobile-nav-height:88px;
     --mobile-nav-safe-bottom:env(safe-area-inset-bottom, 0px);
   }
+  html,body{max-width:100%;overflow-x:hidden;}
   #nav{
     position:fixed !important;
     left:0 !important;
-    right:0 !important;
-    bottom:0 !important;
+    right:auto !important;
+    top:calc(100dvh - var(--mobile-nav-height)) !important;
+    bottom:auto !important;
     width:100vw !important;
     max-width:none !important;
+    min-height:var(--mobile-nav-height) !important;
     margin:0 !important;
     transform:none !important;
     border-radius:0 !important;
@@ -47,21 +50,108 @@
     z-index:10000 !important;
     padding-bottom:var(--mobile-nav-safe-bottom) !important;
   }
+  #nav > button{
+    min-width:0 !important;
+  }
   #mainContent{
-    padding-bottom:calc(var(--mobile-nav-height) + var(--mobile-nav-safe-bottom) + 16px) !important;
+    width:100% !important;
+    max-width:100% !important;
+    box-sizing:border-box !important;
+    padding-bottom:calc(var(--mobile-nav-height) + var(--mobile-nav-safe-bottom) + 20px) !important;
+    overflow-x:hidden !important;
+  }
+  .page{
+    max-width:100% !important;
+    box-sizing:border-box !important;
   }
   #moreNav{
     position:fixed !important;
-    right:8px !important;
-    left:auto !important;
-    bottom:calc(var(--mobile-nav-height) + var(--mobile-nav-safe-bottom) + 8px) !important;
+    right:auto !important;
+    bottom:auto !important;
     width:min(360px, calc(100vw - 16px)) !important;
     max-width:calc(100vw - 16px) !important;
-    max-height:calc(100dvh - var(--mobile-nav-height) - var(--mobile-nav-safe-bottom) - 24px) !important;
+    max-height:calc(100dvh - var(--mobile-nav-height) - 24px) !important;
     overflow-y:auto !important;
     overscroll-behavior:contain !important;
     box-sizing:border-box !important;
     z-index:10001 !important;
+  }
+  .modal,.dialog,.sheet{
+    max-width:calc(100vw - 16px) !important;
+    max-height:calc(100dvh - 16px) !important;
+    overflow:auto !important;
+    box-sizing:border-box !important;
+  }
+  canvas,svg,img{max-width:100%;}
+}
+
+@media (orientation: landscape) and (max-height: 650px) and (pointer: coarse){
+  :root{--mobile-nav-height:70px;}
+  #nav{
+    min-height:70px !important;
+    height:70px !important;
+    padding:3px 6px env(safe-area-inset-bottom, 0px) !important;
+    display:grid !important;
+    grid-template-columns:repeat(5,minmax(0,1fr)) !important;
+    align-items:stretch !important;
+  }
+  #nav > button{
+    width:100% !important;
+    min-width:0 !important;
+    min-height:60px !important;
+    height:60px !important;
+    padding:4px 2px !important;
+    margin:0 !important;
+    border-radius:12px !important;
+  }
+  #nav .navIcon{margin:0 auto 1px !important;}
+  #nav .navIcon svg{width:24px !important;height:24px !important;}
+  #nav .navLabel{font-size:11px !important;line-height:1.05 !important;white-space:nowrap !important;}
+
+  #mainContent{
+    padding-left:14px !important;
+    padding-right:14px !important;
+    padding-bottom:calc(70px + env(safe-area-inset-bottom, 0px) + 14px) !important;
+  }
+  .topbar{
+    min-height:58px !important;
+    padding:7px 14px !important;
+  }
+  .topbar .logo{
+    width:42px !important;
+    height:42px !important;
+  }
+  .topbar .brand-copy h1{
+    font-size:20px !important;
+    line-height:1.05 !important;
+  }
+  .topbar .brand-copy p{
+    font-size:11px !important;
+    line-height:1.2 !important;
+  }
+  .sectionTitle,.progressPageTitle{
+    margin-top:10px !important;
+    margin-bottom:12px !important;
+  }
+  .sectionTitle h2,.progressPageTitle h2{
+    font-size:clamp(28px,5vw,42px) !important;
+    line-height:1.05 !important;
+  }
+  .page{
+    width:100% !important;
+    max-width:none !important;
+  }
+  .grid2,.metricCharts{
+    grid-template-columns:repeat(2,minmax(0,1fr)) !important;
+  }
+  #moreNav{
+    width:min(340px, calc(100vw - 16px)) !important;
+    max-height:calc(100dvh - 86px) !important;
+  }
+  .modal,.dialog,.sheet{
+    width:min(760px,calc(100vw - 16px)) !important;
+    max-width:calc(100vw - 16px) !important;
+    max-height:calc(100dvh - 16px) !important;
   }
 }
 </style>
@@ -69,7 +159,7 @@
 <body>
 <a class="skipLink" href="#mainContent">Skip to main content</a>
 <header class="topbar">
-  <div class="brand"><img class="logo" src="icon-192.png?v=50101" alt="AI Running Coach logo"><div class="brand-copy"><h1>AI Running Coach</h1><p>Race-specific adaptive planning · v15.1.1 · build 50101</p></div></div>
+  <div class="brand"><img class="logo" src="icon-192.png?v=50103" alt="AI Running Coach logo"><div class="brand-copy"><h1>AI Running Coach</h1><p>Race-specific adaptive planning · v15.1.3 · build 50103</p></div></div>
   <button id="installBtn" class="install hidden">Install</button>
 </header>
 <nav id="nav" aria-label="Primary navigation"></nav>
@@ -309,10 +399,10 @@
   <article class="settingsSection"><div class="settingsSectionHead"><span>02</span><div><small>TRAINING STRUCTURE</small><h3>When can you train?</h3><p>Availability and the long-run day used when the plan is rebuilt.</p></div></div><div id="daysGrid"></div></article>
   <article class="settingsSection"><div class="settingsSectionHead"><span>03</span><div><small>ADAPTIVE MODEL</small><h3>Is the configured plan structurally sound?</h3><p>Plan Health validates the programme structure without duplicating Progress.</p></div></div><div class="settingsNested"><div class="panelHead"><div><h3>Plan Health</h3><p class="muted compact">Structure score, calculation and recommendations for the configured plan.</p></div><button id="planHealthBtn" class="secondary">Validate plan</button></div><div id="planHealthContent"></div></div></article>
   <article class="settingsSection"><div class="settingsSectionHead"><span>04</span><div><small>DATA & IMPORTS</small><h3>Manage your local training data</h3><p>Back up, restore or export data. Destructive actions remain clearly separated.</p></div></div><div class="settingsNested"><div class="buttonRow settingsDataActions"><button id="backupBtn">Download backup</button><label for="restoreFile" class="buttonLike">Restore backup</label><input id="restoreFile" type="file" accept=".json"><button id="undoRestoreBtn" type="button" class="secondary hidden">Undo last restore</button><button id="exportBtn">Export runs CSV</button></div><div class="settingsDangerZone"><b>Reset local app data</b><p>Use only when you intend to remove the current local programme and history.</p><button id="resetBtn" class="danger">Reset app</button></div></div></article>
-  <article class="settingsSection"><div class="settingsSectionHead"><span>05</span><div><small>APP & MODEL INFORMATION</small><h3>Which version is running?</h3><p>Reference information for this local build.</p></div></div><div class="settingsNested settingsAppInfo"><div><small>APP VERSION</small><strong>v15.1.1</strong></div><div><small>BUILD</small><strong>50101</strong></div><div><small>DATA</small><strong>Stored locally</strong></div><div><small>ACTIVITY STORAGE</small><strong>Compact derived evidence</strong></div><div><small>EXPECTED CAPACITY</small><strong>≈250–350+ imported sessions</strong><span>Device dependent · a 150-session programme is comfortably within the expected range.</span></div></div><details id="modelDiagnostics" class="settingsNested modelDiagnostics"><summary><div><small>MODEL INTEGRITY</small><b>Checking…</b><span>Read-only consistency diagnostics</span></div></summary></details></article>
+  <article class="settingsSection"><div class="settingsSectionHead"><span>05</span><div><small>APP & MODEL INFORMATION</small><h3>Which version is running?</h3><p>Reference information for this local build.</p></div></div><div class="settingsNested settingsAppInfo"><div><small>APP VERSION</small><strong>v15.1.3</strong></div><div><small>BUILD</small><strong>50103</strong></div><div><small>DATA</small><strong>Stored locally</strong></div><div><small>ACTIVITY STORAGE</small><strong>Compact derived evidence</strong></div><div><small>EXPECTED CAPACITY</small><strong>≈250–350+ imported sessions</strong><span>Device dependent · a 150-session programme is comfortably within the expected range.</span></div></div><details id="modelDiagnostics" class="settingsNested modelDiagnostics"><summary><div><small>MODEL INTEGRITY</small><b>Checking…</b><span>Read-only consistency diagnostics</span></div></summary></details></article>
 </section>
 </main>
-<footer class="appFooter"><span>AI Running Coach</span><small>v15.1.1 · build 50101</small></footer>
+<footer class="appFooter"><span>AI Running Coach</span><small>v15.1.3 · build 50103</small></footer>
 
 <div id="modal" class="modal hidden" role="dialog" aria-modal="true" aria-label="AI Running Coach dialog" tabindex="-1"><div class="modalCard"><button id="closeModal" class="close" type="button" aria-label="Close dialog">×</button><div id="modalContent"></div></div></div>
 
@@ -341,5 +431,5 @@
     <button class="primary full" type="submit">Review and create my plan</button>
   </form>
 </div>
-<script src="app.js?v=50101"></script>
+<script src="app.js?v=50103"></script>
 </body></html>
