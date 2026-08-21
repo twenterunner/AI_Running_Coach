@@ -1,36 +1,28 @@
-// AI Running Coach v15.1.7 · build 50107
+// AI Running Coach v14.9.44 · build 40944
 'use strict';
 
-const BUILD = 50103;
-const CACHE = 'arc-v15106-build-50107';
+const CACHE = 'arc-v14944-build-40944';
 const CACHE_PREFIX = 'arc-v';
 const APP_SHELL = './index.html';
 const ASSETS = [
   './',
   './index.html',
-  './styles.css?v=50103',
-  './app.js?v=50103',
-  './manifest.webmanifest?v=50103',
-  './icon-192.png?v=50103',
-  './icon-512.png?v=50103',
-  './apple-touch-icon.png?v=50103',
-  './favicon-32x32.png?v=50103',
-  './favicon-16x16.png?v=50103',
-  './favicon.ico?v=50103'
+  './styles.css?v=40944',
+  './app.js?v=40944',
+  './manifest.webmanifest?v=40944',
+  './icon-192.png?v=40944',
+  './icon-512.png?v=40944',
+  './apple-touch-icon.png?v=40944',
+  './favicon-32x32.png?v=40944',
+  './favicon-16x16.png?v=40944',
+  './favicon.ico?v=40944'
 ];
-
-async function resilientPrecache() {
-  const cache = await caches.open(CACHE);
-  await Promise.allSettled(ASSETS.map(async asset => {
-    const request = new Request(asset, { cache: 'reload' });
-    const response = await fetch(request);
-    if (response.ok) await cache.put(request, response.clone());
-  }));
-}
 
 self.addEventListener('install', event => {
   event.waitUntil(
-    resilientPrecache().finally(() => self.skipWaiting())
+    caches.open(CACHE)
+      .then(cache => cache.addAll(ASSETS))
+      .then(() => self.skipWaiting())
   );
 });
 
@@ -44,10 +36,6 @@ self.addEventListener('activate', event => {
       ))
       .then(() => self.clients.claim())
   );
-});
-
-self.addEventListener('message', event => {
-  if (event.data?.type === 'SKIP_WAITING') self.skipWaiting();
 });
 
 async function networkFirst(request, fallback) {
@@ -70,17 +58,23 @@ self.addEventListener('fetch', event => {
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
 
-  if (request.mode === 'navigate') {
+  const iconAssets = new Set([
+    '/AI_Running_Coach/icon-192.png',
+    '/AI_Running_Coach/icon-512.png',
+    '/AI_Running_Coach/apple-touch-icon.png',
+    '/AI_Running_Coach/favicon-32x32.png',
+    '/AI_Running_Coach/favicon-16x16.png',
+    '/AI_Running_Coach/favicon.ico'
+  ]);
+  if (iconAssets.has(url.pathname)) {
     const fresh = new URL(request.url);
-    fresh.searchParams.set('build', String(BUILD));
-    event.respondWith(networkFirst(new Request(fresh.toString(), request), APP_SHELL));
+    fresh.search = '?v=40944';
+    event.respondWith(networkFirst(new Request(fresh.toString(), request)));
     return;
   }
 
-  if (/\.(?:js|css|webmanifest)$/i.test(url.pathname)) {
-    const fresh = new URL(request.url);
-    fresh.searchParams.set('v', String(BUILD));
-    event.respondWith(networkFirst(new Request(fresh.toString(), request), request));
+  if (request.mode === 'navigate') {
+    event.respondWith(networkFirst(request, APP_SHELL));
     return;
   }
 
