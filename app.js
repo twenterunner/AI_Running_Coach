@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '15.3.0';
-  const BUILD = 50300;
+  const VERSION = '15.3.1';
+  const BUILD = 50301;
   const SCHEMA = 10400;
   const PRIMARY_STORAGE_KEY = 'arc_v10400_web';
   const MIRROR_STORAGE_KEY = 'arc_v10400_mirror';
@@ -8432,7 +8432,7 @@ function shoeEngineCanonicalFinalizePortfolio(result,manual,weeks){
 function shoeEngineBuildRehabSessions(now,raceDate){const injury=(state.injuries||[]).find(x=>x.id===state.activeInjuryPlanId);if(!injury)return[];const progress=injuryPrediction(injury),rehabEnd=[raceDate,progress?.windowEnd||raceDate].filter(Boolean).sort()[0],rows=[];for(let d=new Date(dte(now).getTime()+DAY),guard=0;d<=dte(rehabEnd)&&guard<120;d=new Date(d.getTime()+DAY),guard++){const date=iso(d),day=rehabCalendarDay(injury,progress,date,rehabPlanDayIndex(injury,date));if(!rehabDayNeedsShoe(day))continue;const exp=rehabExpectedDistance(day),km=Math.max(0,Number(exp.totalKm)||0);if(km<=0)continue;rows.push({id:`rehab-shoe-${injury.id}-${date}`,date,type:'Rehab recovery',distance:km,surface:'road',rehab:true,walkMinutes:exp.walkMinutes,runMinutes:exp.runMinutes,importance:shoeEngineSessionImportance({type:'Rehab recovery',distance:km,runMinutes:exp.runMinutes},{rehab:true}),injuryId:injury.id})}return rows}
 
 const SHOE_PLAN_SNAPSHOT_VERSION=2;
-const SHOE_ENGINE_CACHE_VERSION='15.3.0-50300-whole-horizon-coach-r1';
+const SHOE_ENGINE_CACHE_VERSION='15.3.1-50301-whole-horizon-coach-r2';
 function shoeStableSerialize(value){
  if(value===null||typeof value!=='object')return JSON.stringify(value);
  if(Array.isArray(value))return'['+value.map(shoeStableSerialize).join(',')+']';
@@ -8507,7 +8507,7 @@ function freshShoeLifecyclePlan(){
   racePair:null,raceWindow:null,
   catalogueSource:'offline',catalogueVersion:OFFLINE_ASICS_CATALOGUE_VERSION,
   footMechanics:runnerFootMechanics(),
-  engine:'v15.3.0-whole-horizon-coach-calibrated'
+  engine:'v15.3.1-whole-horizon-coach-fixed-point'
  };
  shoeEngineCanonicalFinalizePortfolio(result,manual,weeks);
 
@@ -8592,25 +8592,35 @@ function freshShoeLifecyclePlan(){
    result.validationIssues=shoeEngineValidation(result);
   }
  }
- const purchaseTimingChanged=shoeEngineDelayDormantFutureEntries(result,manual);
- const purchaseDateChanged=shoeEngineCanonicalizePhysicalEntryDates(result);
- if(purchaseTimingChanged||purchaseDateChanged){
-  result.pairs.forEach(pair=>lifecycleRebuildPoints(pair,now,raceDate,fixed));
-  shoeEngineEnsureCanonicalRetirementEvents(result);
- }
- // Purchase timing can redistribute enough mileage to make a future pair
- // redundant. Challenge the complete portfolio again after that redistribution.
- let portfolioReduced=false,portfolioGuard=0;
- while(portfolioGuard++<Math.max(4,result.pairs.length+1)){
+ // FINAL coach-equivalent purchase-timing fixed point. Portfolio minimisation can
+ // redistribute sessions back onto an early future pair, recreating exactly the
+ // buy-now / sit-dormant pattern that the timing pass had just removed. Therefore
+ // timing and portfolio minimisation are solved together until neither changes.
+ let portfolioReduced=false,timingFixedPointChanged=false,coachTimingGuard=0;
+ while(coachTimingGuard++<Math.max(8,result.pairs.length*3+2)){
+  const beforeSig=JSON.stringify({
+   a:(result.assignments||[]).map(x=>[x.planId,x.pairId,x.date]),
+   p:(result.purchases||[]).map(x=>[x.pairId,x.purchaseDate,x.firstUseDate])
+  });
+  const timingChanged=shoeEngineDelayDormantFutureEntries(result,manual);
+  shoeEngineCanonicalizePhysicalEntryDates(result);
   const before=result.pairs.filter(x=>!x.owned&&x.assignments?.length).length;
   shoeEngineMinimizeFuturePortfolio(result,manual);
   shoeEngineCounterfactualCritic(result,manual);
   const after=result.pairs.filter(x=>!x.owned&&x.assignments?.length).length;
-  if(after>=before)break;
-  portfolioReduced=true;
- }
- if(portfolioReduced){
+  if(after<before)portfolioReduced=true;
+  // A minimisation/critic pass may have recreated sparse early use. Repair again
+  // before testing convergence, so the published ledger itself is the oracle.
+  const timingChangedAfter=shoeEngineDelayDormantFutureEntries(result,manual);
   shoeEngineCanonicalizePhysicalEntryDates(result);
+  timingFixedPointChanged=timingFixedPointChanged||timingChanged||timingChangedAfter;
+  const afterSig=JSON.stringify({
+   a:(result.assignments||[]).map(x=>[x.planId,x.pairId,x.date]),
+   p:(result.purchases||[]).map(x=>[x.pairId,x.purchaseDate,x.firstUseDate])
+  });
+  if(afterSig===beforeSig)break;
+ }
+ if(portfolioReduced||timingFixedPointChanged){
   result.pairs.forEach(pair=>lifecycleRebuildPoints(pair,now,raceDate,fixed));
   shoeEngineEnsureCanonicalRetirementEvents(result);
  }
