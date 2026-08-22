@@ -1,22 +1,23 @@
-AI Running Coach v17.0.0 — clean-slate runner UX
+AI Running Coach v18.0.0 — Clean-slate runner product UI
 
-Design basis
-- Existing calculation engine/data contracts frozen.
-- Presentation designed independently from the legacy GUI.
-- Industry inspiration researched: Garmin Connect/Training Readiness, TrainingPeaks athlete dashboard/performance management, modern serious-runner coaching patterns.
-- Runner hierarchy: decision -> prescription -> evidence -> deep calculation detail.
+DESIGN BASIS
+- Existing calculation engines and data outputs are the product contract; the previous GUI is not.
+- Industry reference principles reviewed: TrainingPeaks Athlete Home/Dashboard and Garmin Connect performance dashboard.
+- Primary hierarchy: decision/action first, performance evidence second, complete calculation detail on demand.
+- Visual system: light performance canvas, dark-teal navigation, teal accent, restrained semantic status colours, consistent typography, spacing, controls and data surfaces.
 
-Engine lock
-- app.js copied unchanged from v15.4.7 baseline.
-- See ENGINE_LOCK_SHA256.txt.
+ENGINE LOCK
+- app.js was not edited by this GUI release.
+- SHA-256 is recorded in ENGINE_LOCK_SHA256.txt.
 
-New UX
-- New desktop athlete performance workspace with persistent navigation.
+NEW PRODUCT EXPERIENCE
+- New desktop athlete workspace with persistent dark-teal navigation.
 - Dedicated mobile bottom navigation.
-- New page headers and purpose hierarchy per module.
-- Minimal light canvas with teal performance identity.
-- Consistent card, typography, form, graph and foldout grammar.
-- All-data/calculation-evidence foldout added to every major screen, while preserving original engine evidence disclosures.
+- Purpose-led screen headers and pictograms for Today, Training, Log, Performance, Recovery, Equipment, Return to Run, Race, Coach, Assessments and Settings.
+- Performance, Recovery, Training and Shoes receive explicit decision/evidence data strips.
+- Existing complex sections restyled into one coherent component system rather than retaining module-specific visual languages.
+- Every page receives an All data & calculation evidence foldout; existing engine-specific formula/evidence foldouts remain intact.
+- Existing chart mounts and calculated outputs are retained; presentation only is changed.
 
-Known limitation
-- The presentation shell is additive so existing engine DOM IDs/data hooks remain intact. Calculation code is not modified.
+IMPORTANT LIMITATION
+This release changes presentation only. It does not create new metrics or reinterpret existing model outputs. Where the engine does not expose an intermediate value, the UI does not invent one.
