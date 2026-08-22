@@ -1,0 +1,24 @@
+AI Running Coach v15.6.9 · build 50609
+Plan programme timeline regression fix
+
+Root cause
+----------
+The Progress renderer still contained legacy code that wrote its own timeline HTML into the DOM element with id="raceTimeline". That element belongs to the Plan tab. With tab caching enabled, visiting/rendering Progress could therefore overwrite the correctly rendered proportional Plan phase graph while the Plan cache still considered itself valid. Returning to Plan reused the cached page, leaving the incompatible legacy timeline markup visible. The screenshot symptom — concatenated horizontal phase names and the summary text running together — matches that legacy markup being rendered under the newer Plan timeline CSS.
+
+Fix
+---
+- Plan is now the sole owner of #raceTimeline.
+- Removed the legacy raceTimeline mutation from renderProgress().
+- Removed the now-dead Progress timeline block calculations.
+- Preserved the v15.6.8 faster-tab path, flat transparent shoe assets, and left-facing shoe orientation unchanged.
+- Added a dedicated regression test proving renderProgress cannot write #raceTimeline and renderPlan remains the owner.
+
+Verification
+------------
+- Plan timeline ownership regression: 5/5 pass
+- Rehab regression: 28/28 pass
+- Performance regression: 17/17 pass
+- Shoe-image integration: 13/13 pass
+- app.js syntax: pass
+- service-worker.js syntax: pass
+- manifest JSON: pass

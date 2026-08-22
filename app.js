@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '15.6.8';
-  const BUILD = 50608;
+  const VERSION = '15.6.9';
+  const BUILD = 50609;
   const SCHEMA = 10400;
   const PRIMARY_STORAGE_KEY = 'arc_v10400_web';
   const MIRROR_STORAGE_KEY = 'arc_v10400_mirror';
@@ -2101,28 +2101,14 @@ function renderDashboard(){
     <div class="pillarMeta"><span>Model weight ${Math.round(p.weight*100)}%</span><span>Evidence ${Math.round(p.coverage*100)}%</span></div>
     <details class="pillarExplain"><summary>How this is calculated</summary><div class="calcTable">${p.items.map(i=>`<div class="calcRow"><span>${i.name}</span><span>${i.hasEvidence?Math.round(i.displayScore):'No evidence'}</span><span>${Math.round(i.weight*100)}%</span></div>`).join('')}</div><p class="muted">Only current completed evidence is scored. Missing evidence is shown as missing and widens the prediction range; it does not receive a neutral or projected score.</p></details>
    </div>`).join('');
- let total=Math.max(1,weeks()),pos=clamp((engine.cw-1)/(Math.max(1,total-1))*100,0,100);
- const blockNames=[];for(let w=1;w<=total;w++){const name=detailedPhase(w),last=blockNames.at(-1);if(!last||last.name!==name)blockNames.push({name,startWeek:w,endWeek:w});else last.endWeek=w}
- const phaseClass=name=>({'Foundation':'foundation','Aerobic':'aerobic','Development':'development','Endurance':'endurance','Specific':'specific','Peak':'peak','Taper':'taper'}[name]||'build');
- const pctStart=w=>(w-1)/total*100,pctEnd=w=>w/total*100;
- const timelineLabel=name=>({'Foundation':'Foundation','Aerobic':'Aerobic','Development':'Development','Endurance':'Endurance','Specific':'Specific','Peak':'Peak','Taper':'Taper'}[name]||esc(name));
- const blocks=blockNames.map(b=>({name:b.name,label:timelineLabel(b.name),start:pctStart(b.startWeek),end:pctEnd(b.endWeek),cls:phaseClass(b.name)}));
  const programmeStart=state.plan.length?dte(state.plan.map(x=>x.date).sort()[0]):today();
  const programmeEnd=dte(state.setup.raceDate);
  const remaining=raceTimeRemaining();
  const programmeSpan=Math.max(DAY,programmeEnd-programmeStart);
  const programmeCompletion=clamp((today()-programmeStart)/programmeSpan*100,0,100);
- $('raceTimeline').innerHTML=(()=>{
- const pct=pos;
- return `<div class="programmeTimelineVisual">
-   <div class="timelineRailWrap">
-     <div class="timelineLabels">${blocks.map(b=>`<span style="width:${Math.max(0,b.end-b.start)}%">${esc(b.label)}</span>`).join('')}</div>
-     <div class="timelineRail">${blocks.map((b,i)=>`<i class="block ${b.cls} b${i+1}" style="width:${Math.max(0,b.end-b.start)}%"></i>`).join('')}<b class="timelineMarker" style="left:${pct}%"></b></div>
-     <div class="timelineEnds"><span>Plan start</span><span>Race day</span></div>
-   </div>
-   <div class="timelineSummary"><strong>${esc(detailedPhase(engine.cw))} phase · week ${engine.cw} of ${total}</strong><span>${Math.round(pct)}% complete · ${Math.max(0,total-engine.cw)} weeks until race</span></div>
- </div>`;
-})();
+ // Plan owns #raceTimeline. Progress must never mutate the Plan-tab timeline.
+ // The legacy Progress timeline renderer previously reused this DOM id, which
+ // could overwrite the proportional phase graph while Plan remained cached.
  let afd=adaptiveFactorDetails(cw);
  $('kpis').innerHTML=kpi('Time until race',remaining.label,'Remaining')+kpi('Programme completion',`${Math.round(programmeCompletion)}%`,'Elapsed on timeline');
  $('weeklyDistanceSummary').innerHTML=`<span class="chartSummaryLabel">This week</span><strong>${wd.actual.toFixed(1)} / ${wd.planned.toFixed(1)} km</strong>`;
@@ -6055,7 +6041,7 @@ function normalizeShoeFamily(text){return String(text||'').toUpperCase().replace
 function knownShoeProfile(brand,model,version){if(normalizeShoeFamily(brand)!=='ASICS')return null;const m=normalizeShoeFamily(model),ver=String(version??'').trim().toUpperCase();let variant=/\bTR\b/.test(m)||/\bTR\b/.test(ver)?'TR':null;const clean=m.replace(/\bTR\b/g,'').replace(/\s+/g,' ').trim();let matches=ASICS_SHOE_PROFILES.filter(p=>clean.includes(p.family)||p.family.includes(clean));if(variant)matches=matches.filter(p=>p.variant==='TR');else matches=matches.filter(p=>!p.variant);if(ver){const n=Number((ver.match(/\d+(?:\.\d+)?/)||[])[0]);if(Number.isFinite(n)){const exact=matches.find(p=>Number(p.version)===n);if(exact)return exact}}return matches.sort((a,b)=>Number(b.version)-Number(a.version))[0]||null}
 function shoeProfileForShoe(shoe){const known=knownShoeProfile(shoe.brand,shoe.model,shoe.version);if(known)return known;const c=shoe.characteristics||{},roles=Array.isArray(c.roles)&&c.roles.length?c.roles:['mixed'];return shoeProfileRecord(normalizeShoeFamily(shoe.model)||'CUSTOM',shoe.version||'',{brand:shoe.brand||'Other',family:shoe.model||'Custom shoe',neutral:c.neutral==null?null:c.neutral!==false,surfaces:c.surfaces||[shoe.surface||'road'],roles,cushioning:Number(c.cushioning)||3,responsiveness:c.ride==='responsive'?5:c.ride==='soft'?2:3,stability:c.neutral===false?5:3,protection:Number(c.cushioning)||3,grip:(c.surfaces||[]).includes('trail')?5:3,efficiency:c.ride==='responsive'?4:3,durability:3,comfort:c.ride==='soft'?5:3,weightClass:'unknown',plated:Boolean(c.plated),typicalReplacementLowKm:Number(shoe.replacementRangeKm?.low)||550,typicalReplacementHighKm:Number(shoe.replacementRangeKm?.high)||850,manufacturerPositioning:'User-entered shoe profile.',evidenceSource:'User-entered characteristics; recommendation profile generated locally by the app.',profileConfidence:'user-entered'})}
 function shoeDisplayName(shoe){return [shoe.brand,shoe.model,shoe.version].filter(Boolean).join(' ').replace(/\s+/g,' ').trim()+(shoe.nickname?` · ${shoe.nickname}`:'')}
-/* v15.6.8 — flat deployment-safe shoe assets.
+/* v15.6.9 — Plan timeline ownership fix; v15.6.8 flat deployment-safe shoe assets retained.
    Transparent WebP files live at the repository root to preserve the app's flat deployment.
    They stay outside app.js so JavaScript parsing and tab rendering do not carry image payloads.
    All bundled shoe art is physically normalized to a left-facing orientation. */
