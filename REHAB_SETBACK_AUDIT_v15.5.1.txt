@@ -1,0 +1,35 @@
+AI Running Coach v15.5.1 · build 50501
+Rehabilitation setback / regression audit
+
+ROOT CAUSE / EXISTING BEHAVIOUR
+- The active rehabilitation stage was already recalculated from the complete check-in history on every injuryPrediction() call.
+- Therefore the engine was technically bidirectional: a newly failed earlier-phase criterion could lower the active phase.
+- Upcoming calendar days are generated from p.stage, so a lower recalculated stage automatically changes future prescriptions.
+- Recovery timing already adds delay for recent next-morning worsening (+7 d), new swelling (+7 d), altered gait (+4 d), and stopped/unable running (+4 d), before model bounds are applied.
+- The missing part was explicit state tracking and user feedback: the app did not retain/derive the highest previously achieved phase, so a regression could look like an unexplained phase change.
+
+CHANGE
+- Added injuryStageHistory() to derive the highest previously demonstrated phase from successive historical check-in prefixes.
+- injuryPrediction() now exposes peakStage, peakStageDate, regressedBy and setback.
+- When current stage < previously achieved stage, the Injury UI explicitly reports the phase regression, its magnitude, the new active phase, and that future rehab/timing have been regenerated.
+- Historical completed sessions are preserved; only future prescription follows the recalculated phase.
+
+CROSS-PHASE AUDIT
+Phase 1: latest pain/walking/strength evidence can prevent or reverse progression.
+Phase 2: current pain plus repeated strength and next-morning response can prevent/reverse progression.
+Phase 3: walking pain, impact tolerance, pain stability and next-morning response can prevent/reverse progression.
+Phase 4: run tolerance, gait and next-morning response can prevent/reverse progression.
+Phase 5: 30-min run tolerance, pain, next-morning response, and combined strength/impact/confidence can prevent/reverse progression.
+Phase 6: 45-min volume, quality/hills and post-training symptom response govern unrestricted return.
+
+IMPORTANT MODEL CHARACTERISTIC
+- Regression is criteria-based, not a fixed 'one phase back' rule. A substantial deterioration can move back more than one phase if the evidence no longer satisfies earlier safety/progression criteria. This is intentional.
+- A single adverse observation only causes regression when it invalidates the criteria used to justify the current/higher phase. It can still delay the projected recovery date even when it does not force a phase regression.
+
+VERIFICATION
+- JavaScript syntax: PASS
+- Service worker syntax: PASS
+- Manifest JSON parse: PASS
+- Rehabilitation consistency + setback static acceptance suite: 28/28 PASS
+- Existing phase-to-prescription consistency tests retained.
+- Full browser E2E could not be executed in this environment; no claim of browser-level verification is made.

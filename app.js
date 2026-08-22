@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '15.5.0';
-  const BUILD = 50500;
+  const VERSION = '15.5.1';
+  const BUILD = 50501;
   const SCHEMA = 10400;
   const PRIMARY_STORAGE_KEY = 'arc_v10400_web';
   const MIRROR_STORAGE_KEY = 'arc_v10400_mirror';
@@ -4984,16 +4984,25 @@ function injuryStageForChecks(i,checks,diag){
  if(diag?.urgent)stage=Math.min(stage,1);
  return stage;
 }
+function injuryStageHistory(i,checks,diag){
+ const rows=(checks||[]).filter(c=>CORE.isIsoDate(c.date)&&c.date<=iso(today())).sort((a,b)=>a.date.localeCompare(b.date));
+ let peakStage=0,peakDate=null;
+ for(let n=1;n<=rows.length;n++){
+  const stage=injuryStageForChecks(i,rows.slice(0,n),diag);
+  if(stage>peakStage){peakStage=stage;peakDate=rows[n-1].date;}
+ }
+ return{peakStage,peakDate};
+}
 function injuryPrediction(i){
  const checks=sortedChecks(i),latest=checks.at(-1)||{},diag=workingDiagnosis(i),initialPain=nullableNumber(i.initialPain),walkInitially=nullableNumber(i.initialWalkPain);let nominalTotal=Number(diag.nominalDays)||56;const severityKnown=Number.isFinite(initialPain)||Number.isFinite(walkInitially)||i.pop||i.bruising;const severityFactor=!severityKnown?1:(initialPain>=8||i.pop||walkInitially>=8?1.18:initialPain>=6||i.bruising||walkInitially>=5?1.08:initialPain<=2&&walkInitially<=1?.88:1);nominalTotal=Math.round(nominalTotal*severityFactor);const baselineMin=Math.max(7,Math.round((Number(diag.minDays)||nominalTotal*.7)*severityFactor)),baselineMax=Math.max(baselineMin+7,Math.round((Number(diag.maxDays)||nominalTotal*1.5)*severityFactor));
  const snap=longitudinalSnapshot(i,checks),currentPain=Number.isFinite(snap.currentPain)?snap.currentPain:initialPain,walkPain=Number.isFinite(snap.walkPain)?snap.walkPain:walkInitially,elapsed=Math.max(0,Math.floor((today()-dte(i.date))/DAY));
- const stage=injuryStageForChecks(i,checks,diag);
+ const stage=injuryStageForChecks(i,checks,diag),stageHistory=injuryStageHistory(i,checks,diag),peakStage=Math.max(stage,stageHistory.peakStage),regressedBy=Math.max(0,peakStage-stage),setback=regressedBy>0;
  const completion=injuryCompletionForChecks(i,checks,diag,initialPain,walkInitially),nominal=Math.round(clamp(elapsed/nominalTotal*100,0,100)),delta=completion===null?null:completion-nominal;
  const nominalRemaining=Math.max(7,nominalTotal-elapsed),stageRemaining=Math.max(7,Math.round(nominalTotal*[.94,.78,.60,.42,.25,.10][stage]));
  let trendRemaining=null,trendRate=null;if(checks.length>=2){const points=checks.map((c,idx)=>({day:Math.max(0,Math.round((dte(c.date)-dte(i.date))/DAY)),score:injuryCompletionForChecks(i,checks.slice(0,idx+1),diag,initialPain,walkInitially)})).filter(x=>Number.isFinite(x.score));if(points.length>=2){const first=points[0],last=points.at(-1),span=Math.max(1,last.day-first.day),gain=last.score-first.score;trendRate=gain/span;if(trendRate>.15)trendRemaining=Math.round((100-last.score)/trendRate);}}
  let remaining=trendRemaining!==null?Math.round(nominalRemaining*.35+stageRemaining*.35+clamp(trendRemaining,7,baselineMax)*.30):Math.round(nominalRemaining*.55+stageRemaining*.45);
  if(Number.isFinite(delta))remaining+=Math.round(clamp(-delta*.20,-14,21));if(latestAdverse(checks,'nextDayWorse'))remaining+=7;if(latestAdverse(checks,'newSwelling'))remaining+=7;if(latestAdverse(checks,'alteredGait'))remaining+=4;if(snap.run.lastAttempt?.runStatus==='unable'||snap.run.lastAttempt?.runStatus==='stopped')remaining+=4;if(diag.urgent)remaining=Math.max(remaining,Math.max(14,baselineMin-elapsed));
- remaining=Math.max(7,Math.min(Math.max(14,Math.round(baselineMax*1.25)),remaining));const total=elapsed+remaining,central=new Date(today().getTime()+remaining*DAY),uncertainty=checks.length>=7?Math.max(7,Math.round(nominalTotal*.12)):checks.length>=3?Math.max(10,Math.round(nominalTotal*.18)):Math.max(14,Math.round(nominalTotal*.25)),rangeStartTotal=Math.max(elapsed+7,Math.max(baselineMin,total-uncertainty)),rangeEndTotal=Math.max(rangeStartTotal+7,Math.min(Math.round(baselineMax*1.25),total+uncertainty)),windowStart=iso(new Date(dte(i.date).getTime()+rangeStartTotal*DAY)),windowEnd=iso(new Date(dte(i.date).getTime()+rangeEndTotal*DAY)),confidence=checks.length>=7?'Moderate':checks.length>=3?'Developing':'Low';return{nominalTotal,baselineMin,baselineMax,total,elapsed,remaining,stage,fullDate:iso(central),windowStart,windowEnd,confidence,currentPain,walkPain,completion,nominal,delta,latest,checks,diag,safetyHold:diag.urgent,trendRate,snapshot:snap};
+ remaining=Math.max(7,Math.min(Math.max(14,Math.round(baselineMax*1.25)),remaining));const total=elapsed+remaining,central=new Date(today().getTime()+remaining*DAY),uncertainty=checks.length>=7?Math.max(7,Math.round(nominalTotal*.12)):checks.length>=3?Math.max(10,Math.round(nominalTotal*.18)):Math.max(14,Math.round(nominalTotal*.25)),rangeStartTotal=Math.max(elapsed+7,Math.max(baselineMin,total-uncertainty)),rangeEndTotal=Math.max(rangeStartTotal+7,Math.min(Math.round(baselineMax*1.25),total+uncertainty)),windowStart=iso(new Date(dte(i.date).getTime()+rangeStartTotal*DAY)),windowEnd=iso(new Date(dte(i.date).getTime()+rangeEndTotal*DAY)),confidence=checks.length>=7?'Moderate':checks.length>=3?'Developing':'Low';return{nominalTotal,baselineMin,baselineMax,total,elapsed,remaining,stage,peakStage,regressedBy,setback,peakStageDate:stageHistory.peakDate,fullDate:iso(central),windowStart,windowEnd,confidence,currentPain,walkPain,completion,nominal,delta,latest,checks,diag,safetyHold:diag.urgent,trendRate,snapshot:snap};
 }
 function injuryCompletionForChecks(i,checks,diag,initialPain,walkInitially){
  const observed=(checks||[]).filter(c=>CORE.isIsoDate(c.date)&&c.date<=iso(today()));
@@ -5543,6 +5552,7 @@ function renderInjury(){
     </div>
     <div class="injuryRunnerHeroFoot"><span>${esc(diag.name)}</span><span>Injury ${fmtDate(i.date)}</span><span>Rehab start ${fmtDate(rehabPlanStart(i))}</span></div>
    </article>
+   ${p.setback&&!p.safetyHold?`<article class="injuryRunnerAlert warn"><b>Rehabilitation phase adjusted after a setback</b><p>Recent check-in evidence no longer satisfies the safety/progression criteria for Phase ${p.peakStage+1}. The active programme has moved back ${p.regressedBy===1?'one phase':`${p.regressedBy} phases`} to Phase ${p.stage+1} (${esc(INJURY_STAGES[p.stage].name)}). Upcoming rehabilitation is regenerated from this phase; later phases and the unrestricted-running estimate are recalculated from the updated evidence. Previously completed sessions remain in your history.</p></article>`:''}
    ${p.safetyHold?`<article class="injuryRunnerAlert bad"><b>Rehabilitation progression paused</b><p>${esc(diag.safetyReasons.join(' · '))}. Seek appropriate clinical assessment before progressing.</p></article>`:''}
    <article class="injuryRunnerCard injuryMeaningCard injuryRunnerStatusMeaning"><div class="injuryRunnerCardHead"><div><small>WHAT THIS MEANS NOW</small><h4>Runner interpretation</h4></div></div>${injuryRunnerInterpretation(i,p,criteria,scoreInfo,adherenceOverall,milestones)}</article>
   </section>

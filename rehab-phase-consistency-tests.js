@@ -27,8 +27,20 @@ test('P6 symptom recurrence uses completed training exposures',has("c.runStatus=
 test('Seconds input retained for walking',has('id="icWalkSeconds"'));
 test('Seconds input retained for running',has('id="icRunSeconds"'));
 test('Current phase criterion is used in runner interpretation',has("criteria=criterionState(i,p,p.stage)"));
+
+// Setback / bidirectional progression checks.
+test('Stage is recalculated from the full check-in history',has('const stage=injuryStageForChecks(i,checks,diag)'));
+test('Highest previously achieved stage is tracked',has('function injuryStageHistory(i,checks,diag)')&&has('peakStage'));
+test('Regression magnitude is exposed to the model and UI',has('regressedBy=Math.max(0,peakStage-stage)')&&has('Rehabilitation phase adjusted after a setback'));
+test('Upcoming programme uses the recalculated active stage',has('const exercises=exerciseList(i,p),stage=p.stage'));
+test('Future rehab shoe/calendar projection also uses recalculated injuryPrediction',has('const progress=injuryPrediction(injury)')&&has('rehabCalendarDay(injury,progress,date'));
+test('Setback extends recovery estimate for adverse next-morning response',has("if(latestAdverse(checks,'nextDayWorse'))remaining+=7"));
+test('Setback extends recovery estimate for new swelling',has("if(latestAdverse(checks,'newSwelling'))remaining+=7"));
+test('Setback extends recovery estimate for altered gait',has("if(latestAdverse(checks,'alteredGait'))remaining+=4"));
+test('Stopped or unable run extends recovery estimate',has("snap.run.lastAttempt?.runStatus==='unable'||snap.run.lastAttempt?.runStatus==='stopped'"));
+
 // Build integrity.
-test('Build number updated',has("const BUILD = 50500;"));
-test('Core version updated',has("const VERSION = '15.5.0';"));
+test('Build number updated',has("const BUILD = 50501;"));
+test('Core version updated',has("const VERSION = '15.5.1';"));
 console.log(`\n${pass} passed, ${fail} failed`);
 if(fail) process.exit(1);
