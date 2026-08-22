@@ -1,0 +1,37 @@
+AI Running Coach v16.0.1 — Full Migration Verification
+Date: 2026-08-22
+
+BASELINE
+- Functional baseline: v15.6.9 Plan Timeline Fix package.
+- GUI migration source: v16.0.0 controlled GUI migration package.
+
+MIGRATION INTEGRITY
+- app.js comparison confirms the migration retained the v15.6.9 application logic byte-for-byte apart from VERSION/BUILD metadata.
+- Storage schema remains 10400; primary and mirror storage keys remain unchanged.
+- The GUI migration is concentrated in styles.css plus version/cache metadata, preserving existing DOM IDs and renderer contracts.
+- FIT/CSV import, plan generation, prediction, recovery/HRV, injury/rehab, shoe lifecycle, persistence and navigation implementation remain present in the migrated application logic.
+
+DEFECTS FOUND AND CORRECTED DURING VERIFICATION
+1. index.html still referenced build 50609 for manifest/CSS/favicon/app cache-busting.
+2. Settings still displayed v15.6.9 / build 50609.
+3. service-worker cache name still contained v15609 despite build 60000.
+These were corrected to the v16 migration identifiers.
+
+AUTOMATED TEST RESULTS
+- app.js syntax: PASS
+- service-worker.js syntax: PASS
+- manifest JSON: PASS
+- performance-regression-tests.js: 17/17 PASS
+- plan-timeline-regression-tests.js: 5/5 PASS
+- rehab-phase-consistency-tests.js: 28/28 PASS
+- shoe-image-integration-tests.js: 13/13 PASS
+- migration-regression-tests.js: 21/21 PASS
+Total explicit assertions: 84/84 PASS.
+
+BROWSER EXECUTION
+- A real Chromium headless launch against a local HTTP server was attempted with --headless --no-sandbox --disable-gpu --disable-dev-shm-usage.
+- Chromium failed to reach page execution in this container because of the environment's DBus/browser startup failure and timed out.
+- Therefore this report does NOT falsely claim a full end-to-end browser/device acceptance pass.
+
+CONCLUSION
+The complete v15.6.9 functional codebase is retained under the migrated GUI and all executable non-browser regression suites available in the package pass. Version/cache defects discovered during verification were corrected. The only unconfirmed layer is real-browser/device interaction because Chromium cannot launch successfully in this execution environment. Device/browser acceptance remains required before a truthful claim of 100% runtime confirmation can be made.
