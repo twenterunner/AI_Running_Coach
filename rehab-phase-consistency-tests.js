@@ -40,7 +40,7 @@ test('Setback extends recovery estimate for altered gait',has("if(latestAdverse(
 test('Stopped or unable run extends recovery estimate',has("snap.run.lastAttempt?.runStatus==='unable'||snap.run.lastAttempt?.runStatus==='stopped'"));
 
 // Build integrity.
-test('Build number updated',has("const BUILD = 60100;"));
-test('Core version updated',has("const VERSION = '16.1.0';"));
+test('Build number updated',has("const BUILD = 50609;"));
+test('Core version updated',has("const VERSION = '15.6.9';"));
 console.log(`\n${pass} passed, ${fail} failed`);
 if(fail) process.exit(1);
