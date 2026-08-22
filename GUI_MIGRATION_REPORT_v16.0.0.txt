@@ -1,0 +1,14 @@
+AI Running Coach v16.0.0 — controlled GUI migration
+
+Scope
+- Presentation-only migration over approved v15.6.9 functional baseline.
+- Existing page IDs, renderer contracts, calculations, storage schema, shoe engine, rehab engine, plan generation, predictions, imports and event handlers retained.
+- New shared dark-teal design system applied across all tabs.
+- Fixed bottom navigation made independent of page scrolling with safe-area padding.
+- More menu and modal z-index/viewport behavior hardened.
+- Shoe transparency/stacking contract explicitly retained above migrated surfaces.
+
+Risk controls
+- No application calculation or data-model algorithm intentionally changed.
+- No repository folders introduced.
+- Existing performance, plan timeline, rehab consistency and shoe image integration regression suites run after migration.

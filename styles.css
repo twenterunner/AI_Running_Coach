@@ -5851,3 +5851,51 @@ body:has(#dashboard.progressPage.active),#mainContent:has(#dashboard.progressPag
 .shoePhoto img,.shoeCardPhoto img,.shoeDetailPhoto img,.todayShoePhoto img,.planShoeThumb img,.logShoePhoto img,.shoeRaceNowPhoto img,.shoeRaceTargetPhoto img,.raceShoeHeroPhoto img,.sessionShoePhoto img,.shoeMiniPhoto img{
   background:transparent!important;mix-blend-mode:normal!important;filter:none!important;z-index:21!important;
 }
+
+/* v16.0.0 — controlled GUI migration.
+   Presentation-only layer. Existing DOM IDs, renderers, calculations and event contracts remain unchanged. */
+:root{
+ --app:#02111c;--app-2:#041823;--card:#072333;--nested:#071d29;--elev:#0a2a3a;--line:#184b5d;
+ --text:#f6fbfc;--text-2:#c5d8dc;--muted:#88a3aa;--teal:#42ded2;--teal-2:#62e7dc;--blue:#39bfe8;
+ --green:#83e05c;--amber:#efb34a;--red:#ff8752;--purple:#b9a3ff;
+ --r1:11px;--r2:16px;--r3:20px;--shadow:0 14px 34px rgba(0,0,0,.28)
+}
+html,body{background:#02111c!important}
+body{background:radial-gradient(circle at 82% -6%,rgba(66,222,210,.12),transparent 23%),linear-gradient(180deg,#041a26 0,#02111c 32%,#02111c 100%)!important}
+.topbar{height:60px!important;background:rgba(3,21,31,.94)!important;border-bottom:1px solid #153f4d!important;backdrop-filter:blur(16px)}
+.brand-copy h1{font-size:16px!important;letter-spacing:-.01em}.brand-copy p{font-size:8px!important;color:#8eabb2!important}.logo{width:38px!important;height:38px!important;border-radius:12px!important}
+#mainContent{max-width:980px;margin:0 auto;padding-top:12px!important}
+.page>.sectionTitle,.progressPageTitle{margin-bottom:12px!important;padding:4px 3px!important}.sectionTitle h2,.progressPageTitle h2{font-size:25px!important;letter-spacing:-.025em}.pageEyebrow{color:#59e0d4!important;font-size:8px!important;letter-spacing:.12em!important}
+.panel,.hero,.level1,.level2,.level3,.planSection,.recoverySection,.injurySection,.shoeSection,.settingsSection,.coachSection,
+#today .seriousBriefing,#today .todayRunnerCard,#today .todayStatusCard,#today .todayWorkoutCard,
+.progressSection>article,.progressSection>.panel,.outlookCard,.planWeekNavWrap,.weekHeaderCard,.planDayCard,
+.shoeCard,.shoeDetailCard,.raceShoeHero,.rehabCard,.injuryCard,.assessmentCard{
+ background:linear-gradient(155deg,#0a2a3a,#061c29)!important;border-color:#165d73!important;box-shadow:var(--shadow)!important
+}
+.level2,.nested,.metricCard,.kpi,.todayTargetGrid>div,.todayPrescription>div,.weekMetrics>div,.signalMetrics>div,.raceMetrics>div,
+.shoeAvailableScores>span,.shoeSuitabilityPair,.planShoeSummary,.sessionShoeAvailableRow,.diagnosticNext{
+ background:#071d29!important;border-color:#1a4657!important
+}
+button,.button,.btn{border-radius:11px!important}button:not(.danger):not(.secondary):not(.ghost):not(.navButton){border-color:#1c6677}
+details{border-radius:13px!important}details>summary{min-height:44px}
+input,select,textarea{background:#061b27!important;border-color:#1b4b5b!important;color:#f6fbfc!important;border-radius:10px!important}
+canvas{border-radius:13px;background:linear-gradient(180deg,#071b26,#04131d)}
+.badge,.pill,.chip,.statusPill{border-radius:999px!important}
+/* Primary navigation: fixed, thumb-safe and independent of page scroll. */
+#nav{position:fixed!important;left:50%!important;bottom:0!important;top:auto!important;transform:translateX(-50%)!important;z-index:500!important;width:min(100%,980px)!important;min-height:66px!important;padding:4px max(8px,env(safe-area-inset-left)) calc(4px + env(safe-area-inset-bottom)) max(8px,env(safe-area-inset-right))!important;background:rgba(3,21,31,.97)!important;border-top:1px solid #18414f!important;border-bottom:0!important;box-shadow:0 -10px 30px rgba(0,0,0,.28)!important;backdrop-filter:blur(18px)}
+#nav button{min-height:56px!important;border-radius:13px!important;background:transparent!important;border:0!important;color:#91aab0!important}
+#nav button.active,#nav button[aria-current="page"]{background:#0a2c37!important;color:#43ded2!important;box-shadow:inset 0 0 0 1px rgba(66,222,210,.12)!important}
+#nav button svg{width:21px!important;height:21px!important}#nav button span,#nav button small{font-size:8px!important;font-weight:750!important}
+body{padding-bottom:calc(78px + env(safe-area-inset-bottom))!important}#mainContent{padding-bottom:calc(22px + env(safe-area-inset-bottom))!important}
+#moreNav{position:fixed!important;left:50%!important;bottom:calc(68px + env(safe-area-inset-bottom))!important;transform:translateX(-50%)!important;z-index:490!important;width:min(calc(100% - 16px),964px)!important;max-height:calc(100dvh - 150px)!important;overflow:auto!important;background:#041823!important;border:1px solid #184b5d!important;border-radius:18px 18px 12px 12px!important;box-shadow:0 20px 55px rgba(0,0,0,.48)!important}
+/* Modal hierarchy must always sit above fixed navigation. */
+.modalBackdrop,.overlay{z-index:900!important}.modal,.dialog,.sheet{z-index:910!important;background:linear-gradient(155deg,#0a2a3a,#061c29)!important;border-color:#1a6074!important;box-shadow:0 24px 70px rgba(0,0,0,.55)!important}
+/* Stronger information hierarchy shared by every tab. */
+.progressSectionHead,.planSectionHead,.panelHead{border-bottom-color:rgba(89,224,212,.12)!important}.progressSectionHead>span{background:#082b37!important;border-color:#1d6574!important;color:#59e0d4!important}
+.progressSectionHead small,.planSectionHead span,.panelHead small{color:#59e0d4!important}.progressSectionHead h3,.planSectionHead h3,.panelHead h3{letter-spacing:-.015em}
+.outlookHero,.seriousBriefing{background:linear-gradient(150deg,#0d3141,#071e2c 65%,#061823)!important;border-color:#1c6d7f!important}
+/* Keep shoe photography truly transparent and above all migrated surfaces. */
+.shoePhoto,.shoeCardPhoto,.shoeDetailPhoto,.todayShoePhoto,.planShoeThumb,.logShoePhoto,.shoeRaceNowPhoto,.shoeRaceTargetPhoto,.raceShoeHeroPhoto,.sessionShoePhoto,.shoeMiniPhoto{background:transparent!important;box-shadow:none!important;border:0!important;z-index:40!important}
+.shoePhoto img,.shoeCardPhoto img,.shoeDetailPhoto img,.todayShoePhoto img,.planShoeThumb img,.logShoePhoto img,.shoeRaceNowPhoto img,.shoeRaceTargetPhoto img,.raceShoeHeroPhoto img,.sessionShoePhoto img,.shoeMiniPhoto img{background:transparent!important;z-index:41!important}
+@media(max-width:700px){#mainContent{padding-left:10px!important;padding-right:10px!important}.topbar{padding-left:12px!important;padding-right:12px!important}.brand-copy p{max-width:230px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.panel,.hero,.planSection{border-radius:16px!important}.grid2,.grid3{gap:9px!important}}
+@media(max-width:390px){#mainContent{padding-left:8px!important;padding-right:8px!important}.brand-copy h1{font-size:15px!important}.brand-copy p{max-width:190px}.sectionTitle h2,.progressPageTitle h2{font-size:23px!important}#nav{padding-left:5px!important;padding-right:5px!important}#nav button{padding-left:3px!important;padding-right:3px!important}}

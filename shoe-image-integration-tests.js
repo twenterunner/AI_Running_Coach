@@ -4,7 +4,7 @@ const css=fs.readFileSync(path.join(__dirname,'styles.css'),'utf8');
 const sw=fs.readFileSync(path.join(__dirname,'service-worker.js'),'utf8');
 const assets=fs.readdirSync(__dirname).filter(x=>x.endsWith('-transparent.webp'));
 const tests=[
- ['Version updated',/VERSION = '15\.6\.9'/.test(app)&&/BUILD = 50609/.test(app)],
+ ['Version updated',/VERSION = '16\.0\.0'/.test(app)&&/BUILD = 60000/.test(app)],
  ['No embedded image payloads',!app.includes('data:image/webp;base64,')&&!app.includes('EMBEDDED_SHOE_IMAGES')],
  ['At least 19 root shoe assets',assets.length>=19],
  ['Flat deployment has no shoe-images directory',!fs.existsSync(path.join(__dirname,'shoe-images'))],
