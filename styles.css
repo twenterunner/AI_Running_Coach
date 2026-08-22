@@ -5785,3 +5785,9 @@ body:has(#dashboard.progressPage.active),#mainContent:has(#dashboard.progressPag
 @media(orientation:landscape) and (max-height:650px) and (pointer:coarse){
  #injury .injuryPhaseStrip{grid-template-columns:repeat(3,minmax(0,1fr))}
 }
+
+/* v15.4.8 rehab duration precision */
+#injury .durationInput{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px}
+#injury .durationInput>label{display:grid;grid-template-columns:auto 1fr;align-items:center;gap:7px;margin:0;padding:0 9px;border:1px solid rgba(136,161,177,.18);border-radius:10px;background:rgba(4,21,29,.45)}
+#injury .durationInput>label>span{font-size:9px;font-weight:850;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+#injury .durationInput input{min-width:0;border:0!important;background:transparent!important;padding-left:0!important;padding-right:0!important}
