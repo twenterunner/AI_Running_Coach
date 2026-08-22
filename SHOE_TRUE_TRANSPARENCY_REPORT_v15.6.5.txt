@@ -1,0 +1,8 @@
+AI Running Coach v15.6.5 · build 50605
+
+CHANGE
+- Replaced browser blend-mode approximation with bundled PNG shoe assets containing a real alpha channel.
+- Border-connected catalogue backgrounds are removed before packaging.
+- Shoe images render with normal compositing above teal card surfaces.
+- Assets are local/offline and precached by the service worker.
+- Exact NOVABLAST 4 image is bundled; every built-in family resolves to a distinct transparent shoe asset, including GEL-PULSE.

@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '15.6.4';
-  const BUILD = 50604;
+  const VERSION = '15.6.5';
+  const BUILD = 50605;
   const SCHEMA = 10400;
   const PRIMARY_STORAGE_KEY = 'arc_v10400_web';
   const MIRROR_STORAGE_KEY = 'arc_v10400_mirror';
@@ -6056,33 +6056,33 @@ function knownShoeProfile(brand,model,version){if(normalizeShoeFamily(brand)!=='
 function shoeProfileForShoe(shoe){const known=knownShoeProfile(shoe.brand,shoe.model,shoe.version);if(known)return known;const c=shoe.characteristics||{},roles=Array.isArray(c.roles)&&c.roles.length?c.roles:['mixed'];return shoeProfileRecord(normalizeShoeFamily(shoe.model)||'CUSTOM',shoe.version||'',{brand:shoe.brand||'Other',family:shoe.model||'Custom shoe',neutral:c.neutral==null?null:c.neutral!==false,surfaces:c.surfaces||[shoe.surface||'road'],roles,cushioning:Number(c.cushioning)||3,responsiveness:c.ride==='responsive'?5:c.ride==='soft'?2:3,stability:c.neutral===false?5:3,protection:Number(c.cushioning)||3,grip:(c.surfaces||[]).includes('trail')?5:3,efficiency:c.ride==='responsive'?4:3,durability:3,comfort:c.ride==='soft'?5:3,weightClass:'unknown',plated:Boolean(c.plated),typicalReplacementLowKm:Number(shoe.replacementRangeKm?.low)||550,typicalReplacementHighKm:Number(shoe.replacementRangeKm?.high)||850,manufacturerPositioning:'User-entered shoe profile.',evidenceSource:'User-entered characteristics; recommendation profile generated locally by the app.',profileConfidence:'user-entered'})}
 function shoeDisplayName(shoe){return [shoe.brand,shoe.model,shoe.version].filter(Boolean).join(' ').replace(/\s+/g,' ').trim()+(shoe.nickname?` · ${shoe.nickname}`:'')}
 const SHOE_IMAGE_CATALOGUE={
- 'ASICS|NOVABLAST|4':'https://images.asics.com/is/image/asics/1011B693_001_SL_LT_GLB?$sfcc-product$=',
- 'ASICS|GEL-NIMBUS|25':'https://images.asics.com/is/image/asics/1011B547_004_SL_LT_GLB?$sfcc-product$=',
- 'ASICS|SUPERBLAST|2':'https://images.asics.com/is/image/asics/1013A142_402_SL_LT_GLB?$sfcc-product$=',
- 'ASICS|MEGABLAST|1':'https://images.asics.com/is/image/asics/1013A170_001_SL_LT_GLB?$sfcc-product$='
+ 'ASICS|NOVABLAST|4':'./shoe-images/novablast-4-transparent.png',
+ 'ASICS|GEL-NIMBUS|25':'./shoe-images/gel-nimbus-transparent.png',
+ 'ASICS|SUPERBLAST|2':'./shoe-images/superblast-transparent.png',
+ 'ASICS|MEGABLAST|1':'./shoe-images/megablast-transparent.png'
 };
-/* Representative manufacturer/product photography for every built-in shoe family.
-   Exact generation imagery above wins when available; otherwise the family image is used so
-   every supported catalogue shoe has a real photographic identity rather than a pictogram. */
+/* v15.6.5 — local background-free product assets.
+   Every built-in family resolves to a bundled PNG whose border-connected catalogue
+   background has been removed. Exact generation assets above win when available. */
 const SHOE_FAMILY_IMAGE_CATALOGUE={
- 'GEL-NIMBUS':'https://images.asics.com/is/image/asics/1011C127_001_SL_LT_GLB?$sfcc-product$=',
- 'GEL-CUMULUS':'https://images.asics.com/is/image/asics/1011C143_400_SL_LT_GLB?$sfcc-product$=',
- 'NOVABLAST':'https://images.asics.com/is/image/asics/1011C243_001_SL_LT_GLB?$sfcc-product$=',
- 'SUPERBLAST':'https://images.asics.com/is/image/asics/1013A177_100_SL_LT_GLB?$sfcc-product$=',
- 'MEGABLAST':'https://images.asics.com/is/image/asics/1013A170_001_SL_LT_GLB?$sfcc-product$=',
- 'SONICBLAST':'https://images.asics.com/is/image/asics/1011C083_401_SL_LT_GLB?$sfcc-product$=',
- 'MAGIC SPEED':'https://images.asics.com/is/image/asics/1013A183_300_SL_LT_GLB?$sfcc-product$=',
- 'METASPEED SKY':'https://images.asics.com/is/image/asics/1013A162_400_SL_LT_GLB?$sfcc-product$=',
- 'METASPEED EDGE':'https://images.asics.com/is/image/asics/1013A163_101_SL_LT_GLB?$sfcc-product$=',
- 'METASPEED RAY':'https://images.asics.com/is/image/asics/1013A176_100_SL_LT_GLB?$sfcc-product$=',
- 'NOOSA TRI':'https://images.asics.com/is/image/asics/1011B872_301_SL_LT_GLB?$sfcc-product$=',
- 'GEL-PULSE':'https://www.asics.co.in/media/catalog/product/1/0/1011b962_003_sl_lt_glb.jpg?optimize=high&bg-color=255,255,255&fit=bounds&width=900',
- 'EVORIDE':'https://assets.solesense.com/en/images/products/500/asics-evoride-white-1011a792-100_1.jpg',
- 'GLIDERIDE':'https://images.asics.com/is/image/asics/1011B336_403_SL_LT_GLB?$sfcc-product$=',
- 'DYNABLAST':'https://www.asics.co.in/media/catalog/product/1/0/1011b983_020_sl_lt_glb_1.jpg?optimize=high&bg-color=255,255,255&fit=bounds&width=900',
- 'GEL-KAYANO':'https://images.asics.com/is/image/asics/1011C167_001_SL_LT_GLB?$sfcc-product$=',
- 'GT-2000':'https://www.asics.co.in/media/catalog/product/1/0/1011c056_400_sl_lt_glb_1.jpg?optimize=high&bg-color=255,255,255&fit=bounds&width=900',
- 'GT-1000':'https://www.asics.co.in/media/catalog/product/1/0/1011c077_400_sl_lt_glb_1.jpg?optimize=high&bg-color=255,255,255&fit=bounds&width=900'
+ 'GEL-NIMBUS':'./shoe-images/gel-nimbus-transparent.png',
+ 'GEL-CUMULUS':'./shoe-images/gel-cumulus-transparent.png',
+ 'NOVABLAST':'./shoe-images/novablast-transparent.png',
+ 'SUPERBLAST':'./shoe-images/superblast-transparent.png',
+ 'MEGABLAST':'./shoe-images/megablast-transparent.png',
+ 'SONICBLAST':'./shoe-images/sonicblast-transparent.png',
+ 'MAGIC SPEED':'./shoe-images/magic-speed-transparent.png',
+ 'METASPEED SKY':'./shoe-images/metaspeed-sky-transparent.png',
+ 'METASPEED EDGE':'./shoe-images/metaspeed-edge-transparent.png',
+ 'METASPEED RAY':'./shoe-images/metaspeed-ray-transparent.png',
+ 'NOOSA TRI':'./shoe-images/noosa-tri-transparent.png',
+ 'GEL-PULSE':'./shoe-images/gel-pulse-transparent.png',
+ 'EVORIDE':'./shoe-images/evoride-transparent.png',
+ 'GLIDERIDE':'./shoe-images/glideride-transparent.png',
+ 'DYNABLAST':'./shoe-images/dynablast-transparent.png',
+ 'GEL-KAYANO':'./shoe-images/gel-kayano-transparent.png',
+ 'GT-2000':'./shoe-images/gt-2000-transparent.png',
+ 'GT-1000':'./shoe-images/gt-1000-transparent.png'
 };
 function shoeImageKey(brand,model,version){return `${String(brand||'').trim().toUpperCase()}|${normalizeShoeFamily(model||'')}|${String(version||'').trim()}`}
 function shoeImageUrlForParts(brand,model,version){

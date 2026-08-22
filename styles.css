@@ -5793,7 +5793,7 @@ body:has(#dashboard.progressPage.active),#mainContent:has(#dashboard.progressPag
 #injury .durationInput input{min-width:0;border:0!important;background:transparent!important;padding-left:0!important;padding-right:0!important}
 /* v15.6.1 — shoe photography */
 .shoePhoto,.shoeCardPhoto,.shoeDetailPhoto,.todayShoePhoto,.planShoeThumb,.logShoePhoto,.shoeRaceNowPhoto,.shoeRaceTargetPhoto,.raceShoeHeroPhoto,.sessionShoePhoto,.shoeMiniPhoto{position:relative;display:grid;place-items:center;overflow:visible;background:transparent;border:0;box-shadow:none}
-.shoePhoto img,.shoeCardPhoto img,.shoeDetailPhoto img,.todayShoePhoto img,.planShoeThumb img,.logShoePhoto img,.shoeRaceNowPhoto img,.shoeRaceTargetPhoto img,.raceShoeHeroPhoto img,.sessionShoePhoto img,.shoeMiniPhoto img{width:100%;height:100%;object-fit:contain;display:block;mix-blend-mode:multiply;background:transparent}
+.shoePhoto img,.shoeCardPhoto img,.shoeDetailPhoto img,.todayShoePhoto img,.planShoeThumb img,.logShoePhoto img,.shoeRaceNowPhoto img,.shoeRaceTargetPhoto img,.raceShoeHeroPhoto img,.sessionShoePhoto img,.shoeMiniPhoto img{width:100%;height:100%;object-fit:contain;display:block;mix-blend-mode:normal;background:transparent}
 .shoePhotoFallbackInner{display:none;color:var(--teal-2)}
 .imageFailed .shoePhotoFallbackInner,.shoePhotoFallback .shoePhotoFallbackInner{display:grid;place-items:center}
 .shoePhotoFallback{color:var(--teal-2);background:rgba(61,214,198,.08)}
@@ -5833,13 +5833,21 @@ body:has(#dashboard.progressPage.active),#mainContent:has(#dashboard.progressPag
 .shoePhoto img,.shoeCardPhoto img,.shoeDetailPhoto img,.todayShoePhoto img,.planShoeThumb img,.logShoePhoto img,.shoeRaceNowPhoto img,.shoeRaceTargetPhoto img,.raceShoeHeroPhoto img,.sessionShoePhoto img,.shoeMiniPhoto img{
   position:relative;
   z-index:9;
-  mix-blend-mode:darken;
+  mix-blend-mode:normal;
   background:transparent;
-  filter:saturate(1.12) contrast(1.06);
+  filter:none;
 }
 @media(max-width:600px){
   .shoeCardHead>.shoeCardPhoto{width:88px!important;height:62px!important}
   .shoeCardHead{grid-template-columns:88px minmax(0,1fr)!important}
   .shoeDetailHead>.shoeDetailPhoto{width:118px!important;height:82px!important}
   .shoeDetailHead{grid-template-columns:118px minmax(0,1fr)!important}
+}
+
+/* v15.6.5 — true transparent shoe assets, rendered above all teal surfaces. */
+.shoePhoto,.shoeCardPhoto,.shoeDetailPhoto,.todayShoePhoto,.planShoeThumb,.logShoePhoto,.shoeRaceNowPhoto,.shoeRaceTargetPhoto,.raceShoeHeroPhoto,.sessionShoePhoto,.shoeMiniPhoto{
+  background:transparent!important;isolation:isolate;z-index:20!important;
+}
+.shoePhoto img,.shoeCardPhoto img,.shoeDetailPhoto img,.todayShoePhoto img,.planShoeThumb img,.logShoePhoto img,.shoeRaceNowPhoto img,.shoeRaceTargetPhoto img,.raceShoeHeroPhoto img,.sessionShoePhoto img,.shoeMiniPhoto img{
+  background:transparent!important;mix-blend-mode:normal!important;filter:none!important;z-index:21!important;
 }
