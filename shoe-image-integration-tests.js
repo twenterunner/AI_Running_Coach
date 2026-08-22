@@ -20,6 +20,9 @@ const tests=[
  ['Shoe detail uses shoe image',/shoeDetailHead.*shoeImageHtml\(shoe/.test(app)],
  ['Photo styling exists',/\.shoeCardPhoto/.test(css)&&/object-fit:contain/.test(css)],
  ['Shoe image containers are transparent',/shoeMiniPhoto\{[^}]*background:transparent[^}]*border:0[^}]*box-shadow:none/.test(css)],
- ['White product-image background blends away',/shoeMiniPhoto img\{[^}]*mix-blend-mode:multiply[^}]*background:transparent/.test(css)]
+ ['Specific card-head teal tile is explicitly overridden',/\.shoeCardHead>\.shoeCardPhoto[^{]*\{[^}]*background:transparent!important[^}]*border:0!important/.test(css)],
+ ['Shoe photo layer sits above card surfaces',/\.shoeCardHead>\.shoeCardPhoto[^{]*\{[^}]*z-index:8!important/.test(css)&&/shoeMiniPhoto img\{[^}]*z-index:9/.test(css)],
+ ['Mobile shoe card photography is not collapsed to legacy 42px tile',/@media\(max-width:600px\)[\s\S]*?\.shoeCardHead>\.shoeCardPhoto\{width:88px!important;height:62px!important/.test(css)],
+ ['White product-image background blends away without multiply darkening',/shoeMiniPhoto img\{[^}]*mix-blend-mode:darken[^}]*background:transparent/.test(css)]
 ];
 let fail=0;for(const [name,ok] of tests){console.log((ok?'PASS ':'FAIL ')+name);if(!ok)fail++}console.log(`\n${tests.length-fail} passed, ${fail} failed`);process.exitCode=fail?1:0;

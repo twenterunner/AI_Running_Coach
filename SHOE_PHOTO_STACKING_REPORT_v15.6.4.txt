@@ -1,0 +1,14 @@
+AI Running Coach v15.6.4 — shoe photo stacking correction
+
+Root cause verified:
+- Existing CSS had .shoeCardHead>span:first-child and .shoeDetailHead>span:first-child rules with greater specificity than the later generic photo rules.
+- Those legacy rules forced the shoe photo wrapper back to a 42x42 teal icon tile with a teal background/border, despite the later transparent .shoeCardPhoto/.shoeDetailPhoto declarations.
+- The v15.6.3 use of multiply blending also darkened the shoe against teal, reinforcing the visual impression that the shoe sat behind the tile.
+
+Correction:
+- High-specificity overrides now target .shoeCardHead>.shoeCardPhoto and .shoeDetailHead>.shoeDetailPhoto directly.
+- Teal icon-tile background/border/shadow are forcibly removed for photographs.
+- Shoe wrappers/images have explicit z-index layers above their cards.
+- Shoe card imagery is enlarged on mobile instead of collapsing to the legacy 42px icon slot.
+- Blend mode changed from multiply to darken to suppress white product canvas with less whole-image darkening.
+- No shoe recommendation, mileage, lifecycle, rehab, plan, prediction, or performance-cache logic changed.

@@ -2,7 +2,7 @@
 'use strict';
 
 const BUILD = 50500;
-const CACHE = 'arc-v15603-build-50603';
+const CACHE = 'arc-v15604-build-50604';
 const CACHE_PREFIX = 'arc-v';
 const APP_SHELL = './index.html';
 const ASSETS = [

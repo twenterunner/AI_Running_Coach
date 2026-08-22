@@ -5809,3 +5809,37 @@ body:has(#dashboard.progressPage.active),#mainContent:has(#dashboard.progressPag
 .sessionShoePhoto{width:78px;height:54px;border-radius:11px;flex:0 0 78px}.sessionShoeHeader{display:flex!important;gap:12px;align-items:center}
 .shoeMiniPhoto{width:42px;height:30px;border-radius:7px;flex:0 0 42px}.sessionShoeAvailableRow,.shoeAvailableScores>span,.shoeSuitabilityPair>summary{align-items:center}.shoeMiniIdentity{display:flex;align-items:center;gap:8px;min-width:0}.shoeMiniIdentity b,.shoeMiniIdentity span{min-width:0;overflow:hidden;text-overflow:ellipsis}
 @media(max-width:600px){.shoeCardPhoto{width:64px;height:48px}.shoeCardHead{grid-template-columns:64px minmax(0,1fr)!important}.shoeCardHead .shoeStatus{grid-column:2!important}.shoeDetailPhoto{width:94px;height:68px}.shoeDetailHead{grid-template-columns:94px minmax(0,1fr)!important}.shoeDetailHead .shoeStatus{grid-column:2!important}.todayShoePhoto{width:76px!important;height:56px!important}.todayShoeRow{grid-template-columns:76px minmax(0,1fr)!important}.logShoePhoto{width:76px;height:54px}.shoeRaceTargetPhoto,.raceShoeHeroPhoto{width:108px;height:74px}.sessionShoePhoto{width:70px;height:50px}}
+
+/* v15.6.4 — shoe photography stacking correction.
+   Earlier generic shoe-photo rules were being overridden by the older, more-specific
+   .shoeCardHead>span:first-child / .shoeDetailHead>span:first-child tile rules. */
+.shoeCardHead>.shoeCardPhoto,
+.shoeDetailHead>.shoeDetailPhoto{
+  position:relative!important;
+  z-index:8!important;
+  display:grid!important;
+  place-items:center!important;
+  overflow:visible!important;
+  background:transparent!important;
+  border:0!important;
+  box-shadow:none!important;
+  color:inherit!important;
+}
+.shoeCardHead>.shoeCardPhoto{width:92px!important;height:64px!important;border-radius:0!important}
+.shoeDetailHead>.shoeDetailPhoto{width:132px!important;height:92px!important;border-radius:0!important}
+.shoeCardHead{grid-template-columns:92px minmax(0,1fr) auto!important;position:relative}
+.shoeDetailHead{grid-template-columns:132px minmax(0,1fr) auto!important;position:relative}
+.shoePhoto,.shoeCardPhoto,.shoeDetailPhoto,.todayShoePhoto,.planShoeThumb,.logShoePhoto,.shoeRaceNowPhoto,.shoeRaceTargetPhoto,.raceShoeHeroPhoto,.sessionShoePhoto,.shoeMiniPhoto{z-index:8}
+.shoePhoto img,.shoeCardPhoto img,.shoeDetailPhoto img,.todayShoePhoto img,.planShoeThumb img,.logShoePhoto img,.shoeRaceNowPhoto img,.shoeRaceTargetPhoto img,.raceShoeHeroPhoto img,.sessionShoePhoto img,.shoeMiniPhoto img{
+  position:relative;
+  z-index:9;
+  mix-blend-mode:darken;
+  background:transparent;
+  filter:saturate(1.12) contrast(1.06);
+}
+@media(max-width:600px){
+  .shoeCardHead>.shoeCardPhoto{width:88px!important;height:62px!important}
+  .shoeCardHead{grid-template-columns:88px minmax(0,1fr)!important}
+  .shoeDetailHead>.shoeDetailPhoto{width:118px!important;height:82px!important}
+  .shoeDetailHead{grid-template-columns:118px minmax(0,1fr)!important}
+}
