@@ -1,0 +1,33 @@
+AI Running Coach v15.6.0 · build 50600
+Performance optimisation report
+
+Scope
+- No training, prediction, recovery, rehabilitation, shoe, scoring or data-model calculations were intentionally changed.
+- Optimisation is limited to page rendering/navigation orchestration.
+
+Root cause
+1. renderPage(page) rebuilt the destination page every time a tab was selected, even when state had not changed.
+2. renderAll() rebuilt every major app area after many save operations, including hidden tabs.
+
+Changes
+- Added page-level render cache keyed by storageRevision + calendar day + Plan weekView.
+- Repeat visits to an unchanged tab now reuse its existing DOM instead of recalculating/rebuilding it.
+- State-changing renderAll() invalidates all page caches but immediately rebuilds only the currently visible page. Hidden pages rebuild lazily when first opened.
+- Current-day and Plan week-view values are part of the cache signature so time/view changes cannot reuse stale content.
+
+Deterministic work reduction
+- Repeat navigation to an unchanged already-rendered page: page renderer calls reduced from 1-3 to 0 (100% elimination of page-render work for that switch).
+- A renderAll-triggering save previously invoked 15 named renderers plus Progress chart rendering. The new path invalidates all caches and invokes only the active page renderer group (normally 1; Progress/Settings can be 3). This removes rendering of all hidden pages from the synchronous save path.
+
+Validation
+- JavaScript syntax: PASS
+- Service worker syntax: PASS
+- Manifest JSON: PASS
+- Rehabilitation consistency/setback suite: PASS 28/28
+- Performance architecture regression suite: PASS 10/10
+- Browser wall-clock benchmark: NOT AVAILABLE. Chromium is installed but local HTTP/file navigation is blocked by the execution environment administrator, so no fabricated millisecond claim is made.
+
+Expected user effect
+- Returning to an unchanged tab should be near-instant because no page calculation or DOM rebuild occurs.
+- Actions that save data should complete faster because hidden tabs are no longer synchronously rebuilt.
+- First opening a tab after data has changed still performs its full, unchanged calculation/rendering once.

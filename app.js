@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '15.5.1';
-  const BUILD = 50501;
+  const VERSION = '15.6.0';
+  const BUILD = 50600;
   const SCHEMA = 10400;
   const PRIMARY_STORAGE_KEY = 'arc_v10400_web';
   const MIRROR_STORAGE_KEY = 'arc_v10400_mirror';
@@ -9274,8 +9274,28 @@ function openShoeAdjustment(shoe){const current=shoeMileage(shoe);$('modalConten
 function choosePlanShoe(planId){const plan=(state.plan||[]).find(p=>p.id===planId);if(!plan)return;const current=plannedAssignment(planId)?.shoeId||shoeRecommendation(plan).best?.shoe.id||'';$('modalContent').innerHTML=`<h2>Choose another shoe</h2><p>${fmtDate(plan.date)} · ${esc(plan.type)} · ${Number(plan.distance).toFixed(1)} km</p><div class="field"><label>Planned shoe</label><select id="planShoeChoice"><option value="">Automatic recommendation</option>${shoeSelectOptions(current,false)}</select></div><button id="savePlanShoeChoice" class="primary full" type="button">Save shoe assignment</button>`;$('modal').className='modal shoeChoiceModal';$('savePlanShoeChoice').onclick=()=>{const id=$('planShoeChoice').value;if(id)setPlannedShoe(planId,id,'user');else{setPlannedShoe(planId,null);const rec=shoeRecommendation(plan);if(rec.best)setPlannedShoe(planId,rec.best.shoe.id,'auto')}save();closeDialog();renderAll();toast('Planned shoe assignment updated. Training plan unchanged.')}}
 /* === End Shoes module === */
 
-function renderAll(){[renderDashboard,renderToday,renderPlan,renderRuns,renderMetrics,renderAssessments,renderCoach,renderInjury,renderRecovery,renderRace,renderSettings,renderShoes,renderPlanHealth,renderMigrationReport].forEach(fn=>{try{fn()}catch(err){recordDiagnostic('Render failure in '+fn.name,err)}});try{renderProgressChartsStandalone()}catch(err){recordDiagnostic('Render failure in renderProgressChartsStandalone',err)}renderDiagnostics();ensureAccessibleForms();renderUndoButtons()}
-function renderPage(page){
+// Performance layer: pages are rendered lazily and kept valid until app data or
+// date/view state changes. This makes repeat tab navigation a show/hide operation
+// instead of recalculating and rebuilding an unchanged screen.
+const pageRenderCache=new Map();
+function activePageId(){return document.querySelector('.page.active')?.id||'today'}
+function pageRenderSignature(page){
+ const day=iso(today());
+ const view=page==='plan'?String(state.weekView??''):'';
+ return `${Number(state.storageRevision)||0}|${day}|${view}`;
+}
+function invalidatePageRenderCache(pages=null){
+ if(!pages){pageRenderCache.clear();return}
+ for(const page of (Array.isArray(pages)?pages:[pages]))pageRenderCache.delete(page);
+}
+function renderAll(){
+ // A state-changing action invalidates every derived view, but only the visible
+ // view is rebuilt immediately. Other tabs refresh on first visit. This preserves
+ // all calculations while removing unnecessary hidden-tab work.
+ invalidatePageRenderCache();
+ renderPage(activePageId(),{force:true});
+}
+function renderPage(page,{force=false}={}){
  const pageRenderers={
   today:[renderToday],
   plan:[renderPlan],
@@ -9288,9 +9308,13 @@ function renderPage(page){
   race:[renderRace],
   settings:[renderSettings,renderPlanHealth,renderMigrationReport]
  };
+ const sig=pageRenderSignature(page);
+ if(!force&&pageRenderCache.get(page)===sig)return false;
  const renderers=pageRenderers[page]||[];
  for(const fn of renderers){try{fn()}catch(err){recordDiagnostic('Render failure in '+fn.name,err)}}
  renderDiagnostics();ensureAccessibleForms(document.getElementById(page)||document);renderUndoButtons();
+ pageRenderCache.set(page,sig);
+ return true;
 }
 const pages=[['today','Today'],['plan','Plan'],['runs','Log'],['dashboard','Progress'],['assessments','Assessments'],['recovery','Recovery'],['injury','Injury'],['shoes','Shoes'],['race','Race day'],['settings','Settings']];
 document.body.addEventListener('change',e=>{const sel=e.target.closest?.('[data-rehab-shoe-plan]');if(!sel)return;const injury=(state.injuries||[]).find(x=>x.id===sel.dataset.rehabShoePlan);if(!injury)return;injury.plannedRehabShoes=injury.plannedRehabShoes||{};if(sel.value)injury.plannedRehabShoes[sel.dataset.rehabShoeDate]=sel.value;else delete injury.plannedRehabShoes[sel.dataset.rehabShoeDate];save();toast(sel.value?'Rehabilitation shoe planned.':'Rehabilitation shoe cleared.');});
