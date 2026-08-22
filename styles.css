@@ -5791,3 +5791,21 @@ body:has(#dashboard.progressPage.active),#mainContent:has(#dashboard.progressPag
 #injury .durationInput>label{display:grid;grid-template-columns:auto 1fr;align-items:center;gap:7px;margin:0;padding:0 9px;border:1px solid rgba(136,161,177,.18);border-radius:10px;background:rgba(4,21,29,.45)}
 #injury .durationInput>label>span{font-size:9px;font-weight:850;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
 #injury .durationInput input{min-width:0;border:0!important;background:transparent!important;padding-left:0!important;padding-right:0!important}
+/* v15.6.1 — shoe photography */
+.shoePhoto,.shoeCardPhoto,.shoeDetailPhoto,.todayShoePhoto,.planShoeThumb,.logShoePhoto,.shoeRaceNowPhoto,.shoeRaceTargetPhoto,.raceShoeHeroPhoto,.sessionShoePhoto,.shoeMiniPhoto{position:relative;display:grid;place-items:center;overflow:hidden;background:linear-gradient(145deg,rgba(255,255,255,.98),rgba(226,238,241,.94));border:1px solid rgba(111,192,199,.22);box-shadow:0 6px 18px rgba(0,0,0,.12)}
+.shoePhoto img,.shoeCardPhoto img,.shoeDetailPhoto img,.todayShoePhoto img,.planShoeThumb img,.logShoePhoto img,.shoeRaceNowPhoto img,.shoeRaceTargetPhoto img,.raceShoeHeroPhoto img,.sessionShoePhoto img,.shoeMiniPhoto img{width:100%;height:100%;object-fit:contain;display:block;mix-blend-mode:multiply}
+.shoePhotoFallbackInner{display:none;color:var(--teal-2)}
+.imageFailed .shoePhotoFallbackInner,.shoePhotoFallback .shoePhotoFallbackInner{display:grid;place-items:center}
+.shoePhotoFallback{color:var(--teal-2);background:rgba(61,214,198,.08)}
+.shoePhotoFallback svg,.shoePhotoFallbackInner svg{width:55%!important;height:55%!important;fill:none;stroke:currentColor;stroke-width:1.8}
+.shoeCardPhoto{width:74px;height:54px;border-radius:13px}.shoeCardHead{grid-template-columns:74px minmax(0,1fr) auto!important}
+.shoeDetailPhoto{width:120px;height:82px;border-radius:16px}.shoeDetailHead{grid-template-columns:120px minmax(0,1fr) auto!important}
+.todayShoePhoto{width:84px!important;height:62px!important;border-radius:13px!important}.todayShoeRow{grid-template-columns:84px minmax(0,1fr)!important}
+.planShoeThumb{width:42px;height:30px;border-radius:7px;flex:0 0 42px}.planShoeSummary{width:100%!important;max-width:100%!important}.planShoeSummaryScore{margin-left:auto}
+.logShoePhoto{width:88px;height:62px;border-radius:13px;flex:0 0 88px}.shoeEquipmentHead{display:flex!important;align-items:center;gap:14px!important}
+.shoeRaceNowPhoto{width:100%;height:86px;border-radius:12px;margin-bottom:10px}
+.shoeRaceTargetPhoto,.raceShoeHeroPhoto{width:132px;height:88px;border-radius:14px;margin-bottom:10px}
+.raceShoeHero{position:relative}.raceShoeHeroPhoto{float:left;margin-right:14px}
+.sessionShoePhoto{width:78px;height:54px;border-radius:11px;flex:0 0 78px}.sessionShoeHeader{display:flex!important;gap:12px;align-items:center}
+.shoeMiniPhoto{width:42px;height:30px;border-radius:7px;flex:0 0 42px}.sessionShoeAvailableRow,.shoeAvailableScores>span,.shoeSuitabilityPair>summary{align-items:center}.shoeMiniIdentity{display:flex;align-items:center;gap:8px;min-width:0}.shoeMiniIdentity b,.shoeMiniIdentity span{min-width:0;overflow:hidden;text-overflow:ellipsis}
+@media(max-width:600px){.shoeCardPhoto{width:64px;height:48px}.shoeCardHead{grid-template-columns:64px minmax(0,1fr)!important}.shoeCardHead .shoeStatus{grid-column:2!important}.shoeDetailPhoto{width:94px;height:68px}.shoeDetailHead{grid-template-columns:94px minmax(0,1fr)!important}.shoeDetailHead .shoeStatus{grid-column:2!important}.todayShoePhoto{width:76px!important;height:56px!important}.todayShoeRow{grid-template-columns:76px minmax(0,1fr)!important}.logShoePhoto{width:76px;height:54px}.shoeRaceTargetPhoto,.raceShoeHeroPhoto{width:108px;height:74px}.sessionShoePhoto{width:70px;height:50px}}

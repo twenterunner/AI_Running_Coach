@@ -1,0 +1,36 @@
+AI Running Coach v15.6.1 · build 50601
+Shoe photography integration
+
+Implemented official ASICS representative product photography for exact supported model/generation matches:
+- NOVABLAST 4
+- GEL-NIMBUS 25
+- SUPERBLAST 2
+- MEGABLAST 1
+
+Images are loaded from the official ASICS image CDN. They are representative model images; the app does not claim the displayed colourway matches the runner's physical pair unless colourway data exists.
+
+Integrated into relevant UI surfaces:
+- Today shoe recommendation
+- Plan compact shoe summary
+- Plan expanded shoe recommendation and available-shoe rows
+- Shoe suitability comparison
+- Shoes active rotation cards
+- Shoe detail view
+- Race-distance recommendations
+- Race-day target / race-shoe planning
+- Logged-run equipment section
+
+Performance safeguards:
+- lazy loading by default
+- async image decoding
+- Today hero image only is eager-loaded
+- browser/CDN caching can reuse downloaded images
+- unknown/unmapped shoes retain the existing shoe pictogram fallback
+- no shoe-engine calculations were changed
+
+Validation:
+- rehabilitation regression suite: 28/28 PASS
+- performance regression suite: 10/10 PASS
+- shoe image integration suite: 13/13 PASS
+- app.js syntax: PASS
+- service-worker.js syntax: PASS
