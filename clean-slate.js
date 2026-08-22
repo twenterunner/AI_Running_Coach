@@ -1,0 +1,22 @@
+(()=>{
+'use strict';
+const meta={
+ today:['TODAY / EXECUTION','Execute today','Know exactly what to do, how hard to do it, and what would justify changing it.','Runner decision','What is the right training action today?'],
+ plan:['PROGRAMME / STRUCTURE','Build the race','See the training architecture, this week’s purpose and what the adaptive model is changing.','Runner decision','What stimulus matters now, and why?'],
+ runs:['TRAINING LOG / EVIDENCE','Learn from the work','Record the session, then separate what happened from what it means for the programme.','Runner decision','What did this session prove?'],
+ dashboard:['PERFORMANCE / TRAJECTORY','Is the training working?','Race readiness first, then the fitness, durability, load and execution evidence behind it.','Runner decision','Am I becoming more capable of the target?'],
+ recovery:['RECOVERY / ABSORPTION','Can you absorb the work?','Start with training permission, then inspect the physiological and load evidence supporting it.','Runner decision','Should the planned stimulus be kept, reduced or deferred?'],
+ shoes:['EQUIPMENT / ROTATION','Use the right tool','Choose the best available shoe for the next stimulus and manage rotation, lifecycle and replacement.','Runner decision','Which shoe best supports the next session?'],
+ injury:['REHAB / RETURN TO RUN','Restore running capacity','Restriction first, today’s rehab second, progression gates and evidence after that.','Runner decision','What can safely progress today?'],
+ race:['RACE / EXECUTION','Turn fitness into performance','Translate current capability into pacing, power, effort and fueling decisions for race day.','Runner decision','How should current fitness be executed on race day?'],
+ coach:['COACH / SYNTHESIS','What matters most?','A concise coaching synthesis across training, recovery, execution and constraints.','Runner decision','What deserves attention next?'],
+ assessments:['ASSESSMENTS / CALIBRATION','Anchor the model','Keep benchmark evidence explicit so training decisions stay grounded in verified performance.','Runner decision','What evidence should recalibrate the model?'],
+ settings:['SYSTEM / CONTROL','Configure the athlete model','Inputs, constraints and model controls—separate from the daily coaching experience.','Runner decision','Are the assumptions behind the plan correct?']
+};
+function pageName(p){return p?.id||''}
+function addCommand(p){if(!p||p.querySelector(':scope > .cs-command'))return;const m=meta[pageName(p)]||['ATHLETE SYSTEM',pageName(p)||'Workspace','Serious-runner decision support.','Runner decision','What matters now?'];const d=document.createElement('header');d.className='cs-command';d.innerHTML=`<div><span class="cs-kicker">${m[0]}</span><h1>${m[1]}</h1><p>${m[2]}</p></div><div class="cs-intent"><b>${m[3]}</b><span>${m[4]}</span></div>`;p.prepend(d)}
+function addTransparency(p){if(!p||p.querySelector(':scope > .cs-transparency'))return;const details=[...p.querySelectorAll('details')].slice(0,12).map(x=>(x.querySelector('summary')?.innerText||'').trim()).filter(Boolean);const ids=[...p.querySelectorAll('[id]')].filter(x=>/probability|prediction|score|factor|drift|efficiency|load|health|recovery|mileage|forecast/i.test(x.id)).slice(0,12).map(x=>x.id);const d=document.createElement('details');d.className='cs-transparency';d.innerHTML=`<summary>Calculation & evidence transparency</summary><div class="cs-transparency-body"><b>Engine lock:</b> this interface does not recalculate or reinterpret these values. It exposes the existing engine outputs and the calculation/evidence disclosures already rendered by this screen.${details.length?`<p><b>Available calculation/evidence foldouts on this screen</b></p><ul>${details.map(x=>`<li>${x}</li>`).join('')}</ul>`:''}${ids.length?`<p><b>Live derived outputs represented here</b></p><ul>${ids.map(x=>`<li>${x.replace(/([A-Z])/g,' $1').replace(/^./,c=>c.toUpperCase())}</li>`).join('')}</ul>`:''}</div>`;p.append(d)}
+function enhance(){document.querySelectorAll('main .page').forEach(p=>{addCommand(p);addTransparency(p)});document.documentElement.classList.add('cs-ready')}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',enhance);else enhance();
+new MutationObserver(()=>document.querySelectorAll('main .page').forEach(p=>{addCommand(p);addTransparency(p)})).observe(document.documentElement,{childList:true,subtree:true});
+})();
