@@ -1,0 +1,26 @@
+AI Running Coach v15.6.2 — comprehensive shoe photography update
+
+Scope
+- Every built-in ASICS shoe family now resolves to a real internet-sourced product photograph.
+- Exact generation-specific mappings are preserved where already available.
+- If a specific generation does not yet have an exact photo mapping, the app falls back to a representative photograph for that exact ASICS family instead of showing the pictogram.
+- Custom/non-ASICS user-entered shoes still use the generic shoe pictogram because the offline app cannot safely identify arbitrary products from text alone.
+
+Built-in families covered
+GEL-NIMBUS, GEL-CUMULUS, NOVABLAST, SUPERBLAST, MEGABLAST, SONICBLAST, MAGIC SPEED, METASPEED SKY, METASPEED EDGE, METASPEED RAY, NOOSA TRI, GEL-PULSE, EVORIDE, GLIDERIDE, DYNABLAST, GEL-KAYANO, GT-2000, GT-1000.
+
+Performance safeguards
+- Existing lazy-loading and asynchronous image decoding are retained.
+- Today recommendation remains eligible for eager loading; other imagery remains lazy.
+- Tab render caching from v15.6.0 remains unchanged.
+
+Validation
+- Rehab/setback regression: 28/28 pass
+- Performance regression: 10/10 pass
+- Shoe-image integration: 16/16 pass
+- JavaScript syntax: pass
+- Service-worker syntax: pass
+- Manifest JSON validation: pass
+
+Important visual accuracy note
+Where exact historical-generation photography is unavailable in the mapping, the image is explicitly a representative photo of the same ASICS shoe family, not a claim that the displayed colourway or generation is the runner's exact physical pair.

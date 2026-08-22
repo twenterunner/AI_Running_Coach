@@ -5792,8 +5792,8 @@ body:has(#dashboard.progressPage.active),#mainContent:has(#dashboard.progressPag
 #injury .durationInput>label>span{font-size:9px;font-weight:850;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
 #injury .durationInput input{min-width:0;border:0!important;background:transparent!important;padding-left:0!important;padding-right:0!important}
 /* v15.6.1 — shoe photography */
-.shoePhoto,.shoeCardPhoto,.shoeDetailPhoto,.todayShoePhoto,.planShoeThumb,.logShoePhoto,.shoeRaceNowPhoto,.shoeRaceTargetPhoto,.raceShoeHeroPhoto,.sessionShoePhoto,.shoeMiniPhoto{position:relative;display:grid;place-items:center;overflow:hidden;background:linear-gradient(145deg,rgba(255,255,255,.98),rgba(226,238,241,.94));border:1px solid rgba(111,192,199,.22);box-shadow:0 6px 18px rgba(0,0,0,.12)}
-.shoePhoto img,.shoeCardPhoto img,.shoeDetailPhoto img,.todayShoePhoto img,.planShoeThumb img,.logShoePhoto img,.shoeRaceNowPhoto img,.shoeRaceTargetPhoto img,.raceShoeHeroPhoto img,.sessionShoePhoto img,.shoeMiniPhoto img{width:100%;height:100%;object-fit:contain;display:block;mix-blend-mode:multiply}
+.shoePhoto,.shoeCardPhoto,.shoeDetailPhoto,.todayShoePhoto,.planShoeThumb,.logShoePhoto,.shoeRaceNowPhoto,.shoeRaceTargetPhoto,.raceShoeHeroPhoto,.sessionShoePhoto,.shoeMiniPhoto{position:relative;display:grid;place-items:center;overflow:visible;background:transparent;border:0;box-shadow:none}
+.shoePhoto img,.shoeCardPhoto img,.shoeDetailPhoto img,.todayShoePhoto img,.planShoeThumb img,.logShoePhoto img,.shoeRaceNowPhoto img,.shoeRaceTargetPhoto img,.raceShoeHeroPhoto img,.sessionShoePhoto img,.shoeMiniPhoto img{width:100%;height:100%;object-fit:contain;display:block;mix-blend-mode:multiply;background:transparent}
 .shoePhotoFallbackInner{display:none;color:var(--teal-2)}
 .imageFailed .shoePhotoFallbackInner,.shoePhotoFallback .shoePhotoFallbackInner{display:grid;place-items:center}
 .shoePhotoFallback{color:var(--teal-2);background:rgba(61,214,198,.08)}

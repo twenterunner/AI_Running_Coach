@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '15.6.1';
-  const BUILD = 50601;
+  const VERSION = '15.6.3';
+  const BUILD = 50603;
   const SCHEMA = 10400;
   const PRIMARY_STORAGE_KEY = 'arc_v10400_web';
   const MIRROR_STORAGE_KEY = 'arc_v10400_mirror';
@@ -6059,10 +6059,37 @@ const SHOE_IMAGE_CATALOGUE={
  'ASICS|NOVABLAST|4':'https://images.asics.com/is/image/asics/1011B693_001_SL_LT_GLB?$sfcc-product$=',
  'ASICS|GEL-NIMBUS|25':'https://images.asics.com/is/image/asics/1011B547_004_SL_LT_GLB?$sfcc-product$=',
  'ASICS|SUPERBLAST|2':'https://images.asics.com/is/image/asics/1013A142_402_SL_LT_GLB?$sfcc-product$=',
- 'ASICS|MEGABLAST|1':'https://images.asics.com/is/image/asics/1013A170_500_SL_LT_GLB?$sfcc-product$='
+ 'ASICS|MEGABLAST|1':'https://images.asics.com/is/image/asics/1013A170_001_SL_LT_GLB?$sfcc-product$='
+};
+/* Representative manufacturer/product photography for every built-in shoe family.
+   Exact generation imagery above wins when available; otherwise the family image is used so
+   every supported catalogue shoe has a real photographic identity rather than a pictogram. */
+const SHOE_FAMILY_IMAGE_CATALOGUE={
+ 'GEL-NIMBUS':'https://images.asics.com/is/image/asics/1011C127_001_SL_LT_GLB?$sfcc-product$=',
+ 'GEL-CUMULUS':'https://images.asics.com/is/image/asics/1011C143_400_SL_LT_GLB?$sfcc-product$=',
+ 'NOVABLAST':'https://images.asics.com/is/image/asics/1011C243_001_SL_LT_GLB?$sfcc-product$=',
+ 'SUPERBLAST':'https://images.asics.com/is/image/asics/1013A177_100_SL_LT_GLB?$sfcc-product$=',
+ 'MEGABLAST':'https://images.asics.com/is/image/asics/1013A170_001_SL_LT_GLB?$sfcc-product$=',
+ 'SONICBLAST':'https://images.asics.com/is/image/asics/1011C083_401_SL_LT_GLB?$sfcc-product$=',
+ 'MAGIC SPEED':'https://images.asics.com/is/image/asics/1013A183_300_SL_LT_GLB?$sfcc-product$=',
+ 'METASPEED SKY':'https://images.asics.com/is/image/asics/1013A162_400_SL_LT_GLB?$sfcc-product$=',
+ 'METASPEED EDGE':'https://images.asics.com/is/image/asics/1013A163_101_SL_LT_GLB?$sfcc-product$=',
+ 'METASPEED RAY':'https://images.asics.com/is/image/asics/1013A176_100_SL_LT_GLB?$sfcc-product$=',
+ 'NOOSA TRI':'https://images.asics.com/is/image/asics/1011B872_301_SL_LT_GLB?$sfcc-product$=',
+ 'GEL-PULSE':'https://www.asics.co.in/media/catalog/product/1/0/1011b962_003_sl_lt_glb.jpg?optimize=high&bg-color=255,255,255&fit=bounds&width=900',
+ 'EVORIDE':'https://assets.solesense.com/en/images/products/500/asics-evoride-white-1011a792-100_1.jpg',
+ 'GLIDERIDE':'https://images.asics.com/is/image/asics/1011B336_403_SL_LT_GLB?$sfcc-product$=',
+ 'DYNABLAST':'https://www.asics.co.in/media/catalog/product/1/0/1011b983_020_sl_lt_glb_1.jpg?optimize=high&bg-color=255,255,255&fit=bounds&width=900',
+ 'GEL-KAYANO':'https://images.asics.com/is/image/asics/1011C167_001_SL_LT_GLB?$sfcc-product$=',
+ 'GT-2000':'https://www.asics.co.in/media/catalog/product/1/0/1011c056_400_sl_lt_glb_1.jpg?optimize=high&bg-color=255,255,255&fit=bounds&width=900',
+ 'GT-1000':'https://www.asics.co.in/media/catalog/product/1/0/1011c077_400_sl_lt_glb_1.jpg?optimize=high&bg-color=255,255,255&fit=bounds&width=900'
 };
 function shoeImageKey(brand,model,version){return `${String(brand||'').trim().toUpperCase()}|${normalizeShoeFamily(model||'')}|${String(version||'').trim()}`}
-function shoeImageUrlForParts(brand,model,version){return SHOE_IMAGE_CATALOGUE[shoeImageKey(brand,model,version)]||''}
+function shoeImageUrlForParts(brand,model,version){
+ const b=String(brand||'').trim().toUpperCase(),family=normalizeShoeFamily(model||'');
+ if(b!=='ASICS')return '';
+ return SHOE_IMAGE_CATALOGUE[shoeImageKey(brand,model,version)]||SHOE_FAMILY_IMAGE_CATALOGUE[family]||''
+}
 function shoeImageUrl(shoe){return shoe?shoeImageUrlForParts(shoe.brand,shoe.model,shoe.version):''}
 function shoeImageHtml(shoe,{className='shoePhoto',alt=null,eager=false}={}){const src=shoeImageUrl(shoe);if(!src)return`<span class="${esc(className)} shoePhotoFallback">${todayPictogram('shoe')}</span>`;return`<span class="${esc(className)}"><img src="${esc(src)}" alt="${esc(alt||shoeDisplayName(shoe))}" loading="${eager?'eager':'lazy'}" decoding="async" referrerpolicy="no-referrer" onerror="this.closest('.${esc(className)}').classList.add('imageFailed');this.remove()"><span class="shoePhotoFallbackInner">${todayPictogram('shoe')}</span></span>`}
 function shoeProfileImageHtml(profile,{className='shoePhoto',alt=null}={}){if(!profile)return`<span class="${esc(className)} shoePhotoFallback">${todayPictogram('shoe')}</span>`;const src=shoeImageUrlForParts(profile.brand||'ASICS',profile.family,profile.version);const label=alt||[profile.brand||'ASICS',profile.family,profile.version].filter(Boolean).join(' ');if(!src)return`<span class="${esc(className)} shoePhotoFallback">${todayPictogram('shoe')}</span>`;return`<span class="${esc(className)}"><img src="${esc(src)}" alt="${esc(label)}" loading="lazy" decoding="async" referrerpolicy="no-referrer" onerror="this.closest('.${esc(className)}').classList.add('imageFailed');this.remove()"><span class="shoePhotoFallbackInner">${todayPictogram('shoe')}</span></span>`}

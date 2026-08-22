@@ -1,0 +1,8 @@
+AI Running Coach v15.6.3 — transparent shoe imagery
+
+Change:
+- Removed the white/grey photo-card background, border and shadow from every shoe-image presentation class.
+- Shoe images now render directly on the underlying app surface.
+- Retained multiply blending so the white pixels in the ASICS product-image canvas visually disappear against the underlying tile/background.
+- Preserved lazy loading, async decoding, exact/family image lookup and fallback behavior.
+- No shoe-engine calculations, recommendations, mileage, lifecycle or rehab logic changed.
