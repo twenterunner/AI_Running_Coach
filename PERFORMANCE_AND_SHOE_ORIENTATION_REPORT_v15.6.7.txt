@@ -1,0 +1,17 @@
+AI Running Coach v15.6.7 · build 50607
+
+Performance changes
+- Removed ~896 kB of base64 shoe image text from app.js.
+- app.js reduced from 2,033,011 bytes (v15.6.6) to approximately 1.14 MB.
+- Transparent shoe art is now stored as individually cacheable WebP assets.
+- Asset URLs resolve from document.baseURI for GitHub Pages repository-path safety.
+- Service worker precaches all shoe assets for offline use.
+- Navigation now caches page and button nodes instead of querying all tabs on every tap.
+- Plan, Log and Progress are pre-rendered opportunistically with requestIdleCallback after startup, improving first-use switching without blocking the initial page.
+
+Shoe orientation
+- Every bundled transparent shoe asset was horizontally normalized so the toe points to the left.
+- No CSS transform is used; orientation is baked into the image file, so all app locations are consistent.
+
+Regression lock
+- Training, rehab, prediction, shoe scoring, lifecycle and state calculations were not intentionally changed.

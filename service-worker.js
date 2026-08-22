@@ -1,22 +1,41 @@
-// AI Running Coach v15.6.6 · build 50606
+// AI Running Coach v15.6.7 · build 50607
 'use strict';
 
-const BUILD = 50606;
-const CACHE = 'arc-v15606-build-50606';
+const BUILD = 50607;
+const CACHE = 'arc-v15606-build-50607';
 const CACHE_PREFIX = 'arc-v';
 const APP_SHELL = './index.html';
 const ASSETS = [
   './',
   './index.html',
-  './styles.css?v=50606',
-  './app.js?v=50606',
-  './manifest.webmanifest?v=50606',
-  './icon-192.png?v=50606',
-  './icon-512.png?v=50606',
-  './apple-touch-icon.png?v=50606',
-  './favicon-32x32.png?v=50606',
-  './favicon-16x16.png?v=50606',
-  './favicon.ico?v=50606',
+  './styles.css?v=50607',
+  './app.js?v=50607',
+  './manifest.webmanifest?v=50607',
+  './icon-192.png?v=50607',
+  './icon-512.png?v=50607',
+  './apple-touch-icon.png?v=50607',
+  './favicon-32x32.png?v=50607',
+  './favicon-16x16.png?v=50607',
+  './favicon.ico?v=50607',
+  './shoe-images/dynablast-transparent.webp',
+  './shoe-images/evoride-transparent.webp',
+  './shoe-images/gel-cumulus-transparent.webp',
+  './shoe-images/gel-kayano-transparent.webp',
+  './shoe-images/gel-nimbus-transparent.webp',
+  './shoe-images/gel-pulse-transparent.webp',
+  './shoe-images/glideride-transparent.webp',
+  './shoe-images/gt-1000-transparent.webp',
+  './shoe-images/gt-2000-transparent.webp',
+  './shoe-images/magic-speed-transparent.webp',
+  './shoe-images/megablast-transparent.webp',
+  './shoe-images/metaspeed-edge-transparent.webp',
+  './shoe-images/metaspeed-ray-transparent.webp',
+  './shoe-images/metaspeed-sky-transparent.webp',
+  './shoe-images/noosa-tri-transparent.webp',
+  './shoe-images/novablast-4-transparent.webp',
+  './shoe-images/novablast-transparent.webp',
+  './shoe-images/sonicblast-transparent.webp',
+  './shoe-images/superblast-transparent.webp',
 ];
 
 async function resilientPrecache() {

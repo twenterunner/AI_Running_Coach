@@ -13,4 +13,7 @@ test('Global state refresh invalidates page cache',has('invalidatePageRenderCach
 test('Global refresh renders only active page immediately',has('renderPage(activePageId(),{force:true})'));
 test('Legacy eager render-all renderer list removed',!has('function renderAll(){[renderDashboard,renderToday,renderPlan'));
 test('Page renderer mapping still covers all navigation pages',['today','plan','runs','dashboard','assessments','recovery','injury','shoes','race','settings'].every(p=>has(p+':[')));
+test('app.js no longer embeds shoe image payloads',!has('data:image/webp;base64,'));
+test('Primary tabs are warmed during idle time',has('function warmPrimaryTabs()')&&has("['plan','runs','dashboard']"));
+test('Tab activation uses cached page/nav node maps',has('const pageNodes=new Map')&&has('const navButtons=new Map'));
 console.log(`\n${pass} passed, ${fail} failed`);process.exitCode=fail?1:0;
