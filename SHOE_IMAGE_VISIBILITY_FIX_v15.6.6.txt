@@ -1,0 +1,7 @@
+AI Running Coach v15.6.6 · build 50606
+
+ROOT CAUSE
+The v15.6.5 UI referenced transparent shoe PNGs as relative files under ./shoe-images/. On the deployed GitHub Pages instance those requests failed, which triggered the app pictogram fallback.
+
+FIX
+All 19 transparent shoe assets are now compact transparent WebP data URIs embedded in app.js. Runtime rendering no longer depends on a shoe-images folder or service-worker precache entries. Alpha transparency and above-card stacking remain enabled.
