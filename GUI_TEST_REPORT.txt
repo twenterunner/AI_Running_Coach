@@ -1,0 +1,144 @@
+AI Running Coach v15.4.8 · build 50408
+Whole-app GUI normalization & regression report
+Date: 2026-08-22
+
+SCOPE
+- Sole baseline: uploaded app.js, index.html, manifest.webmanifest, service-worker.js, styles.css.
+- Presentation-only normalization; no calculation/refactor work performed.
+- Existing Today / Plan / Log / Progress / Recovery visual direction preserved.
+
+ROOT CAUSES FOUND
+1. CSS override debt: 3,471 !important declarations and 103 media-query blocks in the baseline, including many successive version-specific "locked UI contract" patches. This creates selector-specificity conflicts and makes local fixes capable of breaking unrelated screens.
+2. Responsive file inputs could participate in layout and widen Settings at all tested widths; Coach also overflowed at 320/360 px in the baseline.
+3. Modal rules existed in multiple layers; a single viewport-contained contract was needed so future popup changes do not regress other dialogs.
+4. Similar KPI/card/control roles used different spacing/typography rules across modules.
+5. Baseline release identifiers were inconsistent: index/manifest/service worker identified v15.4.7 build 50407 while app.js core reported v15.4.5 build 50405.
+
+IMPLEMENTATION
+- Added one final authoritative GUI-normalization layer instead of editing historical locked rules throughout the file.
+- Added shared design tokens for spacing, card padding/radii, control sizing, typography and touch targets.
+- Normalized secondary screen page titles, cards, KPI/mini tiles, controls, disclosures and settings spacing.
+- Added one viewport-contained modal/onboarding contract with internal scrolling.
+- Added responsive breakpoints for 320, 360, 390, 412, 430 px and wider layouts.
+- Removed native file inputs from visual flow while preserving their explicit label-based activation.
+- Raised several high-density micro-labels to a more legible minimum without changing information hierarchy.
+- Preserved module-specific semantic/chart colours, Shoes retirement markers and Injury phase styling.
+- Synchronized version/build/cache references to v15.4.8 build 50408.
+
+AUTOMATED RUNTIME RESPONSIVE TEST
+Headless Chromium rendered the real HTML + CSS + JS directly and completed onboarding in-memory.
+
+Viewport     Baseline overflow nodes     Release overflow nodes     Long-modal contained     JS page errors
+320 px       2                           0                          PASS                     0
+360 px       2                           0                          PASS                     0
+390 px       1                           0                          PASS                     0
+412 px       1                           0                          PASS                     0
+430 px       1                           0                          PASS                     0
+1024 px      1                           0                          PASS                     0
+
+The baseline overflow was reproducible in Settings at all tested widths and in Coach at 320/360 px. The release has zero detected horizontal-overflow elements on all tested pages at every tested width.
+
+INTERACTION SMOKE TEST
+18/18 exercised interaction paths passed with zero JavaScript page errors:
+- primary navigation
+- Recovery navigation via More where appropriate
+- More open/close
+- Injury navigation
+- Shoes navigation
+- Race Day navigation
+- Settings navigation
+- Plan Health action
+- next/previous plan week
+- manual-run open/close
+- disclosure/foldout toggle
+- Injury add workflow open/close
+- generic modal close
+
+FUNCTIONAL REGRESSION LOCK
+PASS.
+- app.js changed only two core release-identification lines: VERSION and BUILD.
+- After normalizing those two values, release app.js is byte-for-byte identical to baseline app.js.
+- 13 baseline-vs-release core equivalence tests passed for text/id sanitation, time parsing, ISO dates, setup validation, run validation, boundary validation, training-day validation, efficiency scoring, prediction-mode behavior and plan invariants.
+- Therefore no training, prediction, recovery, injury, rehabilitation, shoe, FIT/CSV, storage-schema or coaching calculation code was modified by this release.
+
+STATIC INTEGRITY
+PASS.
+- JavaScript syntax: PASS (app.js, service-worker.js)
+- Manifest JSON: PASS
+- CSS parse errors: 0
+- Duplicate HTML IDs: 0
+- Version/build synchronized: app/manifest/service worker/index = v15.4.8 / 50408
+- styles.css change is append-only relative to the uploaded baseline.
+
+GUI SCORECARD — BASELINE
+Scores are visual-QA ratings against the 10-category rubric in the request, supported by the runtime geometry audit. They are not independent usability-study measurements.
+
+Screen                 Before /100     Main weaknesses
+Today                   90              Strong approved baseline; microcopy/small-label inconsistency
+Plan                    88              Dense microtype and inherited spacing variance
+Log                     87              High-density labels and import-control inconsistency
+Progress                88              Multiple historical overrides; very small graph-support labels
+Recovery                89              Strong hierarchy; table/support-label inconsistency
+Shoes                   85              Newer module with accumulated override layers
+Injury / Rehab          87              Strong module identity but separate spacing/control rules
+Race Day                88              Good hierarchy; dense micro-label system
+Settings                83              Confirmed horizontal overflow; inconsistent form/action rhythm
+Fitness Assessments     84              Older generic section/card treatment
+Coach Report            84              Confirmed narrow-width overflow; older generic hierarchy
+More                    86              Functional but dependent on multiple mobile dock overrides
+Import workflow         86              Native file-input layout participation; modal rules fragmented
+Run detail view         87              Existing strong Log visual language; inherited modal dependencies
+Rehab daily check-in    87              Existing scoped design; inherited modal dependencies
+Plan-update modal       84              Multiple historical viewport rules
+Shoe-edit workflow      86              Newer workflow with module-specific override accumulation
+Shoe forecast/rotation  87              Chart identity strong; containment rules fragmented
+
+GUI SCORECARD — FINAL
+Category order: Visual consistency / Typography / Cards / Spacing / Hierarchy / Charts-or-data-visuals / Responsive / Interaction / Runner usability / Polish
+
+Screen                 VC TY CA SP HI CH RE IN RU PO   Total
+Today                   10  9 10  9 10  9 10 10 10  9    95
+Plan                     9  9  9  9 10  9 10 10 10  9    94
+Log                      9  9  9  9  9  9 10 10 10  9    93
+Progress                 9  9  9  9 10  9 10 10 10  9    94
+Recovery                 9  9  9  9 10  9 10 10 10  9    94
+Shoes                    9  9  9  9 10  9 10 10 10  9    94
+Injury / Rehab           9  9  9  9 10  9 10 10 10  9    94
+Race Day                 9  9  9  9 10  9 10 10 10  9    94
+Settings                 9  9  9  9  9  9 10 10  9  9    92
+Fitness Assessments      9  9  9  9  9  9 10  9  9  9    91
+Coach Report             9  9  9  9  9  9 10  9  9  9    91
+More                     9  9  9  9  9  9 10 10  9  9    92
+Import workflow          9  9  9  9  9  9 10 10  9  9    92
+Run detail view          9  9  9  9  9  9 10 10  9  9    92
+Rehab daily check-in     9  9  9  9  9  9 10 10  9  9    92
+Plan-update modal        9  9  9  9  9  9 10 10  9  9    92
+Shoe-edit workflow       9  9  9  9  9  9 10 10  9  9    92
+Shoe forecast/rotation   9  9  9  9 10  9 10 10 10  9    94
+
+All primary screens >= 90/100. No primary category < 9/10 in this QA rubric. All secondary workflows >= 91/100.
+
+DEFECTS CORRECTED
+Critical: 0 found.
+Major: 2 classes corrected — horizontal viewport overflow; fragmented modal viewport containment risk.
+Moderate: shared spacing/type/control inconsistency; file-input layout participation; secondary-page hierarchy variance; release-version inconsistency.
+Minor/cosmetic: dense micro-label legibility; mobile header-action behavior; common focus/disabled-state consistency.
+
+PROFESSIONAL-RUNNER ACCEPTANCE PASS
+The primary screens preserve the established scan order: current state/priority -> action -> evidence -> deeper detail. The release intentionally does not remove metrics or change coaching conclusions. Shoes, Recovery, Injury and Race Day retain their module-specific information identity rather than becoming generic dashboard cards.
+
+VERIFIED LIMITATIONS
+1. Normal web navigation to localhost/file URLs is blocked by this execution environment. Browser testing therefore used Chromium set-content injection of the exact HTML/CSS/JS. Layout, rendering and interactions are real Chromium behavior, but service-worker/network cache behavior could not be browser-exercised end-to-end.
+2. about:blank browser pages do not expose persistent localStorage. Onboarding and interaction testing therefore ran in-memory. Data-preservation is instead strongly verified by the byte-identical non-version app.js comparison and baseline-vs-release core equivalence tests.
+3. The uploaded baseline contains no persisted real user dataset. Empty/default Shoes and Injury states were runtime-rendered; a populated real shoe lifecycle graph and an active multi-phase rehab history could not be reproduced from the supplied files alone. Their calculation/render code is unchanged; shared containment rules were tested structurally.
+4. FIT/CSV parsing itself was not re-tested because this release did not alter app.js logic and no representative FIT/CSV fixture was supplied. The import UI/modal path and file-control layout were tested.
+
+FINAL STATUS
+GUI normalization: PASS
+Responsive geometry: PASS at 320 / 360 / 390 / 412 / 430 / 1024 px
+Interaction smoke suite: PASS 18/18
+Functional calculation regression lock: PASS
+CSS/HTML/manifest integrity: PASS
+Data-preservation by source equivalence: PASS
+Known Critical defects remaining: 0 verified
+Known Major GUI defects remaining: 0 in exercised states
