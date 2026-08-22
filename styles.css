@@ -5899,3 +5899,51 @@ body{padding-bottom:calc(78px + env(safe-area-inset-bottom))!important}#mainCont
 .shoePhoto img,.shoeCardPhoto img,.shoeDetailPhoto img,.todayShoePhoto img,.planShoeThumb img,.logShoePhoto img,.shoeRaceNowPhoto img,.shoeRaceTargetPhoto img,.raceShoeHeroPhoto img,.sessionShoePhoto img,.shoeMiniPhoto img{background:transparent!important;z-index:41!important}
 @media(max-width:700px){#mainContent{padding-left:10px!important;padding-right:10px!important}.topbar{padding-left:12px!important;padding-right:12px!important}.brand-copy p{max-width:230px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.panel,.hero,.planSection{border-radius:16px!important}.grid2,.grid3{gap:9px!important}}
 @media(max-width:390px){#mainContent{padding-left:8px!important;padding-right:8px!important}.brand-copy h1{font-size:15px!important}.brand-copy p{max-width:190px}.sectionTitle h2,.progressPageTitle h2{font-size:23px!important}#nav{padding-left:5px!important;padding-right:5px!important}#nav button{padding-left:3px!important;padding-right:3px!important}}
+
+/* v16.1.0 — COMPLETE PERFORMANCE-PROTOTYPE MIGRATION
+   Every primary and specialist workspace now uses the same card, hierarchy,
+   spacing, interaction, chart and accent system as the approved performance prototype. */
+:root{--proto-teal:#42ded2;--proto-blue:#4aa8ff;--proto-green:#78e39a;--proto-orange:#ff8554;--proto-amber:#f2bc4c;--proto-purple:#8a7dff;--proto-slate:#9fb6bb}
+#today{--tab-accent:var(--proto-teal)}
+#plan{--tab-accent:var(--proto-teal)}
+#runs{--tab-accent:var(--proto-blue)}
+#dashboard{--tab-accent:var(--proto-blue)}
+#recovery{--tab-accent:var(--proto-green)}
+#injury{--tab-accent:var(--proto-orange)}
+#shoes{--tab-accent:var(--proto-teal)}
+#race{--tab-accent:var(--proto-amber)}
+#assessments{--tab-accent:var(--proto-purple)}
+#coach{--tab-accent:var(--proto-teal)}
+#settings{--tab-accent:var(--proto-slate)}
+.page{max-width:460px!important;margin:0 auto!important;padding-left:0!important;padding-right:0!important}
+.page>.sectionTitle,.page>.progressPageTitle{padding:15px!important;border-radius:22px!important;background:linear-gradient(145deg,#0b3142,#071f2d)!important;border:1px solid color-mix(in srgb,var(--tab-accent) 52%,#17798b)!important;box-shadow:0 18px 42px rgba(0,0,0,.32)!important;position:relative;overflow:hidden;margin:0 0 10px!important}
+.page>.sectionTitle:after,.page>.progressPageTitle:after{content:"";position:absolute;right:-70px;top:-80px;width:180px;height:180px;border-radius:50%;background:radial-gradient(circle,color-mix(in srgb,var(--tab-accent) 24%,transparent),transparent 68%);pointer-events:none}
+.page>.sectionTitle h2,.page>.progressPageTitle h2{font-size:25px!important;font-weight:850!important;letter-spacing:-.025em!important;margin:5px 0!important}.page>.sectionTitle p,.page>.progressPageTitle p{font-size:8.5px!important;line-height:1.45!important;color:#b9cdd1!important}.pageEyebrow,.page>.sectionTitle small,.page>.progressPageTitle small{color:var(--tab-accent)!important;font-size:7px!important;letter-spacing:.13em!important;font-weight:900!important}
+/* Prototype card primitive across every workspace. */
+#plan :is(.planSection,.planDayCard,.weekHeaderCard,.planWeekNavWrap),#runs :is(.panel,.runSummaryV3,.runCard),#dashboard :is(.progressSection,.panel,.outlookCard,.progressMetricTile,.metricTypeCard),#recovery :is(.recoverySection,.panel,.recoveryCard),#injury :is(.injurySection,.panel,.injuryCard,.rehabCard),#shoes :is(.shoeSection,.panel,.shoeCard,.shoeDetailCard,.raceShoeHero),#race :is(.raceDaySection,.panel,.raceShoeHero),#assessments :is(.panel,.assessmentCard),#coach :is(.panel,.coachSection),#settings :is(.settingsSection,.panel){background:linear-gradient(155deg,#0b2b3c,#071d2a 70%)!important;border:1px solid color-mix(in srgb,var(--tab-accent) 34%,#175268)!important;border-radius:17px!important;box-shadow:0 14px 32px rgba(0,0,0,.25)!important;margin-top:10px}
+/* Section heads = prototype proposal-head. */
+:is(#plan,#runs,#dashboard,#recovery,#injury,#shoes,#race,#assessments,#coach,#settings) :is(.planSectionHead,.panelHead,.progressSectionHead,.recoverySectionHead,.injurySectionHead,.shoeSectionHead,.settingsSectionHead,.coachSectionHead){padding:13px 14px 10px!important;border-bottom:1px solid rgba(89,224,212,.1)!important;gap:10px!important}
+:is(#plan,#runs,#dashboard,#recovery,#injury,#shoes,#race,#assessments,#coach,#settings) :is(.planSectionHead,.panelHead,.progressSectionHead,.recoverySectionHead,.injurySectionHead,.shoeSectionHead,.settingsSectionHead,.coachSectionHead) small{color:var(--tab-accent)!important;font-size:7px!important;letter-spacing:.09em!important;font-weight:900!important}
+:is(#plan,#runs,#dashboard,#recovery,#injury,#shoes,#race,#assessments,#coach,#settings) :is(.planSectionHead,.panelHead,.progressSectionHead,.recoverySectionHead,.injurySectionHead,.shoeSectionHead,.settingsSectionHead,.coachSectionHead) h3{font-size:17px!important;letter-spacing:-.02em!important;margin-top:3px!important}
+/* Nested rows and metrics = prototype activity/driver/settings rows. */
+:is(#plan,#runs,#dashboard,#recovery,#injury,#shoes,#race,#assessments,#coach,#settings) :is(.level2,.level3,.nested,.metricCard,.kpi,.settingsNested,.shoeAvailableScores>span,.shoeSuitabilityPair,.planShoeSummary,.sessionShoeAvailableRow,.diagnosticNext,.personalDimension,.modelValidationGrid>article,.progressMetricTile,.outlookMiniMetric,.runMetricV3,.runPlanCompare,.recoveryMetric,.injuryMetric){background:#082333!important;border:1px solid #164f65!important;border-radius:14px!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.02)!important}
+:is(#plan,#runs,#dashboard,#recovery,#injury,#shoes,#race,#assessments,#coach,#settings) :is(.pill,.badge,.chip,.statusPill){background:#0a2936!important;border-color:color-mix(in srgb,var(--tab-accent) 38%,#245f70)!important;color:#c3d5d8!important;box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--tab-accent) 8%,transparent)}
+/* Charts and visual rails match prototype plotting surface. */
+:is(#plan,#runs,#dashboard,#recovery,#injury,#shoes,#race,#assessments,#coach,#settings) :is(canvas,.chart,.chartbox,.progressChartMount,.progressInlineChart,.pathwayHistoryChart,.shoeMileageChart,.shoeProjectionChart){background:linear-gradient(180deg,#071b26,#04131c)!important;border:1px solid #183d4b!important;border-radius:14px!important;box-shadow:inset 0 0 28px rgba(0,0,0,.2),0 10px 22px rgba(0,0,0,.12)!important}
+:is(#plan,#runs,#dashboard,#recovery,#injury,#shoes,#race,#assessments,#coach,#settings) :is(.bar,.barTrack,.brandProgress,.weekMeter,.shoeLife,.timeline){background:#0d2631!important;border-radius:99px!important;overflow:hidden}
+/* Prototype interaction contract. */
+:is(#plan,#runs,#dashboard,#recovery,#injury,#shoes,#race,#assessments,#coach,#settings) :is(button,.button,.btn,details>summary){min-height:40px;border-radius:11px;transition:transform .15s ease,border-color .15s ease,background .15s ease}
+:is(#plan,#runs,#dashboard,#recovery,#injury,#shoes,#race,#assessments,#coach,#settings) :is(button,.button,.btn,details>summary):active{transform:scale(.985)}
+:is(#plan,#runs,#dashboard,#recovery,#injury,#shoes,#race,#assessments,#coach,#settings) details{background:#071d29!important;border-color:#164f65!important;border-radius:14px!important}
+/* Page-specific accents from the prototype family. */
+#dashboard :is(.progressPictogram,.progressSectionHead>span),#runs .sectionIcon{color:var(--proto-blue)!important;border-color:var(--proto-blue)!important}
+#recovery :is(.recoveryPictogram,.recoverySectionHead>span){color:var(--proto-green)!important;border-color:var(--proto-green)!important}
+#injury :is(.injuryPictogram,.injurySectionHead>span){color:var(--proto-orange)!important;border-color:var(--proto-orange)!important}
+#race :is(.racePictogram,.raceSectionHead>span){color:var(--proto-amber)!important;border-color:var(--proto-amber)!important}
+#assessments :is(.assessmentPictogram,.sectionIcon){color:var(--proto-purple)!important;border-color:var(--proto-purple)!important}
+/* Preserve transparent, foreground shoe photography throughout migrated views. */
+#shoes :is(.shoePhoto,.shoeCardPhoto,.shoeDetailPhoto,.shoeRaceNowPhoto,.shoeRaceTargetPhoto,.raceShoeHeroPhoto,.shoeMiniPhoto),#plan :is(.planShoeThumb,.sessionShoePhoto),#today .todayShoePhoto,#runs .logShoePhoto{background:transparent!important;border:0!important;box-shadow:none!important;position:relative;z-index:40!important}
+#shoes :is(.shoePhoto,.shoeCardPhoto,.shoeDetailPhoto,.shoeRaceNowPhoto,.shoeRaceTargetPhoto,.raceShoeHeroPhoto,.shoeMiniPhoto) img,#plan :is(.planShoeThumb,.sessionShoePhoto) img,#today .todayShoePhoto img,#runs .logShoePhoto img{background:transparent!important;position:relative;z-index:41!important;object-fit:contain!important}
+/* Compact 390px reference viewport: same density as approved prototype. */
+@media(max-width:700px){#mainContent{max-width:460px!important;padding:10px 10px calc(24px + env(safe-area-inset-bottom))!important}.page{width:100%!important}.page>.sectionTitle,.page>.progressPageTitle{padding:14px!important}.grid2,.grid3,.kpis{gap:7px!important}}
+@media(max-width:390px){#mainContent{padding-left:8px!important;padding-right:8px!important}.page>.sectionTitle h2,.page>.progressPageTitle h2{font-size:23px!important}}

@@ -1,0 +1,61 @@
+AI Running Coach v16.1.0 — COMPLETE GUI MIGRATION VERIFICATION
+Build 60100 · 2026-08-22
+
+SCOPE COMPLETED
+The approved Performance prototype visual system is now explicitly applied to EVERY application workspace, not Today alone:
+- Today
+- Plan
+- Log
+- Progress
+- Recovery
+- Injury / Rehab
+- Shoes
+- Race Day
+- Assessments
+- Coach
+- Settings
+- More / fixed primary navigation and specialist navigation surfaces
+
+MIGRATED DESIGN CONTRACT
+- 460 px mobile-first prototype content geometry
+- prototype hero/page-header treatment
+- prototype card/surface hierarchy
+- prototype nested metric/row hierarchy
+- prototype typography and eyebrow hierarchy
+- prototype spacing/radii/borders/shadows
+- prototype pill/badge treatment
+- prototype plotting/chart surfaces
+- prototype tap/active interaction behavior
+- per-workspace accent semantics (teal/blue/green/orange/amber/purple/slate)
+- fixed thumb-safe bottom navigation
+- specialist More/menu and modal layering
+- transparent foreground shoe photography retained
+- 390 px reference-phone responsive treatment
+
+REGRESSION LOCK
+No training, prediction, plan-generation, recovery, injury/rehab, shoe-engine, import, storage-schema or scoring algorithm was intentionally changed. Storage schema and keys remain unchanged.
+
+AUTOMATED VERIFICATION
+- app.js syntax: PASS
+- service-worker.js syntax: PASS
+- manifest JSON: PASS
+- Full GUI migration coverage: 29/29 PASS
+- Migration/integrity regression: 21/21 PASS
+- Performance/navigation regression: 17/17 PASS
+- Plan timeline regression: 5/5 PASS
+- Rehab phase consistency: 28/28 PASS
+- Shoe image integration: 13/13 PASS
+TOTAL: 113/113 explicit assertions PASS
+
+IMPORTANT RUNTIME LIMITATION
+A Chromium end-to-end launch was attempted again in this execution container. Chromium does not reach page execution because the container lacks a working DBus/browser runtime and times out during startup. Therefore browser/device visual acceptance cannot truthfully be marked as executed here. This is an environment limitation, not a passed browser test.
+
+ACCEPTANCE STATUS
+- Full source-level migration coverage across every app workspace: PASS
+- Existing functional regression suites: PASS
+- Navigation/performance regression: PASS
+- Plan timeline regression: PASS
+- Rehab regression: PASS
+- Shoe image/transparency/stacking regression: PASS
+- Version/cache consistency: PASS
+- Real-device/browser visual acceptance: NOT EXECUTABLE IN THIS CONTAINER
