@@ -1,0 +1,43 @@
+AI Running Coach v15.6.8 · build 50608
+Performance + shoe visibility/orientation correction
+
+ROOT CAUSE 1 — SHOE IMAGES DISAPPEARED
+v15.6.7 moved the transparent shoe assets into a new shoe-images/ subfolder. The app historically uses a flat GitHub Pages deployment. When that subfolder is not present in the deployed repository, every image request fails and the UI executes its deliberate shoe pictogram fallback. This exactly matches the supplied screenshot: the fallback pictogram renders while the shoe photo does not.
+
+CORRECTION
+- All 19 transparent WebP assets now live at repository root.
+- shoeAssetUrl() resolves the root filename through document.baseURI.
+- Service worker precache paths were changed to the same root filenames.
+- No base64 images were reintroduced into app.js.
+- The output archive is completely flat: no folders.
+
+ROOT CAUSE 2 — TAB SWITCHING STILL FELT SLOW
+The v15.6.7 performance layer was partially undermined by a later duplicate activatePage() definition, so the cached page/nav node switching path was not the one actually used. In addition, every page activation intentionally ran a 180 ms pageIn animation, and a background warmPrimaryTabs job could force expensive hidden-page rendering shortly after startup.
+
+CORRECTION
+- Removed the duplicate activatePage implementation; exactly one remains.
+- Page visibility now switches through cached page nodes rather than querying/toggling every page.
+- Navigation nodes are cached after navigation rendering.
+- Removed the 180 ms page-transition animation from the hot navigation path.
+- Removed forced background pre-rendering of hidden primary tabs.
+- First uncached destination render is deferred until after the browser has had an opportunity to paint the selected tab/nav state.
+- Existing render signatures/cache remain; revisiting an unchanged tab does not rerun its render function.
+
+SHOE ORIENTATION
+- Every bundled image was visually cross-checked in a 19-shoe contact sheet.
+- 18 assets were physically mirrored; NOVABLAST 4 was already left-facing and was retained.
+- Final state: all 19 shoe images point left.
+- No CSS scaleX mirroring is used.
+- All 19 assets retain real alpha transparency.
+
+VERIFICATION
+- JavaScript syntax: PASS
+- Service worker syntax: PASS
+- Rehab regression suite: 28/28 PASS
+- Performance regression suite: 17/17 PASS
+- Shoe-image integration suite: 13/13 PASS
+- Transparent alpha verification: 19/19 PASS
+- Flat-package verification: PASS
+- app.js remains external-image architecture (~1.14 MB), not the ~2.03 MB base64 architecture from v15.6.6.
+
+Browser-level millisecond timing could not be measured reliably in this environment; no unsupported speed percentage is claimed.

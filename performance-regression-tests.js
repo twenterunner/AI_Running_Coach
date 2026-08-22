@@ -14,6 +14,12 @@ test('Global refresh renders only active page immediately',has('renderPage(activ
 test('Legacy eager render-all renderer list removed',!has('function renderAll(){[renderDashboard,renderToday,renderPlan'));
 test('Page renderer mapping still covers all navigation pages',['today','plan','runs','dashboard','assessments','recovery','injury','shoes','race','settings'].every(p=>has(p+':[')));
 test('app.js no longer embeds shoe image payloads',!has('data:image/webp;base64,'));
-test('Primary tabs are warmed during idle time',has('function warmPrimaryTabs()')&&has("['plan','runs','dashboard']"));
-test('Tab activation uses cached page/nav node maps',has('const pageNodes=new Map')&&has('const navButtons=new Map'));
+test('No forced background tab pre-render jank',!has('function warmPrimaryTabs()')&&!has('setTimeout(warmPrimaryTabs'));
+test('Tab activation yields a paint before first heavy render',has('requestAnimationFrame(()=>requestAnimationFrame(()=>')&&has('pendingPageRenderToken'));
+test('Only one activatePage implementation remains',(app.match(/function activatePage\(/g)||[]).length===1);
+test('Page transition animation removed from hot navigation path',!fs.readFileSync('styles.css','utf8').includes('animation:pageIn'));
+
+test('Tab activation uses cached page nodes',has('const pageNodes=new Map')&&has('pageNodes.get(current)'));
+test('Navigation buttons are cached after render',has('const navigationButtonMap=new Map()')&&has('refreshNavigationNodeCache'));
+
 console.log(`\n${pass} passed, ${fail} failed`);process.exitCode=fail?1:0;

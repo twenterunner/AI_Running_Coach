@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '15.6.7';
-  const BUILD = 50607;
+  const VERSION = '15.6.8';
+  const BUILD = 50608;
   const SCHEMA = 10400;
   const PRIMARY_STORAGE_KEY = 'arc_v10400_web';
   const MIRROR_STORAGE_KEY = 'arc_v10400_mirror';
@@ -6055,11 +6055,10 @@ function normalizeShoeFamily(text){return String(text||'').toUpperCase().replace
 function knownShoeProfile(brand,model,version){if(normalizeShoeFamily(brand)!=='ASICS')return null;const m=normalizeShoeFamily(model),ver=String(version??'').trim().toUpperCase();let variant=/\bTR\b/.test(m)||/\bTR\b/.test(ver)?'TR':null;const clean=m.replace(/\bTR\b/g,'').replace(/\s+/g,' ').trim();let matches=ASICS_SHOE_PROFILES.filter(p=>clean.includes(p.family)||p.family.includes(clean));if(variant)matches=matches.filter(p=>p.variant==='TR');else matches=matches.filter(p=>!p.variant);if(ver){const n=Number((ver.match(/\d+(?:\.\d+)?/)||[])[0]);if(Number.isFinite(n)){const exact=matches.find(p=>Number(p.version)===n);if(exact)return exact}}return matches.sort((a,b)=>Number(b.version)-Number(a.version))[0]||null}
 function shoeProfileForShoe(shoe){const known=knownShoeProfile(shoe.brand,shoe.model,shoe.version);if(known)return known;const c=shoe.characteristics||{},roles=Array.isArray(c.roles)&&c.roles.length?c.roles:['mixed'];return shoeProfileRecord(normalizeShoeFamily(shoe.model)||'CUSTOM',shoe.version||'',{brand:shoe.brand||'Other',family:shoe.model||'Custom shoe',neutral:c.neutral==null?null:c.neutral!==false,surfaces:c.surfaces||[shoe.surface||'road'],roles,cushioning:Number(c.cushioning)||3,responsiveness:c.ride==='responsive'?5:c.ride==='soft'?2:3,stability:c.neutral===false?5:3,protection:Number(c.cushioning)||3,grip:(c.surfaces||[]).includes('trail')?5:3,efficiency:c.ride==='responsive'?4:3,durability:3,comfort:c.ride==='soft'?5:3,weightClass:'unknown',plated:Boolean(c.plated),typicalReplacementLowKm:Number(shoe.replacementRangeKm?.low)||550,typicalReplacementHighKm:Number(shoe.replacementRangeKm?.high)||850,manufacturerPositioning:'User-entered shoe profile.',evidenceSource:'User-entered characteristics; recommendation profile generated locally by the app.',profileConfidence:'user-entered'})}
 function shoeDisplayName(shoe){return [shoe.brand,shoe.model,shoe.version].filter(Boolean).join(' ').replace(/\s+/g,' ').trim()+(shoe.nickname?` · ${shoe.nickname}`:'')}
-/* v15.6.7 — lightweight deployment-safe shoe assets.
-   Transparent WebP files live outside app.js so JavaScript parsing and tab rendering
-   do not carry ~900 kB of embedded base64 data. document.baseURI keeps GitHub Pages
-   repository deployments and local installs on the same path. All bundled shoe art
-   is normalized to a left-facing orientation. */
+/* v15.6.8 — flat deployment-safe shoe assets.
+   Transparent WebP files live at the repository root to preserve the app's flat deployment.
+   They stay outside app.js so JavaScript parsing and tab rendering do not carry image payloads.
+   All bundled shoe art is physically normalized to a left-facing orientation. */
 const SHOE_ASSET_FILES={
  'NOVABLAST-4':'novablast-4-transparent.webp',
  'GEL-NIMBUS':'gel-nimbus-transparent.webp',
@@ -6081,7 +6080,7 @@ const SHOE_ASSET_FILES={
  'GT-2000':'gt-2000-transparent.webp',
  'GT-1000':'gt-1000-transparent.webp'
 };
-function shoeAssetUrl(file){try{return new URL(`shoe-images/${file}`,document.baseURI).href}catch{return `shoe-images/${file}`}}
+function shoeAssetUrl(file){try{return new URL(file,document.baseURI).href}catch{return file}}
 const SHOE_IMAGE_CATALOGUE={
  'ASICS|NOVABLAST|4':SHOE_ASSET_FILES['NOVABLAST-4'],
  'ASICS|GEL-NIMBUS|25':SHOE_ASSET_FILES['GEL-NIMBUS'],
@@ -9385,18 +9384,6 @@ document.body.addEventListener('change',e=>{const sel=e.target.closest?.('[data-
 $('nav').innerHTML=pages.map((p,i)=>`<button data-page="${p[0]}" class="${i?'':'active'}">${p[1]}</button>`).join('');
 const pageNodes=new Map([...document.querySelectorAll('.page')].map(node=>[node.id,node]));
 const navButtons=new Map([...document.querySelectorAll('#nav button')].map(node=>[node.dataset.page,node]));
-function activatePage(p){
- const current=activePageId(); if(current===p)return;
- pageNodes.get(current)?.classList.remove('active'); pageNodes.get(p)?.classList.add('active');
- navButtons.get(current)?.classList.remove('active'); navButtons.get(p)?.classList.add('active');
- renderPage(p); scrollTo(0,0);
-}
-$('nav').onclick=e=>{const p=e.target.closest?.('[data-page]')?.dataset.page;if(p)activatePage(p)};
-function warmPrimaryTabs(){
- const queue=['plan','runs','dashboard'].filter(p=>p!==activePageId()&&!pageRenderCache.has(p));
- const next=deadline=>{if(!queue.length)return; if(deadline&&deadline.timeRemaining&&deadline.timeRemaining()<8){requestIdleCallback(next,{timeout:1200});return} renderPage(queue.shift()); if(queue.length)requestIdleCallback(next,{timeout:1200})};
- if('requestIdleCallback'in window)requestIdleCallback(next,{timeout:1600});
-}
 document.body.onclick=e=>{if(e.target.id==='addShoeBtn'){openShoeForm();return}let sd=e.target.closest('[data-shoe-detail]');if(sd){openShoeDetail(sd.dataset.shoeDetail);return}let cps=e.target.closest('[data-choose-plan-shoe]');if(cps){choosePlanShoe(cps.dataset.choosePlanShoe);return}if(e.target.id==='addInjuryBtn'){openInjuryForm();return}let activate=e.target.closest('[data-activate-injury-plan]');if(activate){let id=activate.dataset.activateInjuryPlan,current=state.injuries.find(x=>x.id===state.activeInjuryPlanId),next=state.injuries.find(x=>x.id===id);if(next&&confirm(`Switch the active recovery plan from ${current?.location||'the current injury'} to ${next.location||'this injury'}? Only one plan can be followed at a time.`)){state.activeInjuryPlanId=id;save();renderInjury();toast('Active recovery plan switched.')}return;}let phaseTile=e.target.closest('[data-injury-phase]');if(phaseTile){
  const wrap=phaseTile.closest('.injuryTrajectoryWrap'),n=Number(phaseTile.dataset.injuryPhase);
  if(wrap&&Number.isInteger(n)){
@@ -9431,12 +9418,49 @@ function navIcon(page){
  return icons[page]||icons.more;
 }
 function navButtonHtml(page,label,extra=''){return`<button ${extra} data-page="${page}"><span class="navIcon">${navIcon(page)}</span><span class="navLabel">${label}</span></button>`}
-function renderNavigation(){const current=document.querySelector('.page.active')?.id||'today';$('nav').innerHTML=primaryPages.map(p=>navButtonHtml(p[0],p[1])).join('')+secondaryPages.map(p=>navButtonHtml(p[0],p[1],'class="desktopSecondary"')).join('')+`<button id="moreNavBtn" class="moreToggle" type="button" aria-expanded="false" aria-controls="moreNav"><span class="navIcon">${navIcon('more')}</span><span class="navLabel">More</span></button>`;$('moreNav').innerHTML=secondaryPages.map(p=>`<button data-page="${p[0]}"><span class="navIcon">${navIcon(p[0])}</span><span>${p[1]}</span></button>`).join('');setActiveNavigation(current)}
-function setActiveNavigation(page){document.querySelectorAll('#nav [data-page],#moreNav [data-page]').forEach(button=>{const active=button.dataset.page===page;button.classList.toggle('active',active);if(active)button.setAttribute('aria-current','page');else button.removeAttribute('aria-current')});const more=$('moreNavBtn'),secondary=secondaryPages.some(item=>item[0]===page);more?.classList.toggle('active',secondary);if(secondary)more?.setAttribute('aria-current','page');else more?.removeAttribute('aria-current')}
-function activatePage(page,anchor=null){if(!pages.some(p=>p[0]===page))return;if(page==='plan')state.weekView=currentWeek();document.querySelectorAll('.page').forEach(section=>section.classList.toggle('active',section.id===page));setActiveNavigation(page);$('moreNav').className='moreNav hidden';$('moreNavBtn')?.setAttribute('aria-expanded','false');renderPage(page);requestAnimationFrame(positionMobileNavigation);if(anchor){requestAnimationFrame(()=>document.getElementById(anchor)?.scrollIntoView({behavior:'smooth',block:'start'}))}else scrollTo(0,0);$('mainContent')?.focus({preventScroll:true})}
+const navigationButtonMap=new Map();
+function refreshNavigationNodeCache(){
+ navigationButtonMap.clear();
+ document.querySelectorAll('#nav [data-page],#moreNav [data-page]').forEach(button=>{
+  const key=button.dataset.page;if(!key)return;
+  if(!navigationButtonMap.has(key))navigationButtonMap.set(key,[]);
+  navigationButtonMap.get(key).push(button);
+ });
+}
+function renderNavigation(){
+ const current=activePageId();
+ $('nav').innerHTML=primaryPages.map(p=>navButtonHtml(p[0],p[1])).join('')+secondaryPages.map(p=>navButtonHtml(p[0],p[1],'class="desktopSecondary"')).join('')+`<button id="moreNavBtn" class="moreToggle" type="button" aria-expanded="false" aria-controls="moreNav"><span class="navIcon">${navIcon('more')}</span><span class="navLabel">More</span></button>`;
+ $('moreNav').innerHTML=secondaryPages.map(p=>`<button data-page="${p[0]}"><span class="navIcon">${navIcon(p[0])}</span><span>${p[1]}</span></button>`).join('');
+ refreshNavigationNodeCache();setActiveNavigation(current);
+}
+function setActiveNavigation(page){
+ for(const [key,buttons] of navigationButtonMap){
+  const active=key===page;
+  for(const button of buttons){button.classList.toggle('active',active);if(active)button.setAttribute('aria-current','page');else button.removeAttribute('aria-current')}
+ }
+ const more=$('moreNavBtn'),secondary=secondaryPages.some(item=>item[0]===page);
+ more?.classList.toggle('active',secondary);if(secondary)more?.setAttribute('aria-current','page');else more?.removeAttribute('aria-current');
+}
+let pendingPageRenderToken=0;
+function activatePage(page,anchor=null){
+ if(!pages.some(p=>p[0]===page))return;
+ const current=activePageId();if(current===page&&!anchor)return;
+ if(page==='plan'&&state.weekView==null)state.weekView=currentWeek();
+ pageNodes.get(current)?.classList.remove('active');pageNodes.get(page)?.classList.add('active');
+ setActiveNavigation(page);$('moreNav').className='moreNav hidden';$('moreNavBtn')?.setAttribute('aria-expanded','false');
+ if(!anchor)scrollTo(0,0);
+ $('mainContent')?.focus({preventScroll:true});
+ const token=++pendingPageRenderToken;
+ requestAnimationFrame(()=>requestAnimationFrame(()=>{
+  if(token!==pendingPageRenderToken||activePageId()!==page)return;
+  renderPage(page);positionMobileNavigation();
+  if(anchor)document.getElementById(anchor)?.scrollIntoView({behavior:'smooth',block:'start'});
+ }));
+}
 renderNavigation();
 requestAnimationFrame(positionMobileNavigation);
 document.documentElement.style.removeProperty('--nav-visual-bottom');
+
 $('nav').onclick=event=>{
  const button=event.target.closest('button');
  if(!button||!$('nav').contains(button))return;
@@ -9731,7 +9755,7 @@ const importedPowerMigrated=migrateImportedPower();
 const compactedHistoricalStreams=compactHistoricalActivityStreams();
 if(assessmentRunsMigrated||importedPowerMigrated||compactedHistoricalStreams||reconcilePredictionHistory())save();
 renderAll();
-setTimeout(warmPrimaryTabs,250);
+
 initOnboarding();
 console.info(`AI Running Coach v${CORE.VERSION} stable build ${BUILD}`);
 })();

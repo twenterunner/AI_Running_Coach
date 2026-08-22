@@ -1,41 +1,41 @@
-// AI Running Coach v15.6.7 · build 50607
+// AI Running Coach v15.6.8 · build 50608
 'use strict';
 
-const BUILD = 50607;
-const CACHE = 'arc-v15606-build-50607';
+const BUILD = 50608;
+const CACHE = 'arc-v15608-build-50608';
 const CACHE_PREFIX = 'arc-v';
 const APP_SHELL = './index.html';
 const ASSETS = [
   './',
   './index.html',
-  './styles.css?v=50607',
-  './app.js?v=50607',
-  './manifest.webmanifest?v=50607',
-  './icon-192.png?v=50607',
-  './icon-512.png?v=50607',
-  './apple-touch-icon.png?v=50607',
-  './favicon-32x32.png?v=50607',
-  './favicon-16x16.png?v=50607',
-  './favicon.ico?v=50607',
-  './shoe-images/dynablast-transparent.webp',
-  './shoe-images/evoride-transparent.webp',
-  './shoe-images/gel-cumulus-transparent.webp',
-  './shoe-images/gel-kayano-transparent.webp',
-  './shoe-images/gel-nimbus-transparent.webp',
-  './shoe-images/gel-pulse-transparent.webp',
-  './shoe-images/glideride-transparent.webp',
-  './shoe-images/gt-1000-transparent.webp',
-  './shoe-images/gt-2000-transparent.webp',
-  './shoe-images/magic-speed-transparent.webp',
-  './shoe-images/megablast-transparent.webp',
-  './shoe-images/metaspeed-edge-transparent.webp',
-  './shoe-images/metaspeed-ray-transparent.webp',
-  './shoe-images/metaspeed-sky-transparent.webp',
-  './shoe-images/noosa-tri-transparent.webp',
-  './shoe-images/novablast-4-transparent.webp',
-  './shoe-images/novablast-transparent.webp',
-  './shoe-images/sonicblast-transparent.webp',
-  './shoe-images/superblast-transparent.webp',
+  './styles.css?v=50608',
+  './app.js?v=50608',
+  './manifest.webmanifest?v=50608',
+  './icon-192.png?v=50608',
+  './icon-512.png?v=50608',
+  './apple-touch-icon.png?v=50608',
+  './favicon-32x32.png?v=50608',
+  './favicon-16x16.png?v=50608',
+  './favicon.ico?v=50608',
+  './dynablast-transparent.webp',
+  './evoride-transparent.webp',
+  './gel-cumulus-transparent.webp',
+  './gel-kayano-transparent.webp',
+  './gel-nimbus-transparent.webp',
+  './gel-pulse-transparent.webp',
+  './glideride-transparent.webp',
+  './gt-1000-transparent.webp',
+  './gt-2000-transparent.webp',
+  './magic-speed-transparent.webp',
+  './megablast-transparent.webp',
+  './metaspeed-edge-transparent.webp',
+  './metaspeed-ray-transparent.webp',
+  './metaspeed-sky-transparent.webp',
+  './noosa-tri-transparent.webp',
+  './novablast-4-transparent.webp',
+  './novablast-transparent.webp',
+  './sonicblast-transparent.webp',
+  './superblast-transparent.webp',
 ];
 
 async function resilientPrecache() {
