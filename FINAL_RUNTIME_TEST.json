@@ -1,0 +1,366 @@
+{
+  "320": {
+    "errors": [],
+    "nav": [
+      [
+        "today",
+        true
+      ],
+      [
+        "plan",
+        true
+      ],
+      [
+        "runs",
+        false
+      ],
+      [
+        "dashboard",
+        true
+      ],
+      [
+        "recovery",
+        true
+      ],
+      [
+        "injury",
+        false
+      ],
+      [
+        "shoes",
+        false
+      ],
+      [
+        "race",
+        false
+      ],
+      [
+        "settings",
+        false
+      ],
+      [
+        "moreNavBtn",
+        true
+      ]
+    ],
+    "dims": {
+      "vw": 320,
+      "body": 320,
+      "doc": 320,
+      "main": 320
+    },
+    "foldout": true
+  },
+  "360": {
+    "errors": [],
+    "nav": [
+      [
+        "today",
+        true
+      ],
+      [
+        "plan",
+        true
+      ],
+      [
+        "runs",
+        false
+      ],
+      [
+        "dashboard",
+        true
+      ],
+      [
+        "recovery",
+        true
+      ],
+      [
+        "injury",
+        false
+      ],
+      [
+        "shoes",
+        false
+      ],
+      [
+        "race",
+        false
+      ],
+      [
+        "settings",
+        false
+      ],
+      [
+        "moreNavBtn",
+        true
+      ]
+    ],
+    "dims": {
+      "vw": 360,
+      "body": 360,
+      "doc": 360,
+      "main": 360
+    },
+    "foldout": true
+  },
+  "390": {
+    "errors": [],
+    "nav": [
+      [
+        "today",
+        true
+      ],
+      [
+        "plan",
+        true
+      ],
+      [
+        "runs",
+        false
+      ],
+      [
+        "dashboard",
+        true
+      ],
+      [
+        "recovery",
+        true
+      ],
+      [
+        "injury",
+        false
+      ],
+      [
+        "shoes",
+        false
+      ],
+      [
+        "race",
+        false
+      ],
+      [
+        "settings",
+        false
+      ],
+      [
+        "moreNavBtn",
+        true
+      ]
+    ],
+    "dims": {
+      "vw": 390,
+      "body": 390,
+      "doc": 390,
+      "main": 390
+    },
+    "foldout": true
+  },
+  "412": {
+    "errors": [],
+    "nav": [
+      [
+        "today",
+        true
+      ],
+      [
+        "plan",
+        true
+      ],
+      [
+        "runs",
+        false
+      ],
+      [
+        "dashboard",
+        true
+      ],
+      [
+        "recovery",
+        true
+      ],
+      [
+        "injury",
+        false
+      ],
+      [
+        "shoes",
+        false
+      ],
+      [
+        "race",
+        false
+      ],
+      [
+        "settings",
+        false
+      ],
+      [
+        "moreNavBtn",
+        true
+      ]
+    ],
+    "dims": {
+      "vw": 412,
+      "body": 412,
+      "doc": 412,
+      "main": 412
+    },
+    "foldout": true
+  },
+  "430": {
+    "errors": [],
+    "nav": [
+      [
+        "today",
+        true
+      ],
+      [
+        "plan",
+        true
+      ],
+      [
+        "runs",
+        false
+      ],
+      [
+        "dashboard",
+        true
+      ],
+      [
+        "recovery",
+        true
+      ],
+      [
+        "injury",
+        false
+      ],
+      [
+        "shoes",
+        false
+      ],
+      [
+        "race",
+        false
+      ],
+      [
+        "settings",
+        false
+      ],
+      [
+        "moreNavBtn",
+        true
+      ]
+    ],
+    "dims": {
+      "vw": 430,
+      "body": 430,
+      "doc": 430,
+      "main": 430
+    },
+    "foldout": true
+  },
+  "1024": {
+    "errors": [],
+    "nav": [
+      [
+        "today",
+        true
+      ],
+      [
+        "plan",
+        true
+      ],
+      [
+        "runs",
+        true
+      ],
+      [
+        "dashboard",
+        true
+      ],
+      [
+        "recovery",
+        true
+      ],
+      [
+        "injury",
+        true
+      ],
+      [
+        "shoes",
+        true
+      ],
+      [
+        "race",
+        true
+      ],
+      [
+        "settings",
+        true
+      ],
+      [
+        "moreNavBtn",
+        false
+      ]
+    ],
+    "dims": {
+      "vw": 1024,
+      "body": 1024,
+      "doc": 1024,
+      "main": 932
+    },
+    "foldout": true
+  },
+  "1440": {
+    "errors": [],
+    "nav": [
+      [
+        "today",
+        true
+      ],
+      [
+        "plan",
+        true
+      ],
+      [
+        "runs",
+        true
+      ],
+      [
+        "dashboard",
+        true
+      ],
+      [
+        "recovery",
+        true
+      ],
+      [
+        "injury",
+        true
+      ],
+      [
+        "shoes",
+        true
+      ],
+      [
+        "race",
+        true
+      ],
+      [
+        "settings",
+        true
+      ],
+      [
+        "moreNavBtn",
+        false
+      ]
+    ],
+    "dims": {
+      "vw": 1440,
+      "body": 1440,
+      "doc": 1440,
+      "main": 1240
+    },
+    "foldout": true
+  }
+}

@@ -1,0 +1,69 @@
+AI Running Coach v20.0.0 · build 52000
+CLEAN-SLATE ATHLETE PRODUCT UI
+
+DESIGN BASIS
+- Existing GUI was not used as the visual target.
+- Frozen app.js engine/data contract is the source of truth.
+- Primary mobile architecture: Today · Training · Performance · Recovery · More.
+- Log, Rehab, Shoes, Race, Assessments and Settings remain accessible as purpose-built workspaces.
+- Main views are decision-first; full underlying data/calculations remain available through page-level foldouts.
+
+ENGINE REGRESSION LOCK
+- Baseline app.js SHA-256: 38957decd3c2daa36cc823f6176437e2a84617bb43590e7941a5d6a09c93ebe4
+- Release app.js SHA-256:  38957decd3c2daa36cc823f6176437e2a84617bb43590e7941a5d6a09c93ebe4
+- Byte-for-byte comparison: PASS. No calculation engine edits.
+
+RUNTIME TEST MATRIX
+Viewport widths: 320, 360, 390, 412, 430, 1024, 1440 px.
+- JavaScript page errors: 0 at every tested width.
+- Document/body horizontal overflow: 0 at every tested width.
+- Main-content horizontal overflow: 0 at every tested width.
+- Mobile primary navigation visible as Today / Training / Performance / Recovery / More.
+- More menu exposes Log and secondary destinations.
+- Navigation activation smoke tests: PASS.
+- Page-level All data, calculations & model evidence disclosure exists on Today, Training, Log, Performance, Recovery, Rehab, Shoes, Race and Settings: PASS.
+- Calculation/evidence foldout open/close: PASS.
+- Modal stress containment at 390x844: PASS.
+- Training week uses an intentional contained horizontal session workbench on narrow phones; this does not create document-level horizontal scrolling.
+
+NEW PRESENTATION ARCHITECTURE
+TODAY
+- Workout execution hero with session type, distance, pace/power/HR targets and visual session strip.
+- Readiness/constraint context directly below the prescription.
+- Existing detailed workout, recovery, shoe and coaching evidence remains available.
+
+TRAINING
+- Programme phase and race context first.
+- Week objective and compact load summary.
+- Programme timeline plus horizontal session workbench.
+- Adaptation evidence separated into progressive disclosure.
+
+PERFORMANCE
+- Race capability and programme outcome as the main story.
+- Compact efficiency, durability, long-run and weekly-load signal strip.
+- Race trajectory is the primary graph.
+- Efficiency and cardiac-drift graphs presented as paired physiological evidence.
+- Long-run and volume trends form a training-response layer.
+- Execution and model-learning remain available below.
+
+RECOVERY
+- Recovery/training decision first.
+- Readiness modifier visualization and key signals.
+- HRV, pain, training absorption and recovery drivers presented as evidence panels.
+- History/load context below.
+
+RACE / SHOES / REHAB
+- Purpose-specific workspaces rather than generic dashboard styling.
+- Existing engine-generated detail remains intact.
+
+FILES
+- app.js (unchanged engine)
+- index.html
+- styles.css (baseline compatibility styles)
+- athlete-product.css (new product design system)
+- athlete-product.js (presentation adapter / composition layer only)
+- manifest.webmanifest
+- service-worker.js
+- icons/favicons
+- FINAL_RUNTIME_TEST.json
+- V20_TEST_REPORT.txt
