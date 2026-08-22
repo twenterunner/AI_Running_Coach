@@ -1,0 +1,43 @@
+AI Running Coach v15.7.0 · build 50700
+BEST-IN-CLASS RUNNER EXPERIENCE REBUILD
+
+SCOPE
+- Presentation architecture rebuilt around serious-runner decisions.
+- Desktop: persistent athlete navigation rail + wide performance workspace.
+- Mobile: bottom-navigation-first single decision stream.
+- Progress, Plan, Recovery and Race reorganized into decision-first/evidence-second zones.
+- Today, Log, Coach, Injury, Shoes, Assessments and Settings receive purpose-specific layouts rather than one generic card stack.
+- Teal identity retained as the primary accent system.
+- Calculation/evidence transparency presented through foldouts while preserving existing engine outputs and existing technical disclosures.
+
+HARD REGRESSION LOCK
+Baseline app.js SHA-256: 38957decd3c2daa36cc823f6176437e2a84617bb43590e7941a5d6a09c93ebe4
+Release  app.js SHA-256: 38957decd3c2daa36cc823f6176437e2a84617bb43590e7941a5d6a09c93ebe4
+Result: PASS — byte-for-byte identical
+
+RESPONSIVE GEOMETRY
+Tested widths: 320, 360, 390, 412, 430, 1024, 1440 px
+Horizontal overflow defects after correction: 0
+JavaScript page errors: 0
+
+INTERACTION SMOKE TEST
+PASS — Today navigation
+PASS — Plan navigation
+PASS — Log navigation
+PASS — Progress navigation
+PASS — More menu open
+PASS — More menu close
+PASS — Calculation transparency foldout open
+PASS — Restore-file control retained in DOM
+PASS — Stress modal contained within mobile viewport
+
+CORRECTIONS FOUND DURING TESTING
+1. Mobile More sheet was initially forced visible by a new responsive rule. Corrected and retested.
+2. Existing navigation contract left the new mobile nav with inherited hidden/pointer-events behavior. Corrected at shell level and retested with actual clicks.
+3. Narrow-screen athlete-context chips and restore-file input created overflow. Reflow/containment corrected and full width matrix rerun.
+
+ENGINE CHANGES
+None. app.js is byte-for-byte identical to the uploaded baseline. Version/cache changes are limited to HTML/manifest/service worker and the new presentation assets.
+
+LIMITATION
+Runtime visual tests use the app's generated/default state in the test browser. Persisted user-specific localStorage data was not supplied to the headless test environment, so every possible populated Shoes/Rehab/history combination is not claimed as visually exhausted.
