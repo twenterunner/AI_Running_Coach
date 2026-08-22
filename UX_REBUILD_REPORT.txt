@@ -1,0 +1,22 @@
+AI Running Coach v19.0.0 — Athlete OS clean-slate presentation rebuild
+
+DESIGN BASIS
+- Existing app GUI was not used as the visual reference.
+- Existing app.js remains the frozen calculation/data engine.
+- New presentation architecture is informed by serious-athlete patterns: immediate daily action, calendar/program structure, longitudinal performance trends, recovery decision, and progressive disclosure of evidence.
+- Teal retained as the product identity; visual system changed to a restrained light performance canvas with dark-teal navigation and high-contrast hero surfaces.
+
+NEW PRODUCT EXPERIENCE
+- Desktop: persistent compact athlete navigation rail + wide analysis workspace.
+- Mobile: bottom navigation + purpose-specific responsive workspaces.
+- Today: dominant execution surface, supporting coach intelligence below.
+- Plan: program timeline + horizontally scannable training week + adaptation evidence.
+- Log: activity feed with import/manual action separated from history.
+- Performance: race outlook hero plus longitudinal fitness, durability, load, execution and adaptation dashboard.
+- Recovery: current decision first, then evidence modules.
+- Shoes/Injury/Race: focused workspaces using the same visual grammar rather than generic identical cards.
+- Existing details/summary calculation disclosures retained and visually normalized.
+
+ENGINE LOCK
+app.js copied unchanged from the v15.4.7 uploaded baseline. No calculation engine edits.
+38957decd3c2daa36cc823f6176437e2a84617bb43590e7941a5d6a09c93ebe4  /mnt/data/v19/app.js
