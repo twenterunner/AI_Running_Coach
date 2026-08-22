@@ -1,0 +1,58 @@
+AI Running Coach v15.5.0 · build 50500
+Rehabilitation phase criterion/schedule consistency audit
+
+ROOT CAUSE FOUND
+Phase 5 required strength + impact + confidence evidence on the same check-in, but the Phase 5 seven-day programme scheduled running, strength-only and recovery days. No Phase 5 impact assessment was scheduled, so the displayed limiter could be impossible to clear from the prescribed programme.
+
+CROSS-PHASE AUDIT AND CORRECTIONS
+Phase 1 — Protect & settle
+- Criterion: gentle double-leg loading tolerated.
+- Previous issue: the early schedule could contain walking/mobility only, while the criterion depended on the generic strength-tolerance field.
+- Correction: load days now include a Supported double-leg loading assessment, and load days are explicitly recognised as strength-assessment days.
+
+Phase 2 — Restore movement
+- Criterion previously said "Repeated bridge or hinge controlled", although several injury families prescribe other strength patterns.
+- Correction: criterion is now "Repeated strength loading controlled" and is matched to the scheduled strength-tolerance check-in field.
+
+Phase 3 — Build capacity
+- Criterion: gentle hopping tolerated twice.
+- Existing schedule already provides two impact-assessment days per seven-day cycle (cycle days 2 and 5).
+- No scheduling gap found; retained.
+
+Phase 4 — Return to run
+- Criterion: at least 10 minutes running tolerated twice.
+- Previous issue: the standard walk-run prescription was 6 × 1 minute = only 6 running minutes, so following the prescription exactly could never satisfy a 10-minute criterion.
+- Correction: criterion sessions are now 5 × 2 minutes easy running / 2 minutes walking = exactly 10 running minutes, with three spaced opportunities per seven-day cycle.
+
+Phase 5 — Rebuild running
+- Criterion: two tolerated 30-minute easy runs.
+- Correction: run days explicitly prescribe 30:00 rather than an ambiguous 10–30 minute range.
+- Criterion: strength + impact tolerated with confidence >=8/10 on two check-ins.
+- Previous issue: no Phase 5 impact assessment was scheduled.
+- Correction: two Strength & impact readiness assessment days are scheduled per seven-day cycle (cycle days 1 and 4). Each combines stage-appropriate strength work and controlled double-leg hops. The existing confidence field is recorded on the same check-in.
+
+Phase 6 — Return to performance
+- Criterion: two tolerated 45-minute normal-duration runs.
+- Previous issue: easy run days did not prescribe a measurable duration.
+- Correction: normal-duration runs progress 35:00 -> 40:00 -> 45:00 according to demonstrated capacity. Once 40 minutes is tolerated, 45:00 is prescribed and can satisfy the criterion.
+- Criterion wording corrected to "Faster running or hills tolerated" to match the underlying either/or logic.
+- Previous issue: there was no check-in field that could record the faster/hill tolerance evidence used by the criterion.
+- Correction: scheduled quality days now expose a dedicated faster-running / hill tolerance question. A failed quality assessment cannot pass just because the run is tagged as quality.
+- Criterion: no symptom recurrence after normal training.
+- Previous issue: generic stable check-ins could count even when no normal training was completed.
+- Correction: this criterion now counts stable responses after completed running exposures of at least 30 minutes with normal gait.
+
+REGRESSION RETAINED
+- Minutes + seconds input remains available for walking and running duration.
+- Phase 5 30-minute tolerated-run evidence remains distinct from Phase 6 45-minute normal-volume evidence.
+- Runner Interpretation continues to use the current phase criteria rather than the next phase criteria.
+
+TESTING
+- JavaScript syntax: PASS (node --check app.js)
+- Service worker syntax: PASS
+- Manifest JSON parse: PASS
+- Automated source/invariant suite: 19/19 PASS
+- All six rehabilitation phases audited for a prescribed opportunity to generate every progression criterion.
+
+LIMITATION
+A full browser-navigation test could not be executed because this environment blocks local HTTP browser navigation (ERR_BLOCKED_BY_ADMINISTRATOR). The application JavaScript and phase/schedule invariants were tested directly, but this report does not claim a full end-to-end browser interaction run.
