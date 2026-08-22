@@ -1,22 +1,23 @@
-// AI Running Coach v15.4.9 · build 50409
+// AI Running Coach v15.5.0 · build 50500
 'use strict';
 
-const BUILD = 50409;
-const CACHE = 'arc-v15409-build-50409';
+const BUILD = 50500;
+const CACHE = 'arc-v15500-build-50500';
 const CACHE_PREFIX = 'arc-v';
 const APP_SHELL = './index.html';
 const ASSETS = [
   './',
   './index.html',
-  './styles.css?v=50409',
-  './app.js?v=50409',
-  './manifest.webmanifest?v=50409',
-  './icon-192.png?v=50409',
-  './icon-512.png?v=50409',
-  './apple-touch-icon.png?v=50409',
-  './favicon-32x32.png?v=50409',
-  './favicon-16x16.png?v=50409',
-  './favicon.ico?v=50409'
+  './styles.css?v=50500',
+  './gui-best.js?v=50500',
+  './app.js?v=50500',
+  './manifest.webmanifest?v=50500',
+  './icon-192.png?v=50500',
+  './icon-512.png?v=50500',
+  './apple-touch-icon.png?v=50500',
+  './favicon-32x32.png?v=50500',
+  './favicon-16x16.png?v=50500',
+  './favicon.ico?v=50500'
 ];
 
 async function resilientPrecache() {

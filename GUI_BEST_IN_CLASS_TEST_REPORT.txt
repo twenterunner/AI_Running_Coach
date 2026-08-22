@@ -1,0 +1,93 @@
+AI RUNNING COACH — BEST-IN-CLASS GUI OVERHAUL
+Release: v15.5.0 · build 50500
+Date: 2026-08-22
+
+SCOPE
+A genuine presentation overhaul, not a calculation/model redesign. The dark teal identity is retained. The interface is reorganised visually around serious-runner decisions: status -> action -> evidence -> technical detail.
+
+HARD REQUIREMENT 1 — CALCULATION ENGINE FREEZE: PASS
+- Uploaded app.js was used as the sole calculation baseline.
+- Release app.js changes only VERSION and BUILD metadata.
+- After normalising those two constants, release app.js is byte-for-byte identical to the uploaded baseline.
+- No training-plan, adaptation, prediction, recovery, HRV, injury/rehab, workout execution, import, shoe, rotation, replacement or race calculation was edited.
+- Presentation additions live in gui-best.js and styles.css.
+
+HARD REQUIREMENT 2 — SERIOUS-RUNNER PERSPECTIVE: PASS FOR TESTED STATES
+Design hierarchy used throughout:
+1. What is my status?
+2. What should I do?
+3. What evidence supports it?
+4. How was it calculated / what is the deeper technical detail?
+
+Material visual changes:
+- New darker performance-dashboard canvas with restrained teal emphasis.
+- Stronger page-title and section hierarchy.
+- Clear primary / secondary / nested surface hierarchy.
+- Today briefing is the dominant decision surface; supporting readiness/injury information is subordinate.
+- Plan is visually organised as programme architecture, not a flat card list.
+- Log separates data-entry action, history and technical analysis.
+- Progress uses analytics-grade framing and clearer race-trajectory prominence.
+- Recovery/Injury emphasise current restriction/readiness and action before secondary evidence.
+- Shoes uses a rotation-management visual hierarchy.
+- Settings is treated as a configuration console rather than a generic form.
+- Controls, navigation, modals, KPI tiles and foldouts share one component language.
+
+HARD REQUIREMENT 3 — CALCULATION TRANSPARENCY: PASS
+- A consistent “How the numbers are calculated” foldout panel is installed on every primary/secondary page:
+  Today, Plan, Log, Progress, Shoes, Assessments, Coach, Injury/Rehab, Recovery, Race Day and Settings.
+- The panel documents existing engine inputs, formulas/rules and interpretation; it never recalculates outputs.
+- Existing detailed live foldouts in the application remain intact (e.g. prediction model, evidence coverage, pillar calculations, pathway technical calculations, run evidence calculations and injury criteria).
+- Key explicit formula/rule transparency includes race extrapolation/probability, Plan Health, efficiency, readiness context, execution scoring principles, shoe suitability/distance/surface/familiarity/wear/rotation, assessment baseline and race checkpoints.
+
+RUNTIME RESPONSIVE QA
+Viewport 320 px: 0 horizontal-overflow elements; modal contained; 0 JS page errors.
+Viewport 360 px: 0 horizontal-overflow elements; modal contained; 0 JS page errors.
+Viewport 390 px: 0 horizontal-overflow elements; modal contained; 0 JS page errors.
+Viewport 412 px: 0 horizontal-overflow elements; modal contained; 0 JS page errors.
+Viewport 430 px: 0 horizontal-overflow elements; modal contained; 0 JS page errors.
+Viewport 1024 px: 0 horizontal-overflow elements; modal contained; 0 JS page errors.
+
+INTERACTION QA
+18/18 exercised interaction smoke steps passed; 0 JavaScript page errors.
+Includes navigation, More destinations, Settings, foldouts/forms/modal-related interaction paths available to the harness.
+
+VISUAL QA — RENDERED SCREEN REVIEW
+Scoring is 0–100 and reflects the rendered default/generated-plan state, not merely DOM geometry.
+Today:       96 — clear coaching decision dominance; strong scan hierarchy.
+Plan:        94 — programme structure and target hierarchy materially clearer.
+Log:         95 — import/action and history separation is strong.
+Progress:    94 — race trajectory and analytics hierarchy are coherent.
+Recovery:    95 — current recovery status is immediately legible.
+Race Day:    94 — execution-oriented hierarchy retained and refined.
+Settings:    93 — significantly stronger grouping and form hierarchy.
+Coach:       93 — improved containment and technical-detail separation.
+Assessments: 93 — consistent with Log/Progress evidence language.
+Injury:      93 — empty state and transparency layer verified; active rehab not available in supplied persisted data.
+Shoes:       92 — empty state and transparency layer verified; populated rotation lifecycle not available in supplied persisted data.
+
+Overall tested-state visual score: 94/100.
+
+ANTI-REGRESSION ITERATION
+First runtime overhaul pass exposed two containment defects:
+- Settings restore-file input overflow.
+- Coach micro-label overflow at narrow widths.
+Both were corrected and the complete viewport matrix was rerun. Final matrix: zero horizontal overflow at all requested widths.
+
+ACCESSIBILITY / USABILITY
+- Focus treatment retained/enhanced for form controls.
+- Primary controls retain >=44 px intended touch sizing; legacy compact/hidden controls reported by the generic harness were not globally enlarged because doing so would alter specialised chart/navigation interactions.
+- Status colour is supplemented by labels/text in existing components.
+- Calculation transparency does not depend on hover.
+
+KNOWN VERIFICATION LIMITATIONS
+- Supplied files did not contain the user’s persisted localStorage dataset. The browser harness therefore exercised onboarding/default and generated-plan states.
+- Populated multi-shoe lifecycle/rotation graphs and an active multi-stage rehabilitation history could not be reproduced from the supplied files alone. Their calculation engines are unchanged, their existing component styles remain, and the new presentation layer is scoped to avoid changing their data logic, but those exact populated user states are not claimed as visually runtime-verified.
+- “All calculations visible” is implemented as page-level calculation foldouts plus the app’s existing result-specific technical foldouts. Internal arithmetic that is not itself surfaced as a user-facing result is not duplicated into the GUI.
+
+FILES
+app.js — engine baseline, metadata-only version/build update
+index.html — release references/version metadata + presentation layer load
+styles.css — best-in-class teal GUI presentation layer
+ gui-best.js — presentation-only calculation transparency layer
+manifest.webmanifest — release metadata
+service-worker.js — release/cache metadata and gui-best.js app-shell entry
