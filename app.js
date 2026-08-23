@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '15.6.14';
-  const BUILD = 50614;
+  const VERSION = '15.6.15';
+  const BUILD = 50615;
   const SCHEMA = 10400;
   const PRIMARY_STORAGE_KEY = 'arc_v10400_web';
   const MIRROR_STORAGE_KEY = 'arc_v10400_mirror';
@@ -9223,7 +9223,7 @@ function renderShoes(){const root=$('shoesContent');if(!root)return;
   const before=state.plannedShoePurchases.length;
   state.plannedShoePurchases=state.plannedShoePurchases.filter(x=>!(x.status==='planned'&&x.intendedRole==='race'));
   if(state.plannedShoePurchases.length!==before)save();
- }if(state.setup&&Object.prototype.hasOwnProperty.call(state.setup,'shoePurchaseIntervalWeeks'))delete state.setup.shoePurchaseIntervalWeeks;if(!root.closest('.page')?.classList.contains('active'))return;reconcileShoeUsage();ensureShoeAutoAssignments();const active=(state.shoes||[]).filter(s=>s.status!=='retired');
+ }if(state.setup&&Object.prototype.hasOwnProperty.call(state.setup,'shoePurchaseIntervalWeeks'))delete state.setup.shoePurchaseIntervalWeeks;reconcileShoeUsage();ensureShoeAutoAssignments();const active=(state.shoes||[]).filter(s=>s.status!=='retired');
  const outlook=active.slice().sort((a,b)=>{const fa=shoeForecast(a),fb=shoeForecast(b);return (fa.lowDate||'9999').localeCompare(fb.lowDate||'9999')}).map(s=>{const f=shoeForecast(s),replacement=replacementProfileForShoe(s),beforeRace=Boolean(f.lowDate&&state.setup?.raceDate&&f.lowDate<=state.setup.raceDate);return`<article class="shoeOutlookRow ${shoeStatusClass(f.status)}"><div><b>${esc(shoeDisplayName(s))}</b><span>${Math.round(f.km)} km · expected ${Math.round(f.low)}–${Math.round(f.high)} km</span>${beforeRace&&replacement?`<span class="shoeReplacementHint">Likely replacement before race · consider ASICS ${esc(replacement.family)} ${esc(replacement.version)}</span>`:''}</div><div><small>CURRENT USE</small><b>${f.weekly>0?f.weekly.toFixed(1)+' km/week':'—'}</b><span>${esc(f.source)}</span></div><div><small>LIKELY REPLACEMENT</small><b>${esc(shoeForecastDateText(f))}</b><span>${esc(f.confidence)} confidence</span></div></article>`}).join('')||'<div class="shoeEmpty">No active shoes.</div>';
  const lifecycle=raceShoePlan(),futureSessions=lifecycle.famSessions||[],futureDistance=(start,end)=>futureSessions.filter(x=>(!start||x.date>=start)&&(!end||x.date<=end)).reduce((a,x)=>a+Number(x.plannedShoeKm||0),0),now=iso(today()),d7=iso(new Date(today().getTime()+7*DAY)),d28=iso(new Date(today().getTime()+28*DAY));
  const plannedOwned=active.map(s=>`<tr><th>${esc(shoeDisplayName(s))}</th><td>${shoePlannedUsage(s.id,7).toFixed(1)} km</td><td>${shoePlannedUsage(s.id,28).toFixed(1)} km</td><td>${shoePlannedUsage(s.id,null).toFixed(1)} km</td></tr>`).join('');
@@ -9372,13 +9372,24 @@ function renderPage(page,{force=false}={}){
  const sig=pageRenderSignature(page);
  if(!force&&pageRenderCache.get(page)===sig){navigationPerf.cacheHits++;return false}
  const started=(globalThis.performance?.now?.()??Date.now()),renderers=PAGE_RENDERERS[page]||[];
- for(const fn of renderers){try{fn()}catch(err){recordDiagnostic('Render failure in '+fn.name,err)}}
- ensureAccessibleForms(document.getElementById(page)||document);
- if(page==='settings'){renderDiagnostics();renderUndoButtons()}
- pageRenderCache.set(page,sig);
+ let ok=true,firstError=null;
+ for(const fn of renderers){try{fn()}catch(err){ok=false;firstError=firstError||err;recordDiagnostic('Render failure in '+fn.name,err)}}
+ try{ensureAccessibleForms(document.getElementById(page)||document)}catch(err){ok=false;firstError=firstError||err;recordDiagnostic('Accessibility pass failure on '+page,err)}
+ if(page==='settings'){try{renderDiagnostics();renderUndoButtons()}catch(err){ok=false;firstError=firstError||err;recordDiagnostic('Settings post-render failure',err)}}
+ // Never mark a failed render as cached. The previous implementation did this,
+ // which could permanently cache a blank secondary tab after one exception.
+ if(ok)pageRenderCache.set(page,sig);else pageRenderCache.delete(page);
+ if(!ok){
+  const node=document.getElementById(page);
+  const empty=!node||!String(node.textContent||'').trim();
+  if(node&&empty){
+   const target=page==='shoes'?document.getElementById('shoesContent')||node:node;
+   target.innerHTML=`<section class="panel"><h2>${page==='shoes'?'Shoes':'This view'} could not render</h2><p>The app kept this tab uncached so it will retry on the next visit.</p><p class="muted">${esc(firstError?.message||'Unknown rendering error')}</p></section>`;
+  }
+ }
  const elapsed=(globalThis.performance?.now?.()??Date.now())-started;
  navigationPerf.lastPage=page;navigationPerf.lastMs=elapsed;navigationPerf.maxMs=Math.max(navigationPerf.maxMs,elapsed);navigationPerf.renders++;
- return true;
+ return ok;
 }
 function renderAll(){
  // State changes invalidate all derived pages, but the active page is rebuilt now.
