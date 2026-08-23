@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '15.6.63';
-  const BUILD = 50663;
+  const VERSION = '15.6.64';
+  const BUILD = 50664;
   const SCHEMA = 10400;
   const PRIMARY_STORAGE_KEY = 'arc_v10400_web';
   const MIRROR_STORAGE_KEY = 'arc_v10400_mirror';
@@ -5289,15 +5289,29 @@ function buildRehabCalendar(i,p){
   const displayedDay=frozenHistorical||freezeCompletedToday||fresh;
   let execution=rehabExecutionMeta(check);
   if(!check){const isToday=date===todayKey,isPast=date<todayKey,pending=isToday?'Rehab report pending':isPast?'Past check-in missing':'Future rehab day';execution={label:isToday?'Today’s rehabilitation completion has not been reported yet':isPast?'No check-in was recorded for this scheduled rehabilitation day':'Rehabilitation completion will be reported after this day',short:pending,className:'unknown',score:null,assessed:false,exercise:{label:isToday?'Rehab exercise completion has not been reported yet':isPast?'Exercise completion was not recorded':'Future rehabilitation exercise day',short:pending,className:'unknown',score:null,assessed:false},locomotion:{label:isToday?'Walking-target completion has not been reported yet':isPast?'Walking-target completion was not recorded':'Future walking-target day',short:pending,className:'unknown',score:null,assessed:false},walking:{label:isToday?'Walking-target completion has not been reported yet':isPast?'Walking-target completion was not recorded':'Future walking-target day',short:pending,className:'unknown',score:null,assessed:false},running:{label:isToday?'Running exposure has not been reported yet':isPast?'Running exposure was not recorded':'Future running-exposure day',short:pending,className:'unknown',score:null,assessed:false}};}else if(!check.rehabExerciseStatus&&!check.locomotionStatus&&!check.rehabStatus){execution={label:'The questionnaire was completed, but rehabilitation completion was not answered',short:'Rehab not answered',className:'unknown',score:null,assessed:false,exercise:{label:'Rehab exercise completion was not answered',short:'Exercises not reported',className:'unknown',score:null,assessed:false},locomotion:{label:'Walking-target completion was not answered',short:'Walking not assessed',className:'unknown',score:null,assessed:false},walking:{label:'Walking-target completion was not answered',short:'Walking not assessed',className:'unknown',score:null,assessed:false},running:{label:'Running exposure was not assessed',short:'Running not assessed',className:'unknown',score:null,assessed:false}};}
-  const changed=date>=todayKey&&!freezeCompletedToday&&!!previous&&rehabCalendarSignature(previous)!==rehabCalendarSignature(fresh);
-  days.push({...displayedDay,date,checkInCompleted,execution,executionImpact:check?.hop,executionStrength:check?.bridge,updated:changed});
+  const changed=date>todayKey&&!!previous&&rehabCalendarSignature(previous)!==rehabCalendarSignature(fresh);
+  const normalizedDay={
+   ...fresh,
+   ...(displayedDay||{}),
+   date,
+   weekday:displayedDay?.weekday||fresh?.weekday||dte(date).toLocaleDateString(undefined,{weekday:'long'}),
+   title:displayedDay?.title||fresh?.title||'Rehabilitation session',
+   walkingTarget:displayedDay?.walkingTarget||fresh?.walkingTarget||'',
+   items:Array.isArray(displayedDay?.items)?displayedDay.items:(Array.isArray(fresh?.items)?fresh.items:[]),
+   checkInCompleted,
+   execution,
+   executionImpact:check?.hop,
+   executionStrength:check?.bridge,
+   updated:changed
+  };
+  days.push(normalizedDay);
  }
  i.rehabCalendar=days;i.rehabCalendarGenerated=start;return days;
 }
 function rehabCalendarHtml(i,p){
  const days=buildRehabCalendar(i,p),todayKey=iso(today());
  const temporalClass=date=>date<todayKey?'rehabPast':date===todayKey?'rehabToday':'rehabFuture';
- return `<section class="injuryTopicCard rehabCalendarSection"><div class="injurySectionHead"><div><h4>Rehab timeline</h4><p class="muted compact">3 days back · today · 4 days ahead. The questionnaire and rehabilitation execution are tracked separately. A completed check-in does not mean the exercises were completed.</p></div><strong>${fmtDate(days[0].date)}–${fmtDate(days.at(-1).date)}</strong></div><div class="rehabCalendar">${days.map((d,n)=>`<details class="rehabDay ${d.type} rehab-${d.execution.className} ${temporalClass(d.date)}"><summary><div class="rehabDate"><b>${esc(d.weekday.slice(0,3))}</b><span>${dte(d.date).getDate()}</span></div><div class="rehabDayTitle"><strong>${esc(d.title)}</strong><small>${esc(d.walkingTarget)}</small><div class="rehabStatusPair">${d.checkInCompleted?`<span class="executionBadge ${d.execution.className}">✓ Check-in · ${Number.isFinite(d.execution.score)?`${d.execution.score}% execution${d.type==='impact'&&d.executionImpact===false?' · impact not tolerated':''}`:'execution unavailable'}</span>`:`<span class="checkinBadge pending">${d.date>iso(today())?'Planned':'Check-in pending'}</span>`}</div></div><div class="rehabDayStatus">${d.date===todayKey?'<span class="rehabTemporalBadge">TODAY</span>':d.updated?'Updated':''}</div></summary><div class="rehabDayBody"><div><b>Prescription</b><ul>${d.items.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div>${d.stretchGoalOffered?`<div class="rehabStretchGoal"><b>Optional progression</b><p>${esc(d.stretchGoal)}</p></div>`:''}<div class="rehabBestOutcome"><b>Today’s objective</b><p>${esc(d.bestOutcome||d.rationale||'')}</p></div>${rehabShoePlanHtml(i,d)}<details class="rehabDayDetails"><summary>Why this plan and safety rules</summary><div class="rehabDayWhy"><p>${esc(d.rationale)}</p></div><div class="rehabDayRule"><b>Adjustment rule</b><p>${esc(d.rule)}</p></div><div class="rehabEvidenceMeter ${esc(d.evidence?.className||'low')}"><b>Evidence: ${esc(d.evidence?.level||'Low')}</b><p>${esc(d.evidence?.text||'More check-in evidence is needed.')}</p></div></details>${d.checkInCompleted?`<div class="rehabCompletionClarifier"><b>Recorded result</b><p>${esc(d.execution.label)}${Number.isFinite(d.execution.score)?` · ${d.execution.score}%`:''}</p></div>`:''}${d.updated?'<p class="rehabUpdatedNote">Updated after new check-in evidence.</p>':''}${d.date<=iso(today())?`<button type="button" class="secondary full rehabDayCheckinBtn" data-injury-check-date="${i.id}" data-check-date="${d.date}">${d.checkInCompleted?'Edit this day’s check-in':'Add check-in for this day'}</button>`:''}</div></details>`).join('')}</div></section>`;
+ return `<section class="injuryTopicCard rehabCalendarSection"><div class="injurySectionHead"><div><h4>Rehab timeline</h4><p class="muted compact">3 days back · today · 4 days ahead. The questionnaire and rehabilitation execution are tracked separately. A completed check-in does not mean the exercises were completed.</p></div><strong>${fmtDate(days[0].date)}–${fmtDate(days.at(-1).date)}</strong></div><div class="rehabCalendar">${days.map((d,n)=>`<details class="rehabDay ${d.type} rehab-${d.execution.className} ${temporalClass(d.date)} ${d.checkInCompleted?'hasCheckin':''}"><summary><div class="rehabDate"><b>${esc(String(d.weekday||dte(d.date).toLocaleDateString(undefined,{weekday:'short'})).slice(0,3))}</b><span>${dte(d.date).getDate()}</span></div><div class="rehabDayTitle"><strong>${esc(d.title)}</strong><small>${esc(d.walkingTarget)}</small><div class="rehabStatusPair">${d.checkInCompleted?`<span class="executionBadge ${d.execution.className}"><i class="rehabCheckTick" aria-hidden="true">✓</i><span>Check-in · ${Number.isFinite(d.execution.score)?`${d.execution.score}% execution${d.type==='impact'&&d.executionImpact===false?' · impact not tolerated':''}`:'execution unavailable'}</span></span>`:`<span class="checkinBadge pending">${d.date>iso(today())?'Planned':'Check-in pending'}</span>`}</div></div><div class="rehabDayStatus">${d.date===todayKey?'<span class="rehabTemporalBadge">TODAY</span>':d.updated?'Updated':''}</div></summary><div class="rehabDayBody"><div><b>Prescription</b><ul>${d.items.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div>${d.stretchGoalOffered?`<div class="rehabStretchGoal"><b>Optional progression</b><p>${esc(d.stretchGoal)}</p></div>`:''}<div class="rehabBestOutcome"><b>Today’s objective</b><p>${esc(d.bestOutcome||d.rationale||'')}</p></div>${rehabShoePlanHtml(i,d)}<details class="rehabDayDetails"><summary>Why this plan and safety rules</summary><div class="rehabDayWhy"><p>${esc(d.rationale)}</p></div><div class="rehabDayRule"><b>Adjustment rule</b><p>${esc(d.rule)}</p></div><div class="rehabEvidenceMeter ${esc(d.evidence?.className||'low')}"><b>Evidence: ${esc(d.evidence?.level||'Low')}</b><p>${esc(d.evidence?.text||'More check-in evidence is needed.')}</p></div></details>${d.checkInCompleted?`<div class="rehabCompletionClarifier"><b>Recorded result</b><p>${esc(d.execution.label)}${Number.isFinite(d.execution.score)?` · ${d.execution.score}%`:''}</p></div>`:''}${d.updated?'<p class="rehabUpdatedNote">Updated after new check-in evidence.</p>':''}${d.date<=iso(today())?`<button type="button" class="secondary full rehabDayCheckinBtn" data-injury-check-date="${i.id}" data-check-date="${d.date}">${d.checkInCompleted?'Edit this day’s check-in':'Add check-in for this day'}</button>`:''}</div></details>`).join('')}</div></section>`;
 }
 
 function rehabExerciseMuscles(name,family='generic'){
@@ -9066,7 +9080,7 @@ function shoeEngineCanonicalFinalizePortfolio(result,manual,weeks){
 function shoeEngineBuildRehabSessions(now,raceDate){const injury=(state.injuries||[]).find(x=>x.id===state.activeInjuryPlanId);if(!injury)return[];const progress=injuryPrediction(injury),rehabEnd=[raceDate,progress?.windowEnd||raceDate].filter(Boolean).sort()[0],rows=[];for(let d=new Date(dte(now).getTime()+DAY),guard=0;d<=dte(rehabEnd)&&guard<120;d=new Date(d.getTime()+DAY),guard++){const date=iso(d),day=rehabCalendarDay(injury,progress,date,rehabPlanDayIndex(injury,date));if(!rehabDayNeedsShoe(day))continue;const exp=rehabExpectedDistance(day),km=Math.max(0,Number(exp.totalKm)||0);if(km<=0)continue;rows.push({id:`rehab-shoe-${injury.id}-${date}`,date,type:'Rehab recovery',distance:km,surface:'road',rehab:true,walkMinutes:exp.walkMinutes,runMinutes:exp.runMinutes,importance:shoeEngineSessionImportance({type:'Rehab recovery',distance:km,runMinutes:exp.runMinutes},{rehab:true}),injuryId:injury.id})}return rows}
 
 const SHOE_PLAN_SNAPSHOT_VERSION=3;
-const SHOE_ENGINE_CACHE_VERSION='15.6.63-50663-terminal-retirement-reconcile-r8';
+const SHOE_ENGINE_CACHE_VERSION='15.6.64-50664-terminal-retirement-reconcile-r8';
 function shoeStableSerialize(value){
  if(value===null||typeof value!=='object')return JSON.stringify(value);
  if(Array.isArray(value))return'['+value.map(shoeStableSerialize).join(',')+']';
@@ -9148,7 +9162,7 @@ function freshShoeLifecyclePlan(){
   racePair:null,raceWindow:null,
   catalogueSource:'offline',catalogueVersion:OFFLINE_ASICS_CATALOGUE_VERSION,
   footMechanics:runnerFootMechanics(),
-  engine:'v15.6.63-necessity-driven-portfolio'
+  engine:'v15.6.64-necessity-driven-portfolio'
  };
  shoeEngineCanonicalFinalizePortfolio(result,manual,weeks);
 

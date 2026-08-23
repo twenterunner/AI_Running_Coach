@@ -5871,7 +5871,7 @@ body:has(#dashboard.progressPage.active),#mainContent:has(#dashboard.progressPag
 #shoes .shoeProgrammeChart .xLab{font-size:16px!important;font-weight:800!important}
 @media(max-width:600px){#shoes .shoeProgrammeChart .xLab{font-size:15px!important}}
 
-/* v15.6.63 — Active Shoes cards use the same dark teal visual language as Today. */
+/* v15.6.64 — Active Shoes cards use the same dark teal visual language as Today. */
 #shoes .shoeActiveSummaryRow{
   background:linear-gradient(145deg,#075468 0%,#073c50 52%,#062c3d 100%)!important;
   border:1px solid rgba(40,214,219,.42)!important;
@@ -5887,7 +5887,7 @@ body:has(#dashboard.progressPage.active),#mainContent:has(#dashboard.progressPag
   box-shadow:inset 0 0 0 1px rgba(255,255,255,.06)!important
 }
 
-/* v15.6.63 — runner-selectable shoe assignment */
+/* v15.6.64 — runner-selectable shoe assignment */
 .todayShoeSelectable .todayShoeSelectorLabel{
  display:grid;gap:6px;margin-top:10px;font-size:12px;font-weight:800;letter-spacing:.03em;color:#a9cbd0
 }
@@ -5899,26 +5899,26 @@ body:has(#dashboard.progressPage.active),#mainContent:has(#dashboard.progressPag
  outline:2px solid rgba(82,236,220,.42);outline-offset:2px
 }
 
-/* v15.6.63 hard mobile fix — planned rehab shoe */
+/* v15.6.64 hard mobile fix — planned rehab shoe */
 .rehabShoePlan,.rehabShoePlan>div{display:block!important;width:100%!important;max-width:100%!important;min-width:0!important;box-sizing:border-box!important;grid-template-columns:none!important;}
 .rehabShoePlan b{display:block!important;font-size:1.15rem!important;line-height:1.3!important;margin:.35rem 0 .55rem!important;}
 .rehabShoePlan p{display:block!important;width:100%!important;max-width:100%!important;min-width:0!important;white-space:normal!important;overflow-wrap:break-word!important;word-break:normal!important;line-height:1.45!important;margin:0!important;}
 
-/* v15.6.63 — planned rehab shoe typography containment */
+/* v15.6.64 — planned rehab shoe typography containment */
 .rehabShoePlan{overflow:hidden!important}
 .rehabShoePlan>div{padding:0!important}
 .rehabShoePlan small{font-size:.78rem!important;line-height:1.25!important;letter-spacing:.08em!important}
 .rehabShoePlan b{font-size:1.05rem!important;line-height:1.3!important}
 .rehabShoePlan p{font-size:.92rem!important;line-height:1.45!important}
 
-/* v15.6.63 — distinguish saved actual shoe without changing card hierarchy */
+/* v15.6.64 — distinguish saved actual shoe without changing card hierarchy */
 .rehabShoePlan.rehabShoeUsed{
  border-color:rgba(61,226,208,.46)!important;
  box-shadow:inset 3px 0 0 rgba(61,226,208,.72)!important;
 }
 .rehabShoePlan.rehabShoeUsed small{color:#67e7d8!important}
 
-/* v15.6.63 — rehab planned + used shoe display */
+/* v15.6.64 — rehab planned + used shoe display */
 .rehabShoePlan .rehabShoePlanRow{display:block;width:100%;min-width:0}
 .rehabShoePlan .rehabShoePlanRow + .rehabShoePlanRow{
  margin-top:14px;padding-top:14px;border-top:1px solid rgba(104,231,216,.18)
@@ -5926,6 +5926,107 @@ body:has(#dashboard.progressPage.active),#mainContent:has(#dashboard.progressPag
 .rehabShoePlan .rehabActualShoeRow small{color:#67e7d8!important}
 .rehabShoePlan .rehabActualShoeRow b{color:#f7ffff!important}
 
-/* v15.6.63 — purchase markers match their respective shoe curve */
+/* v15.6.64 — purchase markers match their respective shoe curve */
 #shoes .shoeBuyTick circle{fill:var(--shoe-color)!important;stroke:var(--shoe-color)!important}
 #shoes .shoeBuyTick line{stroke:var(--shoe-color)!important}
+
+
+/* v15.6.64 — Rehab timeline temporal hierarchy */
+#injury .rehabCalendar{
+  display:grid;
+  gap:10px;
+}
+
+/* Past = immutable history: visibly muted/greyed, but still readable and expandable. */
+#injury .rehabDay.rehabPast{
+  background:linear-gradient(145deg,rgba(33,46,55,.88),rgba(25,38,47,.92)) !important;
+  border-color:rgba(151,166,176,.13) !important;
+  box-shadow:none !important;
+  opacity:.70;
+  filter:saturate(.56);
+}
+#injury .rehabDay.rehabPast summary{
+  color:#bdc9cf;
+}
+#injury .rehabDay.rehabPast .rehabDate{
+  background:rgba(117,132,143,.08) !important;
+  border-color:rgba(151,166,176,.11) !important;
+}
+#injury .rehabDay.rehabPast .rehabDayTitle strong{
+  color:#d3dadd !important;
+}
+#injury .rehabDay.rehabPast .rehabDayTitle small,
+#injury .rehabDay.rehabPast .rehabDayStatus{
+  color:#8fa0a9 !important;
+}
+
+/* Today = strongest visual priority. */
+#injury .rehabDay.rehabToday{
+  background:linear-gradient(145deg,rgba(12,91,101,.96),rgba(10,61,73,.96)) !important;
+  border:1px solid rgba(74,229,215,.56) !important;
+  box-shadow:0 0 0 1px rgba(74,229,215,.12),0 10px 28px rgba(0,0,0,.15) !important;
+  opacity:1;
+}
+#injury .rehabDay.rehabToday .rehabDate{
+  background:rgba(61,214,198,.13) !important;
+  border-color:rgba(74,229,215,.32) !important;
+}
+#injury .rehabDay.rehabToday .rehabDate b,
+#injury .rehabDay.rehabToday .rehabDayTitle strong,
+#injury .rehabDay.rehabToday .rehabTemporalBadge{
+  color:#8af2e8 !important;
+}
+#injury .rehabDay.rehabToday .rehabTemporalBadge{
+  background:rgba(61,214,198,.13);
+  border:1px solid rgba(74,229,215,.30);
+  border-radius:999px;
+  padding:5px 8px;
+  font-weight:800;
+  letter-spacing:.04em;
+}
+
+/* Future = distinct planned state, cooler than Today and brighter than history. */
+#injury .rehabDay.rehabFuture{
+  background:linear-gradient(145deg,rgba(19,39,57,.96),rgba(14,30,46,.98)) !important;
+  border-color:rgba(103,151,201,.22) !important;
+  opacity:.92;
+}
+#injury .rehabDay.rehabFuture .rehabDate{
+  background:rgba(84,132,182,.10) !important;
+  border-color:rgba(103,151,201,.17) !important;
+}
+#injury .rehabDay.rehabFuture .rehabDayTitle strong{
+  color:#dbe9f3 !important;
+}
+#injury .rehabDay.rehabFuture .checkinBadge.pending{
+  color:#8fb6d1 !important;
+}
+
+/* Saved check-in = unmistakable green tick. */
+#injury .rehabDay.hasCheckin .executionBadge{
+  display:inline-flex;
+  align-items:center;
+  gap:7px;
+  color:#a8eec1 !important;
+}
+#injury .rehabCheckTick{
+  display:inline-grid;
+  place-items:center;
+  width:20px;
+  height:20px;
+  flex:0 0 20px;
+  border-radius:50%;
+  background:rgba(71,203,126,.15);
+  border:1px solid rgba(95,225,148,.33);
+  color:#78e8a8;
+  font-style:normal;
+  font-size:13px;
+  font-weight:900;
+  line-height:1;
+}
+#injury .rehabDay.hasCheckin{
+  border-left:3px solid rgba(95,225,148,.55);
+}
+#injury .rehabDay.rehabPast.hasCheckin{
+  opacity:.78;
+}
