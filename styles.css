@@ -5870,3 +5870,19 @@ body:has(#dashboard.progressPage.active),#mainContent:has(#dashboard.progressPag
 /* v15.6.30 shoe chart axis readability: x-axis labels use a dedicated compact size. */
 #shoes .shoeProgrammeChart .xLab{font-size:16px!important;font-weight:800!important}
 @media(max-width:600px){#shoes .shoeProgrammeChart .xLab{font-size:15px!important}}
+
+/* v15.6.40 — Active Shoes cards use the same dark teal visual language as Today. */
+#shoes .shoeActiveSummaryRow{
+  background:linear-gradient(145deg,#075468 0%,#073c50 52%,#062c3d 100%)!important;
+  border:1px solid rgba(40,214,219,.42)!important;
+  box-shadow:none!important;
+  color:#f5fbfc!important;
+}
+#shoes .shoeActiveSummaryName b{color:#fff!important}
+#shoes .shoeActiveSummaryName span,
+#shoes .shoeActiveSummaryMeta{color:#c9dbe0!important}
+#shoes .shoeActiveSummaryMeta strong{color:#fff!important}
+#shoes .shoeMileageLifeBar{
+  background:rgba(255,255,255,.11)!important;
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.06)!important
+}

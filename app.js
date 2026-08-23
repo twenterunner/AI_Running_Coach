@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '15.6.39';
-  const BUILD = 50639;
+  const VERSION = '15.6.40';
+  const BUILD = 50640;
   const SCHEMA = 10400;
   const PRIMARY_STORAGE_KEY = 'arc_v10400_web';
   const MIRROR_STORAGE_KEY = 'arc_v10400_mirror';
@@ -7812,13 +7812,21 @@ function shoeEngineEnsureCanonicalRetirementEvents(result){
   if(rows.length)pair.finalPlannedUseDate=rows.at(-1).date;
   const physical=shoeEnginePhysicalRetirementAssessment(pair,result);
   if(physical.retired){
-   if(pair.projectedRetireDate!==physical.date||pair.plannedRetireDate!==physical.date||!pair.isProjectedRetired)changed=true;
-   pair.plannedRetireDate=physical.date;
-   pair.projectedRetireDate=physical.date;
+   // Canonical retirement is a terminal lifecycle event. A pair cannot be
+   // physically retired before a later positive assignment that still uses it.
+   // Therefore the published retirement marker is anchored to the FINAL
+   // positive-use row, while the physical assessment decides only WHETHER the
+   // pair is retired. This makes solver state, assignment ledger and graph agree.
+   const terminalRow=rows.length?rows.at(-1):null;
+   const terminalDate=terminalRow?.date||physical.date;
+   const terminalKm=shoeEngineProjectedKm(pair);
+   if(pair.projectedRetireDate!==terminalDate||pair.plannedRetireDate!==terminalDate||!pair.isProjectedRetired||Math.abs(Number(pair.projectedRetireKm)-Number(terminalKm))>1e-6)changed=true;
+   pair.plannedRetireDate=terminalDate;
+   pair.projectedRetireDate=terminalDate;
    pair.isProjectedRetired=true;
    pair.remainsActiveAfterForecast=false;
    pair.retirementReason=physical.reason;
-   pair.projectedRetireKm=Number(physical.km);
+   pair.projectedRetireKm=Number(terminalKm);
   }else if(!(pair.owned&&pair.shoe?.status==='retired')){
    if(pair.isProjectedRetired||pair.projectedRetireDate||pair.plannedRetireDate){
     pair.plannedRetireDate=null;pair.projectedRetireDate=null;pair.isProjectedRetired=false;
@@ -8842,7 +8850,7 @@ function shoeEngineCanonicalFinalizePortfolio(result,manual,weeks){
 function shoeEngineBuildRehabSessions(now,raceDate){const injury=(state.injuries||[]).find(x=>x.id===state.activeInjuryPlanId);if(!injury)return[];const progress=injuryPrediction(injury),rehabEnd=[raceDate,progress?.windowEnd||raceDate].filter(Boolean).sort()[0],rows=[];for(let d=new Date(dte(now).getTime()+DAY),guard=0;d<=dte(rehabEnd)&&guard<120;d=new Date(d.getTime()+DAY),guard++){const date=iso(d),day=rehabCalendarDay(injury,progress,date,rehabPlanDayIndex(injury,date));if(!rehabDayNeedsShoe(day))continue;const exp=rehabExpectedDistance(day),km=Math.max(0,Number(exp.totalKm)||0);if(km<=0)continue;rows.push({id:`rehab-shoe-${injury.id}-${date}`,date,type:'Rehab recovery',distance:km,surface:'road',rehab:true,walkMinutes:exp.walkMinutes,runMinutes:exp.runMinutes,importance:shoeEngineSessionImportance({type:'Rehab recovery',distance:km,runMinutes:exp.runMinutes},{rehab:true}),injuryId:injury.id})}return rows}
 
 const SHOE_PLAN_SNAPSHOT_VERSION=3;
-const SHOE_ENGINE_CACHE_VERSION='15.6.39-50639-retirement-terminal-ledger-r7';
+const SHOE_ENGINE_CACHE_VERSION='15.6.40-50640-retirement-terminal-ledger-r7';
 function shoeStableSerialize(value){
  if(value===null||typeof value!=='object')return JSON.stringify(value);
  if(Array.isArray(value))return'['+value.map(shoeStableSerialize).join(',')+']';
@@ -8924,7 +8932,7 @@ function freshShoeLifecyclePlan(){
   racePair:null,raceWindow:null,
   catalogueSource:'offline',catalogueVersion:OFFLINE_ASICS_CATALOGUE_VERSION,
   footMechanics:runnerFootMechanics(),
-  engine:'v15.6.39-necessity-driven-portfolio'
+  engine:'v15.6.40-necessity-driven-portfolio'
  };
  shoeEngineCanonicalFinalizePortfolio(result,manual,weeks);
 
@@ -9263,7 +9271,15 @@ function shoeGraphRetirementPoint(pair,life,forecastPoints){
  // Never derive a new date from assignments here; that was what moved the X to a
  // later micro-use date after the lifecycle solver had already retired the pair.
  const event=(life.snapshot?.retirementEvents||[]).find(e=>e.pairId===pair.id)||null;
- if(event&&CORE.isIsoDate(event.date)&&Number.isFinite(Number(event.projectedKm)))return{date:event.date,km:Number(event.projectedKm),reason:event.reason||'Physical lifecycle reached.'};
+ if(event){
+  // The event decides WHETHER an X exists. Its coordinates come from the final
+  // positive-use point of the exact forecast series being drawn, guaranteeing
+  // that the X terminates the curve rather than floating before or after it.
+  const rendered=(forecastPoints||[]).filter(p=>CORE.isIsoDate(p.date)&&Number.isFinite(Number(p.km)));
+  const terminal=rendered.length?rendered.at(-1):null;
+  if(terminal)return{date:terminal.date,km:Number(terminal.km),reason:event.reason||'Physical lifecycle reached.'};
+  if(CORE.isIsoDate(event.date)&&Number.isFinite(Number(event.projectedKm)))return{date:event.date,km:Number(event.projectedKm),reason:event.reason||'Physical lifecycle reached.'};
+ }
  if(pair.owned&&pair.shoe?.status==='retired'){
   const actual=shoeActualProgrammeSeries(pair.shoe,state.setup?.planStart||life.now,life.now);
   return actual.length?{...actual.at(-1),reason:'Runner marked the shoe retired.'}:null;
