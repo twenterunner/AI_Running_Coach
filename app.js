@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '15.6.45';
-  const BUILD = 50645;
+  const VERSION = '15.6.46';
+  const BUILD = 50646;
   const SCHEMA = 10400;
   const PRIMARY_STORAGE_KEY = 'arc_v10400_web';
   const MIRROR_STORAGE_KEY = 'arc_v10400_mirror';
@@ -8942,7 +8942,7 @@ function shoeEngineCanonicalFinalizePortfolio(result,manual,weeks){
 function shoeEngineBuildRehabSessions(now,raceDate){const injury=(state.injuries||[]).find(x=>x.id===state.activeInjuryPlanId);if(!injury)return[];const progress=injuryPrediction(injury),rehabEnd=[raceDate,progress?.windowEnd||raceDate].filter(Boolean).sort()[0],rows=[];for(let d=new Date(dte(now).getTime()+DAY),guard=0;d<=dte(rehabEnd)&&guard<120;d=new Date(d.getTime()+DAY),guard++){const date=iso(d),day=rehabCalendarDay(injury,progress,date,rehabPlanDayIndex(injury,date));if(!rehabDayNeedsShoe(day))continue;const exp=rehabExpectedDistance(day),km=Math.max(0,Number(exp.totalKm)||0);if(km<=0)continue;rows.push({id:`rehab-shoe-${injury.id}-${date}`,date,type:'Rehab recovery',distance:km,surface:'road',rehab:true,walkMinutes:exp.walkMinutes,runMinutes:exp.runMinutes,importance:shoeEngineSessionImportance({type:'Rehab recovery',distance:km,runMinutes:exp.runMinutes},{rehab:true}),injuryId:injury.id})}return rows}
 
 const SHOE_PLAN_SNAPSHOT_VERSION=3;
-const SHOE_ENGINE_CACHE_VERSION='15.6.45-50645-terminal-retirement-reconcile-r8';
+const SHOE_ENGINE_CACHE_VERSION='15.6.46-50646-terminal-retirement-reconcile-r8';
 function shoeStableSerialize(value){
  if(value===null||typeof value!=='object')return JSON.stringify(value);
  if(Array.isArray(value))return'['+value.map(shoeStableSerialize).join(',')+']';
@@ -9024,7 +9024,7 @@ function freshShoeLifecyclePlan(){
   racePair:null,raceWindow:null,
   catalogueSource:'offline',catalogueVersion:OFFLINE_ASICS_CATALOGUE_VERSION,
   footMechanics:runnerFootMechanics(),
-  engine:'v15.6.45-necessity-driven-portfolio'
+  engine:'v15.6.46-necessity-driven-portfolio'
  };
  shoeEngineCanonicalFinalizePortfolio(result,manual,weeks);
 
@@ -9622,8 +9622,14 @@ function defaultRehabCheckinShoeId(injury,day,previous={}){
 }
 function rehabShoePlanHtml(injury,day){
  if(!rehabDayNeedsShoe(day)||!(state.shoes||[]).some(s=>s.status!=='retired'))return'';
- const explicit=plannedRehabShoeId(injury,day.date),planned=freshLifecycleRehabAssignment(injury.id,day.date),bestRec=rehabShoeRecommendation(day),selected=plannedRehabShoeForDay(injury,day),bestLabel=selected?shoeDisplayName((state.shoes||[]).find(s=>s.id===selected)||bestRec?.shoe||{}):(planned?lifecyclePairLabel(planned.pair):(bestRec?shoeDisplayName(bestRec.shoe):'')),exp=rehabExpectedDistance(day);
- return`<div class="rehabShoePlan"><div><small>PLANNED SHOE</small><b>${bestLabel?esc(bestLabel):'No shoe recommendation'}</b><p>${bestLabel&&bestRec?`Shoe-engine score ${Math.round(bestRec.score)}/100. `:''}Expected shoe distance ~${exp.totalKm.toFixed(1)} km${exp.runMinutes?` (${exp.walkMinutes} min walk + ${exp.runMinutes} min slow run)`:exp.walkMinutes?` (${exp.walkMinutes} min walk)`:''}. Select the shoe actually used in the daily check-in; that saved check-in is the mileage authority.</p></div></div>`
+ const planned=freshLifecycleRehabAssignment(injury.id,day.date),bestRec=rehabShoeRecommendation(day),plannedId=plannedRehabShoeForDay(injury,day),plannedShoe=(state.shoes||[]).find(s=>s.id===plannedId)||bestRec?.shoe||null,plannedLabel=plannedShoe?shoeDisplayName(plannedShoe):(planned?lifecyclePairLabel(planned.pair):(bestRec?shoeDisplayName(bestRec.shoe):'')),exp=rehabExpectedDistance(day);
+ const savedCheck=(injury.checkIns||[]).find(c=>c.date===day.date),usedId=savedCheck?.rehabShoeId||'',usedShoe=(state.shoes||[]).find(s=>s.id===usedId)||null,hasDifferentSavedShoe=Boolean(usedShoe&&usedId&&usedId!==plannedId);
+ const heading=hasDifferentSavedShoe?'USED SHOE':'PLANNED SHOE',label=hasDifferentSavedShoe?shoeDisplayName(usedShoe):plannedLabel;
+ const actualUsage=hasDifferentSavedShoe?rehabUsageFromCheckIn(injury,savedCheck):null,actualKm=Number(actualUsage?.distanceKm);
+ const note=hasDifferentSavedShoe
+  ?`Saved from this day’s check-in${Number.isFinite(actualKm)?` · ${actualKm.toFixed(1)} km credited to this shoe`:''}. This actual-use choice overrides the shoe-engine plan for mileage tracking.`
+  :`${plannedLabel&&bestRec?`Shoe-engine score ${Math.round(bestRec.score)}/100. `:''}Expected shoe distance ~${exp.totalKm.toFixed(1)} km${exp.runMinutes?` (${exp.walkMinutes} min walk + ${exp.runMinutes} min slow run)`:exp.walkMinutes?` (${exp.walkMinutes} min walk)`:''}. If a different shoe is saved in the daily check-in, this tile will show that used shoe instead.`;
+ return`<div class="rehabShoePlan ${hasDifferentSavedShoe?'rehabShoeUsed':''}"><div><small>${heading}</small><b>${label?esc(label):'No shoe recommendation'}</b><p>${note}</p></div></div>`
 }
 let futureRehabShoeUsageCache={stamp:null,byShoe:new Map()};
 function invalidateShoeDerivedPlanningCaches(){
