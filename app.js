@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '15.6.51';
-  const BUILD = 50651;
+  const VERSION = '15.6.52';
+  const BUILD = 50652;
   const SCHEMA = 10400;
   const PRIMARY_STORAGE_KEY = 'arc_v10400_web';
   const MIRROR_STORAGE_KEY = 'arc_v10400_mirror';
@@ -8943,7 +8943,7 @@ function shoeEngineCanonicalFinalizePortfolio(result,manual,weeks){
 function shoeEngineBuildRehabSessions(now,raceDate){const injury=(state.injuries||[]).find(x=>x.id===state.activeInjuryPlanId);if(!injury)return[];const progress=injuryPrediction(injury),rehabEnd=[raceDate,progress?.windowEnd||raceDate].filter(Boolean).sort()[0],rows=[];for(let d=new Date(dte(now).getTime()+DAY),guard=0;d<=dte(rehabEnd)&&guard<120;d=new Date(d.getTime()+DAY),guard++){const date=iso(d),day=rehabCalendarDay(injury,progress,date,rehabPlanDayIndex(injury,date));if(!rehabDayNeedsShoe(day))continue;const exp=rehabExpectedDistance(day),km=Math.max(0,Number(exp.totalKm)||0);if(km<=0)continue;rows.push({id:`rehab-shoe-${injury.id}-${date}`,date,type:'Rehab recovery',distance:km,surface:'road',rehab:true,walkMinutes:exp.walkMinutes,runMinutes:exp.runMinutes,importance:shoeEngineSessionImportance({type:'Rehab recovery',distance:km,runMinutes:exp.runMinutes},{rehab:true}),injuryId:injury.id})}return rows}
 
 const SHOE_PLAN_SNAPSHOT_VERSION=3;
-const SHOE_ENGINE_CACHE_VERSION='15.6.51-50651-terminal-retirement-reconcile-r8';
+const SHOE_ENGINE_CACHE_VERSION='15.6.52-50652-terminal-retirement-reconcile-r8';
 function shoeStableSerialize(value){
  if(value===null||typeof value!=='object')return JSON.stringify(value);
  if(Array.isArray(value))return'['+value.map(shoeStableSerialize).join(',')+']';
@@ -9025,7 +9025,7 @@ function freshShoeLifecyclePlan(){
   racePair:null,raceWindow:null,
   catalogueSource:'offline',catalogueVersion:OFFLINE_ASICS_CATALOGUE_VERSION,
   footMechanics:runnerFootMechanics(),
-  engine:'v15.6.51-necessity-driven-portfolio'
+  engine:'v15.6.52-necessity-driven-portfolio'
  };
  shoeEngineCanonicalFinalizePortfolio(result,manual,weeks);
 
@@ -9474,11 +9474,9 @@ function shoeProgrammeMileageChartHtml(lifeOverride=null){
  const forecastById=new Map(pairs.map(pair=>[pair.id,shoeGraphForecastPoints(pair,life)]));
  const future=pairs.map(pair=>{const col=colorById.get(pair.id),visible=forecastById.get(pair.id)||[],cls=pair===life.racePair?'shoeRaceStrategyLine':pair.owned?'shoePlannedLine':'shoeNewPairLine';return visible.length>=2?shoeForecastSvgSegments(visible,x,y,`class="shoeLine ${cls} shoeFutureAuthoritative" style="--shoe-color:${col};stroke:${col};stroke-dasharray:12 10" stroke="${col}" fill="none" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="12 10"`):''}).join('');
  const raceMileageMarker=life.racePair?(()=>{const km=shoeEngineRaceStartKm(life,life.racePair),col=colorById.get(life.racePair.id)||'#B58CFF',xx=x(raceDate),yy=y(km);return`<g class="shoeRaceStartMarker" style="--shoe-color:${col}"><circle cx="${xx}" cy="${yy}" r="7"/><line x1="${xx-10}" y1="${yy}" x2="${xx+10}" y2="${yy}"/><text x="${xx-10}" y="${Math.max(T+18,yy-13)}" text-anchor="end">START ${Math.round(km)} km</text></g>`})():'';
- // A purchase marker is a physical first-use event, not a bookkeeping event.
- // Plot it ON the mileage curve at the first positive-use session. This prevents
- // the old x-axis BUY marker from visually implying that a pair was bought and
- // then sat unused. Canonical validation below already requires purchaseDate,
- // firstUseDate and the first positive assignment date to be identical.
+ // Purchase markers show only the purchase sequence on the graph.
+ // Their coordinates remain anchored to the pair's introduction point, but
+ // first-use wording is intentionally omitted from the visualization.
  const plottedPurchases=life.purchases.filter(buy=>{
   const pair=pairs.find(x=>x.id===buy.pairId);if(!pair)return false;
   const fp=forecastById.get(pair.id)||[];if(fp.length<2||!fp.some((pt,i)=>i>0&&Number(pt.km)>Number(fp[i-1].km)+1e-9))return false;
@@ -9490,7 +9488,7 @@ function shoeProgrammeMileageChartHtml(lifeOverride=null){
   const pair=pairs.find(x=>x.id===buy.pairId),rows=(pair.assignments||[]).filter(a=>Number(a.km)>0).slice().sort((a,b)=>a.date.localeCompare(b.date));
   if(!pair||!rows.length)return'';
   const first=rows[0],date=first.date,forecast=forecastById.get(pair.id)||[],sameDay=forecast.filter(pt=>pt.date===date),km=sameDay.length?Math.max(...sameDay.map(pt=>Number(pt.km)||0)):Number(first.km)||0,xx=x(date),yy=y(km),col=colorById.get(pair.id);
-  return`<g class="shoeBuyTick shoeBuyFirstUse" style="--shoe-color:${col}"><circle cx="${xx}" cy="${yy}" r="5"/><line x1="${xx}" y1="${yy+6}" x2="${xx}" y2="${Math.min(H-B,yy+20)}"/><text x="${xx+7}" y="${Math.max(T+14,yy-8)}" text-anchor="start">BUY ${n+1} · FIRST USE</text></g>`
+  return`<g class="shoeBuyTick" style="--shoe-color:${col}"><circle cx="${xx}" cy="${yy}" r="5"/><line x1="${xx}" y1="${yy+6}" x2="${xx}" y2="${Math.min(H-B,yy+20)}"/><text x="${xx+7}" y="${Math.max(T+14,yy-8)}" text-anchor="start">BUY ${n+1}</text></g>`
  }).join('');
  const retirementMarkers=pairs.map(pair=>{
   const rp=shoeGraphRetirementPoint(pair,life,forecastById.get(pair.id));
