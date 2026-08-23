@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '15.6.59';
-  const BUILD = 50659;
+  const VERSION = '15.6.60';
+  const BUILD = 50660;
   const SCHEMA = 10400;
   const PRIMARY_STORAGE_KEY = 'arc_v10400_web';
   const MIRROR_STORAGE_KEY = 'arc_v10400_mirror';
@@ -7966,7 +7966,7 @@ function shoeEngineEnsureCanonicalRetirementEvents(result,manual=new Map()){
 
 function shoeEngineValidation(result,manual=new Map()){
  const issues=[],add=(code,extra={})=>issues.push({code,...extra}),pairById=new Map(result.pairs.map(p=>[p.id,p]));const ids=result.pairs.map(p=>p.id),dupes=[...new Set(ids.filter((id,i)=>ids.indexOf(id)!==i))];for(const id of dupes)add('duplicate-physical-pair-id',{pairId:id});for(const row of result.assignments){const p=pairById.get(row.pairId);if(!p){add('assignment-without-physical-pair',{planId:row.planId});continue}const entry=shoePlannerEntryDate(p);if(entry&&row.date<entry)add('shoe-used-before-purchase',{pairId:p.id,date:row.date,availableDate:entry})}
- for(const p of result.pairs){const km=shoeEngineProjectedKm(p);if(km>p.retireKm+1e-6)add('pair-exceeds-lifecycle',{pairId:p.id,km,limit:p.retireKm});let prev=-Infinity;for(const pt of p.points||[]){if(Number(pt.km)<prev-1e-6)add('graph-mileage-decreases',{pairId:p.id});prev=Number(pt.km)}}
+ for(const p of result.pairs){const km=shoeEngineProjectedKm(p);if(km>p.retireKm+1e-6)add('pair-exceeds-lifecycle',{pairId:p.id,km,limit:p.retireKm,overflowKm:km-Number(p.retireKm||0),lockedOverflowKm:(p.assignments||[]).filter(r=>r.runnerOverride||manual?.has?.(r.planId)||r.raceDayAssignment||r.raceFamiliarisation).reduce((n,r)=>n+(Number(r.km)||0),0)});let prev=-Infinity;for(const pt of p.points||[]){if(Number(pt.km)<prev-1e-6)add('graph-mileage-decreases',{pairId:p.id});prev=Number(pt.km)}}
  for(const p of result.pairs.filter(p=>p.role!=='race')){
   const rows=(p.assignments||[]).filter(r=>Number(r.km)>0&&!r.rehab&&!r.raceDayAssignment).slice().sort((a,b)=>a.date.localeCompare(b.date));
   if(!rows.length)continue;
@@ -9016,7 +9016,7 @@ function shoeEngineCanonicalFinalizePortfolio(result,manual,weeks){
 function shoeEngineBuildRehabSessions(now,raceDate){const injury=(state.injuries||[]).find(x=>x.id===state.activeInjuryPlanId);if(!injury)return[];const progress=injuryPrediction(injury),rehabEnd=[raceDate,progress?.windowEnd||raceDate].filter(Boolean).sort()[0],rows=[];for(let d=new Date(dte(now).getTime()+DAY),guard=0;d<=dte(rehabEnd)&&guard<120;d=new Date(d.getTime()+DAY),guard++){const date=iso(d),day=rehabCalendarDay(injury,progress,date,rehabPlanDayIndex(injury,date));if(!rehabDayNeedsShoe(day))continue;const exp=rehabExpectedDistance(day),km=Math.max(0,Number(exp.totalKm)||0);if(km<=0)continue;rows.push({id:`rehab-shoe-${injury.id}-${date}`,date,type:'Rehab recovery',distance:km,surface:'road',rehab:true,walkMinutes:exp.walkMinutes,runMinutes:exp.runMinutes,importance:shoeEngineSessionImportance({type:'Rehab recovery',distance:km,runMinutes:exp.runMinutes},{rehab:true}),injuryId:injury.id})}return rows}
 
 const SHOE_PLAN_SNAPSHOT_VERSION=3;
-const SHOE_ENGINE_CACHE_VERSION='15.6.59-50659-terminal-retirement-reconcile-r8';
+const SHOE_ENGINE_CACHE_VERSION='15.6.60-50660-terminal-retirement-reconcile-r8';
 function shoeStableSerialize(value){
  if(value===null||typeof value!=='object')return JSON.stringify(value);
  if(Array.isArray(value))return'['+value.map(shoeStableSerialize).join(',')+']';
@@ -9098,7 +9098,7 @@ function freshShoeLifecyclePlan(){
   racePair:null,raceWindow:null,
   catalogueSource:'offline',catalogueVersion:OFFLINE_ASICS_CATALOGUE_VERSION,
   footMechanics:runnerFootMechanics(),
-  engine:'v15.6.59-necessity-driven-portfolio'
+  engine:'v15.6.60-necessity-driven-portfolio'
  };
  shoeEngineCanonicalFinalizePortfolio(result,manual,weeks);
 
@@ -9478,6 +9478,20 @@ function shoeEngineRetainUsableTrainingPairs(result,manual){
  // Final portfolio minimisation: keep usable predecessor pairs active until
  // they can no longer safely cover a meaningful whole session.
  shoeEngineRetainUsableTrainingPairs(result,manual);
+ // Lifecycle-retention is deliberately one of the final allocation passes. Any
+ // change in the training plan (for example a longer current-long-run baseline)
+ // can increase whole-session distances after the earlier optimisation passes.
+ // Re-run the physical lifecycle ceiling repair HERE, after retention, so no
+ // late allocation can publish a pair above its retirement limit.
+ for(let lifecycleGuard=0;lifecycleGuard<12;lifecycleGuard++){
+  const overflowBefore=(result.pairs||[]).reduce((n,p)=>n+Math.max(0,shoeEngineProjectedKm(p)-Number(p.retireKm||0)),0);
+  if(overflowBefore<=1e-6)break;
+  const repaired=shoeEngineRepairLifecycleOverflow(result,manual);
+  shoeEngineCanonicalRelinkAssignments(result,manual);
+  shoeEngineCanonicalizePhysicalEntryDates(result);
+  const overflowAfter=(result.pairs||[]).reduce((n,p)=>n+Math.max(0,shoeEngineProjectedKm(p)-Number(p.retireKm||0)),0);
+  if(!repaired||overflowAfter>=overflowBefore-1e-6)break;
+ }
  // Final continuity cleanup: prevent token reactivation of an almost-retired pair
  // after a long dormant gap. This establishes a terminal lifecycle boundary before
  // the generic post-retirement assignment reconciliation runs.
@@ -9491,6 +9505,16 @@ function shoeEngineRetainUsableTrainingPairs(result,manual){
  }
  result.pairs.forEach(pair=>lifecycleRebuildPoints(pair,now,raceDate,fixed));
  shoeEngineEnsureCanonicalRetirementEvents(result,manual);
+ // Publication firewall: repair any lifecycle overflow created by the final
+ // retirement/reconciliation pass, then rebuild the graph/retirement authority
+ // from the repaired master ledger before hard validation.
+ if((result.pairs||[]).some(p=>shoeEngineProjectedKm(p)>Number(p.retireKm||0)+1e-6)){
+  shoeEngineRepairLifecycleOverflow(result,manual);
+  shoeEngineCanonicalRelinkAssignments(result,manual);
+  shoeEngineCanonicalizePhysicalEntryDates(result);
+  result.pairs.forEach(pair=>lifecycleRebuildPoints(pair,now,raceDate,fixed));
+  shoeEngineEnsureCanonicalRetirementEvents(result,manual);
+ }
  result.validationIssues=shoeEngineValidation(result,manual);
  result.softTargets=shoeEngineSoftTargets(result);result.valid=result.validationIssues.length===0;result.hardInvariantFailures=result.validationIssues.length;
  if(!result.valid){const codes=result.validationIssues.map(x=>x.code).join(', ');recordDiagnostic('Shoe plan blocked',new Error(`Authoritative shoe snapshot rejected: ${codes}`));throw new Error(`Shoe plan could not satisfy hard invariants: ${codes}`)}
