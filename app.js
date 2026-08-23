@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '15.6.13';
-  const BUILD = 50613;
+  const VERSION = '15.6.14';
+  const BUILD = 50614;
   const SCHEMA = 10400;
   const PRIMARY_STORAGE_KEY = 'arc_v10400_web';
   const MIRROR_STORAGE_KEY = 'arc_v10400_mirror';
@@ -9340,10 +9340,9 @@ function openShoeAdjustment(shoe){const current=shoeMileage(shoe);$('modalConten
 function choosePlanShoe(planId){const plan=(state.plan||[]).find(p=>p.id===planId);if(!plan)return;const current=plannedAssignment(planId)?.shoeId||shoeRecommendation(plan).best?.shoe.id||'';$('modalContent').innerHTML=`<h2>Choose another shoe</h2><p>${fmtDate(plan.date)} · ${esc(plan.type)} · ${Number(plan.distance).toFixed(1)} km</p><div class="field"><label>Planned shoe</label><select id="planShoeChoice"><option value="">Automatic recommendation</option>${shoeSelectOptions(current,false)}</select></div><button id="savePlanShoeChoice" class="primary full" type="button">Save shoe assignment</button>`;$('modal').className='modal shoeChoiceModal';$('savePlanShoeChoice').onclick=()=>{const id=$('planShoeChoice').value;if(id)setPlannedShoe(planId,id,'user');else{setPlannedShoe(planId,null);const rec=shoeRecommendation(plan);if(rec.best)setPlannedShoe(planId,rec.best.shoe.id,'auto')}save();closeDialog();renderAll();toast('Planned shoe assignment updated. Training plan unchanged.')}}
 /* === End Shoes module === */
 
-// Performance layer: navigation is intentionally decoupled from expensive page
-// rendering. A cached tab switch is only a class/ARIA update. Stale hidden tabs are
-// refreshed opportunistically while the browser is idle so normal navigation does
-// not sit behind charts, injury models, race predictions or the shoe optimiser.
+// Performance layer hotfix: keep cached tabs instant, but never render hidden tabs
+// opportunistically. Hidden-tab pre-rendering could monopolise the mobile main thread
+// during startup and make the content area appear blank. Only the visible page renders.
 const PAGE_RENDERERS=Object.freeze({
  today:[renderToday],
  plan:[renderPlan],
@@ -9356,9 +9355,8 @@ const PAGE_RENDERERS=Object.freeze({
  race:[renderRace],
  settings:[renderSettings,renderPlanHealth,renderMigrationReport]
 });
-const pageRenderCache=new Map(),pageRenderedOnce=new Set();
+const pageRenderCache=new Map();
 const navigationPerf={lastPage:null,lastMs:0,maxMs:0,renders:0,cacheHits:0};
-let idleWarmGeneration=0,idleWarmHandle=null;
 function activePageId(){return document.querySelector('.page.active')?.id||'today'}
 function pageRenderSignature(page){
  const day=iso(today());
@@ -9367,51 +9365,26 @@ function pageRenderSignature(page){
 }
 function pageNeedsRender(page){return pageRenderCache.get(page)!==pageRenderSignature(page)}
 function invalidatePageRenderCache(pages=null){
- idleWarmGeneration++;
- if(idleWarmHandle!=null){
-  if(typeof cancelIdleCallback==='function')cancelIdleCallback(idleWarmHandle);else clearTimeout(idleWarmHandle);
-  idleWarmHandle=null;
- }
  if(!pages){pageRenderCache.clear();return}
  for(const page of (Array.isArray(pages)?pages:[pages]))pageRenderCache.delete(page);
 }
 function renderPage(page,{force=false}={}){
  const sig=pageRenderSignature(page);
  if(!force&&pageRenderCache.get(page)===sig){navigationPerf.cacheHits++;return false}
- const started=performance?.now?.()??Date.now(),renderers=PAGE_RENDERERS[page]||[];
+ const started=(globalThis.performance?.now?.()??Date.now()),renderers=PAGE_RENDERERS[page]||[];
  for(const fn of renderers){try{fn()}catch(err){recordDiagnostic('Render failure in '+fn.name,err)}}
- // Keep generic DOM walks scoped to the page just rendered. Settings-only utilities
- // are not touched while switching ordinary training tabs.
  ensureAccessibleForms(document.getElementById(page)||document);
  if(page==='settings'){renderDiagnostics();renderUndoButtons()}
- pageRenderCache.set(page,sig);pageRenderedOnce.add(page);
- const elapsed=(performance?.now?.()??Date.now())-started;
+ pageRenderCache.set(page,sig);
+ const elapsed=(globalThis.performance?.now?.()??Date.now())-started;
  navigationPerf.lastPage=page;navigationPerf.lastMs=elapsed;navigationPerf.maxMs=Math.max(navigationPerf.maxMs,elapsed);navigationPerf.renders++;
  return true;
 }
-function scheduleIdlePageWarm(exclude=activePageId()){
- const generation=++idleWarmGeneration;
- const preferred=['today','plan','runs','dashboard','recovery','injury','shoes','race','assessments','settings'];
- const queue=preferred.filter(page=>page!==exclude&&PAGE_RENDERERS[page]&&pageNeedsRender(page));
- if(!queue.length)return;
- const run=deadline=>{
-  if(generation!==idleWarmGeneration)return;
-  idleWarmHandle=null;
-  const hasBudget=!deadline||deadline.didTimeout||deadline.timeRemaining()>8;
-  if(hasBudget&&queue.length){const page=queue.shift();try{renderPage(page)}catch(err){recordDiagnostic('Idle page warm '+page,err)}}
-  if(queue.length&&generation===idleWarmGeneration){
-   idleWarmHandle=typeof requestIdleCallback==='function'?requestIdleCallback(run,{timeout:1200}):setTimeout(()=>run(null),80);
-  }
- };
- idleWarmHandle=typeof requestIdleCallback==='function'?requestIdleCallback(run,{timeout:900}):setTimeout(()=>run(null),60);
-}
 function renderAll(){
- // Rebuild only the visible page synchronously. The rest are repopulated one at a
- // time during idle periods, so a subsequent tab tap normally hits warm DOM/cache.
+ // State changes invalidate all derived pages, but the active page is rebuilt now.
+ // Hidden pages remain untouched until the user actually opens them.
  invalidatePageRenderCache();
- const active=activePageId();
- renderPage(active,{force:true});
- scheduleIdlePageWarm(active);
+ renderPage(activePageId(),{force:true});
 }
 const pages=[['today','Today'],['plan','Plan'],['runs','Log'],['dashboard','Progress'],['assessments','Assessments'],['recovery','Recovery'],['injury','Injury'],['shoes','Shoes'],['race','Race day'],['settings','Settings']];
 document.body.addEventListener('change',e=>{const sel=e.target.closest?.('[data-rehab-shoe-plan]');if(!sel)return;const injury=(state.injuries||[]).find(x=>x.id===sel.dataset.rehabShoePlan);if(!injury)return;injury.plannedRehabShoes=injury.plannedRehabShoes||{};if(sel.value)injury.plannedRehabShoes[sel.dataset.rehabShoeDate]=sel.value;else delete injury.plannedRehabShoes[sel.dataset.rehabShoeDate];save();toast(sel.value?'Rehabilitation shoe planned.':'Rehabilitation shoe cleared.');});
@@ -9480,34 +9453,25 @@ function activatePage(page,anchor=null){
  if(!pages.some(p=>p[0]===page))return;
  const current=activePageId();if(current===page&&!anchor)return;
  if(page==='plan'&&state.weekView==null)state.weekView=currentWeek();
- const tapStarted=performance?.now?.()??Date.now();
+ const tapStarted=(globalThis.performance?.now?.()??Date.now());
  pageNodes.get(current)?.classList.remove('active');pageNodes.get(page)?.classList.add('active');
  setActiveNavigation(page);$('moreNav').className='moreNav hidden';$('moreNavBtn')?.setAttribute('aria-expanded','false');
  if(!anchor)scrollTo(0,0);
  $('mainContent')?.focus({preventScroll:true});
- const token=++pendingPageRenderToken;
- // Hot path: if this page is already valid, navigation is complete now. No RAF,
- // model work, DOM rebuild or mobile-nav repositioning is allowed on the tap path.
+ ++pendingPageRenderToken;
+ // Warm/cached page: pure show/hide navigation.
  if(!pageNeedsRender(page)){
-  navigationPerf.lastPage=page;navigationPerf.lastMs=(performance?.now?.()??Date.now())-tapStarted;navigationPerf.maxMs=Math.max(navigationPerf.maxMs,navigationPerf.lastMs);navigationPerf.cacheHits++;
-  if(anchor)requestAnimationFrame(()=>document.getElementById(anchor)?.scrollIntoView({behavior:'smooth',block:'start'}));
-  return;
+  navigationPerf.lastPage=page;navigationPerf.lastMs=(globalThis.performance?.now?.()??Date.now())-tapStarted;navigationPerf.maxMs=Math.max(navigationPerf.maxMs,navigationPerf.lastMs);navigationPerf.cacheHits++;
+ }else{
+  // First visit/stale page: render deterministically now. This avoids a blank selected
+  // page while still eliminating all hidden-page background work.
+  renderPage(page);
+  navigationPerf.lastPage=page;navigationPerf.lastMs=(globalThis.performance?.now?.()??Date.now())-tapStarted;navigationPerf.maxMs=Math.max(navigationPerf.maxMs,navigationPerf.lastMs);
  }
- // Stale/first-use page: let the newly selected page paint first, then refresh it.
- // Idle warming normally makes this path uncommon after initial app startup.
- requestAnimationFrame(()=>{
-  if(token!==pendingPageRenderToken||activePageId()!==page)return;
-  setTimeout(()=>{
-   if(token!==pendingPageRenderToken||activePageId()!==page)return;
-   renderPage(page);
-   navigationPerf.lastPage=page;navigationPerf.lastMs=(performance?.now?.()??Date.now())-tapStarted;navigationPerf.maxMs=Math.max(navigationPerf.maxMs,navigationPerf.lastMs);
-   if(anchor)document.getElementById(anchor)?.scrollIntoView({behavior:'smooth',block:'start'});
-   scheduleIdlePageWarm(page);
-  },0);
- });
+ if(anchor)requestAnimationFrame(()=>document.getElementById(anchor)?.scrollIntoView({behavior:'smooth',block:'start'}));
 }
 renderNavigation();
-requestAnimationFrame(()=>{positionMobileNavigation();scheduleIdlePageWarm(activePageId())});
+requestAnimationFrame(positionMobileNavigation);
 document.documentElement.style.removeProperty('--nav-visual-bottom');
 
 $('nav').onclick=event=>{
