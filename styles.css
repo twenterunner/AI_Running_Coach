@@ -5866,3 +5866,7 @@ body:has(#dashboard.progressPage.active),#mainContent:has(#dashboard.progressPag
 /* v15.6.23 authoritative shoe graph: semantic line states */
 .shoeProgrammeChart svg .shoeFutureAuthoritative{fill:none!important;stroke-dasharray:12 10!important;stroke-linecap:round;stroke-linejoin:round}
 .shoeProgrammeChart svg .shoeActualLine{stroke-dasharray:none!important}
+
+/* v15.6.29 shoe chart axis readability: x-axis labels use a dedicated compact size. */
+#shoes .shoeProgrammeChart .xLab{font-size:16px!important;font-weight:800!important}
+@media(max-width:600px){#shoes .shoeProgrammeChart .xLab{font-size:15px!important}}

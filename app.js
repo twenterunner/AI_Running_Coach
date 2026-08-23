@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '15.6.28';
-  const BUILD = 50628;
+  const VERSION = '15.6.29';
+  const BUILD = 50629;
   const SCHEMA = 10400;
   const PRIMARY_STORAGE_KEY = 'arc_v10400_web';
   const MIRROR_STORAGE_KEY = 'arc_v10400_mirror';
@@ -7663,7 +7663,7 @@ function shoeEngineGuaranteeTwoServiceablePairs(result,manual){
    if(candidateRows.length)break;
   }
   if(candidateRows.length){shoeEngineCanonicalizePhysicalEntryDates(result);continue}
-  // v15.6.28 necessity rule: never manufacture a new physical purchase merely
+  // v15.6.29 necessity rule: never manufacture a new physical purchase merely
   // to satisfy an availability-count target. If no already-needed pair can join
   // this week with real use, leave the week as a soft rotation exception. A new
   // pair may only be created elsewhere by an actual lifecycle/session-coverage
@@ -7855,7 +7855,7 @@ function shoeEngineValidation(result){
    const weekSessions=sessions.filter(s=>shoeEngineWeekKey(s.date)===wk).sort((a,b)=>a.date.localeCompare(b.date));
    const ids=new Set();
    for(const session of weekSessions)for(const p of result.pairs)if(shoeEnginePairServiceableOnDate(p,session.date,result))ids.add(p.id);
-   if(ids.size<SESSION_SHOE_RULES.targetMinPairs){/* v15.6.28: availability-only two-pair coverage is a soft rotation target, never a reason by itself to buy a physical pair. */}
+   if(ids.size<SESSION_SHOE_RULES.targetMinPairs){/* v15.6.29: availability-only two-pair coverage is a soft rotation target, never a reason by itself to buy a physical pair. */}
   }
  }
  // Coach-level transition invariant: never publish the graph pattern that
@@ -8831,7 +8831,7 @@ function shoeEngineCanonicalFinalizePortfolio(result,manual,weeks){
 function shoeEngineBuildRehabSessions(now,raceDate){const injury=(state.injuries||[]).find(x=>x.id===state.activeInjuryPlanId);if(!injury)return[];const progress=injuryPrediction(injury),rehabEnd=[raceDate,progress?.windowEnd||raceDate].filter(Boolean).sort()[0],rows=[];for(let d=new Date(dte(now).getTime()+DAY),guard=0;d<=dte(rehabEnd)&&guard<120;d=new Date(d.getTime()+DAY),guard++){const date=iso(d),day=rehabCalendarDay(injury,progress,date,rehabPlanDayIndex(injury,date));if(!rehabDayNeedsShoe(day))continue;const exp=rehabExpectedDistance(day),km=Math.max(0,Number(exp.totalKm)||0);if(km<=0)continue;rows.push({id:`rehab-shoe-${injury.id}-${date}`,date,type:'Rehab recovery',distance:km,surface:'road',rehab:true,walkMinutes:exp.walkMinutes,runMinutes:exp.runMinutes,importance:shoeEngineSessionImportance({type:'Rehab recovery',distance:km,runMinutes:exp.runMinutes},{rehab:true}),injuryId:injury.id})}return rows}
 
 const SHOE_PLAN_SNAPSHOT_VERSION=2;
-const SHOE_ENGINE_CACHE_VERSION='15.6.28-50628-orphan-prune-flatline-r1';
+const SHOE_ENGINE_CACHE_VERSION='15.6.29-50629-dormant-gap-axis-r1';
 function shoeStableSerialize(value){
  if(value===null||typeof value!=='object')return JSON.stringify(value);
  if(Array.isArray(value))return'['+value.map(shoeStableSerialize).join(',')+']';
@@ -8906,7 +8906,7 @@ function freshShoeLifecyclePlan(){
   racePair:null,raceWindow:null,
   catalogueSource:'offline',catalogueVersion:OFFLINE_ASICS_CATALOGUE_VERSION,
   footMechanics:runnerFootMechanics(),
-  engine:'v15.6.28-necessity-driven-portfolio'
+  engine:'v15.6.29-necessity-driven-portfolio'
  };
  shoeEngineCanonicalFinalizePortfolio(result,manual,weeks);
 
@@ -9081,7 +9081,7 @@ function freshShoeLifecyclePlan(){
   const after=JSON.stringify({a:(result.assignments||[]).map(r=>[r.planId,r.pairId]),p:(result.purchases||[]).map(b=>[b.pairId,b.purchaseDate,b.firstUseDate])});
   if(after===before)break;
  }
- // v15.6.28 canonical race-artifact sanitation. Only the one selected Race Day
+ // v15.6.29 canonical race-artifact sanitation. Only the one selected Race Day
  // physical pair may own Race Day/familiarisation semantics. Older optimisation
  // passes can leave those flags on a superseded specialist; that makes an otherwise
  // unnecessary shoe look used and prevents portfolio pruning. Normalise those rows
@@ -9143,7 +9143,7 @@ function freshShoeLifecyclePlan(){
   shoeEngineCanonicalRelinkAssignments(result,manual);
   if(!changed)break;
  }
- // v15.6.28 final necessity convergence. A speculative training pair must not
+ // v15.6.29 final necessity convergence. A speculative training pair must not
  // survive merely because a legacy continuity pass seeded one token session.
  // Challenge every non-race future pair again after all continuity work. Since
  // two-pair availability is now a soft target, successful removal is no longer
@@ -9261,16 +9261,31 @@ function shoeGraphRetirementPoint(pair,life,forecastPoints){
  }
  return null
 }
-function shoeForecastSvgSegments(points,x,y,attrs=''){
- if(!Array.isArray(points)||points.length<2)return'';
- const clean=[points[0]];
+function shoeForecastRenderableSegments(points){
+ if(!Array.isArray(points)||points.length<2)return[];
+ const MIN_RISE_KM=0.05,MAX_IDLE_DAYS=21;
+ const meaningful=[points[0]];
  for(let i=1;i<points.length;i++){
-  const p=points[i],last=clean.at(-1);
-  if(Number(p.km)>Number(last.km)+0.05-1e-9)clean.push(p);
+  const p=points[i],last=meaningful.at(-1);
+  if(Number(p.km)>Number(last.km)+MIN_RISE_KM-1e-9)meaningful.push(p);
  }
- if(clean.length<2)return'';
- const pts=clean.map(p=>`${x(p.date)},${y(p.km)}`).join(' ');
- return`<polyline points="${pts}" ${attrs}/>`;
+ if(meaningful.length<2)return[];
+ const segments=[];let seg=[meaningful[0]];
+ for(let i=1;i<meaningful.length;i++){
+  const prev=meaningful[i-1],p=meaningful[i],gapDays=Math.max(0,(dte(p.date)-dte(prev.date))/DAY);
+  if(gapDays>MAX_IDLE_DAYS){
+   if(seg.length>=2)segments.push(seg);
+   // Do not bridge a dormant calendar gap with a horizontal/near-horizontal
+   // mileage line. Restart at the later usage date from the prior cumulative km.
+   seg=[{...p,km:Number(prev.km),gapRestart:true},p];
+  }else seg.push(p);
+ }
+ if(seg.length>=2)segments.push(seg);
+ return segments;
+}
+function shoeForecastSvgSegments(points,x,y,attrs=''){
+ const segments=shoeForecastRenderableSegments(points);
+ return segments.map(seg=>{const pts=seg.map(p=>`${x(p.date)},${y(p.km)}`).join(' ');return`<polyline points="${pts}" ${attrs}/>`}).join('');
 }
 function shoeProgrammeMileageChartHtml(lifeOverride=null){
  let life=lifeOverride||freshShoeLifecyclePlan();
@@ -9318,7 +9333,7 @@ function shoeProgrammeMileageChartHtml(lifeOverride=null){
  }).join('');
  const historicalRetirementMarkers=actualSeries.filter(item=>item.shoe.status==='retired'&&!pairs.some(p=>p.owned&&p.shoe?.id===item.shoe.id)&&item.points.length).map(item=>{const last=item.points.at(-1),xx=x(last.date),yy=y(last.km),col='#8FA9B8';return`<g class="shoeRetireTick" style="--shoe-color:${col}" aria-label="Physical retirement"><line x1="${xx-9}" y1="${yy-9}" x2="${xx+9}" y2="${yy+9}" stroke="${col}" stroke-width="4"/><line x1="${xx-9}" y1="${yy+9}" x2="${xx+9}" y2="${yy-9}" stroke="${col}" stroke-width="4"/></g>`}).join('');
 
- const raceX=x(raceDate),todayX=x(todayStr),targetBand=window&&life.racePair?(()=>{const yy1=y(window.maxKm),yy2=y(window.minKm),bx=Math.max(L,raceX-105);return`<g class="shoeRaceTargetBand"><rect x="${bx}" y="${yy1}" width="${raceX-bx}" height="${Math.max(5,yy2-yy1)}"/></g>`})():'';
+ const raceX=x(raceDate),todayX=x(todayStr),graphStartX=x(graphStart),axisLabelsClose=Math.abs(todayX-graphStartX)<150,graphStartLabelY=H-18,todayLabelY=axisLabelsClose?H-48:H-18,targetBand=window&&life.racePair?(()=>{const yy1=y(window.maxKm),yy2=y(window.minKm),bx=Math.max(L,raceX-105);return`<g class="shoeRaceTargetBand"><rect x="${bx}" y="${yy1}" width="${raceX-bx}" height="${Math.max(5,yy2-yy1)}"/></g>`})():'';
  // Chronology is explicit: rehabilitation shading begins at the stored rehab-plan
  // start (when it precedes programme start) and extends through the last remaining
  // rehab shoe exposure. Owned-shoe curves never begin before the pair was added.
@@ -9326,7 +9341,7 @@ function shoeProgrammeMileageChartHtml(lifeOverride=null){
  const shoeAddedMarkers=ownedShoes.map(sh=>{const d=shoeUploadDate(sh);if(!CORE.isIsoDate(d)||d<graphStart||d>todayStr)return'';const pair=pairs.find(p=>p.owned&&p.shoe.id===sh.id),col=pair?colorById.get(pair.id):'#35E2D0',xx=x(d),km=Number(sh.startingKm)||0,yy=y(km);return`<g class="shoeAddedMarker" style="--shoe-color:${col}"><line x1="${xx}" y1="${T}" x2="${xx}" y2="${H-B}" stroke="${col}" stroke-width="2" stroke-dasharray="3 6" opacity=".32"/><circle cx="${xx}" cy="${yy}" r="5" fill="${col}"/><text x="${xx+7}" y="${Math.max(T+34,yy-10)}" fill="${col}" font-weight="800">ADDED ${esc(shoeChartDate(d).replace(/ \d{4}$/,''))}</text></g>`}).join('');
  const legend=pairs.map(pair=>`<span class="shoeLegendItem ${pair.owned?'':'future'} ${pair===life.racePair?'race':''}"><span class="shoeLegendSwatch ${pair.owned?'':'dotted'}" style="--shoe-color:${colorById.get(pair.id)}"></span><b>${esc(lifecyclePairLabel(pair))}</b><small>${pair.owned?'owned':pair===life.racePair?'Race Day':'planned'}</small></span>`).join('');
  const strategy='Session suitability';
- return`<div class="shoeChartWrap shoeProgrammeChart shoeCoachGraph"><div class="shoeChartRaceDate"><small>SHOE STRATEGY THROUGH RACE DAY</small><b>${esc(strategy)} · Race day ${esc(shoeChartDate(raceDate))}</b></div>${life.racePair?`<div class="shoeRaceStrategyCard"><small>RACE-DAY PAIR</small><b>${esc(lifecyclePairLabel(life.racePair))}</b><span>~${Math.round(shoeEngineRaceStartKm(life,life.racePair))} km projected · target ${Math.round(window?.minKm||0)}–${Math.round(window?.maxKm||0)} km</span></div>`:''}<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Physical shoe rotation through Race Day">${rehabBand}${targetBand}<g class="shoeGrid">${grid}</g>${shoeAddedMarkers}<line class="shoeTodayLine" x1="${todayX}" y1="${T}" x2="${todayX}" y2="${H-B}"/><line class="shoeRaceLine" x1="${raceX}" y1="${T}" x2="${raceX}" y2="${H-B}"/>${actual}${future}${purchaseMarkers}${raceMileageMarker}${retirementMarkers}${historicalRetirementMarkers}<text class="xLab" x="${x(graphStart)}" y="${H-18}" text-anchor="start">${graphStartLabel}</text><text class="xLab" x="${todayX}" y="${H-18}" text-anchor="middle">TODAY</text><text class="xLab" x="${raceX}" y="${H-18}" text-anchor="end">RACE</text><text class="yTitle" transform="translate(32 ${H/2}) rotate(-90)" text-anchor="middle">Accumulated km</text></svg><div class="shoeChartLegend compact">${legend}</div><div class="shoeGraphNote"><b>Solid = actual logged mileage · dashed = future forecast · × = physical retirement.</b></div>${shoeRotationPlanHtml(life,colorById)}</div>`
+ return`<div class="shoeChartWrap shoeProgrammeChart shoeCoachGraph"><div class="shoeChartRaceDate"><small>SHOE STRATEGY THROUGH RACE DAY</small><b>${esc(strategy)} · Race day ${esc(shoeChartDate(raceDate))}</b></div>${life.racePair?`<div class="shoeRaceStrategyCard"><small>RACE-DAY PAIR</small><b>${esc(lifecyclePairLabel(life.racePair))}</b><span>~${Math.round(shoeEngineRaceStartKm(life,life.racePair))} km projected · target ${Math.round(window?.minKm||0)}–${Math.round(window?.maxKm||0)} km</span></div>`:''}<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Physical shoe rotation through Race Day">${rehabBand}${targetBand}<g class="shoeGrid">${grid}</g>${shoeAddedMarkers}<line class="shoeTodayLine" x1="${todayX}" y1="${T}" x2="${todayX}" y2="${H-B}"/><line class="shoeRaceLine" x1="${raceX}" y1="${T}" x2="${raceX}" y2="${H-B}"/>${actual}${future}${purchaseMarkers}${raceMileageMarker}${retirementMarkers}${historicalRetirementMarkers}<text class="xLab xLabStart" x="${graphStartX}" y="${graphStartLabelY}" text-anchor="start">${graphStartLabel}</text><text class="xLab xLabToday" x="${todayX}" y="${todayLabelY}" text-anchor="middle">TODAY</text><text class="xLab xLabRace" x="${raceX}" y="${H-18}" text-anchor="end">RACE</text><text class="yTitle" transform="translate(32 ${H/2}) rotate(-90)" text-anchor="middle">Accumulated km</text></svg><div class="shoeChartLegend compact">${legend}</div><div class="shoeGraphNote"><b>Solid = actual logged mileage · dashed = future forecast · × = physical retirement.</b></div>${shoeRotationPlanHtml(life,colorById)}</div>`
 }
 function shoeMileageChartHtml(life=null){return shoeProgrammeMileageChartHtml(life)}
 function shoeRotationCard(shoe){
@@ -9366,7 +9381,7 @@ function shoeCurrentRotationTileHtml(life,active){
 }
 function shoeNextPurchaseTileHtml(life){const buys=life.purchases.filter(x=>x.role!=='race'),next=buys[0],pair=next?life.pairs.find(p=>p.id===next.pairId):null;const summary=next&&pair?`${lifecyclePairLabel(pair)} · ${fmtDate(next.purchaseDate)}`:'No purchase currently required';return`<details class="shoeKeyTile"><summary><div><small>NEXT PURCHASE</small><b>${esc(summary)}</b><span>${next?`${Math.max(0,Math.ceil((dte(next.purchaseDate)-today())/DAY))} days · first meaningful use`:'Current rotation covers the programme'}</span></div></summary><div class="shoeKeyDetail"><p class="shoeKeyIntro">Purchases are need-driven. A future pair is introduced only when lifecycle, maintaining a useful active rotation, quality-session coverage or Race Day readiness requires it. You can override the proposed future training model; the engine then recalculates lifecycle allocation around that choice.</p>${buys.length?buys.map((buy,n)=>{const p=life.pairs.find(x=>x.id===buy.pairId),sel=shoeFuturePairOverrideKeys()[n]||'';return`<div class="shoeOverrideRow"><div><small>FUTURE PAIR ${n+1}</small><b>${esc(p?lifecyclePairLabel(p):'Future pair')}</b><span>First meaningful use ${esc(fmtDate(buy.firstUseDate||buy.purchaseDate))}</span></div><label>Runner override<select data-future-pair-override="${n}">${shoeOverrideProfileOptions(sel,true)}</select></label><p>${esc(buy.reason||'')}</p></div>`}).join(''):'<div class="shoeEmpty">No future training purchase is currently required.</div>'}</div></details>`}
 function shoeRaceDayTileHtml(life){const pair=life.racePair,window=life.raceWindow,name=pair?lifecyclePairLabel(pair):'Race Day pair unavailable',km=pair?Math.round(shoeEngineRaceStartKm(life,pair)):0,sel=String(state.setup?.shoeRacePairOverride||'');return`<details class="shoeKeyTile"><summary><div><small>RACE-DAY SHOE</small><b>${esc(name)}</b><span>${pair?`~${km} km at race start${window?` · target ${Math.round(window.minKm)}–${Math.round(window.maxKm)} km`:''}`:'Planner error'}</span></div></summary><div class="shoeKeyDetail"><div class="shoeOverrideRow race"><div><small>RACE-DAY MODEL</small><b>${esc(name)}</b><span>Coach-selected unless you override it below.</span></div><label>Runner override<select id="shoeRacePairOverride">${shoeOverrideProfileOptions(sel,true)}</select></label><p>The override changes the model preference, not the safety boundaries: the pair must still be available, sufficiently familiar, below 250 km at race start and comfortably inside its useful lifecycle.</p></div>${raceDayShoeTargetHtml()}</div></details>`}
-function shoeRotationPlanTileHtml(life){const status=life.valid?'Plan feasible':'Plan requires attention',profile=shoeRotationPriorityProfile();return`<section class="shoeKeyTile shoePlanTile shoePlanTileAlwaysOpen"><div class="shoePlanStaticHead"><div><small>ROTATION PLAN</small><b>${esc(status)}</b><span>${esc(profile.label)} · two-pair minimum · need-driven lifecycle forecast</span></div></div><div class="shoeKeyDetail"><article class="shoeChartCard">${shoeMileageChartHtml(life)}</article><div class="shoePlanAllocationFold"><details id="shoeProgrammeAllocationDetails"><summary>Programme allocation details</summary><div data-lazy-shoe-allocation><div class="shoeEmpty">Open to load session allocation details.</div></div></details></div></div></section>`}
+function shoeRotationPlanTileHtml(life){const status=life.valid?'Plan feasible':'Plan requires attention',profile=shoeRotationPriorityProfile();return`<section class="shoeKeyTile shoePlanTile shoePlanTileAlwaysOpen"><div class="shoePlanStaticHead"><div><small>ROTATION PLAN</small><b>${esc(status)}</b><span>${esc(profile.label)} · two-pair target · need-driven lifecycle forecast</span></div></div><div class="shoeKeyDetail"><article class="shoeChartCard">${shoeMileageChartHtml(life)}</article><div class="shoePlanAllocationFold"><details id="shoeProgrammeAllocationDetails"><summary>Programme allocation details</summary><div data-lazy-shoe-allocation><div class="shoeEmpty">Open to load session allocation details.</div></div></details></div></div></section>`}
 function renderShoes(){const root=$('shoesContent');if(!root)return;
  if(Array.isArray(state.plannedShoePurchases)){
   const before=state.plannedShoePurchases.length;
