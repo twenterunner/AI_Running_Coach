@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '15.6.23';
-  const BUILD = 50623;
+  const VERSION = '15.6.24';
+  const BUILD = 50624;
   const SCHEMA = 10400;
   const PRIMARY_STORAGE_KEY = 'arc_v10400_web';
   const MIRROR_STORAGE_KEY = 'arc_v10400_mirror';
@@ -7834,19 +7834,16 @@ function shoeEngineValidation(result){
   if(p.projectedRetireDate&&p.finalPlannedUseDate&&String(p.projectedRetireDate)!==String(p.finalPlannedUseDate))add('retirement-date-not-final-use',{pairId:p.id,lastUse:p.finalPlannedUseDate,retireDate:p.projectedRetireDate});
  }
  for(const buy of result.purchases){const p=pairById.get(buy.pairId),first=p?.assignments.filter(a=>Number(a.km)>0).slice().sort((a,b)=>a.date.localeCompare(b.date))[0],entry=shoePlannerEntryDate(p);if(!p||!first)add('unused-future-pair',{pairId:buy.pairId});else{if(first.date<entry)add('shoe-used-before-purchase',{pairId:p.id,date:first.date,availableDate:entry});if(String(buy.purchaseDate)!==String(first.date)||String(buy.firstUseDate)!==String(first.date)||String(entry)!==String(first.date))add('purchase-not-first-positive-use',{pairId:p.id,purchaseDate:buy.purchaseDate,firstUseDate:buy.firstUseDate,firstPositiveUse:first.date})}}
- // Future TRAINING purchases must become genuine rotation members. This is a hard
- // publication invariant, not merely a warning: no one-session/token purchase may
- // survive because rehab was active or because a late continuity pass added it.
+ // Purchase necessity is authoritative; utilisation density is not a hard
+ // feasibility invariant. A future pair with ZERO normal-training use is invalid.
+ // A pair with low-but-positive use may still be physically necessary because of
+ // whole-session granularity, lifecycle continuity or session suitability. Those
+ // cases are challenged counterfactually by the final portfolio minimiser and are
+ // reported as soft optimisation targets rather than crashing the application.
  for(const buy of result.purchases){
   const p=pairById.get(buy.pairId);if(!p||p.owned||p===result.racePair)continue;
-  // Legacy role flags are NOT authoritative. Every future physical pair except the
-  // single canonical Race Day pair must earn its purchase through meaningful
-  // normal-training use. This blocks stale role:'race' or specialist flags from
-  // bypassing the no-orphan/no-token-purchase invariant.
   const training=(p.assignments||[]).filter(a=>Number(a.km)>0&&!a.rehab&&!a.raceDayAssignment&&!a.raceFamiliarisation).slice().sort((a,b)=>a.date.localeCompare(b.date));
-  if(!training.length){add('future-training-pair-without-training-use',{pairId:p.id});continue}
-  const first=training[0].date,end=iso(new Date(dte(first).getTime()+28*DAY)),early=training.filter(a=>a.date<=end),earlyKm=early.reduce((n,a)=>n+(Number(a.km)||0),0),total=training.reduce((n,a)=>n+(Number(a.km)||0),0),target=Math.max(20,Math.min(70,total*.08));
-  if(training.length<3||total+1e-6<30||early.length<2||earlyKm+1e-6<Math.max(20,target))add('future-training-pair-token-entry',{pairId:p.id,firstUse:first,totalSessions:training.length,totalKm:total,first28Sessions:early.length,first28Km:earlyKm,target});
+  if(!training.length)add('future-training-pair-without-training-use',{pairId:p.id});
  }
  // Hard physical-rotation invariant.
  {
@@ -8058,6 +8055,19 @@ function shoeEngineSoftTargets(result){
    const rows=result.assignments.filter(a=>shoeEngineWeekKey(a.date)===wk&&a.date>=first),total=rows.reduce((n,a)=>n+Number(a.km||0),0),pairKm=rows.filter(a=>a.pairId===p.id).reduce((n,a)=>n+Number(a.km||0),0);
    const target=SESSION_SHOE_RULES.weeklyMinimumShare*total,actionable=shoeEngineWeeklyShareRepairOption(result,wk,p.id,new Map((state.plannedShoeAssignments||[]).filter(a=>a.source==='user').map(a=>[a.planId,a.shoeId])));if(rows.length>=2&&total>0&&pairKm>0&&pairKm+1e-6<target&&actionable)notes.push({code:'future-pair-underused-after-entry',week:wk,pairId:p.id,km:pairKm,target})
   }
+ }
+ // Low-density future-pair entry is a coach optimisation signal, not a hard
+ // invariant. The final counterfactual critic/minimiser decides whether the pair
+ // can actually be removed. This scales to low- and high-volume programmes without
+ // imposing an arbitrary absolute-kilometre validity threshold.
+ for(const p of result.pairs.filter(x=>!x.owned&&x!==result.racePair)){
+  const training=(p.assignments||[]).filter(a=>Number(a.km)>0&&!a.rehab&&!a.raceDayAssignment&&!a.raceFamiliarisation).slice().sort((a,b)=>a.date.localeCompare(b.date));
+  if(!training.length)continue;
+  const first=training[0].date,end=iso(new Date(dte(first).getTime()+28*DAY)),early=training.filter(a=>a.date<=end);
+  const earlyKm=early.reduce((n,a)=>n+(Number(a.km)||0),0),allKm=training.reduce((n,a)=>n+(Number(a.km)||0),0);
+  const horizonKm=(result.assignments||[]).filter(a=>!a.rehab&&!a.raceDayAssignment&&a.date>=first&&a.date<=end).reduce((n,a)=>n+(Number(a.km)||0),0);
+  const share=horizonKm>0?earlyKm/horizonKm:0;
+  if(early.length<2||share+1e-6<SESSION_SHOE_RULES.weeklyMinimumShare*.5)notes.push({code:'future-pair-low-density-entry',pairId:p.id,firstUse:first,first28Sessions:early.length,first28Km:earlyKm,first28Share:share,totalKm:allKm});
  }
  if(result.racePair){const racePlan={date:result.raceDate,type:'Race Day',distance:Number(state.setup?.raceDistance)||42.195,surface:'road'},c=shoeEngineRaceCandidate(result.racePair,racePlan);if(c&&c.preRaceKm<c.window.minKm-1e-6)notes.push({code:'race-familiarisation-below-target',km:c.preRaceKm,target:c.window.minKm})}
  return notes
@@ -8824,7 +8834,7 @@ function shoeEngineCanonicalFinalizePortfolio(result,manual,weeks){
 function shoeEngineBuildRehabSessions(now,raceDate){const injury=(state.injuries||[]).find(x=>x.id===state.activeInjuryPlanId);if(!injury)return[];const progress=injuryPrediction(injury),rehabEnd=[raceDate,progress?.windowEnd||raceDate].filter(Boolean).sort()[0],rows=[];for(let d=new Date(dte(now).getTime()+DAY),guard=0;d<=dte(rehabEnd)&&guard<120;d=new Date(d.getTime()+DAY),guard++){const date=iso(d),day=rehabCalendarDay(injury,progress,date,rehabPlanDayIndex(injury,date));if(!rehabDayNeedsShoe(day))continue;const exp=rehabExpectedDistance(day),km=Math.max(0,Number(exp.totalKm)||0);if(km<=0)continue;rows.push({id:`rehab-shoe-${injury.id}-${date}`,date,type:'Rehab recovery',distance:km,surface:'road',rehab:true,walkMinutes:exp.walkMinutes,runMinutes:exp.runMinutes,importance:shoeEngineSessionImportance({type:'Rehab recovery',distance:km,runMinutes:exp.runMinutes},{rehab:true}),injuryId:injury.id})}return rows}
 
 const SHOE_PLAN_SNAPSHOT_VERSION=2;
-const SHOE_ENGINE_CACHE_VERSION='15.6.23-50623-preview-accepted-authoritative-r3';
+const SHOE_ENGINE_CACHE_VERSION='15.6.24-50624-necessity-gated-authoritative-r4';
 function shoeStableSerialize(value){
  if(value===null||typeof value!=='object')return JSON.stringify(value);
  if(Array.isArray(value))return'['+value.map(shoeStableSerialize).join(',')+']';
@@ -8899,7 +8909,7 @@ function freshShoeLifecyclePlan(){
   racePair:null,raceWindow:null,
   catalogueSource:'offline',catalogueVersion:OFFLINE_ASICS_CATALOGUE_VERSION,
   footMechanics:runnerFootMechanics(),
-  engine:'v15.6.23-authoritative-single-publication'
+  engine:'v15.6.24-necessity-gated-single-publication'
  };
  shoeEngineCanonicalFinalizePortfolio(result,manual,weeks);
 
@@ -9056,7 +9066,7 @@ function freshShoeLifecyclePlan(){
   result.pairs.forEach(pair=>lifecycleRebuildPoints(pair,now,raceDate,fixed));
   shoeEngineEnsureCanonicalRetirementEvents(result);
  }
- // v15.6.23 final authoritative cleanup. Several legacy late passes can add or
+ // v15.6.24 final authoritative cleanup. Several legacy late passes can add or
  // move a future pair after earlier minimisation. Converge purchase necessity,
  // meaningful first use and two-pair continuity together, then rebuild curves
  // exactly once from that final ledger.
@@ -9074,7 +9084,7 @@ function freshShoeLifecyclePlan(){
   const after=JSON.stringify({a:(result.assignments||[]).map(r=>[r.planId,r.pairId]),p:(result.purchases||[]).map(b=>[b.pairId,b.purchaseDate,b.firstUseDate])});
   if(after===before)break;
  }
- // v15.6.23 FINAL publication firewall. Legacy role labels and late continuity
+ // v15.6.24 FINAL publication firewall. Legacy role labels and late continuity
  // repairs are not allowed to publish an orphan/token purchase. Challenge every
  // non-owned, non-canonical-race pair counterfactually, regardless of role label.
  // If the existing portfolio can absorb it, remove it. If it cannot, it must have
@@ -9148,7 +9158,7 @@ function shoeSvgSeries(points,x,y,attrs=''){
  return`<polyline points="${pts}" ${attrs}/>`
 }
 function shoeGraphForecastPoints(pair,life){
- // v15.6.23 authoritative graph contract:
+ // v15.6.24 authoritative graph contract:
  // - owned forecast starts at TODAY/current mileage;
  // - future-pair forecast starts exactly at first positive use (purchase=first use);
  // - only positive future assignments create vertices;
