@@ -5851,3 +5851,22 @@ body:has(#dashboard.progressPage.active),#mainContent:has(#dashboard.progressPag
 .shoePhoto img,.shoeCardPhoto img,.shoeDetailPhoto img,.todayShoePhoto img,.planShoeThumb img,.logShoePhoto img,.shoeRaceNowPhoto img,.shoeRaceTargetPhoto img,.raceShoeHeroPhoto img,.sessionShoePhoto img,.shoeMiniPhoto img{
   background:transparent!important;mix-blend-mode:normal!important;filter:none!important;z-index:21!important;
 }
+
+/* v15.6.20 — purchase marker is anchored to first positive use on the curve. */
+#shoes .shoeBuyFirstUse circle{fill:var(--shoe-color);stroke:#08202b;stroke-width:2}
+#shoes .shoeBuyFirstUse line{stroke:var(--shoe-color);stroke-width:1.5;stroke-dasharray:3 3}
+#shoes .shoeBuyFirstUse text{fill:var(--shoe-color);font-weight:850;font-size:10px}
+
+/* v15.6.22 — shoe lifecycle legacy-finalizer cleanup; no visual style changes required. */
+
+/* v15.6.22 graph semantics firewall: actual=solid, forecast=dashed, target band is not a shoe curve. */
+#shoes .shoePlannedLine,#shoes .shoeNewPairLine,#shoes .shoeRaceStrategyLine{stroke-dasharray:10 8!important;stroke-linecap:round!important;fill:none!important}
+#shoes .shoeActualLine{stroke-dasharray:none!important;fill:none!important}
+#shoes .shoeRaceTargetBand rect{stroke:none!important;stroke-dasharray:none!important}
+/* v15.6.23 authoritative shoe graph: semantic line states */
+.shoeProgrammeChart svg .shoeFutureAuthoritative{fill:none!important;stroke-dasharray:12 10!important;stroke-linecap:round;stroke-linejoin:round}
+.shoeProgrammeChart svg .shoeActualLine{stroke-dasharray:none!important}
+
+/* v15.6.30 shoe chart axis readability: x-axis labels use a dedicated compact size. */
+#shoes .shoeProgrammeChart .xLab{font-size:16px!important;font-weight:800!important}
+@media(max-width:600px){#shoes .shoeProgrammeChart .xLab{font-size:15px!important}}
