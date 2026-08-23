@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '15.6.49';
-  const BUILD = 50649;
+  const VERSION = '15.6.50';
+  const BUILD = 50650;
   const SCHEMA = 10400;
   const PRIMARY_STORAGE_KEY = 'arc_v10400_web';
   const MIRROR_STORAGE_KEY = 'arc_v10400_mirror';
@@ -5278,8 +5278,8 @@ function rehabTodayDisplayPlan(i,p){
 function rehabTodayFocusHtml(i,p){
  const todayPlan=rehabTodayDisplayPlan(i,p),prescription=(todayPlan.items||[]).map(x=>`<li>${esc(x)}</li>`).join(''),family=p.diag.family||'generic',completed=!!todayPlan.checkInCompleted;
  const guides=(todayPlan.guideExercises||[]).map(x=>{const muscles=rehabExerciseMuscles(x.name,family),muscleChips=`<span class="exerciseMuscles">${muscles.map(m=>`<i>${esc(m)}</i>`).join('')}</span>`;return`<details class="exerciseDetail textExercise uiLevel2"><summary><span class="exerciseSummaryCopy"><b>${esc(x.name)}</b><small>${esc(x.dose)}</small>${muscleChips}</span><em class="exerciseChevron">How to do it</em></summary><div class="exerciseGuide"><p class="exercisePurpose">${esc(x.purpose)}</p><div class="exerciseInstructionBlock"><b>How to do it</b><ol>${(x.steps||[]).map(y=>`<li>${esc(y)}</li>`).join('')}</ol></div><div class="exerciseRules"><div><b>Pain rule</b><p>${p.safetyHold?'Do not test impact or progress loading until assessed.':'Keep pain at 0–2/10. Stop for sharp pain, altered movement, or symptoms that worsen later or next morning.'}</p></div><div><b>Progress when</b><p>${esc(x.progress||'Progress only when the prescribed response criteria remain satisfied.')}</p></div></div></div></details>`}).join('');
- const eyebrow=completed?'TODAY’S SESSION · CHECKED IN':'TODAY’S FOCUS',status=completed?`✓ ${Number.isFinite(todayPlan.execution?.score)?`${todayPlan.execution.score}% execution`:'Check-in complete'}`:'Check-in pending';
- return`<section class="injuryTopicCard rehabTodayFocus uiLevel1 ${completed?'completed':''}"><div class="injurySectionHead"><div><small class="eyebrow">${eyebrow}</small><h4>${esc(todayPlan.title)}</h4><p class="muted compact">${todayPlan.weekday||dte(todayPlan.date).toLocaleDateString(undefined,{weekday:'long'})} · ${fmtDate(todayPlan.date)}</p></div><span class="status today">Stage ${p.stage+1}</span></div>${completed?`<div class="rehabTodayCompleted"><b>${esc(status)}</b></div>`:`<div class="todayFocus"><strong>${esc(todayPlan.rationale||'')}</strong></div>`}<div class="todayPlanGrid"><div><b>Today’s dose</b><ul>${prescription}</ul></div>${todayPlan.stretchGoalOffered?`<div class="rehabStretchGoal"><b>Optional progression</b><p>${esc(todayPlan.stretchGoal)}</p></div>`:''}<details class="rehabDayDetails uiLevel3"><summary>Safety & progression</summary><div class="rehabDayRule"><b>Adjustment rule</b><p>${esc(todayPlan.rule||'')}</p></div><div class="rehabEvidenceMeter ${esc(todayPlan.evidence?.className||'low')}"><b>Evidence: ${esc(todayPlan.evidence?.level||'Low')}</b><p>${esc(todayPlan.evidence?.text||'More check-in evidence is needed.')}</p></div></details></div>${rehabShoePlanHtml(i,todayPlan)}<div class="rehabStatusPair">${completed?`<span class="executionBadge ${todayPlan.execution?.className||'unknown'}">${esc(status)}</span>`:'<span class="checkinBadge pending">Check-in pending</span>'}</div>${guides?`<div class="todayExerciseGuides"><h5>${uiIcon('rehab')} Exercise cards</h5>${guides}</div>`:''}</section>`;
+ const eyebrow=completed?'TODAY’S SESSION · CHECKED IN':'TODAY’S FOCUS',status=completed?'✓ Check-in complete':'Check-in pending';
+ return`<section class="injuryTopicCard rehabTodayFocus uiLevel1 ${completed?'completed':''}"><div class="injurySectionHead"><div><small class="eyebrow">${eyebrow}</small><h4>${esc(todayPlan.title)}</h4><p class="muted compact">${todayPlan.weekday||dte(todayPlan.date).toLocaleDateString(undefined,{weekday:'long'})} · ${fmtDate(todayPlan.date)}</p></div><span class="status today">Stage ${p.stage+1}</span></div>${completed?`<div class="rehabTodayCompleted"><b>${esc(status)}</b></div>`:`<div class="todayFocus"><strong>${esc(todayPlan.rationale||'')}</strong></div>`}<div class="todayPlanGrid"><div><b>Today’s dose</b><ul>${prescription}</ul></div>${todayPlan.stretchGoalOffered?`<div class="rehabStretchGoal"><b>Optional progression</b><p>${esc(todayPlan.stretchGoal)}</p></div>`:''}<details class="rehabDayDetails uiLevel3"><summary>Safety & progression</summary><div class="rehabDayRule"><b>Adjustment rule</b><p>${esc(todayPlan.rule||'')}</p></div><div class="rehabEvidenceMeter ${esc(todayPlan.evidence?.className||'low')}"><b>Evidence: ${esc(todayPlan.evidence?.level||'Low')}</b><p>${esc(todayPlan.evidence?.text||'More check-in evidence is needed.')}</p></div></details></div>${rehabShoePlanHtml(i,todayPlan)}${completed?'':`<div class="rehabStatusPair"><span class="checkinBadge pending">Check-in pending</span></div>`}${guides?`<div class="todayExerciseGuides"><h5>${uiIcon('rehab')} Exercise cards</h5>${guides}</div>`:''}</section>`;
 }
 
 function injuryTrajectorySvg(i,p){
@@ -8943,7 +8943,7 @@ function shoeEngineCanonicalFinalizePortfolio(result,manual,weeks){
 function shoeEngineBuildRehabSessions(now,raceDate){const injury=(state.injuries||[]).find(x=>x.id===state.activeInjuryPlanId);if(!injury)return[];const progress=injuryPrediction(injury),rehabEnd=[raceDate,progress?.windowEnd||raceDate].filter(Boolean).sort()[0],rows=[];for(let d=new Date(dte(now).getTime()+DAY),guard=0;d<=dte(rehabEnd)&&guard<120;d=new Date(d.getTime()+DAY),guard++){const date=iso(d),day=rehabCalendarDay(injury,progress,date,rehabPlanDayIndex(injury,date));if(!rehabDayNeedsShoe(day))continue;const exp=rehabExpectedDistance(day),km=Math.max(0,Number(exp.totalKm)||0);if(km<=0)continue;rows.push({id:`rehab-shoe-${injury.id}-${date}`,date,type:'Rehab recovery',distance:km,surface:'road',rehab:true,walkMinutes:exp.walkMinutes,runMinutes:exp.runMinutes,importance:shoeEngineSessionImportance({type:'Rehab recovery',distance:km,runMinutes:exp.runMinutes},{rehab:true}),injuryId:injury.id})}return rows}
 
 const SHOE_PLAN_SNAPSHOT_VERSION=3;
-const SHOE_ENGINE_CACHE_VERSION='15.6.49-50649-terminal-retirement-reconcile-r8';
+const SHOE_ENGINE_CACHE_VERSION='15.6.50-50650-terminal-retirement-reconcile-r8';
 function shoeStableSerialize(value){
  if(value===null||typeof value!=='object')return JSON.stringify(value);
  if(Array.isArray(value))return'['+value.map(shoeStableSerialize).join(',')+']';
@@ -9025,7 +9025,7 @@ function freshShoeLifecyclePlan(){
   racePair:null,raceWindow:null,
   catalogueSource:'offline',catalogueVersion:OFFLINE_ASICS_CATALOGUE_VERSION,
   footMechanics:runnerFootMechanics(),
-  engine:'v15.6.49-necessity-driven-portfolio'
+  engine:'v15.6.50-necessity-driven-portfolio'
  };
  shoeEngineCanonicalFinalizePortfolio(result,manual,weeks);
 
@@ -9629,13 +9629,13 @@ function defaultRehabCheckinShoeId(injury,day,previous={}){
 function rehabShoePlanHtml(injury,day){
  if(!rehabDayNeedsShoe(day)||!(state.shoes||[]).some(s=>s.status!=='retired'))return'';
  const planned=freshLifecycleRehabAssignment(injury.id,day.date),bestRec=rehabShoeRecommendation(day),plannedId=plannedRehabShoeForDay(injury,day),plannedShoe=(state.shoes||[]).find(s=>s.id===plannedId)||bestRec?.shoe||null,plannedLabel=plannedShoe?shoeDisplayName(plannedShoe):(planned?lifecyclePairLabel(planned.pair):(bestRec?shoeDisplayName(bestRec.shoe):'')),exp=rehabExpectedDistance(day);
- const savedCheck=(injury.checkIns||[]).find(c=>c.date===day.date),usedId=savedCheck?.rehabShoeId||'',usedShoe=(state.shoes||[]).find(s=>s.id===usedId)||null,hasDifferentSavedShoe=Boolean(usedShoe&&usedId&&usedId!==plannedId);
- const heading=hasDifferentSavedShoe?'USED SHOE':'PLANNED SHOE',label=hasDifferentSavedShoe?shoeDisplayName(usedShoe):plannedLabel;
- const actualUsage=hasDifferentSavedShoe?rehabUsageFromCheckIn(injury,savedCheck):null,actualKm=Number(actualUsage?.distanceKm);
- const note=hasDifferentSavedShoe
-  ?`Saved from this day’s check-in${Number.isFinite(actualKm)?` · ${actualKm.toFixed(1)} km credited to this shoe`:''}. This actual-use choice overrides the shoe-engine plan for mileage tracking.`
-  :`${plannedLabel&&bestRec?`Shoe-engine score ${Math.round(bestRec.score)}/100. `:''}Expected shoe distance ~${exp.totalKm.toFixed(1)} km${exp.runMinutes?` (${exp.walkMinutes} min walk + ${exp.runMinutes} min slow run)`:exp.walkMinutes?` (${exp.walkMinutes} min walk)`:''}. If a different shoe is saved in the daily check-in, this tile will show that used shoe instead.`;
- return`<div class="rehabShoePlan ${hasDifferentSavedShoe?'rehabShoeUsed':''}"><div><small>${heading}</small><b>${label?esc(label):'No shoe recommendation'}</b><p>${note}</p></div></div>`
+ const savedCheck=(injury.checkIns||[]).find(c=>c.date===day.date)||null,hasSavedCheck=Boolean(savedCheck),usedId=savedCheck?.rehabShoeId||'',usedShoe=(state.shoes||[]).find(s=>s.id===usedId)||null,usedLabel=usedShoe?shoeDisplayName(usedShoe):'No shoe / unknown';
+ const actualUsage=hasSavedCheck?rehabUsageFromCheckIn(injury,savedCheck):null,actualKm=Number(actualUsage?.distanceKm);
+ const plannedNote=`${plannedLabel&&bestRec?`Shoe-engine score ${Math.round(bestRec.score)}/100. `:''}Expected shoe distance ~${exp.totalKm.toFixed(1)} km${exp.runMinutes?` (${exp.walkMinutes} min walk + ${exp.runMinutes} min slow run)`:exp.walkMinutes?` (${exp.walkMinutes} min walk)`:''}.`;
+ const usedNote=usedShoe
+  ?`Saved from this day’s check-in${Number.isFinite(actualKm)?` · ${actualKm.toFixed(1)} km credited to this shoe`:''}.`
+  :`Saved from this day’s check-in as no shoe / unknown. No rehab shoe mileage is credited from this check-in unless a matching logged run provides the activity shoe.`;
+ return`<div class="rehabShoePlan ${hasSavedCheck?'rehabShoeUsed':''}"><div class="rehabShoePlanRow"><small>PLANNED SHOE</small><b>${plannedLabel?esc(plannedLabel):'No shoe recommendation'}</b><p>${plannedNote}</p></div>${hasSavedCheck?`<div class="rehabShoePlanRow rehabActualShoeRow"><small>USED SHOE</small><b>${esc(usedLabel)}</b><p>${usedNote}</p></div>`:''}</div>`
 }
 let futureRehabShoeUsageCache={stamp:null,byShoe:new Map()};
 function invalidateShoeDerivedPlanningCaches(){
