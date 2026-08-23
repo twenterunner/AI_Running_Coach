@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '15.6.64';
-  const BUILD = 50664;
+  const VERSION = '15.6.65';
+  const BUILD = 50665;
   const SCHEMA = 10400;
   const PRIMARY_STORAGE_KEY = 'arc_v10400_web';
   const MIRROR_STORAGE_KEY = 'arc_v10400_mirror';
@@ -5415,7 +5415,7 @@ function injuryTrajectorySvg(i,p){
    const pc=phaseColors[n];
    const labelX=cx,labelY=top+ch/2;
    return `<g class="injuryPhaseBandGroup ${b.kind}" data-phase-band="${n}" style="--phase-stroke:${pc.stroke};--phase-fill:${pc.fill};--phase-text:${pc.text}">
-     <rect class="injuryPhaseBand ${b.kind} ${n===p.stage?'selected':''}" x="${x0}" y="${top}" width="${w}" height="${ch}"><title>Phase ${n+1} · ${esc(st.name)}</title></rect>
+     <rect class="injuryPhaseBand ${b.kind}" x="${x0}" y="${top}" width="${w}" height="${ch}"><title>Phase ${n+1} · ${esc(st.name)}</title></rect>
      <line class="injuryPhaseBoundary" x1="${x0}" x2="${x0}" y1="${top}" y2="${top+ch}"/>
      <g class="injuryPhaseGraphLabelGroup" transform="rotate(-90 ${labelX} ${labelY})">
        <text class="injuryPhaseGraphNumber" x="${labelX}" y="${labelY-10}" text-anchor="middle">PHASE ${n+1}</text>
@@ -5440,7 +5440,7 @@ function injuryTrajectorySvg(i,p){
    const symbol=state==='completed'?'✓':String(n+1);
    const sub=state==='completed'?'Complete':state==='current'?(totalCount?`${metCount}/${totalCount} criteria met`:'Current phase'):'Future';
    const pc=phaseColors[n];
-   return `<button type="button" class="injuryPhaseStripItem ${state} ${n===p.stage?'selected':''}" style="--phase-stroke:${pc.stroke};--phase-fill:${pc.fill};--phase-text:${pc.text}" data-injury-phase="${n}" aria-expanded="${n===p.stage?'true':'false'}"><i>${symbol}</i><span><b>${esc(st.name)}</b><small>${esc(sub)}</small></span><em class="phaseTileChevron" aria-hidden="true"></em></button>`;
+   return `<button type="button" class="injuryPhaseStripItem ${state}" style="--phase-stroke:${pc.stroke};--phase-fill:${pc.fill};--phase-text:${pc.text}" data-injury-phase="${n}" aria-expanded="${n===p.stage?'true':'false'}"><i>${symbol}</i><span><b>${esc(st.name)}</b><small>${esc(sub)}</small></span><em class="phaseTileChevron" aria-hidden="true"></em></button>`;
  }).join('');
 
  const phaseDetails=INJURY_STAGES.map((st,n)=>{
@@ -9080,7 +9080,7 @@ function shoeEngineCanonicalFinalizePortfolio(result,manual,weeks){
 function shoeEngineBuildRehabSessions(now,raceDate){const injury=(state.injuries||[]).find(x=>x.id===state.activeInjuryPlanId);if(!injury)return[];const progress=injuryPrediction(injury),rehabEnd=[raceDate,progress?.windowEnd||raceDate].filter(Boolean).sort()[0],rows=[];for(let d=new Date(dte(now).getTime()+DAY),guard=0;d<=dte(rehabEnd)&&guard<120;d=new Date(d.getTime()+DAY),guard++){const date=iso(d),day=rehabCalendarDay(injury,progress,date,rehabPlanDayIndex(injury,date));if(!rehabDayNeedsShoe(day))continue;const exp=rehabExpectedDistance(day),km=Math.max(0,Number(exp.totalKm)||0);if(km<=0)continue;rows.push({id:`rehab-shoe-${injury.id}-${date}`,date,type:'Rehab recovery',distance:km,surface:'road',rehab:true,walkMinutes:exp.walkMinutes,runMinutes:exp.runMinutes,importance:shoeEngineSessionImportance({type:'Rehab recovery',distance:km,runMinutes:exp.runMinutes},{rehab:true}),injuryId:injury.id})}return rows}
 
 const SHOE_PLAN_SNAPSHOT_VERSION=3;
-const SHOE_ENGINE_CACHE_VERSION='15.6.64-50664-terminal-retirement-reconcile-r8';
+const SHOE_ENGINE_CACHE_VERSION='15.6.65-50665-terminal-retirement-reconcile-r8';
 function shoeStableSerialize(value){
  if(value===null||typeof value!=='object')return JSON.stringify(value);
  if(Array.isArray(value))return'['+value.map(shoeStableSerialize).join(',')+']';
@@ -9162,7 +9162,7 @@ function freshShoeLifecyclePlan(){
   racePair:null,raceWindow:null,
   catalogueSource:'offline',catalogueVersion:OFFLINE_ASICS_CATALOGUE_VERSION,
   footMechanics:runnerFootMechanics(),
-  engine:'v15.6.64-necessity-driven-portfolio'
+  engine:'v15.6.65-necessity-driven-portfolio'
  };
  shoeEngineCanonicalFinalizePortfolio(result,manual,weeks);
 
@@ -10025,14 +10025,16 @@ const navButtons=new Map([...document.querySelectorAll('#nav button')].map(node=
 document.body.onclick=e=>{if(e.target.id==='addShoeBtn'){openShoeForm();return}let sd=e.target.closest('[data-shoe-detail]');if(sd){openShoeDetail(sd.dataset.shoeDetail);return}let cps=e.target.closest('[data-choose-plan-shoe]');if(cps){choosePlanShoe(cps.dataset.choosePlanShoe);return}if(e.target.id==='addInjuryBtn'){openInjuryForm();return}let activate=e.target.closest('[data-activate-injury-plan]');if(activate){let id=activate.dataset.activateInjuryPlan,current=state.injuries.find(x=>x.id===state.activeInjuryPlanId),next=state.injuries.find(x=>x.id===id);if(next&&confirm(`Switch the active recovery plan from ${current?.location||'the current injury'} to ${next.location||'this injury'}? Only one plan can be followed at a time.`)){state.activeInjuryPlanId=id;save();renderInjury();toast('Active recovery plan switched.')}return;}let phaseTile=e.target.closest('[data-injury-phase]');if(phaseTile){
  const wrap=phaseTile.closest('.injuryTrajectoryWrap'),n=Number(phaseTile.dataset.injuryPhase);
  if(wrap&&Number.isInteger(n)){
-  const alreadyOpen=phaseTile.classList.contains('selected')&&phaseTile.getAttribute('aria-expanded')==='true';
-  wrap.querySelectorAll('[data-injury-phase]').forEach(btn=>{btn.classList.remove('selected');btn.setAttribute('aria-expanded','false')});
+  const alreadyOpen=phaseTile.getAttribute('aria-expanded')==='true';
+  wrap.querySelectorAll('[data-injury-phase]').forEach(btn=>btn.setAttribute('aria-expanded','false'));
   wrap.querySelectorAll('[data-phase-detail]').forEach(el=>el.hidden=true);
-  wrap.querySelectorAll('[data-phase-band] .injuryPhaseBand').forEach(el=>el.classList.remove('selected'));
+  wrap.querySelectorAll('[data-phase-band]').forEach(el=>el.classList.remove('phaseFocused'));
+  wrap.classList.remove('phaseFocusActive');
   if(!alreadyOpen){
-   phaseTile.classList.add('selected');phaseTile.setAttribute('aria-expanded','true');
-   const detail=wrap.querySelector(`[data-phase-detail="${n}"]`),band=wrap.querySelector(`[data-phase-band="${n}"] .injuryPhaseBand`);
-   if(detail)detail.hidden=false;if(band)band.classList.add('selected');
+   phaseTile.setAttribute('aria-expanded','true');
+   const detail=wrap.querySelector(`[data-phase-detail="${n}"]`),bandGroup=wrap.querySelector(`[data-phase-band="${n}"]`);
+   if(detail)detail.hidden=false;
+   if(bandGroup){wrap.classList.add('phaseFocusActive');bandGroup.classList.add('phaseFocused');}
   }
  }
  return;

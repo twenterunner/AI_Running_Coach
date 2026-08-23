@@ -5871,7 +5871,7 @@ body:has(#dashboard.progressPage.active),#mainContent:has(#dashboard.progressPag
 #shoes .shoeProgrammeChart .xLab{font-size:16px!important;font-weight:800!important}
 @media(max-width:600px){#shoes .shoeProgrammeChart .xLab{font-size:15px!important}}
 
-/* v15.6.64 — Active Shoes cards use the same dark teal visual language as Today. */
+/* v15.6.65 — Active Shoes cards use the same dark teal visual language as Today. */
 #shoes .shoeActiveSummaryRow{
   background:linear-gradient(145deg,#075468 0%,#073c50 52%,#062c3d 100%)!important;
   border:1px solid rgba(40,214,219,.42)!important;
@@ -5887,7 +5887,7 @@ body:has(#dashboard.progressPage.active),#mainContent:has(#dashboard.progressPag
   box-shadow:inset 0 0 0 1px rgba(255,255,255,.06)!important
 }
 
-/* v15.6.64 — runner-selectable shoe assignment */
+/* v15.6.65 — runner-selectable shoe assignment */
 .todayShoeSelectable .todayShoeSelectorLabel{
  display:grid;gap:6px;margin-top:10px;font-size:12px;font-weight:800;letter-spacing:.03em;color:#a9cbd0
 }
@@ -5899,26 +5899,26 @@ body:has(#dashboard.progressPage.active),#mainContent:has(#dashboard.progressPag
  outline:2px solid rgba(82,236,220,.42);outline-offset:2px
 }
 
-/* v15.6.64 hard mobile fix — planned rehab shoe */
+/* v15.6.65 hard mobile fix — planned rehab shoe */
 .rehabShoePlan,.rehabShoePlan>div{display:block!important;width:100%!important;max-width:100%!important;min-width:0!important;box-sizing:border-box!important;grid-template-columns:none!important;}
 .rehabShoePlan b{display:block!important;font-size:1.15rem!important;line-height:1.3!important;margin:.35rem 0 .55rem!important;}
 .rehabShoePlan p{display:block!important;width:100%!important;max-width:100%!important;min-width:0!important;white-space:normal!important;overflow-wrap:break-word!important;word-break:normal!important;line-height:1.45!important;margin:0!important;}
 
-/* v15.6.64 — planned rehab shoe typography containment */
+/* v15.6.65 — planned rehab shoe typography containment */
 .rehabShoePlan{overflow:hidden!important}
 .rehabShoePlan>div{padding:0!important}
 .rehabShoePlan small{font-size:.78rem!important;line-height:1.25!important;letter-spacing:.08em!important}
 .rehabShoePlan b{font-size:1.05rem!important;line-height:1.3!important}
 .rehabShoePlan p{font-size:.92rem!important;line-height:1.45!important}
 
-/* v15.6.64 — distinguish saved actual shoe without changing card hierarchy */
+/* v15.6.65 — distinguish saved actual shoe without changing card hierarchy */
 .rehabShoePlan.rehabShoeUsed{
  border-color:rgba(61,226,208,.46)!important;
  box-shadow:inset 3px 0 0 rgba(61,226,208,.72)!important;
 }
 .rehabShoePlan.rehabShoeUsed small{color:#67e7d8!important}
 
-/* v15.6.64 — rehab planned + used shoe display */
+/* v15.6.65 — rehab planned + used shoe display */
 .rehabShoePlan .rehabShoePlanRow{display:block;width:100%;min-width:0}
 .rehabShoePlan .rehabShoePlanRow + .rehabShoePlanRow{
  margin-top:14px;padding-top:14px;border-top:1px solid rgba(104,231,216,.18)
@@ -5926,12 +5926,12 @@ body:has(#dashboard.progressPage.active),#mainContent:has(#dashboard.progressPag
 .rehabShoePlan .rehabActualShoeRow small{color:#67e7d8!important}
 .rehabShoePlan .rehabActualShoeRow b{color:#f7ffff!important}
 
-/* v15.6.64 — purchase markers match their respective shoe curve */
+/* v15.6.65 — purchase markers match their respective shoe curve */
 #shoes .shoeBuyTick circle{fill:var(--shoe-color)!important;stroke:var(--shoe-color)!important}
 #shoes .shoeBuyTick line{stroke:var(--shoe-color)!important}
 
 
-/* v15.6.64 — Rehab timeline temporal hierarchy */
+/* v15.6.65 — Rehab timeline temporal hierarchy */
 #injury .rehabCalendar{
   display:grid;
   gap:10px;
@@ -6029,4 +6029,95 @@ body:has(#dashboard.progressPage.active),#mainContent:has(#dashboard.progressPag
 }
 #injury .rehabDay.rehabPast.hasCheckin{
   opacity:.78;
+}
+
+
+/* v15.6.65 — compact functional milestones */
+#injury .injuryRunnerMilestones{
+  gap:6px !important;
+  margin-top:8px !important;
+}
+#injury .injuryRunnerMilestones>div{
+  grid-template-columns:24px minmax(0,1fr) auto !important;
+  gap:7px !important;
+  min-height:0 !important;
+  padding:7px 9px !important;
+  border-radius:10px !important;
+}
+#injury .injuryRunnerMilestones>div>i{
+  width:24px !important;
+  height:24px !important;
+  font-size:12px !important;
+}
+#injury .injuryRunnerMilestones b{
+  font-size:11px !important;
+  line-height:1.2 !important;
+}
+#injury .injuryRunnerMilestones small{
+  margin-top:1px !important;
+  font-size:8.5px !important;
+  line-height:1.2 !important;
+}
+#injury .injuryRunnerMilestones em{
+  grid-column:auto !important;
+  justify-self:end !important;
+  text-align:right !important;
+  font-size:8.5px !important;
+  line-height:1.1 !important;
+  white-space:nowrap !important;
+}
+
+/* Phase tile remains semantically colored; opening it does not light the whole tile. */
+#injury .injuryPhaseStripItem.selected{
+  background:rgba(5,18,24,.48)!important;
+  border-color:color-mix(in srgb,var(--phase-stroke) 35%,transparent)!important;
+  box-shadow:none!important;
+}
+#injury .injuryPhaseStripItem[aria-expanded="true"]{
+  box-shadow:none!important;
+}
+
+/* While a phase tile is opened, focus is confined to the corresponding SVG band. */
+#injury .injuryTrajectoryWrap.phaseFocusActive .injuryPhaseBandGroup{
+  opacity:.24;
+  transition:opacity .16s ease;
+}
+#injury .injuryTrajectoryWrap.phaseFocusActive .injuryPhaseBandGroup.phaseFocused{
+  opacity:1;
+}
+#injury .injuryTrajectoryWrap.phaseFocusActive .injuryPhaseBandGroup.phaseFocused .injuryPhaseBand{
+  opacity:1!important;
+  stroke-width:2.6!important;
+  filter:drop-shadow(0 0 4px var(--phase-stroke));
+}
+#injury .injuryTrajectoryWrap.phaseFocusActive .injuryPhaseBandGroup.phaseFocused .injuryPhaseBoundary{
+  opacity:1!important;
+  stroke-width:1.5!important;
+}
+#injury .injuryTrajectoryWrap.phaseFocusActive .injuryPhaseBandGroup.phaseFocused .injuryPhaseGraphNumber,
+#injury .injuryTrajectoryWrap.phaseFocusActive .injuryPhaseBandGroup.phaseFocused .injuryPhaseGraphLabel{
+  opacity:1!important;
+}
+#injury .injuryTrajectoryWrap.phaseFocusActive .injuryPhaseBandGroup:not(.phaseFocused) .injuryPhaseGraphLabelGroup{
+  opacity:.35;
+}
+
+/* Keep the recovery curves, axes and Today marker unchanged when inspecting a phase. */
+#injury .injuryTrajectoryWrap.phaseFocusActive .actualLine,
+#injury .injuryTrajectoryWrap.phaseFocusActive .projectedLine,
+#injury .injuryTrajectoryWrap.phaseFocusActive .nominalLine,
+#injury .injuryTrajectoryWrap.phaseFocusActive .currentDateLine,
+#injury .injuryTrajectoryWrap.phaseFocusActive .currentDateLabel{
+  opacity:1!important;
+}
+
+@media(max-width:430px){
+  #injury .injuryRunnerMilestones>div{
+    grid-template-columns:24px minmax(0,1fr) auto !important;
+    padding:7px 8px !important;
+  }
+  #injury .injuryRunnerMilestones em{
+    grid-column:auto !important;
+    justify-self:end !important;
+  }
 }
