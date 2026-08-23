@@ -6185,3 +6185,9 @@ body:has(#dashboard.progressPage.active),#mainContent:has(#dashboard.progressPag
 #injury .injurySectionSlot:empty{display:none}
 #injury .injuryLazySlot{min-height:42px}
 #injury .injuryLazyPlaceholder{margin-top:10px;padding:12px 14px;border-radius:12px;background:rgba(6,35,46,.35);border:1px solid rgba(91,219,214,.10);color:var(--muted);font-size:11px}
+
+/* v15.6.73 comparable-run readability */
+.logDetailModal .comparisonValues{display:flex!important;align-items:baseline!important;flex-wrap:wrap!important;column-gap:8px!important;row-gap:2px!important;margin-top:4px!important}
+.logDetailModal .comparisonValues strong{display:inline-block!important;margin:0!important}
+.logDetailModal .comparisonValues span{display:inline-block!important;margin:0!important;color:#b7c8cf!important}
+.logDetailModal .comparableMatch{display:flex!important;justify-content:space-between!important;align-items:baseline!important;gap:8px!important;flex-wrap:wrap!important}
