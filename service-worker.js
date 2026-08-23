@@ -1,22 +1,22 @@
-// AI Running Coach v15.6.40 · build 50640
+// AI Running Coach v15.6.41 · build 50641
 'use strict';
 
-const BUILD = 50640;
-const CACHE = 'arc-v15640-build-50640';
+const BUILD = 50641;
+const CACHE = 'arc-v15641-build-50641';
 const CACHE_PREFIX = 'arc-v';
 const APP_SHELL = './index.html';
 const ASSETS = [
   './',
   './index.html',
-  './styles.css?v=50640',
-  './app.js?v=50640',
-  './manifest.webmanifest?v=50640',
-  './icon-192.png?v=50640',
-  './icon-512.png?v=50640',
-  './apple-touch-icon.png?v=50640',
-  './favicon-32x32.png?v=50640',
-  './favicon-16x16.png?v=50640',
-  './favicon.ico?v=50640',
+  './styles.css?v=50641',
+  './app.js?v=50641',
+  './manifest.webmanifest?v=50641',
+  './icon-192.png?v=50641',
+  './icon-512.png?v=50641',
+  './apple-touch-icon.png?v=50641',
+  './favicon-32x32.png?v=50641',
+  './favicon-16x16.png?v=50641',
+  './favicon.ico?v=50641',
   './dynablast-transparent.webp',
   './evoride-transparent.webp',
   './gel-cumulus-transparent.webp',

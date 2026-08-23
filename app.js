@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '15.6.40';
-  const BUILD = 50640;
+  const VERSION = '15.6.41';
+  const BUILD = 50641;
   const SCHEMA = 10400;
   const PRIMARY_STORAGE_KEY = 'arc_v10400_web';
   const MIRROR_STORAGE_KEY = 'arc_v10400_mirror';
@@ -5665,7 +5665,7 @@ function openInjuryCheck(i,existing=null,options={}){
  <div id="icConsistency" class="note"><b>Consistency check</b><p>The form will automatically align related answers.</p></div><button id="saveCheck" class="primary full">${editing?'Update check-in':'Save and recalculate timeline'}</button>${editing?'<button id="deleteCheck" class="danger full">Delete this check-in</button>':''}</div>`;
  $('modal').className='modal';resetModalViewport();
  const shoeChoices=(state.shoes||[]).filter(s=>s.status!=='retired');
- if(shoeChoices.length){const consistency=$('icConsistency');consistency?.insertAdjacentHTML('beforebegin',`<section id="icShoeUsageSection" class="injuryCheckSection"><div class="checkinSectionHead"><span>06</span><div><small>EQUIPMENT</small><h4>Which shoe did you use?</h4></div></div><p class="muted compact">Used only for shoe mileage. Blank distance fields are estimated from recorded minutes at 10:00/km walking and 6:30/km rehabilitation running.</p><div class="formGrid"><div class="field"><label>Shoe used</label><select id="icRehabShoe">${shoeSelectOptions(defaultRehabCheckinShoeId(i,initialPlan,prev),true)}</select></div><div class="field"><label>Walking distance km (optional)</label><input id="icWalkDistanceKm" type="number" min="0" step="0.01" value="${prev.walkDistanceKm??''}" placeholder="Blank = estimate from minutes"></div><div class="field"><label>Running distance km (optional)</label><input id="icRunDistanceKm" type="number" min="0" step="0.01" value="${prev.runDistanceKm??''}" placeholder="Blank = estimate from minutes"></div></div><div id="icShoeEstimate" class="note"></div></section>`);const updateShoeEstimate=()=>{const walk=durationFromFields($('icWalkMinutes'),$('icWalkSeconds')),run=durationFromFields($('icRun'),$('icRunSeconds')),wd=nullableNumber($('icWalkDistanceKm')?.value),rd=nullableNumber($('icRunDistanceKm')?.value),we=Number.isFinite(wd)?wd:estimateRehabDistance(walk,'walk').distanceKm,re=Number.isFinite(rd)?rd:estimateRehabDistance(run,'run').distanceKm,box=$('icShoeEstimate'),draft={date:$('icDate')?.value,runMinutes:run,runDistanceKm:rd},matched=matchingLoggedRunForRehab(draft),counted=matched?0:we+re;if(box)box.innerHTML=`<b>${matched?'Mileage already captured in Log':'Estimated shoe distance'}</b><p>${counted.toFixed(2)} km credited from this check-in${matched?` · the matching ${Number(matched.distanceKm).toFixed(2)} km logged activity is authoritative for this rehabilitation locomotion session, so this check-in adds no second mileage entry`:Number.isFinite(wd)&&Number.isFinite(rd)?' · user-entered distances':' · estimates are replaced automatically when explicit distance is entered'}.</p>`};['icWalkMinutes','icWalkSeconds','icRun','icRunSeconds','icWalkDistanceKm','icRunDistanceKm'].forEach(id=>$(id)?.addEventListener('input',updateShoeEstimate));updateShoeEstimate();}
+ if(shoeChoices.length){const consistency=$('icConsistency');consistency?.insertAdjacentHTML('beforebegin',`<section id="icShoeUsageSection" class="injuryCheckSection"><div class="checkinSectionHead"><span>06</span><div><small>EQUIPMENT</small><h4>Which shoe did you use?</h4></div></div><p class="muted compact">Used only for shoe mileage. Blank distance fields are estimated from recorded minutes at 10:00/km walking and 6:30/km rehabilitation running.</p><div class="formGrid"><div class="field"><label>Shoe used</label><select id="icRehabShoe">${shoeSelectOptions(defaultRehabCheckinShoeId(i,initialPlan,prev),true)}</select><small class="muted">Defaults to the shoe engine’s planned pair. Change this to the pair actually used; saved mileage follows your choice.</small></div><div class="field"><label>Walking distance km (optional)</label><input id="icWalkDistanceKm" type="number" min="0" step="0.01" value="${prev.walkDistanceKm??''}" placeholder="Blank = estimate from minutes"></div><div class="field"><label>Running distance km (optional)</label><input id="icRunDistanceKm" type="number" min="0" step="0.01" value="${prev.runDistanceKm??''}" placeholder="Blank = estimate from minutes"></div></div><div id="icShoeEstimate" class="note"></div></section>`);const updateShoeEstimate=()=>{const walk=durationFromFields($('icWalkMinutes'),$('icWalkSeconds')),run=durationFromFields($('icRun'),$('icRunSeconds')),wd=nullableNumber($('icWalkDistanceKm')?.value),rd=nullableNumber($('icRunDistanceKm')?.value),we=Number.isFinite(wd)?wd:estimateRehabDistance(walk,'walk').distanceKm,re=Number.isFinite(rd)?rd:estimateRehabDistance(run,'run').distanceKm,box=$('icShoeEstimate'),draft={date:$('icDate')?.value,runMinutes:run,runDistanceKm:rd},matched=matchingLoggedRunForRehab(draft),counted=matched?0:we+re;if(box)box.innerHTML=`<b>${matched?'Mileage already captured in Log':'Estimated shoe distance'}</b><p>${counted.toFixed(2)} km credited from this check-in${matched?` · the matching ${Number(matched.distanceKm).toFixed(2)} km logged activity is authoritative for this rehabilitation locomotion session, so this check-in adds no second mileage entry`:Number.isFinite(wd)&&Number.isFinite(rd)?' · user-entered distances':' · estimates are replaced automatically when explicit distance is entered'}.</p>`};['icWalkMinutes','icWalkSeconds','icRun','icRunSeconds','icWalkDistanceKm','icRunDistanceKm'].forEach(id=>$(id)?.addEventListener('input',updateShoeEstimate));$('icRehabShoe')?.addEventListener('change',updateShoeEstimate);updateShoeEstimate();}
 
  const runStatusField=$('icRunStatus'),runMinutesField=$('icRun'),runSecondsField=$('icRunSeconds'),runPainField=$('icRunPain'),gaitField=$('icGait'),qualityField=$('icRunQuality'),walkMinutesField=$('icWalkMinutes'),walkSecondsField=$('icWalkSeconds'),locomotionField=$('icLocomotion'),exerciseField=$('icRehabExercises'),stretchField=$('icStretchGoal'),strengthField=$('icBridge'),impactField=$('icHop'),worseField=$('icWorse'),responseField=$('icResponse'),consistencyBox=$('icConsistency'),dateField=$('icDate');
  let activePlan=initialPlan,activeScheduled=initialScheduled,syncing=false;
@@ -6358,7 +6358,33 @@ function replacementProfileForShoe(shoe){
 }
 function nextRunningPlan(){return (state.plan||[]).filter(p=>p.type!=='Rest'&&p.date>=iso(today())).sort((a,b)=>a.date.localeCompare(b.date))[0]||null}
 function shoeSelectOptions(selected='',allowUnknown=true){const active=(state.shoes||[]).filter(s=>s.status!=='retired');return`${allowUnknown?`<option value="">No shoe / unknown</option>`:''}${active.map(s=>`<option value="${esc(s.id)}" ${selected===s.id?'selected':''}>${esc(shoeDisplayName(s))} · ${Math.round(shoeMileage(s))} km</option>`).join('')}`}
-function plannedShoeForRunDraft(run){const planId=run.planId||suggestedPlanId(run),p=(state.plan||[]).find(x=>x.id===planId);if(!p)return null;const activeIds=new Set((state.shoes||[]).filter(s=>s.status!=='retired').map(s=>s.id)),assigned=plannedAssignment(p.id)?.shoeId;if(assigned&&activeIds.has(assigned))return assigned;const ranked=authoritativeShoeRanking(p).ranked.find(x=>x?.pair?.owned&&x?.shoe?.id&&activeIds.has(x.shoe.id));return ranked?.shoe?.id||shoeRecommendation(p).best?.shoe?.id||null}
+function plannedShoeForRunDraft(run){const planId=run.planId||suggestedPlanId(run),p=(state.plan||[]).find(x=>x.id===planId);if(!p)return null;return canonicalOwnedShoeForPlan(p)||null}
+
+function canonicalOwnedShoeForPlan(plan){
+ if(!plan||plan.type==='Rest')return'';
+ const activeIds=new Set((state.shoes||[]).filter(shoe=>shoe.status!=='retired').map(shoe=>shoe.id));
+ const manual=plannedAssignment(plan.id);
+ if(manual?.shoeId&&activeIds.has(manual.shoeId))return manual.shoeId;
+ const ranked=authoritativeShoeRanking(plan).ranked.find(item=>item?.pair?.owned&&item?.shoe?.id&&activeIds.has(item.shoe.id)&&item.selected)
+   ||authoritativeShoeRanking(plan).ranked.find(item=>item?.pair?.owned&&item?.shoe?.id&&activeIds.has(item.shoe.id));
+ if(ranked?.shoe?.id)return ranked.shoe.id;
+ const fallback=shoeRecommendation(plan).best?.shoe?.id||'';
+ return activeIds.has(fallback)?fallback:'';
+}
+function setRunnerSessionShoe(planId,shoeId){
+ const plan=(state.plan||[]).find(p=>p.id===planId);
+ if(!plan)return false;
+ const activeIds=new Set((state.shoes||[]).filter(shoe=>shoe.status!=='retired').map(shoe=>shoe.id));
+ if(shoeId&&!activeIds.has(shoeId))return false;
+ if(shoeId)setPlannedShoe(planId,shoeId,'user');
+ else{
+  setPlannedShoe(planId,null);
+  const automatic=canonicalOwnedShoeForPlan(plan);
+  if(automatic)setPlannedShoe(planId,automatic,'auto');
+ }
+ invalidateShoeDerivedPlanningCaches();
+ return true;
+}
 function shoeEquipmentForRunHtml(r){const sid=selectedShoeIdForRun(r),shoe=(state.shoes||[]).find(s=>s.id===sid);if(!shoe)return'';const u=shoeUsageRecordForRun(r.id);if(!u)return'';const events=shoeUsageFor(shoe.id).filter(x=>String(x.date||'')<=r.date).slice().sort((a,b)=>String(a.date||'').localeCompare(String(b.date||''))),after=Number(shoe.startingKm||0)+events.reduce((a,x)=>a+(x.sourceType==='manual_adjustment'||x.source==='manual-adjustment'?Number(x.adjustmentKm)||0:Number(x.distanceKm)||0),0);return`<section class="logEquipmentCard"><div class="logDetailSectionHead shoeEquipmentHead">${shoeImageHtml(shoe,{className:'logShoePhoto'})}<div><small>EQUIPMENT</small><h3>Shoe used</h3></div></div><div class="shoeRunEquipment"><div><small>SHOE USED</small><b>${esc(shoeDisplayName(shoe))}</b></div><div><small>RUN CONTRIBUTION</small><b>${Number(u.distanceKm).toFixed(1)} km</b></div><div><small>SHOE TOTAL AFTER THIS RUN</small><b>${Math.max(0,after).toFixed(1)} km</b></div></div></section>`}
 function shoeSuitabilityComponents(profile,plan,options={}){return shoeSuitabilityAssessment(profile,plan,options).components}
 function authoritativeShoeRanking(plan,{rehab=false}={}){
@@ -6403,7 +6429,15 @@ function shoeSuitabilityDetailsHtml(plan,{rehab=false}={}){
  return`<details class="shoeSuitabilityDetails"><summary><span>Compare shoe scores</span></summary><div class="shoeSuitabilityPanel"><div class="shoeSuitabilityTitle"><small>SHOE SUITABILITY</small><b>${esc(plan.type||'Session')} · ${Number(plan.distance||0).toFixed(1)} km</b></div>${ranked.map(x=>`<details class="shoeSuitabilityPair ${x.selected?'selected':''}"><summary><span class="shoeMiniIdentity shoeSuitabilityPairName">${shoeImageHtml(x.shoe,{className:'shoeMiniPhoto'})}<span>${esc(shoeDisplayName(x.shoe))}</span></span><b class="shoeSuitabilityPairScore">${x.score}/100${x.selected?' · ✓ SELECTED':''}</b></summary><div class="shoeSuitabilityComponents">${x.components.map(c=>`<div class="shoeSuitabilityComponent"><span class="shoeSuitabilityComponentLabel">${esc(c.label)}<small>${Math.round(c.weight)}% weight</small></span><b class="shoeSuitabilityComponentValue">${Math.round(c.value)}/100</b></div>`).join('')}</div><p class="shoeScoreFormula">Overall ${x.score}/100 = weighted average of the components above. No separate hidden bonus is added.</p></details>`).join('')}<p class="shoeSuitabilityNote">All physical pairs genuinely available for this session are shown. The weekly 25% rule may select the next-best pair for a lower-priority session so the most race-relevant sessions stay in the best-suited shoe. Future pairs appear only from first use; runner overrides remain explicit.</p></div></details>`
 }
 function planShoeSummaryHtml(plan){if(!plan||plan.type==='Rest'||!(state.shoes||[]).some(s=>s.status!=='retired'))return'';const assignment=plannedAssignment(plan.id),rec=shoeRecommendationForPlan(plan);if(!rec?.best)return'';const label=assignment?.source==='user'?'Selected shoe':rec.future?'Planned future shoe':rec.planner?'Shoe plan':'Shoe';return`<div class="planShoeSummary">${shoeImageHtml(rec.best.shoe,{className:'planShoeThumb'})}<span class="planShoeSummaryText"><small>${esc(label)}</small><b>${esc(shoeDisplayName(rec.best.shoe))}</b></span><strong class="planShoeSummaryScore">${Math.round(rec.best.score)}/100</strong></div>`}
-function todayShoeRowHtml(plan){if(!plan||(state.shoes||[]).filter(s=>s.status!=='retired').length===0)return'';const rec=shoeRecommendationForPlan(plan);if(!rec.best)return'';return`<div class="todayShoeRow">${shoeImageHtml(rec.best.shoe,{className:'todayShoePhoto',eager:true})}<div><small>SHOE</small><b>${esc(shoeDisplayName(rec.best.shoe))} · ${Math.round(rec.best.score)}/100</b><p>Recommended for today’s ${esc(plan.type)}</p>${shoeAvailableScoresInlineHtml(plan)}${shoeSuitabilityDetailsHtml(plan)}${rec.alternative?`<small class="todayShoeAlternative">Alternative · ${esc(shoeDisplayName(rec.alternative.shoe))}</small>`:''}</div></div>`}
+function todayShoeRowHtml(plan){
+ if(!plan||(state.shoes||[]).filter(s=>s.status!=='retired').length===0)return'';
+ const rec=shoeRecommendationForPlan(plan);if(!rec.best)return'';
+ const selected=canonicalOwnedShoeForPlan(plan)||rec.best.shoe?.id||'';
+ const selectedShoe=(state.shoes||[]).find(s=>s.id===selected)||rec.best.shoe;
+ const selectedRank=authoritativeShoeRanking(plan).ranked.find(x=>x?.shoe?.id===selected);
+ const selectedScore=Math.round(selectedRank?.score??rec.best.score??0);
+ return`<div class="todayShoeRow todayShoeSelectable">${shoeImageHtml(selectedShoe,{className:'todayShoePhoto',eager:true})}<div><small>SHOE</small><b>${esc(shoeDisplayName(selectedShoe))} · ${selectedScore}/100</b><p>Shoe-engine default for today’s ${esc(plan.type)}. Change it if you will use another active pair.</p><label class="todayShoeSelectorLabel">Shoe for this session<select data-session-shoe="${esc(plan.id)}">${shoeSelectOptions(selected,false)}</select></label>${shoeAvailableScoresInlineHtml(plan)}${shoeSuitabilityDetailsHtml(plan)}${rec.alternative?`<small class="todayShoeAlternative">Alternative · ${esc(shoeDisplayName(rec.alternative.shoe))}</small>`:''}</div></div>`
+}
 function planShoeRowHtml(plan){
  if(!plan||plan.type==='Rest'||(state.shoes||[]).filter(s=>s.status!=='retired').length===0)return'';
  const rec=shoeRecommendationForPlan(plan);if(!rec.best)return'';
@@ -8850,7 +8884,7 @@ function shoeEngineCanonicalFinalizePortfolio(result,manual,weeks){
 function shoeEngineBuildRehabSessions(now,raceDate){const injury=(state.injuries||[]).find(x=>x.id===state.activeInjuryPlanId);if(!injury)return[];const progress=injuryPrediction(injury),rehabEnd=[raceDate,progress?.windowEnd||raceDate].filter(Boolean).sort()[0],rows=[];for(let d=new Date(dte(now).getTime()+DAY),guard=0;d<=dte(rehabEnd)&&guard<120;d=new Date(d.getTime()+DAY),guard++){const date=iso(d),day=rehabCalendarDay(injury,progress,date,rehabPlanDayIndex(injury,date));if(!rehabDayNeedsShoe(day))continue;const exp=rehabExpectedDistance(day),km=Math.max(0,Number(exp.totalKm)||0);if(km<=0)continue;rows.push({id:`rehab-shoe-${injury.id}-${date}`,date,type:'Rehab recovery',distance:km,surface:'road',rehab:true,walkMinutes:exp.walkMinutes,runMinutes:exp.runMinutes,importance:shoeEngineSessionImportance({type:'Rehab recovery',distance:km,runMinutes:exp.runMinutes},{rehab:true}),injuryId:injury.id})}return rows}
 
 const SHOE_PLAN_SNAPSHOT_VERSION=3;
-const SHOE_ENGINE_CACHE_VERSION='15.6.40-50640-retirement-terminal-ledger-r7';
+const SHOE_ENGINE_CACHE_VERSION='15.6.41-50641-retirement-terminal-ledger-r7';
 function shoeStableSerialize(value){
  if(value===null||typeof value!=='object')return JSON.stringify(value);
  if(Array.isArray(value))return'['+value.map(shoeStableSerialize).join(',')+']';
@@ -8932,7 +8966,7 @@ function freshShoeLifecyclePlan(){
   racePair:null,raceWindow:null,
   catalogueSource:'offline',catalogueVersion:OFFLINE_ASICS_CATALOGUE_VERSION,
   footMechanics:runnerFootMechanics(),
-  engine:'v15.6.40-necessity-driven-portfolio'
+  engine:'v15.6.41-necessity-driven-portfolio'
  };
  shoeEngineCanonicalFinalizePortfolio(result,manual,weeks);
 
@@ -9561,7 +9595,7 @@ function deleteOwnedShoe(shoe){
 }
 function openShoeDetail(id){const shoe=(state.shoes||[]).find(s=>s.id===id);if(!shoe)return;$('modalContent').innerHTML=shoeDetailHtml(shoe);$('modal').className='modal shoeDetailModal';$('shoeConditionSelect').onchange=()=>{shoe.condition=$('shoeConditionSelect').value;shoe.conditionFeedback=shoe.condition;save();openShoeDetail(shoe.id);renderShoes()};$('editShoeDetail').onclick=()=>openShoeForm(shoe);$('retireShoe').onclick=()=>{shoe.status=shoe.status==='retired'?'active':'retired';shoe.retiredAt=shoe.status==='retired'?new Date().toISOString():null;state.plannedShoeAssignments=(state.plannedShoeAssignments||[]).filter(a=>a.shoeId!==shoe.id||shoe.status!=='retired');shoeAutoAssignments();save();closeDialog();renderAll();toast(shoe.status==='retired'?'Shoe retired; history preserved.':'Shoe reactivated.')};$('deleteShoe').onclick=()=>deleteOwnedShoe(shoe)}
 function openShoeAdjustment(shoe){const current=shoeMileage(shoe);$('modalContent').innerHTML=`<h2>Adjust shoe mileage</h2><p>${esc(shoeDisplayName(shoe))}</p><div class="shoeAdjustSummary"><span>Current calculated mileage</span><b>${current.toFixed(1)} km</b></div><div class="field"><label>Correct mileage</label><input id="shoeCorrectMileage" type="number" min="0" step="0.1" value="${current.toFixed(1)}"></div><div id="shoeAdjustmentDiff" class="shoeAdjustmentDiff">Difference 0.0 km</div><button id="saveShoeAdjustment" class="primary full" type="button">Save adjustment</button>`;$('modal').className='modal shoeAdjustModal';const refresh=()=>{const n=Number($('shoeCorrectMileage').value),d=n-current;$('shoeAdjustmentDiff').textContent=`Difference ${d>=0?'+':''}${Number.isFinite(d)?d.toFixed(1):'—'} km`};$('shoeCorrectMileage').oninput=refresh;$('saveShoeAdjustment').onclick=()=>{const n=Number($('shoeCorrectMileage').value);if(!Number.isFinite(n)||n<0)return toast('Enter a valid non-negative mileage.',true);const diff=n-current;if(Math.abs(diff)>.001)state.shoeUsage.push({id:`shoe-adj-${Date.now()}`,shoeId:shoe.id,runId:null,date:iso(today()),distanceKm:0,adjustmentKm:diff,source:'manual-adjustment',note:`Corrected calculated mileage from ${current.toFixed(1)} to ${n.toFixed(1)} km`});save();closeDialog();renderAll();toast('Mileage adjustment saved with audit history.')}}
-function choosePlanShoe(planId){const plan=(state.plan||[]).find(p=>p.id===planId);if(!plan)return;const current=plannedAssignment(planId)?.shoeId||shoeRecommendation(plan).best?.shoe.id||'';$('modalContent').innerHTML=`<h2>Choose another shoe</h2><p>${fmtDate(plan.date)} · ${esc(plan.type)} · ${Number(plan.distance).toFixed(1)} km</p><div class="field"><label>Planned shoe</label><select id="planShoeChoice"><option value="">Automatic recommendation</option>${shoeSelectOptions(current,false)}</select></div><button id="savePlanShoeChoice" class="primary full" type="button">Save shoe assignment</button>`;$('modal').className='modal shoeChoiceModal';$('savePlanShoeChoice').onclick=()=>{const id=$('planShoeChoice').value;if(id)setPlannedShoe(planId,id,'user');else{setPlannedShoe(planId,null);const rec=shoeRecommendation(plan);if(rec.best)setPlannedShoe(planId,rec.best.shoe.id,'auto')}save();closeDialog();renderAll();toast('Planned shoe assignment updated. Training plan unchanged.')}}
+function choosePlanShoe(planId){const plan=(state.plan||[]).find(p=>p.id===planId);if(!plan)return;const current=canonicalOwnedShoeForPlan(plan);$('modalContent').innerHTML=`<h2>Choose another shoe</h2><p>${fmtDate(plan.date)} · ${esc(plan.type)} · ${Number(plan.distance).toFixed(1)} km</p><div class="field"><label>Planned shoe</label><select id="planShoeChoice"><option value="">Use shoe-engine recommendation</option>${shoeSelectOptions(current,false)}</select><small class="muted">The shoe engine is the default. A manual choice is retained as a runner override for this session.</small></div><button id="savePlanShoeChoice" class="primary full" type="button">Save shoe assignment</button>`;$('modal').className='modal shoeChoiceModal';$('savePlanShoeChoice').onclick=()=>{setRunnerSessionShoe(planId,$('planShoeChoice').value||'');save();closeDialog();renderAll();toast('Session shoe updated. Completed mileage will be credited to the shoe actually used.')}}
 /* === End Shoes module === */
 
 // Performance layer hotfix: keep cached tabs instant, but never render hidden tabs
@@ -9623,6 +9657,16 @@ function renderAll(){
 }
 const pages=[['today','Today'],['plan','Plan'],['runs','Log'],['dashboard','Progress'],['assessments','Assessments'],['recovery','Recovery'],['injury','Injury'],['shoes','Shoes'],['race','Race day'],['settings','Settings']];
 document.body.addEventListener('change',e=>{const sel=e.target.closest?.('[data-rehab-shoe-plan]');if(!sel)return;const injury=(state.injuries||[]).find(x=>x.id===sel.dataset.rehabShoePlan);if(!injury)return;injury.plannedRehabShoes=injury.plannedRehabShoes||{};if(sel.value)injury.plannedRehabShoes[sel.dataset.rehabShoeDate]=sel.value;else delete injury.plannedRehabShoes[sel.dataset.rehabShoeDate];save();toast(sel.value?'Rehabilitation shoe planned.':'Rehabilitation shoe cleared.');});
+document.body.addEventListener('change',e=>{
+ const sel=e.target.closest?.('[data-session-shoe]');
+ if(!sel)return;
+ const planId=sel.dataset.sessionShoe,shoeId=sel.value||'';
+ if(!setRunnerSessionShoe(planId,shoeId))return toast('Could not update the session shoe.',true);
+ save();
+ renderToday();
+ if(document.getElementById('plan')?.classList.contains('active'))renderPlan();
+ toast('Session shoe changed. The selected pair will receive the mileage when the run is logged.');
+});
 $('nav').innerHTML=pages.map((p,i)=>`<button data-page="${p[0]}" class="${i?'':'active'}">${p[1]}</button>`).join('');
 const pageNodes=new Map([...document.querySelectorAll('.page')].map(node=>[node.id,node]));
 const navButtons=new Map([...document.querySelectorAll('#nav button')].map(node=>[node.dataset.page,node]));
