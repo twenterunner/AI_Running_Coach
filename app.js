@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '15.6.38';
-  const BUILD = 50638;
+  const VERSION = '15.6.39';
+  const BUILD = 50639;
   const SCHEMA = 10400;
   const PRIMARY_STORAGE_KEY = 'arc_v10400_web';
   const MIRROR_STORAGE_KEY = 'arc_v10400_mirror';
@@ -7745,62 +7745,15 @@ function shoeEngineMinimizeFuturePortfolio(result,manual){
 
 function shoeEnginePhysicalRetirementAssessment(pair,result){
  if(!pair||!result)return{retired:false,date:null,km:0,reason:null};
- const rows=(pair.assignments||[]).filter(a=>Number(a.km)>0&&String(a.date)<String(result.raceDate))
+ const allRows=(pair.assignments||[]).filter(a=>Number(a.km)>0&&String(a.date)<String(result.raceDate))
   .slice().sort((a,b)=>a.date.localeCompare(b.date)||String(a.planId).localeCompare(String(b.planId)));
  const manualRetired=Boolean(pair.owned&&pair.shoe?.status==='retired');
- const projected=shoeEngineProjectedKm(pair);
- if(!rows.length){
-  return manualRetired
-   ?{retired:true,date:result.now,km:pair.owned?Number(pair.currentKm)||0:0,reason:'Runner marked the shoe retired.'}
-   :{retired:false,date:null,km:projected,reason:null};
- }
+ const currentBase=pair.owned?Number(pair.currentKm)||0:0;
+ if(!allRows.length)return manualRetired?{retired:true,date:result.now,km:currentBase,reason:'Runner marked the shoe retired.'}:{retired:false,date:null,km:currentBase,reason:null};
 
- const last=rows.at(-1),remaining=Math.max(0,Number(pair.retireKm)-projected);
- // Canonical physical exhaustion uses whole-session granularity, not an exact
- // floating-point equality to retireKm. A pair with only a sub-session residue
- // cannot be used again without splitting a prescribed workout, so its physical
- // lifecycle ends at its final positive-use point. This is calculated here, once,
- // and published to every consumer (graph/cards/validation).
- const lifecycleCeilingReached=projected>=Number(pair.retireKm)-1e-6;
-
- // Evaluate later programme sessions for category/safety compatibility WITHOUT
- // lifecycle wear. This asks whether the shoe would otherwise be a legitimate
- // choice if it had fresh lifecycle remaining.
- const later=(result.allSessions||[])
-  .filter(plan=>String(plan.date)>String(last.date)&&String(plan.date)<=String(result.raceDate)&&plan.type!=='Rest'&&Number(plan.distance)>0&&!plan.rehab&&!/^Rehab/i.test(String(plan.type||'')))
-  .slice().sort((a,b)=>a.date.localeCompare(b.date)||String(a.id).localeCompare(String(b.id)));
- const compatible=later.filter(plan=>{
-  if(/^Race Day$/i.test(String(plan.type||''))&&pair!==result.racePair)return false;
-  const freshFit=lifecycleWorkoutFit(pair.profile,plan);
-  if(freshFit<SESSION_SHOE_RULES.safeWorkoutFitFloor)return false;
-  const freshAssessment=shoeSuitabilityAssessment(pair.profile,plan,{
-   rehab:Boolean(plan.rehab),shoe:null,projectedKm:0,retireKm:1e9
-  });
-  return freshAssessment.score>=SESSION_SHOE_RULES.safeSuitabilityFloor;
- });
-
- // The retirement boundary is reached when the next otherwise-suitable WHOLE
- // session cannot fit inside remaining lifecycle. The shoe retires at its final
- // positive-use point; the overflowing session belongs wholly to another pair.
- const nextCompatible=compatible[0]||null;
- const blockedNext=nextCompatible&&(Number(nextCompatible.distance)||0)>remaining+1e-6?nextCompatible:null;
- const cannotCoverNextSuitableWholeSession=Boolean(blockedNext);
-
- // Generic end-of-lifecycle rule: physical retirement must not depend on there
- // happening to be another compatible workout AFTER the shoe's final use. That
- // legacy dependency is exactly how a pair could end a programme with only a
- // few unusable kilometres of residual life yet lose its retirement X when no
- // later compatible session remained to 'prove' the overflow.
- //
- // Determine the smallest WHOLE compatible workout represented by the fixed
- // programme. If the residual lifecycle cannot cover even that smallest normal
- // compatible exposure, the pair is physically exhausted at its final positive
- // use regardless of where that use falls on the calendar.
- // Retirement capacity is judged against meaningful NORMAL training sessions.
- // Rehab can contain deliberately tiny walk/run exposures (sometimes <1 km). Those
- // micro-sessions are valid rehab demand, but they must not keep an otherwise
- // exhausted training shoe artificially 'alive' and suppress its retirement event.
- // This was the root cause of near-ceiling shoes ending their curve without an X.
+ // Establish the smallest meaningful compatible WHOLE normal-training session.
+ // Rehab micro-exposures are wear, but are not allowed to redefine the physical
+ // retirement threshold for a normal running shoe.
  const compatibleWholeSessionDistances=(result.allSessions||[])
   .filter(plan=>plan.type!=='Rest'&&Number(plan.distance)>0&&!plan.rehab&&!/^Rehab/i.test(String(plan.type||'')))
   .filter(plan=>{
@@ -7811,44 +7764,44 @@ function shoeEnginePhysicalRetirementAssessment(pair,result){
   })
   .map(plan=>Number(plan.distance)||0).filter(km=>km>0);
  const minCompatibleWholeSessionKm=compatibleWholeSessionDistances.length?Math.min(...compatibleWholeSessionDistances):null;
- const cannotCoverAnyMeaningfulCompatibleWholeSession=Number.isFinite(minCompatibleWholeSessionKm)
-  ? remaining+1e-6<minCompatibleWholeSessionKm
-  : false;
 
- // A lifecycle-linked successor purchase is corroborating evidence. Do not call
- // category-driven or Race-Day-special purchases retirement unless the outgoing
- // pair also lacks enough lifecycle for the successor's first otherwise-suitable
- // whole session.
- const successor=(result.purchases||[])
-  .filter(b=>b.role!=='race'&&b.replacesPairId===pair.id)
-  .slice().sort((a,b)=>String(a.firstUseDate||a.purchaseDate).localeCompare(String(b.firstUseDate||b.purchaseDate)))[0]||null;
- let successorLifecycleBoundary=false;
- if(successor){
-  const entry=successor.firstUseDate||successor.purchaseDate;
-  const trigger=compatible.find(plan=>String(plan.date)>=String(entry))||null;
-  if(trigger)successorLifecycleBoundary=(Number(trigger.distance)||0)>remaining+1e-6;
+ // Trace mileage chronologically and capture the FIRST canonical lifecycle
+ // boundary. This prevents a later token/dormant assignment from moving the X
+ // months to the right after the shoe had already become unusable for another
+ // meaningful whole compatible session.
+ let cumulative=currentBase,boundary=null,lastNormal=null;
+ for(const row of allRows){
+  cumulative+=Number(row.km)||0;
+  const normal=!row.rehab&&!/^Rehab/i.test(String(row.type||''))&&!row.raceDayAssignment;
+  if(normal)lastNormal={row,km:cumulative};
+  if(!normal)continue;
+  const remaining=Math.max(0,Number(pair.retireKm)-cumulative);
+  if(cumulative>=Number(pair.retireKm)-1e-6 || (Number.isFinite(minCompatibleWholeSessionKm)&&remaining+1e-6<minCompatibleWholeSessionKm)){
+   boundary={date:row.date,km:cumulative,remainingKm:remaining,reason:cumulative>=Number(pair.retireKm)-1e-6?'Physical lifecycle ceiling reached.':'Residual lifecycle cannot cover any meaningful compatible whole programme session.'};
+   break;
+  }
  }
 
- // A successor created explicitly by the hard lifecycle-ceiling repair is itself
- // canonical evidence that the predecessor physically retires at its final use.
- // Do NOT infer retirement from an ordinary/category/portfolio successor: only the
- // engine's explicit lifecycle-replacement reason may establish this boundary.
+ const terminal=boundary||lastNormal||{row:allRows.at(-1),km:cumulative};
+ const terminalDate=boundary?.date||terminal.row.date,terminalKm=boundary?.km||terminal.km;
+ const remaining=Math.max(0,Number(pair.retireKm)-terminalKm);
+ const later=(result.allSessions||[])
+  .filter(plan=>String(plan.date)>String(terminalDate)&&String(plan.date)<=String(result.raceDate)&&plan.type!=='Rest'&&Number(plan.distance)>0&&!plan.rehab&&!/^Rehab/i.test(String(plan.type||'')))
+  .slice().sort((a,b)=>a.date.localeCompare(b.date)||String(a.id).localeCompare(String(b.id)));
+ const compatible=later.filter(plan=>{
+  if(/^Race Day$/i.test(String(plan.type||''))&&pair!==result.racePair)return false;
+  if(lifecycleWorkoutFit(pair.profile,plan)<SESSION_SHOE_RULES.safeWorkoutFitFloor)return false;
+  const freshAssessment=shoeSuitabilityAssessment(pair.profile,plan,{rehab:false,shoe:null,projectedKm:0,retireKm:1e9});
+  return freshAssessment.score>=SESSION_SHOE_RULES.safeSuitabilityFloor;
+ });
+ const nextCompatible=compatible[0]||null;
+ const blockedNext=nextCompatible&&(Number(nextCompatible.distance)||0)>remaining+1e-6?nextCompatible:null;
+ const successor=(result.purchases||[]).filter(b=>b.role!=='race'&&b.replacesPairId===pair.id).slice().sort((a,b)=>String(a.firstUseDate||a.purchaseDate).localeCompare(String(b.firstUseDate||b.purchaseDate)))[0]||null;
+ let successorLifecycleBoundary=false;
+ if(successor){const entry=successor.firstUseDate||successor.purchaseDate,trigger=compatible.find(plan=>String(plan.date)>=String(entry))||null;if(trigger)successorLifecycleBoundary=(Number(trigger.distance)||0)>remaining+1e-6;}
  const hardLifecycleSuccessor=Boolean(successor&&/^Hard lifecycle replacement:/i.test(String(successor.reason||'')));
- const retired=manualRetired||lifecycleCeilingReached||cannotCoverAnyMeaningfulCompatibleWholeSession||cannotCoverNextSuitableWholeSession||successorLifecycleBoundary||hardLifecycleSuccessor;
- return{
-  retired,
-  date:retired?last.date:null,
-  km:projected,
-  remainingKm:remaining,
-  minCompatibleWholeSessionKm,
-  blockedSessionId:blockedNext?.id||null,
-  blockedSessionDate:blockedNext?.date||null,
-  reason:manualRetired?'Runner marked the shoe retired.'
-   :lifecycleCeilingReached?'Physical lifecycle ceiling reached.'
-   :cannotCoverAnyMeaningfulCompatibleWholeSession?'Residual lifecycle cannot cover any meaningful compatible whole programme session.'
-   :hardLifecycleSuccessor?'Hard lifecycle replacement establishes physical retirement at final use.'
-   :retired?'Remaining physical lifecycle cannot cover the next otherwise-suitable whole programme session.':null
- };
+ const retired=manualRetired||Boolean(boundary)||Boolean(blockedNext)||successorLifecycleBoundary||hardLifecycleSuccessor;
+ return{retired,date:retired?terminalDate:null,km:terminalKm,remainingKm:remaining,minCompatibleWholeSessionKm,blockedSessionId:blockedNext?.id||null,blockedSessionDate:blockedNext?.date||null,reason:manualRetired?'Runner marked the shoe retired.':boundary?.reason||(hardLifecycleSuccessor?'Hard lifecycle replacement establishes physical retirement at final meaningful use.':retired?'Remaining physical lifecycle cannot cover the next otherwise-suitable whole programme session.':null)};
 }
 
 function shoeEngineEnsureCanonicalRetirementEvents(result){
@@ -7865,10 +7818,11 @@ function shoeEngineEnsureCanonicalRetirementEvents(result){
    pair.isProjectedRetired=true;
    pair.remainsActiveAfterForecast=false;
    pair.retirementReason=physical.reason;
+   pair.projectedRetireKm=Number(physical.km);
   }else if(!(pair.owned&&pair.shoe?.status==='retired')){
    if(pair.isProjectedRetired||pair.projectedRetireDate||pair.plannedRetireDate){
     pair.plannedRetireDate=null;pair.projectedRetireDate=null;pair.isProjectedRetired=false;
-    pair.remainsActiveAfterForecast=true;pair.retirementReason=null;pair.rotationExitCanonical=false;changed=true;
+    pair.remainsActiveAfterForecast=true;pair.retirementReason=null;pair.projectedRetireKm=null;pair.rotationExitCanonical=false;changed=true;
    }
   }
  }
@@ -8888,7 +8842,7 @@ function shoeEngineCanonicalFinalizePortfolio(result,manual,weeks){
 function shoeEngineBuildRehabSessions(now,raceDate){const injury=(state.injuries||[]).find(x=>x.id===state.activeInjuryPlanId);if(!injury)return[];const progress=injuryPrediction(injury),rehabEnd=[raceDate,progress?.windowEnd||raceDate].filter(Boolean).sort()[0],rows=[];for(let d=new Date(dte(now).getTime()+DAY),guard=0;d<=dte(rehabEnd)&&guard<120;d=new Date(d.getTime()+DAY),guard++){const date=iso(d),day=rehabCalendarDay(injury,progress,date,rehabPlanDayIndex(injury,date));if(!rehabDayNeedsShoe(day))continue;const exp=rehabExpectedDistance(day),km=Math.max(0,Number(exp.totalKm)||0);if(km<=0)continue;rows.push({id:`rehab-shoe-${injury.id}-${date}`,date,type:'Rehab recovery',distance:km,surface:'road',rehab:true,walkMinutes:exp.walkMinutes,runMinutes:exp.runMinutes,importance:shoeEngineSessionImportance({type:'Rehab recovery',distance:km,runMinutes:exp.runMinutes},{rehab:true}),injuryId:injury.id})}return rows}
 
 const SHOE_PLAN_SNAPSHOT_VERSION=3;
-const SHOE_ENGINE_CACHE_VERSION='15.6.38-50638-retirement-single-ledger-r6';
+const SHOE_ENGINE_CACHE_VERSION='15.6.39-50639-retirement-terminal-ledger-r7';
 function shoeStableSerialize(value){
  if(value===null||typeof value!=='object')return JSON.stringify(value);
  if(Array.isArray(value))return'['+value.map(shoeStableSerialize).join(',')+']';
@@ -8934,7 +8888,7 @@ function publishAuthoritativeShoeSnapshot(result,inputStamp){
   const rejected=result.pairs.filter(x=>x.owned&&x.id!==b.pairId).map(x=>({pairId:x.id,shoeId:x.shoe?.id||null,reason:shoeEngineRemainingKmBefore(x,b.purchaseDate)<=0?'lifecycle-insufficient':'coverage-or-suitability-insufficient'}));
   return{pairId:b.pairId,model:p?.profile?.family||b.model||'',purchaseDate:b.purchaseDate,firstUseDate:first?.date||b.firstUseDate||null,firstAssignedSession:first?.planId||null,necessity:b.reason||'Required future coverage.',coverageFailurePrevented:b.reason||'Required future coverage.',rejectedOwnedAlternatives:rejected};
  }).sort((a,b)=>String(a.purchaseDate).localeCompare(String(b.purchaseDate))||a.pairId.localeCompare(b.pairId));
- const snapshot={snapshotVersion:SHOE_PLAN_SNAPSHOT_VERSION,engine:result.engine,inputFingerprint:shoeFingerprint(inputStamp),asOfDate:result.now,physicalPairState:result.pairs.map(p=>({pairId:p.id,owned:Boolean(p.owned),shoeId:p.owned?p.shoe?.id||null:null,entryDate:shoePlannerEntryDate(p),retireKm:Number(p.retireKm),projectedKm:shoeEngineProjectedKm(p),retirementDate:p.projectedRetireDate||null})),actualMileageLedger:actual,forecastAssignmentLedger:decisions.map(x=>({sessionId:x.sessionId,date:x.date,pairId:x.pairId,distanceKm:x.distanceKm})),sessionAssignments:decisions,purchaseEvents:purchases,retirementEvents:result.pairs.filter(p=>p.projectedRetireDate).map(p=>({pairId:p.id,date:p.projectedRetireDate,projectedKm:shoeEngineProjectedKm(p),reason:p.retirementReason||'Physical lifecycle reached.'})),projectedMileage:result.pairs.map(p=>({pairId:p.id,km:shoeEngineProjectedKm(p),points:(p.points||[]).map(x=>({date:x.date,km:Number(x.km),kind:x.kind||null}))})),raceDay:result.racePair?{pairId:result.racePair.id,date:result.raceDate,preRaceKm:shoeEngineProjectedKmBefore(result.racePair,result.raceDate),limitKm:SESSION_SHOE_RULES.raceDayMaximumKm}:null,validation:{hardFailures:0,issues:[]},repairLog:(result.repairLog||[]).slice(),optimiserDiagnostics:result.optimiserDiagnostics||null,criticFindings:(result.criticFindings||[]).slice()};
+ const snapshot={snapshotVersion:SHOE_PLAN_SNAPSHOT_VERSION,engine:result.engine,inputFingerprint:shoeFingerprint(inputStamp),asOfDate:result.now,physicalPairState:result.pairs.map(p=>({pairId:p.id,owned:Boolean(p.owned),shoeId:p.owned?p.shoe?.id||null:null,entryDate:shoePlannerEntryDate(p),retireKm:Number(p.retireKm),projectedKm:shoeEngineProjectedKm(p),retirementDate:p.projectedRetireDate||null})),actualMileageLedger:actual,forecastAssignmentLedger:decisions.map(x=>({sessionId:x.sessionId,date:x.date,pairId:x.pairId,distanceKm:x.distanceKm})),sessionAssignments:decisions,purchaseEvents:purchases,retirementEvents:result.pairs.filter(p=>p.projectedRetireDate).map(p=>({pairId:p.id,date:p.projectedRetireDate,projectedKm:Number.isFinite(Number(p.projectedRetireKm))?Number(p.projectedRetireKm):shoeEngineProjectedKm(p),reason:p.retirementReason||'Physical lifecycle reached.'})),projectedMileage:result.pairs.map(p=>({pairId:p.id,km:shoeEngineProjectedKm(p),points:(p.points||[]).map(x=>({date:x.date,km:Number(x.km),kind:x.kind||null}))})),raceDay:result.racePair?{pairId:result.racePair.id,date:result.raceDate,preRaceKm:shoeEngineProjectedKmBefore(result.racePair,result.raceDate),limitKm:SESSION_SHOE_RULES.raceDayMaximumKm}:null,validation:{hardFailures:0,issues:[]},repairLog:(result.repairLog||[]).slice(),optimiserDiagnostics:result.optimiserDiagnostics||null,criticFindings:(result.criticFindings||[]).slice()};
  result.snapshot=shoeDeepFreeze(snapshot);result.inputFingerprint=result.snapshot.inputFingerprint;result.sessionDecisions=result.snapshot.sessionAssignments;
  return result;
 }
@@ -8970,7 +8924,7 @@ function freshShoeLifecyclePlan(){
   racePair:null,raceWindow:null,
   catalogueSource:'offline',catalogueVersion:OFFLINE_ASICS_CATALOGUE_VERSION,
   footMechanics:runnerFootMechanics(),
-  engine:'v15.6.38-necessity-driven-portfolio'
+  engine:'v15.6.39-necessity-driven-portfolio'
  };
  shoeEngineCanonicalFinalizePortfolio(result,manual,weeks);
 
@@ -9305,30 +9259,16 @@ function shoeGraphForecastPoints(pair,life){
  return points;
 }
 function shoeGraphRetirementPoint(pair,life,forecastPoints){
- // Renderer is a pure projection of the FINAL canonical retirement ledger.
- // It must never re-run physical-retirement reasoning. Doing so created a second
- // authority and allowed an X that had already been finalized to disappear again.
- const manualRetired=Boolean(pair.owned&&pair.shoe?.status==='retired');
+ // Pure renderer: use the already-finalized canonical retirement event exactly.
+ // Never derive a new date from assignments here; that was what moved the X to a
+ // later micro-use date after the lifecycle solver had already retired the pair.
  const event=(life.snapshot?.retirementEvents||[]).find(e=>e.pairId===pair.id)||null;
- const retirementDate=event?.date||pair.projectedRetireDate||(manualRetired&&pair.shoe?.retiredAt?String(pair.shoe.retiredAt).slice(0,10):null);
- if(!retirementDate&&!manualRetired)return null;
-
- // Anchor the X to accumulated mileage at the canonical terminal date. Use the
- // authoritative assignment ledger, not rendered forecast segments, so dormant-
- // gap splitting or SVG simplification can never remove/move a retirement marker.
- const rows=(pair.assignments||[])
-  .filter(a=>Number(a.km)>1e-6&&String(a.date)>=String(life.now)&&String(a.date)<=String(retirementDate||life.raceDate))
-  .slice().sort((a,b)=>String(a.date).localeCompare(String(b.date))||String(a.planId).localeCompare(String(b.planId)));
- if(rows.length){
-  let km=pair.owned?Number(shoeMileage(pair.shoe))||0:0,lastDate=null;
-  for(const row of rows){km+=Number(row.km)||0;lastDate=row.date}
-  return lastDate?{date:lastDate,km,reason:event?.reason||pair.retirementReason||'Physical lifecycle reached.'}:null;
- }
- if(manualRetired){
+ if(event&&CORE.isIsoDate(event.date)&&Number.isFinite(Number(event.projectedKm)))return{date:event.date,km:Number(event.projectedKm),reason:event.reason||'Physical lifecycle reached.'};
+ if(pair.owned&&pair.shoe?.status==='retired'){
   const actual=shoeActualProgrammeSeries(pair.shoe,state.setup?.planStart||life.now,life.now);
-  return actual.length?{...actual.at(-1),reason:event?.reason||pair.retirementReason||'Runner marked the shoe retired.'}:null;
+  return actual.length?{...actual.at(-1),reason:'Runner marked the shoe retired.'}:null;
  }
- return null
+ return null;
 }
 
 function shoeForecastRenderableSegments(points){
@@ -9368,7 +9308,7 @@ function shoeProgrammeMileageChartHtml(lifeOverride=null){
  const pairs=life.pairs.filter(graphEligiblePair);if(!pairs.length)return'<div class="shoeEmpty">Add a shoe to start mileage planning.</div>';
  const raceDate=life.raceDate,todayStr=life.now,ownedShoes=(state.shoes||[]).filter(Boolean),programStart=CORE.isIsoDate(state.setup?.planStart)?state.setup.planStart:todayStr,activeInjury=(state.injuries||[]).find(x=>x.id===state.activeInjuryPlanId),activeRehabStart=activeInjury&&CORE.isIsoDate(activeInjury.rehabStartDate)?activeInjury.rehabStartDate:null,graphStart=activeRehabStart&&activeRehabStart<programStart?activeRehabStart:programStart,graphStartLabel=graphStart===activeRehabStart?'REHAB START':'PROGRAM START',actualSeries=ownedShoes.map(sh=>({shoe:sh,points:shoeActualSinceUploadSeries(sh,todayStr)})).filter(x=>x.points.length);
  const dates=[graphStart,todayStr,raceDate,...pairs.flatMap(p=>p.points.map(x=>x.date)),...actualSeries.flatMap(x=>x.points.map(p=>p.date))].filter(Boolean).sort(),values=[...pairs.flatMap(p=>p.points.map(x=>x.km)),...actualSeries.flatMap(x=>x.points.map(p=>p.km))].filter(Number.isFinite),window=life.raceWindow;if(window)values.push(window.maxKm);
- const minD=dte(graphStart).getTime(),maxD=Math.max(minD+DAY,dte(raceDate).getTime()),maxY=Math.max(100,Math.ceil(Math.max(...values,100)*1.15/50)*50),W=920,H=470,L=112,R=34,T=72,B=78,x=d=>L+(dte(d).getTime()-minD)/(maxD-minD)*(W-L-R),y=v=>T+(maxY-v)/maxY*(H-T-B),palette=['#35E2D0','#F4C95D','#73A7FF','#FF758F','#B58CFF','#8DE35C','#FF9F43','#46D6F0','#E66FE8','#F06A5D'];
+ const minD=dte(graphStart).getTime(),maxD=Math.max(minD+DAY,dte(raceDate).getTime()),maxY=Math.max(100,Math.ceil(Math.max(...values,100)*1.15/50)*50),W=920,H=470,L=112,R=72,T=72,B=78,x=d=>L+(dte(d).getTime()-minD)/(maxD-minD)*(W-L-R),y=v=>T+(maxY-v)/maxY*(H-T-B),palette=['#35E2D0','#F4C95D','#73A7FF','#FF758F','#B58CFF','#8DE35C','#FF9F43','#46D6F0','#E66FE8','#F06A5D'];
  // One authoritative colour is assigned per physical pair and reused by every
  // lifecycle-chart primitive (actual/forecast curve, legend, BUY/RETIRE and Race Day markers).
  const colorById=new Map();let ci=0;pairs.forEach(p=>colorById.set(p.id,palette[ci++%palette.length]));
@@ -9407,7 +9347,7 @@ function shoeProgrammeMileageChartHtml(lifeOverride=null){
  // Chronology is explicit: rehabilitation shading begins at the stored rehab-plan
  // start (when it precedes programme start) and extends through the last remaining
  // rehab shoe exposure. Owned-shoe curves never begin before the pair was added.
- const rehabRows=life.assignments.filter(a=>a.rehab&&Number(a.km)>0),rehabEnd=rehabRows.length?rehabRows.map(a=>a.date).sort().at(-1):todayStr,rehabBand=activeRehabStart?(()=>{const startDate=activeRehabStart<graphStart?graphStart:activeRehabStart,endDate=rehabEnd>todayStr?rehabEnd:todayStr,xx1=x(startDate),xx2=x(endDate);return`<g class="shoeRehabBand"><rect x="${xx1}" y="${T}" width="${Math.max(4,xx2-xx1)}" height="${H-T-B}"/><text x="${Math.min(W-R-6,xx1+8)}" y="${T+20}">REHAB</text></g>`})():'';
+ const rehabPrediction=activeInjury?(()=>{try{return injuryPrediction(activeInjury)}catch{return null}})():null,rehabEndCandidate=rehabPrediction&&CORE.isIsoDate(rehabPrediction.fullDate)?rehabPrediction.fullDate:todayStr,rehabEnd=rehabEndCandidate>raceDate?raceDate:(rehabEndCandidate<todayStr?todayStr:rehabEndCandidate),rehabBand=activeRehabStart?(()=>{const startDate=activeRehabStart<graphStart?graphStart:activeRehabStart,endDate=rehabEnd,xx1=x(startDate),xx2=x(endDate);return`<g class="shoeRehabBand"><rect x="${xx1}" y="${T}" width="${Math.max(4,xx2-xx1)}" height="${H-T-B}"/><text x="${Math.min(W-R-6,xx1+8)}" y="${T+20}">REHAB</text></g>`})():'';
  const shoeAddedMarkers=ownedShoes.map(sh=>{const d=shoeUploadDate(sh);if(!CORE.isIsoDate(d)||d<graphStart||d>todayStr)return'';const pair=pairs.find(p=>p.owned&&p.shoe.id===sh.id),col=pair?colorById.get(pair.id):'#35E2D0',xx=x(d),km=Number(sh.startingKm)||0,yy=y(km);return`<g class="shoeAddedMarker" style="--shoe-color:${col}"><line x1="${xx}" y1="${T}" x2="${xx}" y2="${H-B}" stroke="${col}" stroke-width="2" stroke-dasharray="3 6" opacity=".32"/><circle cx="${xx}" cy="${yy}" r="5" fill="${col}"/><text x="${xx+7}" y="${Math.max(T+34,yy-10)}" fill="${col}" font-weight="800">ADDED ${esc(shoeChartDate(d).replace(/ \d{4}$/,''))}</text></g>`}).join('');
  const legend=pairs.map(pair=>`<span class="shoeLegendItem ${pair.owned?'':'future'} ${pair===life.racePair?'race':''}"><span class="shoeLegendSwatch ${pair.owned?'':'dotted'}" style="--shoe-color:${colorById.get(pair.id)}"></span><b>${esc(lifecyclePairLabel(pair))}</b><small>${pair.owned?'owned':pair===life.racePair?'Race Day':'planned'}</small></span>`).join('');
  const strategy='Session suitability';
@@ -9462,10 +9402,11 @@ function shoeActiveShoesTileHtml(life,active){
   const retire=Math.max(current+1,Number(pair?.retireKm)||lifecycleRetireKmForProfile(shoeProfileForShoe(shoe),shoe));
   const pct=Math.max(0,Math.min(100,current/retire*100));
   const remaining=Math.max(0,retire-current),stateClass=shoeMileageBarState(current,retire);
-  return `<div class="shoeActiveSummaryRow ${stateClass}">${shoeImageHtml(shoe,{className:'shoeActiveSummaryPhoto',eager:true})}<div class="shoeActiveSummaryMain"><div class="shoeActiveSummaryName"><b>${esc(shoeDisplayName(shoe))}</b><span>${Math.round(current)} / ${Math.round(retire)} km</span></div><div class="shoeMileageLifeBar" role="img" aria-label="${esc(shoeDisplayName(shoe))}: ${Math.round(current)} of ${Math.round(retire)} km"><i style="width:${pct.toFixed(1)}%"></i></div><div class="shoeActiveSummaryMeta"><span>${Math.round(remaining)} km estimated usable lifecycle remaining</span><strong>${Math.round(pct)}%</strong></div></div></div>`;
+  return `<button type="button" class="shoeActiveSummaryRow ${stateClass}" data-shoe-detail="${esc(shoe.id)}">${shoeImageHtml(shoe,{className:'shoeActiveSummaryPhoto',eager:true})}<div class="shoeActiveSummaryMain"><div class="shoeActiveSummaryName"><b>${esc(shoeDisplayName(shoe))}</b><span>${Math.round(current)} / ${Math.round(retire)} km</span></div><div class="shoeMileageLifeBar" role="img" aria-label="${esc(shoeDisplayName(shoe))}: ${Math.round(current)} of ${Math.round(retire)} km"><i style="width:${pct.toFixed(1)}%"></i></div><div class="shoeActiveSummaryMeta"><span>${Math.round(remaining)} km estimated usable lifecycle remaining</span><strong>${Math.round(pct)}%</strong></div></div></button>`;
  }).join('')||'<div class="shoeEmpty">No active shoes.</div>';
- return `<details id="shoeActiveShoesDetails" class="shoeActiveShoesTile"><summary><div class="shoeActiveSummaryHead"><div><small>ACTIVE SHOES</small><b>Current rotation</b><span>${active.length} active physical pair${active.length===1?'':'s'} · tap for full shoe details</span></div><span class="shoeFoldChevron">⌄</span></div><div class="shoeActiveSummaryRows">${rows}</div></summary><div class="shoeActiveDetailHost" data-lazy-active-shoe-details></div></details>`;
+ return `<section class="shoeActiveShoesTile shoeActiveShoesStatic"><div class="shoeActiveSummaryHead"><div><small>ACTIVE SHOES</small><b>Current rotation</b><span>${active.length} active physical pair${active.length===1?'':'s'} · tap a shoe for details</span></div></div><div class="shoeActiveSummaryRows">${rows}</div></section>`;
 }
+
 function shoeGraphOnlyTileHtml(life){
  return `<section class="shoeGraphOnlyTile"><div class="shoeGraphOnlyHead"><div><small>SHOE LIFECYCLE</small><b>Rotation through Race Day</b><span>Actual mileage, projected use and lifecycle retirement.</span></div></div>${shoeMileageChartHtml(life)}</section>`;
 }
@@ -9490,15 +9431,7 @@ function renderShoes(){const root=$('shoesContent');if(!root)return;
  root.innerHTML=`<div class="sectionTitle shoesPageTitle"><div><span class="pageEyebrow">SHOE ROTATION</span><h2>Shoes</h2><p>Rotation, lifecycle & Race Day planning.</p></div><button id="addShoeBtn" class="primary small" type="button">Add running shoe</button></div>
  <div class="shoeKeyDashboard shoeKeyDashboardSimplified">${shoeActiveShoesTileHtml(life,active)}${shoeGraphOnlyTileHtml(life)}</div>
  `;
- // Expensive secondary shoe detail is lazy. Opening a foldout reuses the exact
- // lifecycle snapshot already calculated for this Shoes render; tab entry never
- // launches a second optimiser pass merely to build hidden DOM.
- const activeShoeDetails=$('shoeActiveShoesDetails');
- if(activeShoeDetails){
-  const loadActiveDetails=()=>{const host=activeShoeDetails.querySelector('[data-lazy-active-shoe-details]');if(host&&!host.dataset.loaded){host.innerHTML=`<div class="shoeRotationGrid">${active.map(shoeRotationCard).join('')||'<div class="shoeEmpty">No active shoes.</div>'}</div>`;host.dataset.loaded='1'}};
-  activeShoeDetails.addEventListener('toggle',()=>{if(activeShoeDetails.open)loadActiveDetails()});
-  if(activeShoeDetails.open)loadActiveDetails();
- }
+ root.querySelectorAll('[data-shoe-detail]').forEach(btn=>btn.onclick=()=>openShoeDetail(btn.dataset.shoeDetail));
  const allocationDetails=$('shoeProgrammeAllocationDetails');
  if(allocationDetails)allocationDetails.addEventListener('toggle',()=>{if(!allocationDetails.open)return;const host=allocationDetails.querySelector('[data-lazy-shoe-allocation]');if(host&&!host.dataset.loaded){host.innerHTML=shoeSessionPlanHtml(life);host.dataset.loaded='1'}});
  const recalcShoeStrategy=message=>{invalidateShoeDerivedPlanningCaches();ensureShoeAutoAssignments();save();renderAll();toast(message)};
