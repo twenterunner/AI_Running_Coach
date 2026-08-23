@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '15.6.57';
-  const BUILD = 50657;
+  const VERSION = '15.6.58';
+  const BUILD = 50658;
   const SCHEMA = 10400;
   const PRIMARY_STORAGE_KEY = 'arc_v10400_web';
   const MIRROR_STORAGE_KEY = 'arc_v10400_mirror';
@@ -6476,7 +6476,7 @@ function todayShoeRowHtml(plan){
  const selectedShoe=(state.shoes||[]).find(s=>s.id===selected)||rec.best.shoe;
  const selectedRank=authoritativeShoeRanking(plan).ranked.find(x=>x?.shoe?.id===selected);
  const selectedScore=Math.round(selectedRank?.score??rec.best.score??0);
- return`<div class="todayShoeRow">${shoeImageHtml(selectedShoe,{className:'todayShoePhoto',eager:true})}<div><small>PLANNED SHOE</small><b>${esc(shoeDisplayName(selectedShoe))} · ${selectedScore}/100</b><p>Shoe-engine recommendation for today’s ${esc(plan.type)}. Confirm the shoe actually used when the activity is logged.</p>${shoeAvailableScoresInlineHtml(plan)}${shoeSuitabilityDetailsHtml(plan)}${rec.alternative?`<small class="todayShoeAlternative">Alternative · ${esc(shoeDisplayName(rec.alternative.shoe))}</small>`:''}</div></div>`
+ return`<div class="todayShoeRow">${shoeImageHtml(selectedShoe,{className:'todayShoePhoto',eager:true})}<div><small>PLANNED SHOE</small><b>${esc(shoeDisplayName(selectedShoe))} · ${selectedScore}/100</b><p>Shoe-engine recommendation for today’s ${esc(plan.type)}. Confirm the shoe actually used when the activity is logged.</p></div></div>`
 }
 function planShoeRowHtml(plan){
  if(!plan||plan.type==='Rest'||(state.shoes||[]).filter(s=>s.status!=='retired').length===0)return'';
@@ -9016,7 +9016,7 @@ function shoeEngineCanonicalFinalizePortfolio(result,manual,weeks){
 function shoeEngineBuildRehabSessions(now,raceDate){const injury=(state.injuries||[]).find(x=>x.id===state.activeInjuryPlanId);if(!injury)return[];const progress=injuryPrediction(injury),rehabEnd=[raceDate,progress?.windowEnd||raceDate].filter(Boolean).sort()[0],rows=[];for(let d=new Date(dte(now).getTime()+DAY),guard=0;d<=dte(rehabEnd)&&guard<120;d=new Date(d.getTime()+DAY),guard++){const date=iso(d),day=rehabCalendarDay(injury,progress,date,rehabPlanDayIndex(injury,date));if(!rehabDayNeedsShoe(day))continue;const exp=rehabExpectedDistance(day),km=Math.max(0,Number(exp.totalKm)||0);if(km<=0)continue;rows.push({id:`rehab-shoe-${injury.id}-${date}`,date,type:'Rehab recovery',distance:km,surface:'road',rehab:true,walkMinutes:exp.walkMinutes,runMinutes:exp.runMinutes,importance:shoeEngineSessionImportance({type:'Rehab recovery',distance:km,runMinutes:exp.runMinutes},{rehab:true}),injuryId:injury.id})}return rows}
 
 const SHOE_PLAN_SNAPSHOT_VERSION=3;
-const SHOE_ENGINE_CACHE_VERSION='15.6.57-50657-terminal-retirement-reconcile-r8';
+const SHOE_ENGINE_CACHE_VERSION='15.6.58-50658-terminal-retirement-reconcile-r8';
 function shoeStableSerialize(value){
  if(value===null||typeof value!=='object')return JSON.stringify(value);
  if(Array.isArray(value))return'['+value.map(shoeStableSerialize).join(',')+']';
@@ -9098,7 +9098,7 @@ function freshShoeLifecyclePlan(){
   racePair:null,raceWindow:null,
   catalogueSource:'offline',catalogueVersion:OFFLINE_ASICS_CATALOGUE_VERSION,
   footMechanics:runnerFootMechanics(),
-  engine:'v15.6.57-necessity-driven-portfolio'
+  engine:'v15.6.58-necessity-driven-portfolio'
  };
  shoeEngineCanonicalFinalizePortfolio(result,manual,weeks);
 
