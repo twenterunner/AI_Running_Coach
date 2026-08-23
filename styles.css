@@ -5871,7 +5871,7 @@ body:has(#dashboard.progressPage.active),#mainContent:has(#dashboard.progressPag
 #shoes .shoeProgrammeChart .xLab{font-size:16px!important;font-weight:800!important}
 @media(max-width:600px){#shoes .shoeProgrammeChart .xLab{font-size:15px!important}}
 
-/* v15.6.41 — Active Shoes cards use the same dark teal visual language as Today. */
+/* v15.6.43 — Active Shoes cards use the same dark teal visual language as Today. */
 #shoes .shoeActiveSummaryRow{
   background:linear-gradient(145deg,#075468 0%,#073c50 52%,#062c3d 100%)!important;
   border:1px solid rgba(40,214,219,.42)!important;
@@ -5887,7 +5887,7 @@ body:has(#dashboard.progressPage.active),#mainContent:has(#dashboard.progressPag
   box-shadow:inset 0 0 0 1px rgba(255,255,255,.06)!important
 }
 
-/* v15.6.41 — runner-selectable shoe assignment */
+/* v15.6.43 — runner-selectable shoe assignment */
 .todayShoeSelectable .todayShoeSelectorLabel{
  display:grid;gap:6px;margin-top:10px;font-size:12px;font-weight:800;letter-spacing:.03em;color:#a9cbd0
 }
