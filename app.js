@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '15.6.56';
-  const BUILD = 50656;
+  const VERSION = '15.6.57';
+  const BUILD = 50657;
   const SCHEMA = 10400;
   const PRIMARY_STORAGE_KEY = 'arc_v10400_web';
   const MIRROR_STORAGE_KEY = 'arc_v10400_mirror';
@@ -6229,6 +6229,35 @@ function footMechanicsSessionAdjustment(profile,planType='',rehab=false){
 }
 function gaitPurchaseAdjustment(profile){return footMechanicsSessionAdjustment(profile,'',false)}
 
+function bodyMassShoeContext(profile,planType='',distance=0,rehab=false){
+ const bw=clamp(Number(state.setup?.bodyWeight)||75,25,250),t=String(planType||''),d=Math.max(0,Number(distance)||0);
+ const cush=Number(profile?.cushioning||3),prot=Number(profile?.protection||3),stab=Number(profile?.stability||3),comfort=Number(profile?.comfort||3),resp=Number(profile?.responsiveness||3),eff=Number(profile?.efficiency||3);
+ const protective=clamp(Math.round(((cush*.32+prot*.32+stab*.20+comfort*.16)/5)*100),0,100);
+ const lightPerformance=clamp(Math.round(((resp*.55+eff*.30+comfort*.15)/5)*100),0,100);
+ const isRecovery=rehab||/Rehab|Recovery|Walk|Easy/i.test(t),isLong=/Long|Medium-long|Marathon/i.test(t)||d>=18,isQuality=lifecycleIsQuality(t);
+ let score=90;
+ if(bw>80){
+  // Higher body mass progressively raises the value of cushioning, protection
+  // and stability. The effect is strongest for recovery/long work and deliberately
+  // smaller for quality sessions so a protective trainer does not automatically
+  // beat a genuinely better speed shoe.
+  const massFactor=clamp((bw-80)/30,0,1);
+  let exposure=isRecovery?1:isLong?.95:isQuality?.45:.65;
+  if(d>=28)exposure=Math.min(1,exposure+.08);
+  const blend=clamp(massFactor*exposure,0,1);
+  score=Math.round(90*(1-blend)+protective*blend);
+ }else if(bw<65){
+  // Lower body mass modestly increases the relevance of efficiency/response,
+  // but never makes cushioning or protection a penalty.
+  const massFactor=clamp((65-bw)/20,0,.7);
+  const exposure=isQuality?.70:isLong?.30:.40;
+  const blend=clamp(massFactor*exposure,0,.55);
+  score=Math.round(90*(1-blend)+lightPerformance*blend);
+ }
+ return clamp(score,45,100)
+}
+
+
 const SHOE_ENGINE_STRATEGY={key:'session-suitability',label:'Session suitability',desc:'Every session is ranked by suitability. The best-suited shoes are protected for the sessions that add most race value; lower-priority sessions may use the next-best pair where this improves rotation and purchase timing. Purchases are made only when the useful 2–3 pair rotation or lifecycle genuinely requires one.'};
 const SHOE_ROTATION_PRIORITIES={
  'quality-session':{label:'Quality-session priority',short:'Quality-session matching',desc:'Protect the best safe shoe match for threshold, intervals, race-specific sessions and key long runs. Lifecycle, rotation coverage and Race Day readiness remain safety constraints, while quality-session suitability is the footwear-matching priority.'}
@@ -6253,6 +6282,8 @@ function shoeRecommendation(plan,{excludeId=null}={}){
   add(p.workoutSuitability?.[plan.type]??shoeProfileWorkoutSuitability(p,plan.type),3.4);add(shoeDistanceScore(p,plan.distance),1.2);add(shoeSurfaceScore(p,plan),1.6);
   const metric=(key,score)=>{if(req[key])add(score/5*100,req[key]/6)};metric('cushioning',p.cushioning);metric('protection',p.protection);metric('responsiveness',p.responsiveness);metric('efficiency',p.efficiency);metric('grip',p.grip);metric('stability',p.stability);metric('durability',p.durability);metric('comfort',p.comfort);
   if(req.weight)add(({ 'ultra-light':5,'very-light':5,light:4,'medium-light':4,medium:3,'medium-heavy':2,heavy:1,unknown:3}[p.weightClass]||3)/5*100,req.weight/6);
+  const bodyMassFit=bodyMassShoeContext(p,plan.type,plan.distance,false),bodyMassWeight=/Recovery|Easy|Rehab|Walk/i.test(String(plan.type||''))?1.35:/Long|Medium-long|Marathon/i.test(String(plan.type||''))||Number(plan.distance)>=18?1.20:lifecycleIsQuality(plan.type)?.70:.95;
+  add(bodyMassFit,bodyMassWeight);
   if(req.familiarity||req.raceSpecific)add(fam.score,(req.familiarity||0)/5+(req.raceSpecific||0)/6);
   let score=total?weighted/total:50;const wearRatio=wear.high>0?wear.km/wear.high:0;score-=Math.max(0,wearRatio-.72)*45;score+=shoeConditionModifier(shoe)*100;
   const recent=shoeRecentKm(shoe.id,7),plannedNear=shoePlannedUsage(shoe.id,7),projectedAtWorkout=shoeMileage(shoe)+shoePlannedUsageThrough(shoe.id,plan.date);score-=Math.min(8,recent/12);score-=Math.min(6,plannedNear/18);
@@ -6262,7 +6293,7 @@ function shoeRecommendation(plan,{excludeId=null}={}){
   if(inj){score+=(p.comfort>=4?3:0)+(p.protection>=4?3:0)+(fam.runs>=2?3:0)}
   const race=/Race$|Race Day|Race rehearsal/.test(plan.type),raceSuitable=(p.roles||[]).includes('race');let warning='';if(race&&!raceSuitable)score=Math.min(score,34);if(race&&raceSuitable&&fam.runs<2){score-=18;warning=''}if(race&&raceSuitable&&wear.status==='replace'){score-=30;warning='This shoe is at or beyond its expected service-life range.'}
   score=clamp(Math.round(score),0,100);const label=score>=88?'Best match':score>=78?'Very good match':score>=66?'Suitable':score>=52?'Acceptable alternative':score>=38?'Poor match':'Do not recommend';
-  if((p.roles||[]).includes('long')&&/Long|Marathon/.test(plan.type))reasons.push('strong long-run suitability');if(p.cushioning>=4)reasons.push('adequate cushioning/protection');if(p.responsiveness>=4&&/Progression|Threshold|interval|Race|Fartlek|Specific/.test(plan.type))reasons.push('responsive enough for the planned work');if(shoeSurfaceScore(p,plan)>=90)reasons.push('surface match');if(fam.runs>=2&&race)reasons.push('verified prior use');reasons.push(`${Math.round(wear.km)} km accumulated`);reasons.push(wear.status==='healthy'?'well inside expected service-life range':wear.label.toLowerCase());
+  if((p.roles||[]).includes('long')&&/Long|Marathon/.test(plan.type))reasons.push('strong long-run suitability');if(p.cushioning>=4)reasons.push('adequate cushioning/protection');if(bodyMassFit>=94)reasons.push('strong body-mass support match');else if(bodyMassFit<=76)reasons.push('less protective for current body-mass context');if(p.responsiveness>=4&&/Progression|Threshold|interval|Race|Fartlek|Specific/.test(plan.type))reasons.push('responsive enough for the planned work');if(shoeSurfaceScore(p,plan)>=90)reasons.push('surface match');if(fam.runs>=2&&race)reasons.push('verified prior use');reasons.push(`${Math.round(wear.km)} km accumulated`);reasons.push(wear.status==='healthy'?'well inside expected service-life range':wear.label.toLowerCase());
   return{shoe,profile:p,score,label,reasons:[...new Set(reasons)].slice(0,5),warning,wear,familiarity:fam}
  }).sort((a,b)=>b.score-a.score||shoeRecentKm(a.shoe.id,7)-shoeRecentKm(b.shoe.id,7));if(ranked[0]){const margin=ranked[1]?ranked[0].score-ranked[1].score:20,known=ranked[0].profile.profileConfidence!=='user-entered';ranked[0].confidence=ranked[0].score>=78&&margin>=7&&known?'High':ranked[0].score>=65?'Medium':'Low'}return{ranked,best:ranked[0]||null,alternative:ranked[1]||null};
 }
@@ -6623,7 +6654,7 @@ function shoeSuitabilityAssessment(profile,plan,{rehab=false,shoe=null,projected
  const response=clamp(Math.round(((Number(profile.responsiveness||3)*.55+Number(profile.efficiency||3)*.45)/5)*100),0,100);
  const stability=clamp(Math.round(((Number(profile.stability||3)*.68+Number(profile.guidance||profile.stability||3)*.32)/5)*100),0,100);
  const surfaceBase=shoeSurfaceScore(profile,plan),surface=clamp(Math.round(surfaceBase*.65+(Number(profile.grip||3)/5*100)*.35),0,100);
- const gait=runnerFootMechanics(),footAdj=footMechanicsSessionAdjustment(profile,type,rehab);
+ const gait=runnerFootMechanics(),footAdj=footMechanicsSessionAdjustment(profile,type,rehab),bodyMass=bodyMassShoeContext(profile,type,d,rehab);
  // 100 means no meaningful mechanics mismatch; penalties/bonuses are expressed within this component.
  let foot=clamp(Math.round(88+footAdj*.5),0,100);
  if(gait==='unknown'||gait==='not-sure'||gait==='not sure')foot=90;
@@ -6643,12 +6674,12 @@ function shoeSuitabilityAssessment(profile,plan,{rehab=false,shoe=null,projected
   if(condition==='Upper damaged'||condition==='Causing discomfort')lifecycle=Math.min(lifecycle,20);
  }
  lifecycle=clamp(lifecycle,0,100);
- let weights={workout:22,distance:10,cushioning:14,response:14,stability:10,surface:8,foot:8,lifecycle:14};
- if(isRecovery)weights={workout:18,distance:8,cushioning:22,response:5,stability:15,surface:7,foot:10,lifecycle:10,rehab:5};
- else if(isQuality)weights={workout:24,distance:10,cushioning:8,response:25,stability:8,surface:8,foot:5,lifecycle:12};
- else if(isLong)weights={workout:20,distance:12,cushioning:20,response:10,stability:10,surface:8,foot:8,lifecycle:12};
+ let weights={workout:22,distance:10,cushioning:14,response:14,stability:10,surface:8,foot:8,bodyMass:8,lifecycle:14};
+ if(isRecovery)weights={workout:18,distance:8,cushioning:22,response:5,stability:15,surface:7,foot:10,bodyMass:10,lifecycle:10,rehab:5};
+ else if(isQuality)weights={workout:24,distance:10,cushioning:8,response:25,stability:8,surface:8,foot:5,bodyMass:5,lifecycle:12};
+ else if(isLong)weights={workout:20,distance:12,cushioning:20,response:10,stability:10,surface:8,foot:8,bodyMass:9,lifecycle:12};
  if(isHills&&!isRecovery){weights.surface+=6;weights.stability+=4;weights.workout=Math.max(10,weights.workout-5);weights.response=Math.max(5,weights.response-3);weights.lifecycle=Math.max(6,weights.lifecycle-2)}
- const values={workout,distance,cushioning,response,stability,surface,foot,lifecycle,rehab:rehabContext};
+ const values={workout,distance,cushioning,response,stability,surface,foot,bodyMass,lifecycle,rehab:rehabContext};
  let weighted=0,total=0;
  Object.entries(weights).forEach(([key,weight])=>{if(values[key]==null||weight<=0)return;weighted+=values[key]*weight;total+=weight});
  let score=clamp(Math.round(weighted/Math.max(1,total)),0,100);
@@ -6662,6 +6693,7 @@ function shoeSuitabilityAssessment(profile,plan,{rehab=false,shoe=null,projected
   {key:'stability',label:'Stability / support',value:stability,weight:weights.stability||0},
   {key:'surface',label:'Surface / grip',value:surface,weight:weights.surface||0},
   {key:'foot',label:'Foot-mechanics context',value:foot,weight:weights.foot||0},
+  {key:'bodyMass',label:'Body-mass context',value:bodyMass,weight:weights.bodyMass||0},
   ...(rehab?[{key:'rehab',label:'Rehabilitation context',value:rehabContext,weight:weights.rehab||0}]:[]),
   {key:'lifecycle',label:'Lifecycle / condition',value:lifecycle,weight:weights.lifecycle||0}
  ].filter(x=>x.weight>0);
@@ -8984,7 +9016,7 @@ function shoeEngineCanonicalFinalizePortfolio(result,manual,weeks){
 function shoeEngineBuildRehabSessions(now,raceDate){const injury=(state.injuries||[]).find(x=>x.id===state.activeInjuryPlanId);if(!injury)return[];const progress=injuryPrediction(injury),rehabEnd=[raceDate,progress?.windowEnd||raceDate].filter(Boolean).sort()[0],rows=[];for(let d=new Date(dte(now).getTime()+DAY),guard=0;d<=dte(rehabEnd)&&guard<120;d=new Date(d.getTime()+DAY),guard++){const date=iso(d),day=rehabCalendarDay(injury,progress,date,rehabPlanDayIndex(injury,date));if(!rehabDayNeedsShoe(day))continue;const exp=rehabExpectedDistance(day),km=Math.max(0,Number(exp.totalKm)||0);if(km<=0)continue;rows.push({id:`rehab-shoe-${injury.id}-${date}`,date,type:'Rehab recovery',distance:km,surface:'road',rehab:true,walkMinutes:exp.walkMinutes,runMinutes:exp.runMinutes,importance:shoeEngineSessionImportance({type:'Rehab recovery',distance:km,runMinutes:exp.runMinutes},{rehab:true}),injuryId:injury.id})}return rows}
 
 const SHOE_PLAN_SNAPSHOT_VERSION=3;
-const SHOE_ENGINE_CACHE_VERSION='15.6.56-50656-terminal-retirement-reconcile-r8';
+const SHOE_ENGINE_CACHE_VERSION='15.6.57-50657-terminal-retirement-reconcile-r8';
 function shoeStableSerialize(value){
  if(value===null||typeof value!=='object')return JSON.stringify(value);
  if(Array.isArray(value))return'['+value.map(shoeStableSerialize).join(',')+']';
@@ -9036,7 +9068,7 @@ function publishAuthoritativeShoeSnapshot(result,inputStamp){
 }
 
 function freshShoeLifecyclePlan(){
- const now=iso(today()),raceDate=state.setup?.raceDate||now,manual=new Map((state.plannedShoeAssignments||[]).filter(a=>a.source==='user').map(a=>[a.planId,a.shoeId])),fixed=(state.plan||[]).filter(p=>p.type!=='Rest'&&p.date>=now&&p.date<=raceDate).map(p=>({...p,rehab:false,importance:shoeEngineSessionImportance(p)})).sort((a,b)=>a.date.localeCompare(b.date)),rehab=shoeEngineBuildRehabSessions(now,raceDate),allSessions=[...fixed,...rehab].sort((a,b)=>a.date.localeCompare(b.date)||Number(b.rehab)-Number(a.rehab)),injury=(state.injuries||[]).find(x=>x.id===state.activeInjuryPlanId),rehabStamp=injury?JSON.stringify({id:injury.id,checks:(injury.checkIns||[]).map(c=>[c.date,c.walkMinutes,c.runMinutes,c.rehabShoeId,c.pain,c.hop,c.bridge]),updatedAt:injury.updatedAt||injury.lastUpdated||''}):'',stamp=[`shoe-snapshot-v${SHOE_PLAN_SNAPSHOT_VERSION}`,SHOE_ENGINE_CACHE_VERSION,runnerFootMechanics(),shoeRotationPriority(),JSON.stringify(shoeFuturePairOverrideKeys()),String(state.setup?.shoeRacePairOverride||''),String(state.setup?.shoePurchaseIntervalWeeks||state.setup?.shoePurchaseInterval||''),raceDate,Number(state.setup?.raceDistance)||0,OFFLINE_ASICS_CATALOGUE_VERSION,fixed.map(p=>`${p.id}:${p.date}:${p.type}:${p.distance}:${p.surface||''}`).join(';'),(state.shoes||[]).map(sh=>`${sh.id}:${sh.status}:${shoeMileage(sh).toFixed(2)}:${sh.condition||sh.conditionFeedback||''}:${sh.purchaseDate||''}:${sh.firstUseDate||''}:${sh.characteristics?.profileKey||''}`).join(';'),(state.shoeUsage||[]).map(u=>`${u.id||''}:${u.shoeId||''}:${u.runId||''}:${u.rehabActivityId||''}:${u.date||''}:${u.distanceKm||0}:${u.adjustmentKm||0}`).sort().join(';'),(state.runs||[]).filter(r=>r.shoeId).map(r=>`${r.id}:${r.date}:${r.type}:${r.distanceKm}:${r.shoeId}`).sort().join(';'),[...manual].join(';'),rehabStamp].join('|');
+ const now=iso(today()),raceDate=state.setup?.raceDate||now,manual=new Map((state.plannedShoeAssignments||[]).filter(a=>a.source==='user').map(a=>[a.planId,a.shoeId])),fixed=(state.plan||[]).filter(p=>p.type!=='Rest'&&p.date>=now&&p.date<=raceDate).map(p=>({...p,rehab:false,importance:shoeEngineSessionImportance(p)})).sort((a,b)=>a.date.localeCompare(b.date)),rehab=shoeEngineBuildRehabSessions(now,raceDate),allSessions=[...fixed,...rehab].sort((a,b)=>a.date.localeCompare(b.date)||Number(b.rehab)-Number(a.rehab)),injury=(state.injuries||[]).find(x=>x.id===state.activeInjuryPlanId),rehabStamp=injury?JSON.stringify({id:injury.id,checks:(injury.checkIns||[]).map(c=>[c.date,c.walkMinutes,c.runMinutes,c.rehabShoeId,c.pain,c.hop,c.bridge]),updatedAt:injury.updatedAt||injury.lastUpdated||''}):'',stamp=[`shoe-snapshot-v${SHOE_PLAN_SNAPSHOT_VERSION}`,SHOE_ENGINE_CACHE_VERSION,runnerFootMechanics(),shoeRotationPriority(),JSON.stringify(shoeFuturePairOverrideKeys()),String(state.setup?.shoeRacePairOverride||''),String(state.setup?.shoePurchaseIntervalWeeks||state.setup?.shoePurchaseInterval||''),raceDate,Number(state.setup?.raceDistance)||0,OFFLINE_ASICS_CATALOGUE_VERSION,fixed.map(p=>`${p.id}:${p.date}:${p.type}:${p.distance}:${p.surface||''}`).join(';'),(state.shoes||[]).map(sh=>`${sh.id}:${sh.status}:${shoeMileage(sh).toFixed(2)}:${sh.condition||sh.conditionFeedback||''}:${sh.purchaseDate||''}:${sh.firstUseDate||''}:${sh.characteristics?.profileKey||''}`).join(';'),(state.shoeUsage||[]).map(u=>`${u.id||''}:${u.shoeId||''}:${u.runId||''}:${u.rehabActivityId||''}:${u.date||''}:${u.distanceKm||0}:${u.adjustmentKm||0}`).sort().join(';'),(state.runs||[]).filter(r=>r.shoeId).map(r=>`${r.id}:${r.date}:${r.type}:${r.distanceKm}:${r.shoeId}`).sort().join(';'),[...manual].join(';'),Number(state.setup?.bodyWeight)||75,rehabStamp].join('|');
  if(freshShoePlanCache.stamp===stamp){
   const cached=freshShoePlanCache.value;
   const cachedRace=String(cached?.raceDate||cached?.snapshot?.raceDay?.date||'');
@@ -9066,7 +9098,7 @@ function freshShoeLifecyclePlan(){
   racePair:null,raceWindow:null,
   catalogueSource:'offline',catalogueVersion:OFFLINE_ASICS_CATALOGUE_VERSION,
   footMechanics:runnerFootMechanics(),
-  engine:'v15.6.56-necessity-driven-portfolio'
+  engine:'v15.6.57-necessity-driven-portfolio'
  };
  shoeEngineCanonicalFinalizePortfolio(result,manual,weeks);
 
