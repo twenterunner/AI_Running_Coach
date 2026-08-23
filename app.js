@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '15.6.21';
-  const BUILD = 50621;
+  const VERSION = '15.6.22';
+  const BUILD = 50622;
   const SCHEMA = 10400;
   const PRIMARY_STORAGE_KEY = 'arc_v10400_web';
   const MIRROR_STORAGE_KEY = 'arc_v10400_mirror';
@@ -7837,12 +7837,16 @@ function shoeEngineValidation(result){
  // Future TRAINING purchases must become genuine rotation members. This is a hard
  // publication invariant, not merely a warning: no one-session/token purchase may
  // survive because rehab was active or because a late continuity pass added it.
- for(const buy of result.purchases.filter(b=>b.role!=='race')){
-  const p=pairById.get(buy.pairId);if(!p||p.owned)continue;
+ for(const buy of result.purchases){
+  const p=pairById.get(buy.pairId);if(!p||p.owned||p===result.racePair)continue;
+  // Legacy role flags are NOT authoritative. Every future physical pair except the
+  // single canonical Race Day pair must earn its purchase through meaningful
+  // normal-training use. This blocks stale role:'race' or specialist flags from
+  // bypassing the no-orphan/no-token-purchase invariant.
   const training=(p.assignments||[]).filter(a=>Number(a.km)>0&&!a.rehab&&!a.raceDayAssignment&&!a.raceFamiliarisation).slice().sort((a,b)=>a.date.localeCompare(b.date));
   if(!training.length){add('future-training-pair-without-training-use',{pairId:p.id});continue}
   const first=training[0].date,end=iso(new Date(dte(first).getTime()+28*DAY)),early=training.filter(a=>a.date<=end),earlyKm=early.reduce((n,a)=>n+(Number(a.km)||0),0),total=training.reduce((n,a)=>n+(Number(a.km)||0),0),target=Math.max(20,Math.min(70,total*.08));
-  if(early.length<2||earlyKm+1e-6<target)add('future-training-pair-token-entry',{pairId:p.id,firstUse:first,first28Sessions:early.length,first28Km:earlyKm,target});
+  if(training.length<2||total+1e-6<20||early.length<2||earlyKm+1e-6<target)add('future-training-pair-token-entry',{pairId:p.id,firstUse:first,totalSessions:training.length,totalKm:total,first28Sessions:early.length,first28Km:earlyKm,target});
  }
  // Hard physical-rotation invariant.
  {
@@ -8610,7 +8614,7 @@ function shoeEngineEnsureMeaningfulFutureEntry(result,manual){
  // token session is not a professional strategy.
  const plans=new Map((result.allSessions||[]).map(x=>[x.id,x])),raceId=result.racePair?.id||null;
  let changed=false;
- const future=result.pairs.filter(p=>!p.owned&&p.role!=='race'&&p.id!==raceId)
+ const future=result.pairs.filter(p=>!p.owned&&p.id!==raceId)
   .slice().sort((a,b)=>String(shoePlannerEntryDate(a)||'').localeCompare(String(shoePlannerEntryDate(b)||''))||a.id.localeCompare(b.id));
  for(const pair of future){
   const rows=(pair.assignments||[]).filter(a=>Number(a.km)>0&&!a.raceDayAssignment&&!a.raceFamiliarisation)
@@ -8820,7 +8824,7 @@ function shoeEngineCanonicalFinalizePortfolio(result,manual,weeks){
 function shoeEngineBuildRehabSessions(now,raceDate){const injury=(state.injuries||[]).find(x=>x.id===state.activeInjuryPlanId);if(!injury)return[];const progress=injuryPrediction(injury),rehabEnd=[raceDate,progress?.windowEnd||raceDate].filter(Boolean).sort()[0],rows=[];for(let d=new Date(dte(now).getTime()+DAY),guard=0;d<=dte(rehabEnd)&&guard<120;d=new Date(d.getTime()+DAY),guard++){const date=iso(d),day=rehabCalendarDay(injury,progress,date,rehabPlanDayIndex(injury,date));if(!rehabDayNeedsShoe(day))continue;const exp=rehabExpectedDistance(day),km=Math.max(0,Number(exp.totalKm)||0);if(km<=0)continue;rows.push({id:`rehab-shoe-${injury.id}-${date}`,date,type:'Rehab recovery',distance:km,surface:'road',rehab:true,walkMinutes:exp.walkMinutes,runMinutes:exp.runMinutes,importance:shoeEngineSessionImportance({type:'Rehab recovery',distance:km,runMinutes:exp.runMinutes},{rehab:true}),injuryId:injury.id})}return rows}
 
 const SHOE_PLAN_SNAPSHOT_VERSION=2;
-const SHOE_ENGINE_CACHE_VERSION='15.4.9-50621-legacy-finalizer-cleanup-r1';
+const SHOE_ENGINE_CACHE_VERSION='15.6.22-50622-authoritative-publication-r2';
 function shoeStableSerialize(value){
  if(value===null||typeof value!=='object')return JSON.stringify(value);
  if(Array.isArray(value))return'['+value.map(shoeStableSerialize).join(',')+']';
@@ -9052,7 +9056,7 @@ function freshShoeLifecyclePlan(){
   result.pairs.forEach(pair=>lifecycleRebuildPoints(pair,now,raceDate,fixed));
   shoeEngineEnsureCanonicalRetirementEvents(result);
  }
- // v15.6.21 final authoritative cleanup. Several legacy late passes can add or
+ // v15.6.22 final authoritative cleanup. Several legacy late passes can add or
  // move a future pair after earlier minimisation. Converge purchase necessity,
  // meaningful first use and two-pair continuity together, then rebuild curves
  // exactly once from that final ledger.
@@ -9070,6 +9074,32 @@ function freshShoeLifecyclePlan(){
   const after=JSON.stringify({a:(result.assignments||[]).map(r=>[r.planId,r.pairId]),p:(result.purchases||[]).map(b=>[b.pairId,b.purchaseDate,b.firstUseDate])});
   if(after===before)break;
  }
+ // v15.6.22 FINAL publication firewall. Legacy role labels and late continuity
+ // repairs are not allowed to publish an orphan/token purchase. Challenge every
+ // non-owned, non-canonical-race pair counterfactually, regardless of role label.
+ // If the existing portfolio can absorb it, remove it. If it cannot, it must have
+ // at least two normal-training sessions and >=20 km of real programme work.
+ for(let strictPass=0;strictPass<6;strictPass++){
+  let changed=false;
+  const candidates=result.pairs.filter(p=>!p.owned&&p!==result.racePair).slice().sort((a,b)=>String(shoePlannerEntryDate(b)||'').localeCompare(String(shoePlannerEntryDate(a)||'')));
+  for(const pair of candidates){
+   const normal=(pair.assignments||[]).filter(a=>Number(a.km)>0&&!a.rehab&&!a.raceDayAssignment&&!a.raceFamiliarisation).slice().sort((a,b)=>a.date.localeCompare(b.date));
+   const totalKm=normal.reduce((n,a)=>n+(Number(a.km)||0),0);
+   if(normal.length>=2&&totalKm>=20-1e-6)continue;
+   if(shoeEngineTryRemoveFuturePair(result,pair,manual)){changed=true;continue}
+   // If hard continuity genuinely needs this pair, give it a meaningful role now
+   // rather than preserving a token purchase. The existing meaningful-entry repair
+   // can move compatible whole sessions into it without altering the running plan.
+   if(shoeEngineEnsureMeaningfulFutureEntry(result,manual))changed=true;
+  }
+  shoeEngineCanonicalizePhysicalEntryDates(result);
+  shoeEngineCanonicalRelinkAssignments(result,manual);
+  if(!changed)break;
+ }
+ // Only one pair may carry canonical Race Day semantics. Any stale legacy race
+ // role on another future pair is normalized before validation so it cannot bypass
+ // the meaningful-use invariant.
+ for(const pair of result.pairs)if(!pair.owned&&pair!==result.racePair&&pair.role==='race')pair.role='quality';
  result.pairs=result.pairs.filter(p=>p.owned||(p.assignments||[]).some(a=>Number(a.km)>0)||p===result.racePair);
  result.purchases=result.purchases.filter(b=>{const p=result.pairs.find(x=>x.id===b.pairId);return p&&(p===result.racePair||(p.assignments||[]).some(a=>Number(a.km)>0))});
  result.pairs.forEach(pair=>lifecycleRebuildPoints(pair,now,raceDate,fixed));
@@ -9144,18 +9174,22 @@ function shoeGraphRetirementPoint(pair,life,forecastPoints){
  if(!markerDate)return null;
  const sameOrBefore=pts.filter(p=>String(p.date)<=String(markerDate));
  const last=sameOrBefore.at(-1)||pts.at(-1);
- if(last)return{date:markerDate,km:Number(last.km),reason:markerReason};
+ // A retirement X belongs at the final positive-use mileage point. Never extend
+ // a shoe horizontally through an unused period merely to reach a later date.
+ if(last)return{date:last.date,km:Number(last.km),reason:markerReason};
  if(pair.owned&&pair.shoe?.status==='retired'){
   const actual=shoeActualProgrammeSeries(pair.shoe,state.setup?.planStart||life.now,life.now);
   return actual.length?{...actual.at(-1),reason:physical.reason}:null;
  }
  return null
 }
-function shoeNonFlatSvgSegments(points,x,y,attrs=''){
+function shoeForecastSvgSegments(points,x,y,attrs=''){
  if(!Array.isArray(points)||points.length<2)return'';
  let out='';
  for(let i=1;i<points.length;i++){
   const a=points[i-1],b=points[i];
+  // Forecast has no visual tail when mileage does not change. Flat future
+  // ownership is not a mileage trajectory and must not be drawn as one.
   if(Math.abs(Number(a.km)-Number(b.km))<1e-9)continue;
   out+=`<line x1="${x(a.date)}" y1="${y(a.km)}" x2="${x(b.date)}" y2="${y(b.km)}" ${attrs}/>`;
  }
@@ -9170,9 +9204,9 @@ function shoeProgrammeMileageChartHtml(lifeOverride=null){
  // lifecycle-chart primitive (actual/forecast curve, legend, BUY/RETIRE and Race Day markers).
  const colorById=new Map();let ci=0;pairs.forEach(p=>colorById.set(p.id,palette[ci++%palette.length]));
  let grid='';for(let i=0;i<=4;i++){const v=maxY*i/4,yy=y(v);grid+=`<line x1="${L}" y1="${yy}" x2="${W-R}" y2="${yy}"/><text x="${L-20}" y="${yy+8}" text-anchor="end">${Math.round(v)}</text>`}
- const actual=actualSeries.map(item=>{const pair=pairs.find(p=>p.owned&&p.shoe.id===item.shoe.id),col=pair?colorById.get(pair.id):'#35E2D0';return shoeSvgSeries(item.points,x,y,`class="shoeLine shoeActualLine" style="--shoe-color:${col};stroke:${col}"`)}).join('');
+ const actual=actualSeries.map(item=>{const pair=pairs.find(p=>p.owned&&p.shoe.id===item.shoe.id),col=pair?colorById.get(pair.id):'#35E2D0';return shoeSvgSeries(item.points,x,y,`class="shoeLine shoeActualLine" style="--shoe-color:${col};stroke:${col};stroke-dasharray:none !important"`)}).join('');
  const forecastById=new Map(pairs.map(pair=>[pair.id,shoeGraphForecastPoints(pair,life)]));
- const future=pairs.map(pair=>{const col=colorById.get(pair.id),visible=forecastById.get(pair.id)||[],cls=pair===life.racePair?'shoeRaceStrategyLine':pair.owned?'shoePlannedLine':'shoeNewPairLine';return visible.length>=2?shoeNonFlatSvgSegments(visible,x,y,`class="shoeLine ${cls}" style="--shoe-color:${col};stroke:${col}"`):visible.length===1?`<circle class="shoeSinglePoint" style="--shoe-color:${col};fill:${col};stroke:${col}" cx="${x(visible[0].date).toFixed(1)}" cy="${y(visible[0].km).toFixed(1)}" r="4"/>`:''}).join('');
+ const future=pairs.map(pair=>{const col=colorById.get(pair.id),visible=forecastById.get(pair.id)||[],cls=pair===life.racePair?'shoeRaceStrategyLine':pair.owned?'shoePlannedLine':'shoeNewPairLine';return visible.length>=2?shoeForecastSvgSegments(visible,x,y,`class="shoeLine ${cls}" style="--shoe-color:${col};stroke:${col};stroke-dasharray:10 8 !important"`):visible.length===1?`<circle class="shoeSinglePoint" style="--shoe-color:${col};fill:${col};stroke:${col}" cx="${x(visible[0].date).toFixed(1)}" cy="${y(visible[0].km).toFixed(1)}" r="4"/>`:''}).join('');
  const raceMileageMarker=life.racePair?(()=>{const km=shoeEngineRaceStartKm(life,life.racePair),col=colorById.get(life.racePair.id)||'#B58CFF',xx=x(raceDate),yy=y(km);return`<g class="shoeRaceStartMarker" style="--shoe-color:${col}"><circle cx="${xx}" cy="${yy}" r="7"/><line x1="${xx-10}" y1="${yy}" x2="${xx+10}" y2="${yy}"/><text x="${xx-10}" y="${Math.max(T+18,yy-13)}" text-anchor="end">START ${Math.round(km)} km</text></g>`})():'';
  // A purchase marker is a physical first-use event, not a bookkeeping event.
  // Plot it ON the mileage curve at the first positive-use session. This prevents
