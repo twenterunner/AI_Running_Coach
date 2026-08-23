@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '15.6.44';
-  const BUILD = 50644;
+  const VERSION = '15.6.45';
+  const BUILD = 50645;
   const SCHEMA = 10400;
   const PRIMARY_STORAGE_KEY = 'arc_v10400_web';
   const MIRROR_STORAGE_KEY = 'arc_v10400_mirror';
@@ -5670,8 +5670,7 @@ function openInjuryCheck(i,existing=null,options={}){
  const runStatusField=$('icRunStatus'),runMinutesField=$('icRun'),runSecondsField=$('icRunSeconds'),runPainField=$('icRunPain'),gaitField=$('icGait'),qualityField=$('icRunQuality'),walkMinutesField=$('icWalkMinutes'),walkSecondsField=$('icWalkSeconds'),locomotionField=$('icLocomotion'),exerciseField=$('icRehabExercises'),stretchField=$('icStretchGoal'),strengthField=$('icBridge'),impactField=$('icHop'),worseField=$('icWorse'),responseField=$('icResponse'),consistencyBox=$('icConsistency'),dateField=$('icDate');
  let activePlan=initialPlan,activeScheduled=initialScheduled,syncing=false;
  const showBlock=(id,show)=>{const el=$(id);if(el)el.classList.toggle('hidden',!show)};
- const applyScheduledQuestions=(date,preserve=true)=>{activePlan=planForDate(date);activeScheduled=scheduledMeta(activePlan);const planItems=(activePlan.items||[]).map(x=>`<li>${esc(x)}</li>`).join(''),exactExercises=(activeScheduled.scheduledExercises||[]).map(x=>`<li><b>${esc(x.name)}</b>${x.dose?`<span>${esc(x.dose)}</span>`:''}</li>`).join('');const plannedRehab=plannedRehabShoeForDay(i,activePlan),shoeField=$('icRehabShoe');if(shoeField)shoeField.onchange=()=>{shoeField.dataset.userChosen='1'};
-  if(shoeField&&plannedRehab&&!shoeField.dataset.userChosen&&(!preserve||!shoeField.value))shoeField.value=plannedRehab;$('icScheduledPlan').innerHTML=`<b>Plan for ${esc(fmtDate(date))}: ${esc(activePlan.title)}</b>${planItems?`<ul>${planItems}</ul>`:'<p>No rehabilitation activity is scheduled.</p>'}${activePlan.stretchGoalOffered===true?`<p><b>Optional progression:</b> ${esc(activePlan.stretchGoal||'')}</p>`:''}<p class="muted compact">This is the exact prescription shown on this date's seven-day plan card.</p>`;const exactBox=$('icExactExercises');if(exactBox)exactBox.innerHTML=exactExercises?`<small>SCHEDULED EXERCISES FOR THIS DATE</small><ul>${exactExercises}</ul>`:'';
+ const applyScheduledQuestions=(date,preserve=true)=>{activePlan=planForDate(date);activeScheduled=scheduledMeta(activePlan);const planItems=(activePlan.items||[]).map(x=>`<li>${esc(x)}</li>`).join(''),exactExercises=(activeScheduled.scheduledExercises||[]).map(x=>`<li><b>${esc(x.name)}</b>${x.dose?`<span>${esc(x.dose)}</span>`:''}</li>`).join('');const plannedRehab=plannedRehabShoeForDay(i,activePlan);$('icScheduledPlan').innerHTML=`<b>Plan for ${esc(fmtDate(date))}: ${esc(activePlan.title)}</b>${planItems?`<ul>${planItems}</ul>`:'<p>No rehabilitation activity is scheduled.</p>'}${activePlan.stretchGoalOffered===true?`<p><b>Optional progression:</b> ${esc(activePlan.stretchGoal||'')}</p>`:''}<p class="muted compact">This is the exact prescription shown on this date's seven-day plan card.</p>`;const exactBox=$('icExactExercises');if(exactBox)exactBox.innerHTML=exactExercises?`<small>SCHEDULED EXERCISES FOR THIS DATE</small><ul>${exactExercises}</ul>`:'';
 
   showBlock('icExerciseExecutionBlock',activeScheduled.exercisePlanned);showBlock('icWalkingExecutionBlock',activeScheduled.walkingPlanned);showBlock('icStretchExecutionBlock',activeScheduled.stretchPlanned);showBlock('icStrengthToleranceBlock',activeScheduled.strengthPlanned);showBlock('icImpactToleranceBlock',activeScheduled.impactPlanned);showBlock('icRunningSection',activeScheduled.runningPlanned);showBlock('icQualityToleranceBlock',activeScheduled.qualityPlanned);
   if(!activeScheduled.exercisePlanned)exerciseField.value='not_planned';else if(exerciseField.value==='not_planned')exerciseField.value='';
@@ -5765,7 +5764,12 @@ function openInjuryCheck(i,existing=null,options={}){
  stretchField.addEventListener('change',()=>normalizeCheckIn('stretch'));
  worseField.addEventListener('change',()=>normalizeCheckIn('worse'));
  responseField.addEventListener('change',()=>normalizeCheckIn('response'));
- dateField.addEventListener('change',()=>{applyScheduledQuestions(dateField.value,false);normalizeCheckIn('date')});
+ dateField.addEventListener('change',()=>{
+  applyScheduledQuestions(dateField.value,false);
+  const shoeField=$('icRehabShoe'),datePlan=planForDate(dateField.value),savedForDate=(i.checkIns||[]).find(x=>x.date===dateField.value)||{};
+  if(shoeField)shoeField.value=defaultRehabCheckinShoeId(i,datePlan,savedForDate)||'';
+  normalizeCheckIn('date');
+ });
  applyScheduledQuestions(dateField.value);
  normalizeCheckIn('initial');
  $('saveCheck').onclick=()=>{applyScheduledQuestions(dateField.value);normalizeCheckIn('save');let runStatus=activeScheduled.runningPlanned?runStatusField.value:'not_planned',runMinutes=durationFromFields(runMinutesField,runSecondsField),rehabExerciseStatus=activeScheduled.exercisePlanned?(exerciseField.value||null):'not_planned',locomotionStatus=activeScheduled.walkingPlanned?(locomotionField.value||null):'not_planned',stretchGoalStatus=activeScheduled.stretchPlanned?(stretchField.value||null):'not_planned';
@@ -7780,6 +7784,9 @@ function shoeEngineMinimizeFuturePortfolio(result,manual){
 
 function shoeEnginePhysicalRetirementAssessment(pair,result){
  if(!pair||!result)return{retired:false,date:null,km:0,reason:null};
+ if(CORE.isIsoDate(pair.forcedTerminalRetireDate)&&Number.isFinite(Number(pair.forcedTerminalRetireKm))){
+  return{retired:true,date:pair.forcedTerminalRetireDate,km:Number(pair.forcedTerminalRetireKm),remainingKm:Math.max(0,Number(pair.retireKm)-Number(pair.forcedTerminalRetireKm)),minCompatibleWholeSessionKm:null,blockedSessionId:null,blockedSessionDate:null,reason:pair.forcedTerminalRetireReason||'Near-end-of-life pair retired at its final continuous-use point.'};
+ }
  const allRows=(pair.assignments||[]).filter(a=>Number(a.km)>0&&String(a.date)<String(result.raceDate))
   .slice().sort((a,b)=>a.date.localeCompare(b.date)||String(a.planId).localeCompare(String(b.planId)));
  const manualRetired=Boolean(pair.owned&&pair.shoe?.status==='retired');
@@ -8935,7 +8942,7 @@ function shoeEngineCanonicalFinalizePortfolio(result,manual,weeks){
 function shoeEngineBuildRehabSessions(now,raceDate){const injury=(state.injuries||[]).find(x=>x.id===state.activeInjuryPlanId);if(!injury)return[];const progress=injuryPrediction(injury),rehabEnd=[raceDate,progress?.windowEnd||raceDate].filter(Boolean).sort()[0],rows=[];for(let d=new Date(dte(now).getTime()+DAY),guard=0;d<=dte(rehabEnd)&&guard<120;d=new Date(d.getTime()+DAY),guard++){const date=iso(d),day=rehabCalendarDay(injury,progress,date,rehabPlanDayIndex(injury,date));if(!rehabDayNeedsShoe(day))continue;const exp=rehabExpectedDistance(day),km=Math.max(0,Number(exp.totalKm)||0);if(km<=0)continue;rows.push({id:`rehab-shoe-${injury.id}-${date}`,date,type:'Rehab recovery',distance:km,surface:'road',rehab:true,walkMinutes:exp.walkMinutes,runMinutes:exp.runMinutes,importance:shoeEngineSessionImportance({type:'Rehab recovery',distance:km,runMinutes:exp.runMinutes},{rehab:true}),injuryId:injury.id})}return rows}
 
 const SHOE_PLAN_SNAPSHOT_VERSION=3;
-const SHOE_ENGINE_CACHE_VERSION='15.6.44-50644-terminal-retirement-reconcile-r8';
+const SHOE_ENGINE_CACHE_VERSION='15.6.45-50645-terminal-retirement-reconcile-r8';
 function shoeStableSerialize(value){
  if(value===null||typeof value!=='object')return JSON.stringify(value);
  if(Array.isArray(value))return'['+value.map(shoeStableSerialize).join(',')+']';
@@ -9017,7 +9024,7 @@ function freshShoeLifecyclePlan(){
   racePair:null,raceWindow:null,
   catalogueSource:'offline',catalogueVersion:OFFLINE_ASICS_CATALOGUE_VERSION,
   footMechanics:runnerFootMechanics(),
-  engine:'v15.6.44-necessity-driven-portfolio'
+  engine:'v15.6.45-necessity-driven-portfolio'
  };
  shoeEngineCanonicalFinalizePortfolio(result,manual,weeks);
 
@@ -9282,6 +9289,50 @@ function freshShoeLifecyclePlan(){
  // Remove master-ledger rows whose pair was eliminated by the final publication
  // filter, then relink once. This prevents a ghost pair from surviving only in UI.
  {const ids=new Set(result.pairs.map(p=>p.id));result.assignments=result.assignments.filter(a=>ids.has(a.pairId));shoeEngineCanonicalRelinkAssignments(result,manual)}
+
+function shoeEngineResolveDormantEndOfLifeReactivation(result,manual){
+ // A retirement target is an estimate, not an odometer cliff. If a shoe is within
+ // the final 5% of its modelled lifecycle and then leaves rotation for >21 days,
+ // the optimiser must not reactivate it months later merely to consume the last
+ // few kilometres. That produces the detached-X / token-use artefact.
+ //
+ // Instead, the final continuous-use point becomes the terminal lifecycle point;
+ // subsequent AUTOMATIC assignments are handed to another serviceable pair by the
+ // existing terminal-lifecycle reconciliation. Explicit runner overrides are never
+ // rewritten.
+ let changed=false;
+ for(const pair of (result.pairs||[])){
+  delete pair.forcedTerminalRetireDate;
+  delete pair.forcedTerminalRetireKm;
+  delete pair.forcedTerminalRetireReason;
+  if(pair===result.racePair||pair.role==='race')continue;
+  const rows=(pair.assignments||[]).filter(r=>Number(r.km)>0&&String(r.date)<String(result.raceDate))
+    .slice().sort((a,b)=>a.date.localeCompare(b.date)||String(a.planId).localeCompare(String(b.planId)));
+  if(rows.length<2)continue;
+  let cumulative=pair.owned?Number(pair.currentKm)||0:0;
+  const tolerance=Math.max(10,Number(pair.retireKm||0)*.05);
+  for(let index=0;index<rows.length-1;index++){
+   const row=rows[index];
+   cumulative+=Number(row.km)||0;
+   const next=rows[index+1],gapDays=Math.max(0,(dte(next.date)-dte(row.date))/DAY);
+   const remaining=Math.max(0,Number(pair.retireKm||0)-cumulative);
+   if(gapDays<=21||remaining>tolerance+1e-6)continue;
+   const tail=rows.slice(index+1);
+   if(tail.some(r=>r.runnerOverride||manual.has(r.planId)))break;
+   pair.forcedTerminalRetireDate=row.date;
+   pair.forcedTerminalRetireKm=cumulative;
+   pair.forcedTerminalRetireReason=`Near-end-of-life lifecycle closed at final continuous use after a ${Math.round(gapDays)}-day dormant gap with only ${remaining.toFixed(1)} km (${(remaining/Math.max(1,Number(pair.retireKm))*100).toFixed(1)}%) modelled life remaining.`;
+   changed=true;
+   break;
+  }
+ }
+ return changed;
+}
+
+ // Final continuity cleanup: prevent token reactivation of an almost-retired pair
+ // after a long dormant gap. This establishes a terminal lifecycle boundary before
+ // the generic post-retirement assignment reconciliation runs.
+ shoeEngineResolveDormantEndOfLifeReactivation(result,manual);
  // Final terminal-lifecycle reconciliation. No optimiser runs after this pass.
  // Therefore a retirement event and the visible curve are guaranteed to share
  // the same terminal assignment boundary.
@@ -9361,10 +9412,8 @@ function shoeGraphForecastPoints(pair,life){
 }
 function shoeGraphRetirementPoint(pair,life,forecastPoints){
  const event=(life.snapshot?.retirementEvents||[]).find(e=>e.pairId===pair.id)||null;
- const pts=(forecastPoints||[]).filter(p=>p&&CORE.isIsoDate(p.date)&&Number.isFinite(Number(p.km)));
- if(event&&pts.length){
-  const last=pts.at(-1);
-  return{date:last.date,km:Number(last.km),reason:event.reason||'Physical lifecycle reached.'};
+ if(event&&CORE.isIsoDate(event.date)&&Number.isFinite(Number(event.projectedKm))){
+  return{date:event.date,km:Number(event.projectedKm),reason:event.reason||'Physical lifecycle reached.'};
  }
  if(pair.owned&&pair.shoe?.status==='retired'){
   const actual=shoeActualProgrammeSeries(pair.shoe,state.setup?.planStart||life.now,life.now);
