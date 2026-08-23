@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '15.6.54';
-  const BUILD = 50654;
+  const VERSION = '15.6.55';
+  const BUILD = 50655;
   const SCHEMA = 10400;
   const PRIMARY_STORAGE_KEY = 'arc_v10400_web';
   const MIRROR_STORAGE_KEY = 'arc_v10400_mirror';
@@ -5938,7 +5938,7 @@ addAsicsSeries('GEL-NIMBUS',[24,25,26,27,28],v=>({roles:['daily','easy','recover
 addAsicsSeries('GEL-CUMULUS',[24,25,26,27,28],v=>({roles:['daily','easy','steady','long'],cushioning:4,responsiveness:v>=28?4:3,stability:4,protection:4,grip:3,efficiency:3,durability:4,comfort:4,weightClass:'medium',typicalReplacementLowKm:650,typicalReplacementHighKm:900,manufacturerPositioning:'Neutral cushioned road trainer with a smooth, versatile ride.',profileConfidence:v>=28?'high':'medium'}));
 addAsicsSeries('NOVABLAST',[3,4,5,6],v=>({roles:['daily','easy','steady','long','progression','tempo'],cushioning:4,responsiveness:5,stability:3,protection:4,grip:v>=6?4:3,efficiency:4,durability:4,comfort:4,weightClass:'medium-light',preferredDistanceMaxKm:40,typicalReplacementLowKm:600,typicalReplacementHighKm:850,manufacturerPositioning:'Versatile neutral daily trainer focused on energetic cushioning and bounce for short- and long-distance training.',profileConfidence:v>=6?'high':'medium'}));
 addAsicsSeries('SUPERBLAST',[1,2,3],v=>({roles:['daily','steady','long','progression','tempo','threshold','race'],cushioning:5,responsiveness:5,stability:4,protection:5,grip:4,efficiency:5,durability:4,comfort:4,weightClass:'light',preferredDistanceMaxKm:50,typicalReplacementLowKm:650,typicalReplacementHighKm:900,manufacturerPositioning:'Light, highly cushioned and bouncy performance trainer positioned for everyday running and versatile faster/longer training.',profileConfidence:v>=3?'high':'medium'}));
-addAsicsSeries('MEGABLAST',[1],{roles:['daily','easy','steady','long','progression','tempo','race'],cushioning:5,responsiveness:5,stability:3,protection:4,grip:5,efficiency:5,durability:4,comfort:4,weightClass:'light',preferredDistanceMaxKm:45,typicalReplacementLowKm:600,typicalReplacementHighKm:850,manufacturerPositioning:'Neutral, lightweight and exceptionally bouncy trainer for varied speeds and distances; ASICS also positions it for easy, long and tempo running.',profileConfidence:'high'});
+addAsicsSeries('MEGABLAST',[1],{roles:['daily','easy','steady','long','progression','tempo'],cushioning:5,responsiveness:5,stability:3,protection:4,grip:5,efficiency:5,durability:4,comfort:4,weightClass:'light',preferredDistanceMaxKm:45,typicalReplacementLowKm:600,typicalReplacementHighKm:850,manufacturerPositioning:'Neutral, lightweight and exceptionally bouncy trainer for varied speeds and distances; ASICS also positions it for easy, long and tempo running.',profileConfidence:'high'});
 addAsicsSeries('SONICBLAST',[1],{roles:['daily','steady','progression','tempo','threshold','intervals'],cushioning:4,responsiveness:5,stability:3,protection:4,grip:4,efficiency:5,durability:4,comfort:4,weightClass:'light',plated:true,plateType:'ASTROPLATE (Pebax)',typicalReplacementLowKm:550,typicalReplacementHighKm:800,manufacturerPositioning:'Light, bouncy and responsive trainer positioned for faster training and daily use.',profileConfidence:'high'});
 addAsicsSeries('MAGIC SPEED',[2,3,4,5],v=>({roles:['tempo','threshold','intervals','race'],cushioning:3,responsiveness:5,stability:3,protection:3,grip:4,efficiency:5,durability:3,comfort:3,weightClass:'light',plated:true,plateType:'performance plate',preferredDistanceMinKm:5,preferredDistanceMaxKm:30,typicalReplacementLowKm:450,typicalReplacementHighKm:700,manufacturerPositioning:'Performance-oriented road shoe built for faster runs and racing.',profileConfidence:v>=5?'high':'medium'}));
 addAsicsSeries('METASPEED SKY',[1,2,3,4],v=>({roles:['race','tempo','intervals'],cushioning:4,responsiveness:5,stability:2,protection:3,grip:5,efficiency:5,durability:2,comfort:3,weightClass:'very-light',plated:true,plateType:'carbon',preferredDistanceMinKm:5,preferredDistanceMaxKm:42.2,typicalReplacementLowKm:300,typicalReplacementHighKm:550,manufacturerPositioning:'Carbon-plated race shoe in the METASPEED family.',profileConfidence:v>=4?'high':'medium'}));
@@ -5992,8 +5992,11 @@ function applyRunRepeatCalibration(profile){
   Object.assign(patch,{cushioning:5,responsiveness:5,stability:4,protection:5,efficiency:5,comfort:4,grip:v>=2?5:4,durability:4});
   evidence=v===3?'RunRepeat Superblast 3: elite versatility, protection, stability and traction; top-tier long/quality trainer.':v===2?'RunRepeat Superblast 2: exceptional speed/cushioning versatility, rigid-stable platform and improved outsole.':'RunRepeat Superblast: very light, remarkably stable, durable and capable across distances/paces.';
  }else if(fam==='MEGABLAST'){
-  Object.assign(patch,{cushioning:5,responsiveness:5,stability:4,protection:5,grip:5,efficiency:5,durability:4,comfort:4,roles:['daily','easy','steady','long','progression','tempo','threshold','intervals','race']});
-  evidence='RunRepeat Megablast: outstanding energy return, exceptional impact protection, low weight, durable/grippy rubber and all-pace versatility.';
+  // MEGABLAST is an exceptional versatile trainer, not a universal specialist.
+  // Keep its genuine strengths without allowing one profile to dominate every
+  // quality category and suppress complementary rotation choices.
+  Object.assign(patch,{cushioning:5,responsiveness:5,stability:4,protection:5,grip:5,efficiency:5,durability:4,comfort:4,roles:['daily','easy','steady','long','progression','tempo']});
+  evidence='Megablast: highly cushioned, light and energetic do-it-all trainer; specialist speed/race roles remain available to differentiated models.';
  }else if(fam==='SONICBLAST'){
   Object.assign(patch,{cushioning:5,responsiveness:5,stability:4,protection:5,grip:4,efficiency:4,durability:4,comfort:3,roles:['daily','steady','long','progression','tempo','threshold','intervals']});
   evidence='RunRepeat Sonicblast: very high shock absorption, plated long-run/extended-interval strength and agile tempo bias; energy return below Megablast.';
@@ -7941,7 +7944,18 @@ function shoeEngineValidation(result,manual=new Map()){
    const km=Number(plan.distance)||0;
    if(km<=0||km>remaining+1e-6)return false;
    if(lifecycleWorkoutFit(p.profile,plan)<SESSION_SHOE_RULES.safeWorkoutFitFloor)return false;
-   return shoeEngineAssessment(p,plan,{rehab:false}).score>=SESSION_SHOE_RULES.safeSuitabilityFloor;
+   const predScore=shoeEngineAssessment(p,plan,{rehab:false}).score;
+   if(predScore<SESSION_SHOE_RULES.safeSuitabilityFloor)return false;
+   const assigned=result.assignments.find(a=>a.planId===plan.id);
+   const assignedPair=assigned&&result.pairs.find(x=>x.id===assigned.pairId);
+   if(assignedPair&&assignedPair.id!==p.id&&!assignedPair.owned&&assignedPair!==result.racePair&&assignedPair.role!=='race'){
+    const successorScore=shoeEngineAssessment(assignedPair,plan,{rehab:false}).score;
+    const importance=shoeEngineSessionImportance(plan);
+    // Keep validation exactly aligned with the retention pass: a materially
+    // superior planned successor is a legitimate quality-session exception.
+    if((successorScore-predScore)>=12&&importance>=86)return false;
+   }
+   return true;
   });
   if(compatible&&!p.isProjectedRetired&&String(last.date)<String(result.raceDate))add('usable-pair-abandoned-before-programme-end',{pairId:p.id,lastUse:last.date,remainingKm:remaining,nextCompatibleSession:compatible.id});
  }
@@ -8956,7 +8970,7 @@ function shoeEngineCanonicalFinalizePortfolio(result,manual,weeks){
 function shoeEngineBuildRehabSessions(now,raceDate){const injury=(state.injuries||[]).find(x=>x.id===state.activeInjuryPlanId);if(!injury)return[];const progress=injuryPrediction(injury),rehabEnd=[raceDate,progress?.windowEnd||raceDate].filter(Boolean).sort()[0],rows=[];for(let d=new Date(dte(now).getTime()+DAY),guard=0;d<=dte(rehabEnd)&&guard<120;d=new Date(d.getTime()+DAY),guard++){const date=iso(d),day=rehabCalendarDay(injury,progress,date,rehabPlanDayIndex(injury,date));if(!rehabDayNeedsShoe(day))continue;const exp=rehabExpectedDistance(day),km=Math.max(0,Number(exp.totalKm)||0);if(km<=0)continue;rows.push({id:`rehab-shoe-${injury.id}-${date}`,date,type:'Rehab recovery',distance:km,surface:'road',rehab:true,walkMinutes:exp.walkMinutes,runMinutes:exp.runMinutes,importance:shoeEngineSessionImportance({type:'Rehab recovery',distance:km,runMinutes:exp.runMinutes},{rehab:true}),injuryId:injury.id})}return rows}
 
 const SHOE_PLAN_SNAPSHOT_VERSION=3;
-const SHOE_ENGINE_CACHE_VERSION='15.6.54-50654-terminal-retirement-reconcile-r8';
+const SHOE_ENGINE_CACHE_VERSION='15.6.55-50655-terminal-retirement-reconcile-r8';
 function shoeStableSerialize(value){
  if(value===null||typeof value!=='object')return JSON.stringify(value);
  if(Array.isArray(value))return'['+value.map(shoeStableSerialize).join(',')+']';
@@ -9038,7 +9052,7 @@ function freshShoeLifecyclePlan(){
   racePair:null,raceWindow:null,
   catalogueSource:'offline',catalogueVersion:OFFLINE_ASICS_CATALOGUE_VERSION,
   footMechanics:runnerFootMechanics(),
-  engine:'v15.6.54-necessity-driven-portfolio'
+  engine:'v15.6.55-necessity-driven-portfolio'
  };
  shoeEngineCanonicalFinalizePortfolio(result,manual,weeks);
 
