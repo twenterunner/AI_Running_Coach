@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '15.6.67';
-  const BUILD = 50667;
+  const VERSION = '15.6.68';
+  const BUILD = 50668;
   const SCHEMA = 10400;
   const PRIMARY_STORAGE_KEY = 'arc_v10400_web';
   const MIRROR_STORAGE_KEY = 'arc_v10400_mirror';
@@ -2649,6 +2649,34 @@ function todayRehabStatusSummary(active){
  };
 }
 
+function todayInjuryPainDisplay(active,recoveryPain){
+ const injury=active?.injury;
+ if(!injury){
+  const value=Number(recoveryPain?.max);
+  return{
+   value:Number.isFinite(value)?value:null,
+   status:recoveryPain?.status||'No pain data',
+   text:`${recoveryPain?.status||'No pain data'}${Number.isFinite(value)?' · highest recent run pain':''}`,
+   source:'run'
+  };
+ }
+ const checks=sortedChecks(injury),todayKey=iso(today());
+ const todayCheck=checks.find(c=>c.date===todayKey&&Number.isFinite(Number(c.pain)));
+ const observed=todayCheck
+  ?{value:Number(todayCheck.pain),date:todayCheck.date,check:todayCheck,index:checks.indexOf(todayCheck)}
+  :lastObserved(checks,'pain',v=>Number.isFinite(Number(v)));
+ let value=observed.index>=0?Number(observed.value):nullableNumber(injury.currentPain);
+ let source='injury assessment';
+ if(observed.index>=0)source=observed.date===todayKey?"today's rehab check-in":`latest rehab check-in · ${fmtDate(observed.date)}`;
+ const status=Number.isFinite(value)?(value>=5?'Pain needs attention':value>=3?'Monitor pain':'Low pain signal'):'No pain data';
+ return{
+  value:Number.isFinite(value)?value:null,
+  status,
+  source,
+  text:`${injury.bodyRegion||'Active injury'} · ${source}`
+ };
+}
+
 function todayReadinessExplanation(ready){
  const reasons=[];
  const hrvDelta=Math.round((Number(ready.hrvAdj)||0)*100);
@@ -2674,10 +2702,10 @@ function todayReadinessExplanation(ready){
 }
 function consolidatedTodayCoachBriefing(p){
  const engine=coachEngine(),report=evidenceBasedCoach(engine),ast=report.athleteState,ready=readinessModel(),active=todayActiveInjury(),injuryDay=active.day,rehabSummary=todayRehabStatusSummary(active);
- const evidence=Math.round(clamp(Number(report.evidenceCoverage)||0,0,100)),remaining=raceTimeRemaining(),hrv=ready.hrv,pain=ready.pain;
+ const evidence=Math.round(clamp(Number(report.evidenceCoverage)||0,0,100)),remaining=raceTimeRemaining(),hrv=ready.hrv,pain=ready.pain,todayPain=todayInjuryPainDisplay(active,pain);
  const readinessDetail=todayReadinessExplanation(ready);
- const painValue=Number.isFinite(Number(pain.max))?`${Number(pain.max).toFixed(0)}/10`:'—';
- const painText=active.injury?`${active.injury.bodyRegion||'Active injury'} · ${pain.status}${Number.isFinite(Number(pain.max))?' · highest recent pain':''}`:`${pain.status}${Number.isFinite(Number(pain.max))?' · highest recent pain':''}`;
+ const painValue=Number.isFinite(Number(todayPain.value))?`${Number(todayPain.value).toFixed(0)}/10`:'—';
+ const painText=todayPain.text;
  const modeTitle=injuryDay&&rehabSummary?rehabSummary.date:p&&p.type!=='Rest'?p.type:'Recovery';
  const modeText=injuryDay&&rehabSummary?`Normal running estimate · ${rehabSummary.detail}`:p&&p.type!=='Rest'?`${Number(p.distance).toFixed(1)} km · ${p.purpose||'Complete as prescribed'}`:'No run scheduled · recovery is today’s training';
  let priorityTitle,priorityBullets;
@@ -2729,7 +2757,7 @@ function consolidatedTodayCoachBriefing(p){
  <div class="todayStatusGrid seriousStatusGrid">
    <article class="todayStatusCard training"><h4>${injuryDay?'ACTIVE REHAB':'TODAY’S FOCUS'}</h4><div class="statusRing">${todayPictogram(injuryDay?'rehab':p&&p.type!=='Rest'?'training':'recovery')}</div><div class="statusCopy"><strong>${esc(modeTitle)}</strong><p>${esc(modeText)}</p></div></article>
    <article class="todayStatusCard ${ready.label==='Normal'?'good':ready.label==='Restricted'?'caution':'neutral'}"><h4>READINESS</h4><div class="statusRing">${todayPictogram('readiness')}</div><div class="statusCopy"><strong>${esc(ready.label)}</strong><p>${esc(readinessDetail)}</p></div></article>
-   <article class="todayStatusCard ${Number(pain.max)>=3?'caution':'good'}"><h4>PAIN / INJURY</h4><div class="statusRing">${todayPictogram('pain')}</div><div class="statusCopy"><strong>${painValue}</strong><p>${esc(painText)}</p></div></article>
+   <article class="todayStatusCard ${Number(todayPain.value)>=3?'caution':'good'}"><h4>PAIN / INJURY</h4><div class="statusRing">${todayPictogram('pain')}</div><div class="statusCopy"><strong>${painValue}</strong><p>${esc(painText)}</p></div></article>
  </div>
  ${todayRehabCard(active)}
  ${todayWorkoutCard(p,injuryDay)}
@@ -9091,7 +9119,7 @@ function shoeEngineCanonicalFinalizePortfolio(result,manual,weeks){
 function shoeEngineBuildRehabSessions(now,raceDate){const injury=(state.injuries||[]).find(x=>x.id===state.activeInjuryPlanId);if(!injury)return[];const progress=injuryPrediction(injury),rehabEnd=[raceDate,progress?.windowEnd||raceDate].filter(Boolean).sort()[0],rows=[];for(let d=new Date(dte(now).getTime()+DAY),guard=0;d<=dte(rehabEnd)&&guard<120;d=new Date(d.getTime()+DAY),guard++){const date=iso(d),day=rehabCalendarDay(injury,progress,date,rehabPlanDayIndex(injury,date));if(!rehabDayNeedsShoe(day))continue;const exp=rehabExpectedDistance(day),km=Math.max(0,Number(exp.totalKm)||0);if(km<=0)continue;rows.push({id:`rehab-shoe-${injury.id}-${date}`,date,type:'Rehab recovery',distance:km,surface:'road',rehab:true,walkMinutes:exp.walkMinutes,runMinutes:exp.runMinutes,importance:shoeEngineSessionImportance({type:'Rehab recovery',distance:km,runMinutes:exp.runMinutes},{rehab:true}),injuryId:injury.id})}return rows}
 
 const SHOE_PLAN_SNAPSHOT_VERSION=3;
-const SHOE_ENGINE_CACHE_VERSION='15.6.67-50667-terminal-retirement-reconcile-r8';
+const SHOE_ENGINE_CACHE_VERSION='15.6.68-50668-terminal-retirement-reconcile-r8';
 function shoeStableSerialize(value){
  if(value===null||typeof value!=='object')return JSON.stringify(value);
  if(Array.isArray(value))return'['+value.map(shoeStableSerialize).join(',')+']';
@@ -9173,7 +9201,7 @@ function freshShoeLifecyclePlan(){
   racePair:null,raceWindow:null,
   catalogueSource:'offline',catalogueVersion:OFFLINE_ASICS_CATALOGUE_VERSION,
   footMechanics:runnerFootMechanics(),
-  engine:'v15.6.67-necessity-driven-portfolio'
+  engine:'v15.6.68-necessity-driven-portfolio'
  };
  shoeEngineCanonicalFinalizePortfolio(result,manual,weeks);
 
