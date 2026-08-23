@@ -5863,3 +5863,6 @@ body:has(#dashboard.progressPage.active),#mainContent:has(#dashboard.progressPag
 #shoes .shoePlannedLine,#shoes .shoeNewPairLine,#shoes .shoeRaceStrategyLine{stroke-dasharray:10 8!important;stroke-linecap:round!important;fill:none!important}
 #shoes .shoeActualLine{stroke-dasharray:none!important;fill:none!important}
 #shoes .shoeRaceTargetBand rect{stroke:none!important;stroke-dasharray:none!important}
+/* v15.6.23 authoritative shoe graph: semantic line states */
+.shoeProgrammeChart svg .shoeFutureAuthoritative{fill:none!important;stroke-dasharray:12 10!important;stroke-linecap:round;stroke-linejoin:round}
+.shoeProgrammeChart svg .shoeActualLine{stroke-dasharray:none!important}
