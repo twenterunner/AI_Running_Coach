@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '15.6.19';
-  const BUILD = 50619;
+  const VERSION = '15.6.20';
+  const BUILD = 50620;
   const SCHEMA = 10400;
   const PRIMARY_STORAGE_KEY = 'arc_v10400_web';
   const MIRROR_STORAGE_KEY = 'arc_v10400_mirror';
@@ -7774,7 +7774,8 @@ function shoeEnginePhysicalRetirementAssessment(pair,result){
  // The retirement boundary is reached when the next otherwise-suitable WHOLE
  // session cannot fit inside remaining lifecycle. The shoe retires at its final
  // positive-use point; the overflowing session belongs wholly to another pair.
- const blockedNext=compatible.find(plan=>(Number(plan.distance)||0)>remaining+1e-6)||null;
+ const nextCompatible=compatible[0]||null;
+ const blockedNext=nextCompatible&&(Number(nextCompatible.distance)||0)>remaining+1e-6?nextCompatible:null;
  const cannotCoverNextSuitableWholeSession=Boolean(blockedNext);
 
  // A lifecycle-linked successor purchase is corroborating evidence. Do not call
@@ -8820,6 +8821,12 @@ function shoeEngineCanonicalFinalizePortfolio(result,manual,weeks){
  // Canonical entry dates can shift after a continuity repair. Validate/repair
  // weekly physical coverage once more against those final dates.
  shoeEngineGuaranteeTwoServiceablePairs(result,manual);
+ // Final coach pass: before publishing purchases/retirements, rotate still-serviceable
+ // owned shoes back into compatible whole sessions. This prevents long unused tails
+ // and avoids speculative replacement purchases while owned lifecycle is available.
+ shoeEngineRepairDormantServiceablePairs(result,manual);
+ shoeEngineFinalOwnedContinuityReclaim(result,manual);
+ shoeEngineMinimizeFuturePortfolio(result,manual);
  shoeEngineCanonicalizePhysicalEntryDates(result);
  shoeEngineApplyCanonicalRotationExits(result);
  return result;
@@ -8903,7 +8910,7 @@ function freshShoeLifecyclePlan(){
   racePair:null,raceWindow:null,
   catalogueSource:'offline',catalogueVersion:OFFLINE_ASICS_CATALOGUE_VERSION,
   footMechanics:runnerFootMechanics(),
-  engine:'v15.4.7-retirement-markers'
+  engine:'v15.4.8-physical-retirement-only'
  };
  shoeEngineCanonicalFinalizePortfolio(result,manual,weeks);
 
@@ -8923,6 +8930,12 @@ function freshShoeLifecyclePlan(){
  // Canonical entry dates can shift after a continuity repair. Validate/repair
  // weekly physical coverage once more against those final dates.
  shoeEngineGuaranteeTwoServiceablePairs(result,manual);
+ // Final coach pass: before publishing purchases/retirements, rotate still-serviceable
+ // owned shoes back into compatible whole sessions. This prevents long unused tails
+ // and avoids speculative replacement purchases while owned lifecycle is available.
+ shoeEngineRepairDormantServiceablePairs(result,manual);
+ shoeEngineFinalOwnedContinuityReclaim(result,manual);
+ shoeEngineMinimizeFuturePortfolio(result,manual);
  shoeEngineCanonicalizePhysicalEntryDates(result);
  shoeEngineApplyCanonicalRotationExits(result);
  result.purchases=result.purchases.map(b=>{b.reason=String(b.reason||'')
@@ -9116,24 +9129,11 @@ function shoeGraphRetirementPoint(pair,life,forecastPoints){
  const pts=(forecastPoints||shoeGraphForecastPoints(pair,life)).slice()
   .sort((a,b)=>String(a.date).localeCompare(String(b.date)));
  const physical=shoeEnginePhysicalRetirementAssessment(pair,life);
- // Graph acceptance rule: every non-race physical pair that has a final planned
- // positive-use date before Race Day gets a visible terminal X.  The lifecycle
- // engine can intentionally leave a few unusable kilometres below the numeric
- // ceiling because the next whole suitable session will not fit; the chart must
- // still show where that physical pair leaves the programme instead of silently
- // ending/flattening the curve.  Prefer the canonical physical-retirement date
- // when available, otherwise use the final positive-use assignment.
- let markerDate=physical.retired&&physical.date?physical.date:null;
- let markerReason=physical.reason||null;
- if(!markerDate&&pair!==life.racePair&&pair.role!=='race'){
-  const positive=(pair.assignments||[]).filter(a=>Number(a.km)>0&&String(a.date)<String(life.raceDate))
-   .slice().sort((a,b)=>String(a.date).localeCompare(String(b.date))||String(a.planId||'').localeCompare(String(b.planId||'')));
-  const finalUse=positive.at(-1)||null;
-  if(finalUse&&String(finalUse.date)<String(life.raceDate)){
-   markerDate=finalUse.date;
-   markerReason='Final planned use / lifecycle exit.';
-  }
- }
+ // A terminal X means PHYSICAL retirement only. End of assigned programme use
+ // is not retirement: a serviceable shoe may finish the programme with usable
+ // lifecycle remaining and must stay active without a false retirement marker.
+ const markerDate=physical.retired&&physical.date?physical.date:null;
+ const markerReason=physical.reason||null;
  if(!markerDate)return null;
  const sameOrBefore=pts.filter(p=>String(p.date)<=String(markerDate));
  const last=sameOrBefore.at(-1)||pts.at(-1);

@@ -5852,7 +5852,7 @@ body:has(#dashboard.progressPage.active),#mainContent:has(#dashboard.progressPag
   background:transparent!important;mix-blend-mode:normal!important;filter:none!important;z-index:21!important;
 }
 
-/* v15.6.19 — purchase marker is anchored to first positive use on the curve. */
+/* v15.6.20 — purchase marker is anchored to first positive use on the curve. */
 #shoes .shoeBuyFirstUse circle{fill:var(--shoe-color);stroke:#08202b;stroke-width:2}
 #shoes .shoeBuyFirstUse line{stroke:var(--shoe-color);stroke-width:1.5;stroke-dasharray:3 3}
 #shoes .shoeBuyFirstUse text{fill:var(--shoe-color);font-weight:850;font-size:10px}
