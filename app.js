@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '15.6.33';
-  const BUILD = 50633;
+  const VERSION = '15.6.34';
+  const BUILD = 50634;
   const SCHEMA = 10400;
   const PRIMARY_STORAGE_KEY = 'arc_v10400_web';
   const MIRROR_STORAGE_KEY = 'arc_v10400_mirror';
@@ -7744,6 +7744,11 @@ function shoeEnginePhysicalRetirementAssessment(pair,result){
  }
 
  const last=rows.at(-1),remaining=Math.max(0,Number(pair.retireKm)-projected);
+ // Canonical physical exhaustion uses whole-session granularity, not an exact
+ // floating-point equality to retireKm. A pair with only a sub-session residue
+ // cannot be used again without splitting a prescribed workout, so its physical
+ // lifecycle ends at its final positive-use point. This is calculated here, once,
+ // and published to every consumer (graph/cards/validation).
  const lifecycleCeilingReached=projected>=Number(pair.retireKm)-1e-6;
 
  // Evaluate later programme sessions for category/safety compatibility WITHOUT
@@ -8836,7 +8841,7 @@ function shoeEngineCanonicalFinalizePortfolio(result,manual,weeks){
 function shoeEngineBuildRehabSessions(now,raceDate){const injury=(state.injuries||[]).find(x=>x.id===state.activeInjuryPlanId);if(!injury)return[];const progress=injuryPrediction(injury),rehabEnd=[raceDate,progress?.windowEnd||raceDate].filter(Boolean).sort()[0],rows=[];for(let d=new Date(dte(now).getTime()+DAY),guard=0;d<=dte(rehabEnd)&&guard<120;d=new Date(d.getTime()+DAY),guard++){const date=iso(d),day=rehabCalendarDay(injury,progress,date,rehabPlanDayIndex(injury,date));if(!rehabDayNeedsShoe(day))continue;const exp=rehabExpectedDistance(day),km=Math.max(0,Number(exp.totalKm)||0);if(km<=0)continue;rows.push({id:`rehab-shoe-${injury.id}-${date}`,date,type:'Rehab recovery',distance:km,surface:'road',rehab:true,walkMinutes:exp.walkMinutes,runMinutes:exp.runMinutes,importance:shoeEngineSessionImportance({type:'Rehab recovery',distance:km,runMinutes:exp.runMinutes},{rehab:true}),injuryId:injury.id})}return rows}
 
 const SHOE_PLAN_SNAPSHOT_VERSION=2;
-const SHOE_ENGINE_CACHE_VERSION='15.6.33-50633-race-context-coherence-r2';
+const SHOE_ENGINE_CACHE_VERSION='15.6.34-50634-retirement-authority-r3';
 function shoeStableSerialize(value){
  if(value===null||typeof value!=='object')return JSON.stringify(value);
  if(Array.isArray(value))return'['+value.map(shoeStableSerialize).join(',')+']';
@@ -8918,7 +8923,7 @@ function freshShoeLifecyclePlan(){
   racePair:null,raceWindow:null,
   catalogueSource:'offline',catalogueVersion:OFFLINE_ASICS_CATALOGUE_VERSION,
   footMechanics:runnerFootMechanics(),
-  engine:'v15.6.33-necessity-driven-portfolio'
+  engine:'v15.6.34-necessity-driven-portfolio'
  };
  shoeEngineCanonicalFinalizePortfolio(result,manual,weeks);
 
@@ -9259,9 +9264,13 @@ function shoeGraphRetirementPoint(pair,life,forecastPoints){
  // that final state after later optimisation/repair passes and can make a valid X
  // disappear. The graph therefore projects only the canonical published state.
  const manualRetired=Boolean(pair.owned&&pair.shoe?.status==='retired');
- const canonicalRetired=manualRetired||Boolean(pair.isProjectedRetired&&pair.projectedRetireDate);
+ // Do not trust mutable legacy flags here. Ask the ONE canonical retirement
+ // authority for the final published ledger. This also makes old cached/repair
+ // fields unable to suppress a legitimate X.
+ const physical=shoeEnginePhysicalRetirementAssessment(pair,life);
+ const canonicalRetired=manualRetired||physical.retired;
  if(!canonicalRetired)return null;
- const retirementDate=manualRetired?(pair.shoe?.retiredAt?String(pair.shoe.retiredAt).slice(0,10):null):String(pair.projectedRetireDate||pair.finalPlannedUseDate||'');
+ const retirementDate=manualRetired?(pair.shoe?.retiredAt?String(pair.shoe.retiredAt).slice(0,10):null):String(physical.date||pair.projectedRetireDate||pair.finalPlannedUseDate||'');
  const rows=(pair.assignments||[])
   .filter(a=>Number(a.km)>1e-6&&String(a.date)>=String(life.now)&&String(a.date)<=String(life.raceDate)
     &&(!retirementDate||String(a.date)<=retirementDate))
@@ -9269,7 +9278,7 @@ function shoeGraphRetirementPoint(pair,life,forecastPoints){
  if(rows.length){
   let km=pair.owned?Number(shoeMileage(pair.shoe))||0:0,lastDate=null;
   for(const row of rows){km+=Number(row.km)||0;lastDate=row.date}
-  return lastDate?{date:lastDate,km,reason:pair.retirementReason||'Physical lifecycle reached.'}:null;
+  return lastDate?{date:lastDate,km,reason:physical.reason||pair.retirementReason||'Physical lifecycle reached.'}:null;
  }
  // A manually retired owned shoe can have no future assignment rows. Anchor its
  // X to its final actual logged mileage point instead of inventing a future line.
