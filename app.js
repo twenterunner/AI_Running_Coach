@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '15.6.68';
-  const BUILD = 50668;
+  const VERSION = '15.6.69';
+  const BUILD = 50669;
   const SCHEMA = 10400;
   const PRIMARY_STORAGE_KEY = 'arc_v10400_web';
   const MIRROR_STORAGE_KEY = 'arc_v10400_mirror';
@@ -2649,6 +2649,11 @@ function todayRehabStatusSummary(active){
  };
 }
 
+function rehabCheckinWorstPain(c){
+ if(!c)return null;
+ const vals=[c.pain,c.walkPain,c.runPain].map(Number).filter(Number.isFinite);
+ return vals.length?Math.max(...vals):null;
+}
 function todayInjuryPainDisplay(active,recoveryPain){
  const injury=active?.injury;
  if(!injury){
@@ -2661,13 +2666,11 @@ function todayInjuryPainDisplay(active,recoveryPain){
   };
  }
  const checks=sortedChecks(injury),todayKey=iso(today());
- const todayCheck=checks.find(c=>c.date===todayKey&&Number.isFinite(Number(c.pain)));
- const observed=todayCheck
-  ?{value:Number(todayCheck.pain),date:todayCheck.date,check:todayCheck,index:checks.indexOf(todayCheck)}
-  :lastObserved(checks,'pain',v=>Number.isFinite(Number(v)));
- let value=observed.index>=0?Number(observed.value):nullableNumber(injury.currentPain);
+ const todayCheck=checks.find(c=>c.date===todayKey&&Number.isFinite(rehabCheckinWorstPain(c)));
+ const latestCheck=todayCheck||checks.slice().reverse().find(c=>Number.isFinite(rehabCheckinWorstPain(c)))||null;
+ const value=latestCheck?rehabCheckinWorstPain(latestCheck):nullableNumber(injury.currentPain);
  let source='injury assessment';
- if(observed.index>=0)source=observed.date===todayKey?"today's rehab check-in":`latest rehab check-in · ${fmtDate(observed.date)}`;
+ if(latestCheck)source=latestCheck.date===todayKey?"today's rehab check-in":`latest rehab check-in · ${fmtDate(latestCheck.date)}`;
  const status=Number.isFinite(value)?(value>=5?'Pain needs attention':value>=3?'Monitor pain':'Low pain signal'):'No pain data';
  return{
   value:Number.isFinite(value)?value:null,
@@ -9119,7 +9122,7 @@ function shoeEngineCanonicalFinalizePortfolio(result,manual,weeks){
 function shoeEngineBuildRehabSessions(now,raceDate){const injury=(state.injuries||[]).find(x=>x.id===state.activeInjuryPlanId);if(!injury)return[];const progress=injuryPrediction(injury),rehabEnd=[raceDate,progress?.windowEnd||raceDate].filter(Boolean).sort()[0],rows=[];for(let d=new Date(dte(now).getTime()+DAY),guard=0;d<=dte(rehabEnd)&&guard<120;d=new Date(d.getTime()+DAY),guard++){const date=iso(d),day=rehabCalendarDay(injury,progress,date,rehabPlanDayIndex(injury,date));if(!rehabDayNeedsShoe(day))continue;const exp=rehabExpectedDistance(day),km=Math.max(0,Number(exp.totalKm)||0);if(km<=0)continue;rows.push({id:`rehab-shoe-${injury.id}-${date}`,date,type:'Rehab recovery',distance:km,surface:'road',rehab:true,walkMinutes:exp.walkMinutes,runMinutes:exp.runMinutes,importance:shoeEngineSessionImportance({type:'Rehab recovery',distance:km,runMinutes:exp.runMinutes},{rehab:true}),injuryId:injury.id})}return rows}
 
 const SHOE_PLAN_SNAPSHOT_VERSION=3;
-const SHOE_ENGINE_CACHE_VERSION='15.6.68-50668-terminal-retirement-reconcile-r8';
+const SHOE_ENGINE_CACHE_VERSION='15.6.69-50669-terminal-retirement-reconcile-r8';
 function shoeStableSerialize(value){
  if(value===null||typeof value!=='object')return JSON.stringify(value);
  if(Array.isArray(value))return'['+value.map(shoeStableSerialize).join(',')+']';
@@ -9201,7 +9204,7 @@ function freshShoeLifecyclePlan(){
   racePair:null,raceWindow:null,
   catalogueSource:'offline',catalogueVersion:OFFLINE_ASICS_CATALOGUE_VERSION,
   footMechanics:runnerFootMechanics(),
-  engine:'v15.6.68-necessity-driven-portfolio'
+  engine:'v15.6.69-necessity-driven-portfolio'
  };
  shoeEngineCanonicalFinalizePortfolio(result,manual,weeks);
 
