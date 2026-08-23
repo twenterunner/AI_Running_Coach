@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '15.6.36';
-  const BUILD = 50636;
+  const VERSION = '15.6.37';
+  const BUILD = 50637;
   const SCHEMA = 10400;
   const PRIMARY_STORAGE_KEY = 'arc_v10400_web';
   const MIRROR_STORAGE_KEY = 'arc_v10400_mirror';
@@ -7786,6 +7786,30 @@ function shoeEnginePhysicalRetirementAssessment(pair,result){
  const blockedNext=nextCompatible&&(Number(nextCompatible.distance)||0)>remaining+1e-6?nextCompatible:null;
  const cannotCoverNextSuitableWholeSession=Boolean(blockedNext);
 
+ // Generic end-of-lifecycle rule: physical retirement must not depend on there
+ // happening to be another compatible workout AFTER the shoe's final use. That
+ // legacy dependency is exactly how a pair could end a programme with only a
+ // few unusable kilometres of residual life yet lose its retirement X when no
+ // later compatible session remained to 'prove' the overflow.
+ //
+ // Determine the smallest WHOLE compatible workout represented by the fixed
+ // programme. If the residual lifecycle cannot cover even that smallest normal
+ // compatible exposure, the pair is physically exhausted at its final positive
+ // use regardless of where that use falls on the calendar.
+ const compatibleWholeSessionDistances=(result.allSessions||[])
+  .filter(plan=>plan.type!=='Rest'&&Number(plan.distance)>0)
+  .filter(plan=>{
+   if(/^Race Day$/i.test(String(plan.type||''))&&pair!==result.racePair)return false;
+   if(lifecycleWorkoutFit(pair.profile,plan)<SESSION_SHOE_RULES.safeWorkoutFitFloor)return false;
+   const freshAssessment=shoeSuitabilityAssessment(pair.profile,plan,{rehab:Boolean(plan.rehab),shoe:null,projectedKm:0,retireKm:1e9});
+   return freshAssessment.score>=SESSION_SHOE_RULES.safeSuitabilityFloor;
+  })
+  .map(plan=>Number(plan.distance)||0).filter(km=>km>0);
+ const minCompatibleWholeSessionKm=compatibleWholeSessionDistances.length?Math.min(...compatibleWholeSessionDistances):null;
+ const cannotCoverAnyMeaningfulCompatibleWholeSession=Number.isFinite(minCompatibleWholeSessionKm)
+  ? remaining+1e-6<minCompatibleWholeSessionKm
+  : false;
+
  // A lifecycle-linked successor purchase is corroborating evidence. Do not call
  // category-driven or Race-Day-special purchases retirement unless the outgoing
  // pair also lacks enough lifecycle for the successor's first otherwise-suitable
@@ -7805,15 +7829,18 @@ function shoeEnginePhysicalRetirementAssessment(pair,result){
  // Do NOT infer retirement from an ordinary/category/portfolio successor: only the
  // engine's explicit lifecycle-replacement reason may establish this boundary.
  const hardLifecycleSuccessor=Boolean(successor&&/^Hard lifecycle replacement:/i.test(String(successor.reason||'')));
- const retired=manualRetired||lifecycleCeilingReached||cannotCoverNextSuitableWholeSession||successorLifecycleBoundary||hardLifecycleSuccessor;
+ const retired=manualRetired||lifecycleCeilingReached||cannotCoverAnyMeaningfulCompatibleWholeSession||cannotCoverNextSuitableWholeSession||successorLifecycleBoundary||hardLifecycleSuccessor;
  return{
   retired,
   date:retired?last.date:null,
   km:projected,
+  remainingKm:remaining,
+  minCompatibleWholeSessionKm,
   blockedSessionId:blockedNext?.id||null,
   blockedSessionDate:blockedNext?.date||null,
   reason:manualRetired?'Runner marked the shoe retired.'
    :lifecycleCeilingReached?'Physical lifecycle ceiling reached.'
+   :cannotCoverAnyMeaningfulCompatibleWholeSession?'Residual lifecycle cannot cover any meaningful compatible whole programme session.'
    :hardLifecycleSuccessor?'Hard lifecycle replacement establishes physical retirement at final use.'
    :retired?'Remaining physical lifecycle cannot cover the next otherwise-suitable whole programme session.':null
  };
@@ -8855,8 +8882,8 @@ function shoeEngineCanonicalFinalizePortfolio(result,manual,weeks){
 
 function shoeEngineBuildRehabSessions(now,raceDate){const injury=(state.injuries||[]).find(x=>x.id===state.activeInjuryPlanId);if(!injury)return[];const progress=injuryPrediction(injury),rehabEnd=[raceDate,progress?.windowEnd||raceDate].filter(Boolean).sort()[0],rows=[];for(let d=new Date(dte(now).getTime()+DAY),guard=0;d<=dte(rehabEnd)&&guard<120;d=new Date(d.getTime()+DAY),guard++){const date=iso(d),day=rehabCalendarDay(injury,progress,date,rehabPlanDayIndex(injury,date));if(!rehabDayNeedsShoe(day))continue;const exp=rehabExpectedDistance(day),km=Math.max(0,Number(exp.totalKm)||0);if(km<=0)continue;rows.push({id:`rehab-shoe-${injury.id}-${date}`,date,type:'Rehab recovery',distance:km,surface:'road',rehab:true,walkMinutes:exp.walkMinutes,runMinutes:exp.runMinutes,importance:shoeEngineSessionImportance({type:'Rehab recovery',distance:km,runMinutes:exp.runMinutes},{rehab:true}),injuryId:injury.id})}return rows}
 
-const SHOE_PLAN_SNAPSHOT_VERSION=2;
-const SHOE_ENGINE_CACHE_VERSION='15.6.36-50636-retirement-handover-r5';
+const SHOE_PLAN_SNAPSHOT_VERSION=3;
+const SHOE_ENGINE_CACHE_VERSION='15.6.37-50637-retirement-single-ledger-r6';
 function shoeStableSerialize(value){
  if(value===null||typeof value!=='object')return JSON.stringify(value);
  if(Array.isArray(value))return'['+value.map(shoeStableSerialize).join(',')+']';
@@ -8938,7 +8965,7 @@ function freshShoeLifecyclePlan(){
   racePair:null,raceWindow:null,
   catalogueSource:'offline',catalogueVersion:OFFLINE_ASICS_CATALOGUE_VERSION,
   footMechanics:runnerFootMechanics(),
-  engine:'v15.6.36-necessity-driven-portfolio'
+  engine:'v15.6.37-necessity-driven-portfolio'
  };
  shoeEngineCanonicalFinalizePortfolio(result,manual,weeks);
 
@@ -9273,36 +9300,32 @@ function shoeGraphForecastPoints(pair,life){
  return points;
 }
 function shoeGraphRetirementPoint(pair,life,forecastPoints){
- // Generic single-authority contract: rendering MUST NOT re-run retirement logic.
- // The lifecycle solver/finaliser has already published the canonical physical
- // retirement state on the pair. Re-assessing retirement here can disagree with
- // that final state after later optimisation/repair passes and can make a valid X
- // disappear. The graph therefore projects only the canonical published state.
+ // Renderer is a pure projection of the FINAL canonical retirement ledger.
+ // It must never re-run physical-retirement reasoning. Doing so created a second
+ // authority and allowed an X that had already been finalized to disappear again.
  const manualRetired=Boolean(pair.owned&&pair.shoe?.status==='retired');
- // Do not trust mutable legacy flags here. Ask the ONE canonical retirement
- // authority for the final published ledger. This also makes old cached/repair
- // fields unable to suppress a legitimate X.
- const physical=shoeEnginePhysicalRetirementAssessment(pair,life);
- const canonicalRetired=manualRetired||physical.retired;
- if(!canonicalRetired)return null;
- const retirementDate=manualRetired?(pair.shoe?.retiredAt?String(pair.shoe.retiredAt).slice(0,10):null):String(physical.date||pair.projectedRetireDate||pair.finalPlannedUseDate||'');
+ const event=(life.snapshot?.retirementEvents||[]).find(e=>e.pairId===pair.id)||null;
+ const retirementDate=event?.date||pair.projectedRetireDate||(manualRetired&&pair.shoe?.retiredAt?String(pair.shoe.retiredAt).slice(0,10):null);
+ if(!retirementDate&&!manualRetired)return null;
+
+ // Anchor the X to accumulated mileage at the canonical terminal date. Use the
+ // authoritative assignment ledger, not rendered forecast segments, so dormant-
+ // gap splitting or SVG simplification can never remove/move a retirement marker.
  const rows=(pair.assignments||[])
-  .filter(a=>Number(a.km)>1e-6&&String(a.date)>=String(life.now)&&String(a.date)<=String(life.raceDate)
-    &&(!retirementDate||String(a.date)<=retirementDate))
+  .filter(a=>Number(a.km)>1e-6&&String(a.date)>=String(life.now)&&String(a.date)<=String(retirementDate||life.raceDate))
   .slice().sort((a,b)=>String(a.date).localeCompare(String(b.date))||String(a.planId).localeCompare(String(b.planId)));
  if(rows.length){
   let km=pair.owned?Number(shoeMileage(pair.shoe))||0:0,lastDate=null;
   for(const row of rows){km+=Number(row.km)||0;lastDate=row.date}
-  return lastDate?{date:lastDate,km,reason:physical.reason||pair.retirementReason||'Physical lifecycle reached.'}:null;
+  return lastDate?{date:lastDate,km,reason:event?.reason||pair.retirementReason||'Physical lifecycle reached.'}:null;
  }
- // A manually retired owned shoe can have no future assignment rows. Anchor its
- // X to its final actual logged mileage point instead of inventing a future line.
  if(manualRetired){
   const actual=shoeActualProgrammeSeries(pair.shoe,state.setup?.planStart||life.now,life.now);
-  return actual.length?{...actual.at(-1),reason:pair.retirementReason||'Runner marked the shoe retired.'}:null;
+  return actual.length?{...actual.at(-1),reason:event?.reason||pair.retirementReason||'Runner marked the shoe retired.'}:null;
  }
  return null
 }
+
 function shoeForecastRenderableSegments(points){
  if(!Array.isArray(points)||points.length<2)return[];
  const MIN_RISE_KM=0.05,MAX_IDLE_DAYS=21;
