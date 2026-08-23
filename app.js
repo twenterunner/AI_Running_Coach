@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '15.6.61';
-  const BUILD = 50661;
+  const VERSION = '15.6.62';
+  const BUILD = 50662;
   const SCHEMA = 10400;
   const PRIMARY_STORAGE_KEY = 'arc_v10400_web';
   const MIRROR_STORAGE_KEY = 'arc_v10400_mirror';
@@ -4880,6 +4880,20 @@ function longitudinalSnapshot(i,checks){
   strength:strengthObs.value,impact:impactObs.value,confidence:confidenceObs.value,morningStiffness:stiffObs.value,walkMinutes:walkMinObs.value,stairs:stairsObs.value};
 }
 function checkStatus(checks,test){const assessed=checks.filter(test.assessed),met=assessed.length?test.pass(assessed):null;return met===null?'unknown':met?'met':'notMet'}
+
+function isStrengthImpactReadinessAssessmentCheck(c){
+ const title=String(c?.planSnapshot?.title||'');
+ const stage=Number(c?.planSnapshot?.stage);
+ const type=String(c?.planSnapshot?.type||'');
+ return /strength\s*&\s*impact readiness assessment/i.test(title)||(stage===4&&type==='load'&&(known(c?.bridge)||known(c?.hop)));
+}
+function completedStrengthImpactAssessmentChecks(checks){
+ return (checks||[]).filter(c=>isStrengthImpactReadinessAssessmentCheck(c)&&c.rehabExerciseStatus==='all'&&known(c.bridge)&&known(c.hop));
+}
+function qualifyingStrengthImpactAssessmentChecks(checks){
+ return completedStrengthImpactAssessmentChecks(checks).filter(c=>c.bridge===true&&c.hop===true&&Number(c.confidence)>=8);
+}
+
 function criterionState(i,p,stageIndex){const checks=sortedChecks(i),snap=longitudinalSnapshot(i,checks),stable=checks.filter(c=>c.nextDayWorse===false&&c.newSwelling===false),run=runEvidence(checks),tests={
  'Symptoms stable or improving':{assessed:c=>known(c.symptomTrend)||known(c.nextDayWorse)||Number.isFinite(c.pain),pass:()=>{const last=checks.slice(-3);return !last.some(c=>c.symptomTrend==='worse'||c.nextDayWorse===true)&&!(Number.isFinite(snap.painTrend)&&snap.painTrend>=2)}},
  'No new swelling or bruising':{assessed:c=>known(c.newSwelling),pass:a=>a.slice(-2).every(c=>c.newSwelling===false)},
@@ -4898,7 +4912,7 @@ function criterionState(i,p,stageIndex){const checks=sortedChecks(i),snap=longit
  'No altered gait':{assessed:c=>known(c.alteredGait),pass:()=>run.successful.slice(-2).length>=2&&run.successful.slice(-2).every(c=>c.alteredGait===false)},
  'At least 30 minutes easy running tolerated':{assessed:c=>['completed','stopped','unable'].includes(c.runStatus)||Number.isFinite(c.runMinutes),pass:()=>run.successful.filter(c=>Number(c.runMinutes)>=30).length>=2},
  'Pain ≤1/10':{assessed:c=>Number.isFinite(c.pain),pass:()=>checks.filter(c=>Number.isFinite(c.pain)).slice(-2).length>=2&&checks.filter(c=>Number.isFinite(c.pain)).slice(-2).every(c=>c.pain<=1)},
- 'Strength and impact confidence restored':{assessed:c=>known(c.bridge)||known(c.hop)||Number.isFinite(c.confidence),pass:()=>checks.filter(c=>c.bridge===true&&c.hop===true&&Number(c.confidence)>=8).length>=2},
+ 'Strength and impact confidence restored':{assessed:c=>isStrengthImpactReadinessAssessmentCheck(c)||known(c.bridge)||known(c.hop)||Number.isFinite(c.confidence),pass:()=>qualifyingStrengthImpactAssessmentChecks(checks).length>=2},
  'Normal running volume tolerated':{assessed:c=>['completed','stopped','unable'].includes(c.runStatus)||Number.isFinite(c.runMinutes),pass:()=>run.successful.filter(c=>Number(c.runMinutes)>=45).length>=2},
  'Faster running or hills tolerated':{assessed:c=>known(c.runQualityTolerated)||known(c.runIntensity)||known(c.hillsTolerated),pass:()=>checks.filter(c=>c.runStatus==='completed'&&(c.runQualityTolerated===true||(!known(c.runQualityTolerated)&&(c.hillsTolerated===true||['tempo','interval','hills','quality'].includes(String(c.runIntensity||'').toLowerCase()))))).length>=2},
  'No symptom recurrence after normal training':{assessed:c=>c.runStatus==='completed'&&known(c.nextDayWorse),pass:()=>checks.filter(c=>c.runStatus==='completed'&&Number(c.runMinutes)>=30&&c.nextDayWorse===false&&c.alteredGait===false).slice(-3).length>=3}
@@ -4949,8 +4963,9 @@ function criterionState(i,p,stageIndex){const checks=sortedChecks(i),snap=longit
    return{count,target:3,text:`${Math.min(count,3)} of 3 stable post-training responses`};
   }
   if(label==='Strength and impact confidence restored'){
-   const count=checks.filter(c=>c.bridge===true&&c.hop===true&&Number(c.confidence)>=8).length;
-   return{count,target:2,text:`${Math.min(count,2)} of 2 check-ins with strength + impact tolerated and confidence ≥8/10`};
+   const completedCount=completedStrengthImpactAssessmentChecks(checks).length;
+   const qualifyingCount=qualifyingStrengthImpactAssessmentChecks(checks).length;
+   return{count:qualifyingCount,target:2,completedCount,text:`${Math.min(completedCount,2)} of 2 readiness assessments completed · ${Math.min(qualifyingCount,2)} of 2 meet strength + impact tolerated and confidence ≥8/10`};
   }
   return null;
  };
@@ -4979,10 +4994,24 @@ function injuryStageHistory(i,checks,diag){
  }
  return{peakStage,peakDate};
 }
+
+function completedPhaseCriterionState(i,stageIndex,diag){
+ const rows=sortedChecks(i);
+ for(let n=1;n<=rows.length;n++){
+  const prefix=rows.slice(0,n);
+  const reached=injuryStageForChecks(i,prefix,diag);
+  if(reached>stageIndex){
+   const scoped={...i,checkIns:prefix};
+   return criterionState(scoped,{},stageIndex);
+  }
+ }
+ return criterionState(i,{},stageIndex);
+}
+
 function injuryPrediction(i){
  const checks=sortedChecks(i),latest=checks.at(-1)||{},diag=workingDiagnosis(i),initialPain=nullableNumber(i.initialPain),walkInitially=nullableNumber(i.initialWalkPain);let nominalTotal=Number(diag.nominalDays)||56;const severityKnown=Number.isFinite(initialPain)||Number.isFinite(walkInitially)||i.pop||i.bruising;const severityFactor=!severityKnown?1:(initialPain>=8||i.pop||walkInitially>=8?1.18:initialPain>=6||i.bruising||walkInitially>=5?1.08:initialPain<=2&&walkInitially<=1?.88:1);nominalTotal=Math.round(nominalTotal*severityFactor);const baselineMin=Math.max(7,Math.round((Number(diag.minDays)||nominalTotal*.7)*severityFactor)),baselineMax=Math.max(baselineMin+7,Math.round((Number(diag.maxDays)||nominalTotal*1.5)*severityFactor));
  const snap=longitudinalSnapshot(i,checks),currentPain=Number.isFinite(snap.currentPain)?snap.currentPain:initialPain,walkPain=Number.isFinite(snap.walkPain)?snap.walkPain:walkInitially,elapsed=Math.max(0,Math.floor((today()-dte(i.date))/DAY));
- const stage=injuryStageForChecks(i,checks,diag),stageHistory=injuryStageHistory(i,checks,diag),peakStage=Math.max(stage,stageHistory.peakStage),regressedBy=Math.max(0,peakStage-stage),setback=regressedBy>0;
+ const criteriaStage=injuryStageForChecks(i,checks,diag),stageHistory=injuryStageHistory(i,checks,diag),peakStage=Math.max(criteriaStage,stageHistory.peakStage),stage=peakStage,regressedBy=0,setback=false;
  const completion=injuryCompletionForChecks(i,checks,diag,initialPain,walkInitially),nominal=Math.round(clamp(elapsed/nominalTotal*100,0,100)),delta=completion===null?null:completion-nominal;
  const nominalRemaining=Math.max(7,nominalTotal-elapsed),stageRemaining=Math.max(7,Math.round(nominalTotal*[.94,.78,.60,.42,.25,.10][stage]));
  let trendRemaining=null,trendRate=null;if(checks.length>=2){const points=checks.map((c,idx)=>({day:Math.max(0,Math.round((dte(c.date)-dte(i.date))/DAY)),score:injuryCompletionForChecks(i,checks.slice(0,idx+1),diag,initialPain,walkInitially)})).filter(x=>Number.isFinite(x.score));if(points.length>=2){const first=points[0],last=points.at(-1),span=Math.max(1,last.day-first.day),gain=last.score-first.score;trendRate=gain/span;if(trendRate>.15)trendRemaining=Math.round((100-last.score)/trendRate);}}
@@ -4994,7 +5023,7 @@ function injuryCompletionForChecks(i,checks,diag,initialPain,walkInitially){
  const observed=(checks||[]).filter(c=>CORE.isIsoDate(c.date)&&c.date<=iso(today()));
  if(!observed.length)return null;
  const snap=longitudinalSnapshot({...i,checkIns:observed},observed),currentPain=Number.isFinite(snap.currentPain)?snap.currentPain:initialPain,walkPain=Number.isFinite(snap.walkPain)?snap.walkPain:walkInitially;
- const stage=injuryStageForChecks(i,observed,diag);
+ const stageHistory=injuryStageHistory(i,observed,diag),stage=Math.max(injuryStageForChecks(i,observed,diag),stageHistory.peakStage);
  const stageBase=[5,18,36,56,74,90][stage];let within=0;
  if(Number.isFinite(currentPain))within+=(3-currentPain)*1.6;
  if(Number.isFinite(walkPain))within+=(1-walkPain)*1.6;
@@ -5383,7 +5412,7 @@ function injuryTrajectorySvg(i,p){
 
  const phaseDetails=INJURY_STAGES.map((st,n)=>{
    const phaseState=n<p.stage?'completed':n===p.stage?'current':'future',b=phaseBounds[n],nb=nominalBounds[n];
-   const stageCriteria=criterionState(i,{currentPain:p.currentPain,walkPain:p.walkPain},n);
+   const stageCriteria=phaseState==='completed'?completedPhaseCriterionState(i,n,p.diag):criterionState(i,{currentPain:p.currentPain,walkPain:p.walkPain},n);
    const criteriaHtml=stageCriteria.map(c=>{
      const future=phaseState==='future';
      const partial=!future&&c.status!=='met'&&c.progress&&c.progress.count>0&&c.progress.count<c.progress.target;
@@ -5538,7 +5567,7 @@ function renderInjury(){
     </div>
     <div class="injuryRunnerHeroFoot"><span>${esc(diag.name)}</span><span>Injury ${fmtDate(i.date)}</span><span>Rehab start ${fmtDate(rehabPlanStart(i))}</span></div>
    </article>
-   ${p.setback&&!p.safetyHold?`<article class="injuryRunnerAlert warn"><b>Rehabilitation phase adjusted after a setback</b><p>Recent check-in evidence no longer satisfies the safety/progression criteria for Phase ${p.peakStage+1}. The active programme has moved back ${p.regressedBy===1?'one phase':`${p.regressedBy} phases`} to Phase ${p.stage+1} (${esc(INJURY_STAGES[p.stage].name)}). Upcoming rehabilitation is regenerated from this phase; later phases and the unrestricted-running estimate are recalculated from the updated evidence. Previously completed sessions remain in your history.</p></article>`:''}
+   ${p.safetyHold?`<article class="injuryRunnerAlert warn"><b>Progression paused for safety review</b><p>Your completed rehabilitation phases remain completed. New safety evidence can pause progression and extend the recovery estimate, but it does not erase previously demonstrated phase criteria.</p></article>`:''}
    ${p.safetyHold?`<article class="injuryRunnerAlert bad"><b>Rehabilitation progression paused</b><p>${esc(diag.safetyReasons.join(' · '))}. Seek appropriate clinical assessment before progressing.</p></article>`:''}
    <article class="injuryRunnerCard injuryMeaningCard injuryRunnerStatusMeaning"><div class="injuryRunnerCardHead"><div><small>WHAT THIS MEANS NOW</small><h4>Runner interpretation</h4></div></div>${injuryRunnerInterpretation(i,p,criteria,scoreInfo,adherenceOverall,milestones)}</article>
   </section>
@@ -5781,6 +5810,7 @@ function openInjuryCheck(i,existing=null,options={}){
  if(activeScheduled.runningPlanned&&runStatus==='not_assessed')return toast('Answer the scheduled running-exposure question.',true);
  if(activeScheduled.strengthPlanned&&['all','some'].includes(rehabExerciseStatus)&&!known(readTri('icBridge')))return toast('Because strength work was performed, state whether it was tolerated with control.',true);
  if(activeScheduled.impactPlanned&&['all','some'].includes(rehabExerciseStatus)&&!known(readTri('icHop')))return toast('Because the impact assessment was performed, state whether it was tolerated.',true);
+ if(/strength\s*&\s*impact readiness assessment/i.test(String(activePlan?.title||''))&&['all','some'].includes(rehabExerciseStatus)&&!Number.isFinite(nullableNumber($('icConfidence').value)))return toast('Enter confidence from 0–10 for this strength & impact readiness assessment.',true);
  if(activeScheduled.qualityPlanned&&runStatus==='completed'&&!known(readTri('icRunQuality')))return toast('Because the scheduled faster-running / hill exposure was completed, state whether it was tolerated.',true);
  if(activeScheduled.strengthPlanned&&['none','not_planned'].includes(rehabExerciseStatus)&&known(readTri('icBridge')))return toast('Strength tolerance cannot be recorded when the strength exercises were not performed.',true);
  if(activeScheduled.impactPlanned&&['none','not_planned'].includes(rehabExerciseStatus)&&known(readTri('icHop')))return toast('Impact tolerance cannot be recorded when the impact assessment was not performed.',true);
@@ -9016,7 +9046,7 @@ function shoeEngineCanonicalFinalizePortfolio(result,manual,weeks){
 function shoeEngineBuildRehabSessions(now,raceDate){const injury=(state.injuries||[]).find(x=>x.id===state.activeInjuryPlanId);if(!injury)return[];const progress=injuryPrediction(injury),rehabEnd=[raceDate,progress?.windowEnd||raceDate].filter(Boolean).sort()[0],rows=[];for(let d=new Date(dte(now).getTime()+DAY),guard=0;d<=dte(rehabEnd)&&guard<120;d=new Date(d.getTime()+DAY),guard++){const date=iso(d),day=rehabCalendarDay(injury,progress,date,rehabPlanDayIndex(injury,date));if(!rehabDayNeedsShoe(day))continue;const exp=rehabExpectedDistance(day),km=Math.max(0,Number(exp.totalKm)||0);if(km<=0)continue;rows.push({id:`rehab-shoe-${injury.id}-${date}`,date,type:'Rehab recovery',distance:km,surface:'road',rehab:true,walkMinutes:exp.walkMinutes,runMinutes:exp.runMinutes,importance:shoeEngineSessionImportance({type:'Rehab recovery',distance:km,runMinutes:exp.runMinutes},{rehab:true}),injuryId:injury.id})}return rows}
 
 const SHOE_PLAN_SNAPSHOT_VERSION=3;
-const SHOE_ENGINE_CACHE_VERSION='15.6.61-50661-terminal-retirement-reconcile-r8';
+const SHOE_ENGINE_CACHE_VERSION='15.6.62-50662-terminal-retirement-reconcile-r8';
 function shoeStableSerialize(value){
  if(value===null||typeof value!=='object')return JSON.stringify(value);
  if(Array.isArray(value))return'['+value.map(shoeStableSerialize).join(',')+']';
@@ -9098,7 +9128,7 @@ function freshShoeLifecyclePlan(){
   racePair:null,raceWindow:null,
   catalogueSource:'offline',catalogueVersion:OFFLINE_ASICS_CATALOGUE_VERSION,
   footMechanics:runnerFootMechanics(),
-  engine:'v15.6.61-necessity-driven-portfolio'
+  engine:'v15.6.62-necessity-driven-portfolio'
  };
  shoeEngineCanonicalFinalizePortfolio(result,manual,weeks);
 
