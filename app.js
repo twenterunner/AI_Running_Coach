@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '15.6.34';
-  const BUILD = 50634;
+  const VERSION = '15.6.35';
+  const BUILD = 50635;
   const SCHEMA = 10400;
   const PRIMARY_STORAGE_KEY = 'arc_v10400_web';
   const MIRROR_STORAGE_KEY = 'arc_v10400_mirror';
@@ -7788,10 +7788,12 @@ function shoeEnginePhysicalRetirementAssessment(pair,result){
   if(trigger)successorLifecycleBoundary=(Number(trigger.distance)||0)>remaining+1e-6;
  }
 
- const explicitReplacement=Boolean(successor);
- // A planned successor is not itself a physical-retirement reason. The owned pair
- // remains active while it can safely cover a suitable whole session.
- const retired=manualRetired||lifecycleCeilingReached||cannotCoverNextSuitableWholeSession||successorLifecycleBoundary;
+ // A successor created explicitly by the hard lifecycle-ceiling repair is itself
+ // canonical evidence that the predecessor physically retires at its final use.
+ // Do NOT infer retirement from an ordinary/category/portfolio successor: only the
+ // engine's explicit lifecycle-replacement reason may establish this boundary.
+ const hardLifecycleSuccessor=Boolean(successor&&/^Hard lifecycle replacement:/i.test(String(successor.reason||'')));
+ const retired=manualRetired||lifecycleCeilingReached||cannotCoverNextSuitableWholeSession||successorLifecycleBoundary||hardLifecycleSuccessor;
  return{
   retired,
   date:retired?last.date:null,
@@ -7800,6 +7802,7 @@ function shoeEnginePhysicalRetirementAssessment(pair,result){
   blockedSessionDate:blockedNext?.date||null,
   reason:manualRetired?'Runner marked the shoe retired.'
    :lifecycleCeilingReached?'Physical lifecycle ceiling reached.'
+   :hardLifecycleSuccessor?'Hard lifecycle replacement establishes physical retirement at final use.'
    :retired?'Remaining physical lifecycle cannot cover the next otherwise-suitable whole programme session.':null
  };
 }
@@ -8841,7 +8844,7 @@ function shoeEngineCanonicalFinalizePortfolio(result,manual,weeks){
 function shoeEngineBuildRehabSessions(now,raceDate){const injury=(state.injuries||[]).find(x=>x.id===state.activeInjuryPlanId);if(!injury)return[];const progress=injuryPrediction(injury),rehabEnd=[raceDate,progress?.windowEnd||raceDate].filter(Boolean).sort()[0],rows=[];for(let d=new Date(dte(now).getTime()+DAY),guard=0;d<=dte(rehabEnd)&&guard<120;d=new Date(d.getTime()+DAY),guard++){const date=iso(d),day=rehabCalendarDay(injury,progress,date,rehabPlanDayIndex(injury,date));if(!rehabDayNeedsShoe(day))continue;const exp=rehabExpectedDistance(day),km=Math.max(0,Number(exp.totalKm)||0);if(km<=0)continue;rows.push({id:`rehab-shoe-${injury.id}-${date}`,date,type:'Rehab recovery',distance:km,surface:'road',rehab:true,walkMinutes:exp.walkMinutes,runMinutes:exp.runMinutes,importance:shoeEngineSessionImportance({type:'Rehab recovery',distance:km,runMinutes:exp.runMinutes},{rehab:true}),injuryId:injury.id})}return rows}
 
 const SHOE_PLAN_SNAPSHOT_VERSION=2;
-const SHOE_ENGINE_CACHE_VERSION='15.6.34-50634-retirement-authority-r3';
+const SHOE_ENGINE_CACHE_VERSION='15.6.35-50635-retirement-marker-r4';
 function shoeStableSerialize(value){
  if(value===null||typeof value!=='object')return JSON.stringify(value);
  if(Array.isArray(value))return'['+value.map(shoeStableSerialize).join(',')+']';
@@ -8923,7 +8926,7 @@ function freshShoeLifecyclePlan(){
   racePair:null,raceWindow:null,
   catalogueSource:'offline',catalogueVersion:OFFLINE_ASICS_CATALOGUE_VERSION,
   footMechanics:runnerFootMechanics(),
-  engine:'v15.6.34-necessity-driven-portfolio'
+  engine:'v15.6.35-necessity-driven-portfolio'
  };
  shoeEngineCanonicalFinalizePortfolio(result,manual,weeks);
 
