@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '15.6.55';
-  const BUILD = 50655;
+  const VERSION = '15.6.56';
+  const BUILD = 50656;
   const SCHEMA = 10400;
   const PRIMARY_STORAGE_KEY = 'arc_v10400_web';
   const MIRROR_STORAGE_KEY = 'arc_v10400_mirror';
@@ -7957,7 +7957,8 @@ function shoeEngineValidation(result,manual=new Map()){
    }
    return true;
   });
-  if(compatible&&!p.isProjectedRetired&&String(last.date)<String(result.raceDate))add('usable-pair-abandoned-before-programme-end',{pairId:p.id,lastUse:last.date,remainingKm:remaining,nextCompatibleSession:compatible.id});
+  // Remaining usable mileage is an optimisation preference, not a physical feasibility invariant.
+  // A valid complementary/specialist successor must not make the Shoes tab fail to render.
  }
  for(const p of result.pairs.filter(p=>p.role!=='race'&&p.isProjectedRetired)){
   if(!p.projectedRetireDate)add('retired-pair-missing-retirement-marker',{pairId:p.id,lastUse:p.finalPlannedUseDate||null});
@@ -8174,6 +8175,19 @@ function shoeEngineSoftTargets(result){
    const rows=result.assignments.filter(a=>shoeEngineWeekKey(a.date)===wk&&a.date>=first),total=rows.reduce((n,a)=>n+Number(a.km||0),0),pairKm=rows.filter(a=>a.pairId===p.id).reduce((n,a)=>n+Number(a.km||0),0);
    const target=SESSION_SHOE_RULES.weeklyMinimumShare*total,actionable=shoeEngineWeeklyShareRepairOption(result,wk,p.id,new Map((state.plannedShoeAssignments||[]).filter(a=>a.source==='user').map(a=>[a.planId,a.shoeId])));if(rows.length>=2&&total>0&&pairKm>0&&pairKm+1e-6<target&&actionable)notes.push({code:'future-pair-underused-after-entry',week:wk,pairId:p.id,km:pairKm,target})
   }
+ }
+ // Remaining usable life at a portfolio transition is advisory, not invalid.
+ for(const p of result.pairs.filter(p=>p.role!=='race')){
+  const rows=(p.assignments||[]).filter(r=>Number(r.km)>0&&!r.rehab&&!r.raceDayAssignment).slice().sort((a,b)=>a.date.localeCompare(b.date));
+  if(!rows.length||p.isProjectedRetired)continue;
+  const last=rows.at(-1),remaining=Math.max(0,Number(p.retireKm||0)-shoeEngineProjectedKm(p));
+  if(remaining<=1e-6||String(last.date)>=String(result.raceDate))continue;
+  const compatible=(result.allSessions||[]).find(plan=>{
+   if(String(plan.date)<=String(last.date)||String(plan.date)>String(result.raceDate)||plan.type==='Rest'||plan.rehab||/^Race Day$/i.test(String(plan.type||'')))return false;
+   const km=Number(plan.distance)||0;
+   return km>0&&km<=remaining+1e-6&&lifecycleWorkoutFit(p.profile,plan)>=SESSION_SHOE_RULES.safeWorkoutFitFloor&&shoeEngineAssessment(p,plan,{rehab:false}).score>=SESSION_SHOE_RULES.safeSuitabilityFloor;
+  });
+  if(compatible)notes.push({code:'usable-pair-life-remaining-at-transition',pairId:p.id,lastUse:last.date,remainingKm:remaining,nextCompatibleSession:compatible.id});
  }
  // Low-density future-pair entry is a coach optimisation signal, not a hard
  // invariant. The final counterfactual critic/minimiser decides whether the pair
@@ -8970,7 +8984,7 @@ function shoeEngineCanonicalFinalizePortfolio(result,manual,weeks){
 function shoeEngineBuildRehabSessions(now,raceDate){const injury=(state.injuries||[]).find(x=>x.id===state.activeInjuryPlanId);if(!injury)return[];const progress=injuryPrediction(injury),rehabEnd=[raceDate,progress?.windowEnd||raceDate].filter(Boolean).sort()[0],rows=[];for(let d=new Date(dte(now).getTime()+DAY),guard=0;d<=dte(rehabEnd)&&guard<120;d=new Date(d.getTime()+DAY),guard++){const date=iso(d),day=rehabCalendarDay(injury,progress,date,rehabPlanDayIndex(injury,date));if(!rehabDayNeedsShoe(day))continue;const exp=rehabExpectedDistance(day),km=Math.max(0,Number(exp.totalKm)||0);if(km<=0)continue;rows.push({id:`rehab-shoe-${injury.id}-${date}`,date,type:'Rehab recovery',distance:km,surface:'road',rehab:true,walkMinutes:exp.walkMinutes,runMinutes:exp.runMinutes,importance:shoeEngineSessionImportance({type:'Rehab recovery',distance:km,runMinutes:exp.runMinutes},{rehab:true}),injuryId:injury.id})}return rows}
 
 const SHOE_PLAN_SNAPSHOT_VERSION=3;
-const SHOE_ENGINE_CACHE_VERSION='15.6.55-50655-terminal-retirement-reconcile-r8';
+const SHOE_ENGINE_CACHE_VERSION='15.6.56-50656-terminal-retirement-reconcile-r8';
 function shoeStableSerialize(value){
  if(value===null||typeof value!=='object')return JSON.stringify(value);
  if(Array.isArray(value))return'['+value.map(shoeStableSerialize).join(',')+']';
@@ -9052,7 +9066,7 @@ function freshShoeLifecyclePlan(){
   racePair:null,raceWindow:null,
   catalogueSource:'offline',catalogueVersion:OFFLINE_ASICS_CATALOGUE_VERSION,
   footMechanics:runnerFootMechanics(),
-  engine:'v15.6.55-necessity-driven-portfolio'
+  engine:'v15.6.56-necessity-driven-portfolio'
  };
  shoeEngineCanonicalFinalizePortfolio(result,manual,weeks);
 
