@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '15.6.35';
-  const BUILD = 50635;
+  const VERSION = '15.6.36';
+  const BUILD = 50636;
   const SCHEMA = 10400;
   const PRIMARY_STORAGE_KEY = 'arc_v10400_web';
   const MIRROR_STORAGE_KEY = 'arc_v10400_mirror';
@@ -7568,8 +7568,20 @@ function shoeEngineRepairLifecycleOverflow(result,manual){
   for(const r of (pair.assignments||[]).slice().sort((a,b)=>a.date.localeCompare(b.date))){cumulative+=Number(r.km||0);if(cumulative>Number(pair.retireKm)+1e-6){triggerRow=r;break}}
   const trigger=triggerRow&&plans.get(triggerRow.planId);if(!trigger)break;
   let replacement=result.pairs.filter(p=>p.id!==pair.id&&!p.owned&&p.role!=='race'&&(shoePlannerEntryDate(p)||'9999-99-99')>trigger.date).sort((a,b)=>(shoePlannerEntryDate(a)||'').localeCompare(shoePlannerEntryDate(b)||''))[0]||null;
-  if(replacement){replacement.plannedEntryDate=trigger.date;replacement.availableDate=trigger.date;replacement.purchaseDate=trigger.date}
-  else replacement=shoeEngineCreatePair(trigger,result.allSessions,result.pairs,result.purchases,result.events,'training',`Hard lifecycle replacement: ${lifecyclePairLabel(pair)} reaches its physical retirement ceiling before this session.`);
+  if(replacement){
+   replacement.plannedEntryDate=trigger.date;replacement.availableDate=trigger.date;replacement.purchaseDate=trigger.date;
+   // Reusing an already-created future pair must preserve the lifecycle handover
+   // provenance. Older code moved the pair's entry date but left its purchase
+   // record attached to the earlier portfolio reason/predecessor. The canonical
+   // retirement authority therefore could not know that the outgoing pair had
+   // reached a hard lifecycle boundary, and its terminal X disappeared.
+   const replacementBuy=(result.purchases||[]).find(b=>b.pairId===replacement.id);
+   if(replacementBuy){
+    replacementBuy.purchaseDate=trigger.date;replacementBuy.firstUseDate=trigger.date;
+    replacementBuy.replacesPairId=pair.id;
+    replacementBuy.reason=`Hard lifecycle replacement: ${lifecyclePairLabel(pair)} reaches its physical retirement ceiling before this session. Reuses an already-planned future pair at its first required lifecycle handover.`;
+   }
+  } else replacement=shoeEngineCreatePair(trigger,result.allSessions,result.pairs,result.purchases,result.events,'training',`Hard lifecycle replacement: ${lifecyclePairLabel(pair)} reaches its physical retirement ceiling before this session.`);
   const liveRow=result.assignments.find(a=>a.planId===triggerRow.planId&&a.date===triggerRow.date);
   if(!replacement||!liveRow||!shoeEngineCanCover(replacement,trigger,{rehab:Boolean(liveRow.rehab),allowRacePair:false})||!shoeEngineMoveAssignment(liveRow,replacement,result.pairs))break;
   liveRow.why=`Lifecycle replacement: ${lifecyclePairLabel(replacement)} takes over when ${lifecyclePairLabel(pair)} reaches its physical retirement ceiling.`;changed=true;
@@ -8844,7 +8856,7 @@ function shoeEngineCanonicalFinalizePortfolio(result,manual,weeks){
 function shoeEngineBuildRehabSessions(now,raceDate){const injury=(state.injuries||[]).find(x=>x.id===state.activeInjuryPlanId);if(!injury)return[];const progress=injuryPrediction(injury),rehabEnd=[raceDate,progress?.windowEnd||raceDate].filter(Boolean).sort()[0],rows=[];for(let d=new Date(dte(now).getTime()+DAY),guard=0;d<=dte(rehabEnd)&&guard<120;d=new Date(d.getTime()+DAY),guard++){const date=iso(d),day=rehabCalendarDay(injury,progress,date,rehabPlanDayIndex(injury,date));if(!rehabDayNeedsShoe(day))continue;const exp=rehabExpectedDistance(day),km=Math.max(0,Number(exp.totalKm)||0);if(km<=0)continue;rows.push({id:`rehab-shoe-${injury.id}-${date}`,date,type:'Rehab recovery',distance:km,surface:'road',rehab:true,walkMinutes:exp.walkMinutes,runMinutes:exp.runMinutes,importance:shoeEngineSessionImportance({type:'Rehab recovery',distance:km,runMinutes:exp.runMinutes},{rehab:true}),injuryId:injury.id})}return rows}
 
 const SHOE_PLAN_SNAPSHOT_VERSION=2;
-const SHOE_ENGINE_CACHE_VERSION='15.6.35-50635-retirement-marker-r4';
+const SHOE_ENGINE_CACHE_VERSION='15.6.36-50636-retirement-handover-r5';
 function shoeStableSerialize(value){
  if(value===null||typeof value!=='object')return JSON.stringify(value);
  if(Array.isArray(value))return'['+value.map(shoeStableSerialize).join(',')+']';
@@ -8926,7 +8938,7 @@ function freshShoeLifecyclePlan(){
   racePair:null,raceWindow:null,
   catalogueSource:'offline',catalogueVersion:OFFLINE_ASICS_CATALOGUE_VERSION,
   footMechanics:runnerFootMechanics(),
-  engine:'v15.6.35-necessity-driven-portfolio'
+  engine:'v15.6.36-necessity-driven-portfolio'
  };
  shoeEngineCanonicalFinalizePortfolio(result,manual,weeks);
 
