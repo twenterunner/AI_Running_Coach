@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '15.6.66';
-  const BUILD = 50666;
+  const VERSION = '15.6.67';
+  const BUILD = 50667;
   const SCHEMA = 10400;
   const PRIMARY_STORAGE_KEY = 'arc_v10400_web';
   const MIRROR_STORAGE_KEY = 'arc_v10400_mirror';
@@ -5489,9 +5489,18 @@ function injuryRunnerSectionHead(number,eyebrow,title,description){
 function injuryRunnerStatusClass(status){
  return ['ahead','behind','on','met','notMet','unknown'].includes(status)?status:'unknown';
 }
-function injuryRunnerSeriesPath(points,x,y){
- let d='',open=false;
- points.forEach(p=>{if(!Number.isFinite(p.value)){open=false;return;}d+=`${open?' L':'M'} ${x(p.index)} ${y(p.value)}`;open=true;});
+function injuryRunnerSeriesPath(points,x,y,rows=null){
+ let d='',open=false,previousIndex=null;
+ points.forEach(p=>{
+  if(!Number.isFinite(p.value)){open=false;previousIndex=null;return;}
+  let connect=open;
+  if(connect&&rows&&previousIndex!==null){
+   const gap=(dte(rows[p.index].date).getTime()-dte(rows[previousIndex].date).getTime())/DAY;
+   if(gap>1.01)connect=false;
+  }
+  d+=`${connect?' L':'M'} ${x(p.index)} ${y(p.value)}`;
+  open=true;previousIndex=p.index;
+ });
  return d;
 }
 function injuryRunnerSymptomChart(i,p){
@@ -5501,14 +5510,15 @@ function injuryRunnerSymptomChart(i,p){
  if(!observations)return `<div class="injuryRunnerBaseline"><b>No symptom trend yet</b><p>Pain has not been reported in a rehabilitation check-in. Missing observations are not treated as zero.</p></div>`;
  if(rows.length===1)return `<div class="injuryRunnerBaseline"><b>Building your symptom trend — 1 check-in recorded</b><p>${Number.isFinite(rows[0].pain)?`Latest pain ${rows[0].pain}/10. `:''}${Number.isFinite(rows[0].walk)?`Walking pain ${rows[0].walk}/10. `:''}${Number.isFinite(rows[0].run)?`Running pain ${rows[0].run}/10.`:''}</p></div>`;
  const W=720,H=250,left=42,right=16,top=22,bottom=42,cw=W-left-right,ch=H-top-bottom;
- const x=n=>left+(rows.length===1?.5:n/(rows.length-1))*cw,y=v=>top+(10-clamp(v,0,10))/10*ch;
+ const day0=dte(rows[0].date).getTime(),dayN=dte(rows.at(-1).date).getTime(),span=Math.max(DAY,dayN-day0);
+ const x=n=>left+((dte(rows[n].date).getTime()-day0)/span)*cw,y=v=>top+(10-clamp(v,0,10))/10*ch;
  const painPts=rows.map(r=>({index:r.index,value:r.pain})),walkPts=rows.map(r=>({index:r.index,value:r.walk})),runPts=rows.map(r=>({index:r.index,value:r.run}));
  const dateTicks=[0,Math.floor((rows.length-1)/2),rows.length-1].filter((v,n,a)=>a.indexOf(v)===n);
  return `<div class="injuryRunnerChartWrap"><svg class="injuryRunnerChart injurySymptomChart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Pain, walking pain and running pain over rehabilitation check-ins">
  ${[0,2,4,6,8,10].map(v=>`<line class="grid" x1="${left}" x2="${W-right}" y1="${y(v)}" y2="${y(v)}"/><text class="axisText" x="${left-8}" y="${y(v)+4}" text-anchor="end">${v}</text>`).join('')}
- ${injuryRunnerSeriesPath(painPts,x,y)?`<path class="series painSeries" d="${injuryRunnerSeriesPath(painPts,x,y)}"/>`:''}
- ${injuryRunnerSeriesPath(walkPts,x,y)?`<path class="series walkSeries" d="${injuryRunnerSeriesPath(walkPts,x,y)}"/>`:''}
- ${injuryRunnerSeriesPath(runPts,x,y)?`<path class="series runSeries" d="${injuryRunnerSeriesPath(runPts,x,y)}"/>`:''}
+ ${injuryRunnerSeriesPath(painPts,x,y,rows)?`<path class="series painSeries" d="${injuryRunnerSeriesPath(painPts,x,y,rows)}"/>`:''}
+ ${injuryRunnerSeriesPath(walkPts,x,y,rows)?`<path class="series walkSeries" d="${injuryRunnerSeriesPath(walkPts,x,y,rows)}"/>`:''}
+ ${injuryRunnerSeriesPath(runPts,x,y,rows)?`<path class="series runSeries" d="${injuryRunnerSeriesPath(runPts,x,y,rows)}"/>`:''}
  ${rows.map(r=>`${Number.isFinite(r.pain)?`<circle class="dot painDot" cx="${x(r.index)}" cy="${y(r.pain)}" r="4"><title>${fmtDate(r.date)} · Pain ${r.pain}/10</title></circle>`:''}${Number.isFinite(r.walk)?`<circle class="dot walkDot" cx="${x(r.index)}" cy="${y(r.walk)}" r="4"><title>${fmtDate(r.date)} · Walking pain ${r.walk}/10</title></circle>`:''}${Number.isFinite(r.run)?`<circle class="dot runDot" cx="${x(r.index)}" cy="${y(r.run)}" r="4"><title>${fmtDate(r.date)} · Running pain ${r.run}/10</title></circle>`:''}`).join('')}
  ${dateTicks.map(n=>`<text class="axisText" x="${x(n)}" y="${H-12}" text-anchor="${n===0?'start':n===rows.length-1?'end':'middle'}">${fmtDate(rows[n].date)}</text>`).join('')}
  <text class="axisLabel" x="${left}" y="14">Pain 0–10</text></svg><div class="injuryRunnerLegend"><span class="pain">Pain</span><span class="walk">Walking pain</span><span class="run">Running pain</span></div></div>`;
@@ -5520,12 +5530,13 @@ function injuryRunnerFunctionChart(i,p){
  if(!vals.length)return `<div class="injuryRunnerBaseline"><b>Functional exposure not yet recorded</b><p>Walking or running duration has not yet been reported in rehabilitation check-ins.</p></div>`;
  if(rows.length===1)return `<div class="injuryRunnerBaseline"><b>Building your functional trend — 1 check-in recorded</b><p>${Number.isFinite(rows[0].walk)?`Walking ${rows[0].walk} min. `:''}${Number.isFinite(rows[0].run)?`Running ${rows[0].run} min.`:''}</p></div>`;
  const W=720,H=250,left=44,right=16,top=22,bottom=42,cw=W-left-right,ch=H-top-bottom,maxV=Math.max(10,...vals),pad=Math.max(5,maxV*.12),yMax=Math.ceil((maxV+pad)/5)*5;
- const x=n=>left+(rows.length===1?.5:n/(rows.length-1))*cw,y=v=>top+(yMax-clamp(v,0,yMax))/yMax*ch;
+ const day0=dte(rows[0].date).getTime(),dayN=dte(rows.at(-1).date).getTime(),span=Math.max(DAY,dayN-day0);
+ const x=n=>left+((dte(rows[n].date).getTime()-day0)/span)*cw,y=v=>top+(yMax-clamp(v,0,yMax))/yMax*ch;
  const walkPts=rows.map(r=>({index:r.index,value:r.walk})),runPts=rows.map(r=>({index:r.index,value:r.run})),ticks=[0,yMax*.25,yMax*.5,yMax*.75,yMax].map(v=>Math.round(v/5)*5).filter((v,n,a)=>a.indexOf(v)===n),dateTicks=[0,Math.floor((rows.length-1)/2),rows.length-1].filter((v,n,a)=>a.indexOf(v)===n);
  return `<div class="injuryRunnerChartWrap"><svg class="injuryRunnerChart injuryFunctionChart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Walking and running duration during rehabilitation">
  ${ticks.map(v=>`<line class="grid" x1="${left}" x2="${W-right}" y1="${y(v)}" y2="${y(v)}"/><text class="axisText" x="${left-8}" y="${y(v)+4}" text-anchor="end">${v}</text>`).join('')}
- ${injuryRunnerSeriesPath(walkPts,x,y)?`<path class="series walkTimeSeries" d="${injuryRunnerSeriesPath(walkPts,x,y)}"/>`:''}
- ${injuryRunnerSeriesPath(runPts,x,y)?`<path class="series runTimeSeries" d="${injuryRunnerSeriesPath(runPts,x,y)}"/>`:''}
+ ${injuryRunnerSeriesPath(walkPts,x,y,rows)?`<path class="series walkTimeSeries" d="${injuryRunnerSeriesPath(walkPts,x,y,rows)}"/>`:''}
+ ${injuryRunnerSeriesPath(runPts,x,y,rows)?`<path class="series runTimeSeries" d="${injuryRunnerSeriesPath(runPts,x,y,rows)}"/>`:''}
  ${rows.map(r=>`${Number.isFinite(r.walk)?`<circle class="dot walkTimeDot" cx="${x(r.index)}" cy="${y(r.walk)}" r="4"><title>${fmtDate(r.date)} · Walking ${r.walk} min</title></circle>`:''}${Number.isFinite(r.run)?`<circle class="dot runTimeDot" cx="${x(r.index)}" cy="${y(r.run)}" r="4"><title>${fmtDate(r.date)} · Running ${r.run} min</title></circle>`:''}`).join('')}
  ${dateTicks.map(n=>`<text class="axisText" x="${x(n)}" y="${H-12}" text-anchor="${n===0?'start':n===rows.length-1?'end':'middle'}">${fmtDate(rows[n].date)}</text>`).join('')}
  <text class="axisLabel" x="${left}" y="14">Minutes</text></svg><div class="injuryRunnerLegend"><span class="walkTime">Walking</span><span class="runTime">Running</span></div></div>`;
@@ -9080,7 +9091,7 @@ function shoeEngineCanonicalFinalizePortfolio(result,manual,weeks){
 function shoeEngineBuildRehabSessions(now,raceDate){const injury=(state.injuries||[]).find(x=>x.id===state.activeInjuryPlanId);if(!injury)return[];const progress=injuryPrediction(injury),rehabEnd=[raceDate,progress?.windowEnd||raceDate].filter(Boolean).sort()[0],rows=[];for(let d=new Date(dte(now).getTime()+DAY),guard=0;d<=dte(rehabEnd)&&guard<120;d=new Date(d.getTime()+DAY),guard++){const date=iso(d),day=rehabCalendarDay(injury,progress,date,rehabPlanDayIndex(injury,date));if(!rehabDayNeedsShoe(day))continue;const exp=rehabExpectedDistance(day),km=Math.max(0,Number(exp.totalKm)||0);if(km<=0)continue;rows.push({id:`rehab-shoe-${injury.id}-${date}`,date,type:'Rehab recovery',distance:km,surface:'road',rehab:true,walkMinutes:exp.walkMinutes,runMinutes:exp.runMinutes,importance:shoeEngineSessionImportance({type:'Rehab recovery',distance:km,runMinutes:exp.runMinutes},{rehab:true}),injuryId:injury.id})}return rows}
 
 const SHOE_PLAN_SNAPSHOT_VERSION=3;
-const SHOE_ENGINE_CACHE_VERSION='15.6.66-50666-terminal-retirement-reconcile-r8';
+const SHOE_ENGINE_CACHE_VERSION='15.6.67-50667-terminal-retirement-reconcile-r8';
 function shoeStableSerialize(value){
  if(value===null||typeof value!=='object')return JSON.stringify(value);
  if(Array.isArray(value))return'['+value.map(shoeStableSerialize).join(',')+']';
@@ -9162,7 +9173,7 @@ function freshShoeLifecyclePlan(){
   racePair:null,raceWindow:null,
   catalogueSource:'offline',catalogueVersion:OFFLINE_ASICS_CATALOGUE_VERSION,
   footMechanics:runnerFootMechanics(),
-  engine:'v15.6.66-necessity-driven-portfolio'
+  engine:'v15.6.67-necessity-driven-portfolio'
  };
  shoeEngineCanonicalFinalizePortfolio(result,manual,weeks);
 
