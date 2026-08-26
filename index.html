@@ -2,12 +2,12 @@
 <html lang="en">
 <head>
 <meta charset="utf-8"><meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"><meta http-equiv="Pragma" content="no-cache"><meta http-equiv="Expires" content="0"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,interactive-widget=resizes-content">
-<meta name="theme-color" content="#07111D"><meta name="app-build" content="50689"><title>AI Running Coach</title>
-<link rel="manifest" href="manifest.webmanifest?v=50689"><link rel="stylesheet" href="styles.css?v=50689">
-<link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png?v=50689">
-<link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png?v=50689">
-<link rel="icon" href="favicon.ico?v=50689">
-<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=50689">
+<meta name="theme-color" content="#07111D"><meta name="app-build" content="50690"><title>AI Running Coach</title>
+<link rel="manifest" href="manifest.webmanifest?v=50690"><link rel="stylesheet" href="styles.css?v=50690">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png?v=50690">
+<link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png?v=50690">
+<link rel="icon" href="favicon.ico?v=50690">
+<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=50690">
 <meta property="og:image" content="github-banner.png">
 
 
@@ -199,6 +199,8 @@
 #appStartupLoader .legFront{transform-origin:67px 66px;animation:runnerLegFront 1.45s ease-in-out infinite}
 #appStartupLoader .runnerTrail{animation:runnerTrail 1.45s linear infinite}
 #appStartupLoader .runnerShadow{transform-origin:64px 105px;animation:runnerShadow 1.45s ease-in-out infinite}
+#appStartupLoader .startupIconRunner{display:block;width:106px;height:106px;object-fit:contain;object-position:center;background:#fff;transform-origin:50% 72%;animation:iconRunCycle 1.25s linear infinite}
+@keyframes iconRunCycle{0%,50%,100%{transform:translateY(0)}25%,75%{transform:translateY(-3px)}12.5%,37.5%,62.5%,87.5%{transform:translateY(-1.5px)}}
 #appStartupLoader strong{font-size:13px;line-height:1.25;letter-spacing:.01em;max-width:154px}
 #appStartupLoader small{display:none}
 @keyframes runnerTorsoBob{0%,100%{transform:translateY(0) rotate(-2deg)}25%{transform:translateY(-1.5px) rotate(-1deg)}50%{transform:translateY(1px) rotate(-2.5deg)}75%{transform:translateY(-1px) rotate(-1deg)}}
@@ -213,55 +215,14 @@
 </style>
 <div id="appStartupLoader" class="appStartupLoader" role="status" aria-live="polite" aria-label="Loading AI Running Coach">
   <div class="startupLoaderCard">
-    <div class="startupRunnerStage" aria-hidden="true">
-      <svg class="tealRunner" viewBox="0 0 128 128" role="img" aria-label="Animated teal runner">
-        <defs>
-          <linearGradient id="runnerTeal" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#20e1d4"/><stop offset=".48" stop-color="#079ea6"/><stop offset="1" stop-color="#04506b"/></linearGradient>
-          <linearGradient id="runnerDark" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#087f8e"/><stop offset="1" stop-color="#043e57"/></linearGradient>
-        </defs>
-        <g class="runnerTrail" fill="none" stroke="#0aa9ad" stroke-width="1.4" stroke-linecap="round" opacity=".62">
-          <path d="M8 31h21l7 7h18"/><circle cx="8" cy="31" r="2.2"/><path d="M3 45h28l7 7h15"/><circle cx="3" cy="45" r="1.8"/><path d="M12 61h23l6 6h15"/><circle cx="12" cy="61" r="2"/><path d="M18 77h20l7 7h12"/><circle cx="18" cy="77" r="1.8"/><path d="M25 90h16l5 5h10"/>
-        </g>
-        <ellipse class="runnerShadow" cx="66" cy="108" rx="34" ry="3" fill="#08a8aa" opacity=".18"/>
-        <g class="runnerTorso">
-          <path d="M57 39c7-8 19-8 26-1 4 5 5 13 2 21-2 7-8 12-17 12-10 0-17-5-18-13-1-7 1-14 7-19z" fill="url(#runnerTeal)"/>
-          <path d="M59 40c4 8 10 14 19 18M53 55c10 2 20 1 31-3M62 67c4-7 8-14 10-24" stroke="#d7ffff" stroke-width="1.4" fill="none" opacity=".9"/>
-        </g>
-        <g class="runnerHead">
-          <path d="M69 20c7-4 17-1 20 6 2 5 0 12-4 16-4 3-10 2-14-1-4-4-6-14-2-21z" fill="url(#runnerTeal)"/>
-          <path d="M72 21l8-3 8 3-2 3-14-3z" fill="#10bbb9"/>
-        </g>
-        <g class="armBack">
-          <path d="M59 42c-8 2-14 8-16 17l-2 15" stroke="url(#runnerDark)" stroke-width="9" stroke-linecap="round" fill="none"/>
-          <path d="M41 73l-2 8" stroke="#075a70" stroke-width="8" stroke-linecap="round"/>
-          <circle cx="39" cy="82" r="4.5" fill="#07677b"/>
-        </g>
-        <g class="armFront">
-          <path d="M79 43c8 4 13 10 15 18l3 11" stroke="url(#runnerTeal)" stroke-width="9" stroke-linecap="round" fill="none"/>
-          <path d="M97 71l8-8" stroke="#078b97" stroke-width="8" stroke-linecap="round"/>
-          <circle cx="106" cy="62" r="4.4" fill="#09a9a8"/>
-        </g>
-        <g class="legBack">
-          <path d="M59 67c-6 9-10 18-14 26l-10 13" stroke="url(#runnerDark)" stroke-width="12" stroke-linecap="round" fill="none"/>
-          <path d="M35 105l-11 5" stroke="#075a70" stroke-width="9" stroke-linecap="round"/>
-          <path d="M19 109c4 0 10 1 14 3l-2 4H19c-4 0-5-5 0-7z" fill="#057582"/>
-          <path d="M20 114h11" stroke="#d7ffff" stroke-width="1.4"/>
-        </g>
-        <g class="legFront">
-          <path d="M68 67c9 7 16 14 21 21l8 10" stroke="url(#runnerTeal)" stroke-width="12" stroke-linecap="round" fill="none"/>
-          <path d="M97 98l9 9" stroke="#078b97" stroke-width="9" stroke-linecap="round"/>
-          <path d="M105 106c5 1 10 4 13 7l-3 4h-14c-3-2-2-8 4-11z" fill="#079ca1"/>
-          <path d="M104 115h12" stroke="#d7ffff" stroke-width="1.4"/>
-        </g>
-      </svg>
-    </div>
+    <div class="startupRunnerStage" aria-hidden="true"><img class="startupIconRunner" src="startup-runner-icon.png?v=50690" alt=""></div>
     <strong>Starting AI Running Coach…</strong>
   </div>
 </div>
 
 <a class="skipLink" href="#mainContent">Skip to main content</a>
 <header class="topbar">
-  <div class="brand"><img class="logo" src="icon-192.png?v=50689" alt="AI Running Coach logo"><div class="brand-copy"><h1>AI Running Coach</h1><p>Race-specific adaptive planning · v15.6.89 · build 50689</p></div></div>
+  <div class="brand"><img class="logo" src="icon-192.png?v=50690" alt="AI Running Coach logo"><div class="brand-copy"><h1>AI Running Coach</h1><p>Race-specific adaptive planning · v15.6.90 · build 50690</p></div></div>
   <button id="installBtn" class="install hidden">Install</button>
 </header>
 <nav id="nav" aria-label="Primary navigation"></nav>
@@ -501,10 +462,10 @@
   <article class="settingsSection"><div class="settingsSectionHead"><span>02</span><div><small>TRAINING STRUCTURE</small><h3>When can you train?</h3><p>Availability and the long-run day used when the plan is rebuilt.</p></div></div><div id="daysGrid"></div></article>
   <article class="settingsSection"><div class="settingsSectionHead"><span>03</span><div><small>ADAPTIVE MODEL</small><h3>Is the configured plan structurally sound?</h3><p>Plan Health validates the programme structure without duplicating Progress.</p></div></div><div class="settingsNested"><div class="panelHead"><div><h3>Plan Health</h3><p class="muted compact">Structure score, calculation and recommendations for the configured plan.</p></div><button id="planHealthBtn" class="secondary">Validate plan</button></div><div id="planHealthContent"></div></div></article>
   <article class="settingsSection"><div class="settingsSectionHead"><span>04</span><div><small>DATA & IMPORTS</small><h3>Manage your local training data</h3><p>Back up, restore or export data. Destructive actions remain clearly separated.</p></div></div><div class="settingsNested"><div class="buttonRow settingsDataActions"><button id="backupBtn">Download backup</button><label for="restoreFile" class="buttonLike">Restore backup</label><input id="restoreFile" type="file" accept=".json"><button id="undoRestoreBtn" type="button" class="secondary hidden">Undo last restore</button><button id="exportBtn">Export runs CSV</button></div><div class="settingsDangerZone"><b>Reset local app data</b><p>Use only when you intend to remove the current local programme and history.</p><button id="resetBtn" class="danger">Reset app</button></div></div></article>
-  <article class="settingsSection"><div class="settingsSectionHead"><span>05</span><div><small>APP & MODEL INFORMATION</small><h3>Which version is running?</h3><p>Reference information for this local build.</p></div></div><div class="settingsNested settingsAppInfo"><div><small>APP VERSION</small><strong>v15.6.89</strong></div><div><small>BUILD</small><strong>50689</strong></div><div><small>DATA</small><strong>Stored locally</strong></div><div><small>ACTIVITY STORAGE</small><strong>Compact derived evidence</strong></div><div><small>EXPECTED CAPACITY</small><strong>≈250–350+ imported sessions</strong><span>Device dependent · a 150-session programme is comfortably within the expected range.</span></div></div><details id="modelDiagnostics" class="settingsNested modelDiagnostics"><summary><div><small>MODEL INTEGRITY</small><b>Checking…</b><span>Read-only consistency diagnostics</span></div></summary></details></article>
+  <article class="settingsSection"><div class="settingsSectionHead"><span>05</span><div><small>APP & MODEL INFORMATION</small><h3>Which version is running?</h3><p>Reference information for this local build.</p></div></div><div class="settingsNested settingsAppInfo"><div><small>APP VERSION</small><strong>v15.6.90</strong></div><div><small>BUILD</small><strong>50690</strong></div><div><small>DATA</small><strong>Stored locally</strong></div><div><small>ACTIVITY STORAGE</small><strong>Compact derived evidence</strong></div><div><small>EXPECTED CAPACITY</small><strong>≈250–350+ imported sessions</strong><span>Device dependent · a 150-session programme is comfortably within the expected range.</span></div></div><details id="modelDiagnostics" class="settingsNested modelDiagnostics"><summary><div><small>MODEL INTEGRITY</small><b>Checking…</b><span>Read-only consistency diagnostics</span></div></summary></details></article>
 </section>
 </main>
-<footer class="appFooter"><span>AI Running Coach</span><small>v15.6.89 · build 50689</small></footer>
+<footer class="appFooter"><span>AI Running Coach</span><small>v15.6.90 · build 50690</small></footer>
 
 <div id="modal" class="modal hidden" role="dialog" aria-modal="true" aria-label="AI Running Coach dialog" tabindex="-1"><div class="modalCard"><button id="closeModal" class="close" type="button" aria-label="Close dialog">×</button><div id="modalContent"></div></div></div>
 
@@ -533,5 +494,5 @@
     <button class="primary full" type="submit">Review and create my plan</button>
   </form>
 </div>
-<script src="app.js?v=50689"></script>
+<script src="app.js?v=50690"></script>
 </body></html>
