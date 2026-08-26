@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '15.6.76';
-  const BUILD = 50676;
+  const VERSION = '15.6.77';
+  const BUILD = 50677;
   const SCHEMA = 10400;
   const PRIMARY_STORAGE_KEY = 'arc_v10400_web';
   const MIRROR_STORAGE_KEY = 'arc_v10400_mirror';
@@ -5858,8 +5858,8 @@ function renderInjury(){
    ${injuryRunnerSectionHead(5,'FUNCTION & RETURN TO RUN','What can you tolerate now?','Walking, impact and running capability accumulated through rehabilitation.')}
    <article class="injuryRunnerCard">
     <div class="injuryRunnerMetricRow">
-     <div><small>Latest walking exposure</small><strong>${Number.isFinite(p.snapshot?.walkMinutes)?`${p.snapshot.walkMinutes} min`:'—'}</strong><span>${Number.isFinite(p.snapshot?.walkPain)?`Walking pain ${p.snapshot.walkPain}/10`:'Walking pain not reported'}</span></div>
-     <div><small>Best completed run</small><strong>${run.bestCompletedMinutes?`${run.bestCompletedMinutes} min`:'—'}</strong><span>${lastRun?`Last completed ${fmtDate(lastRun.date)}`:'Running exposure not yet completed'}</span></div>
+     <div><small>Latest walking exposure</small><strong>${Number.isFinite(p.snapshot?.walkMinutes)?formatDurationMinutes(p.snapshot.walkMinutes):'—'}</strong><span>${Number.isFinite(p.snapshot?.walkPain)?`Walking pain ${p.snapshot.walkPain}/10`:'Walking pain not reported'}</span></div>
+     <div><small>Best completed run</small><strong>${run.bestCompletedMinutes?formatDurationMinutes(run.bestCompletedMinutes):'—'}</strong><span>${lastRun?`Last completed ${fmtDate(lastRun.date)}`:'Running exposure not yet completed'}</span></div>
      <div><small>Impact tolerance</small><strong>${p.snapshot?.impact===true?'Tolerated':p.snapshot?.impact===false?'Not tolerated':'—'}</strong><span>${p.snapshot?.impact===undefined||p.snapshot?.impact===null?'Not assessed':'Latest recorded assessment'}</span></div>
     </div>
     ${injuryRunnerFunctionChart(i,p)}
