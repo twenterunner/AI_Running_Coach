@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '15.6.82';
-  const BUILD = 50682;
+  const VERSION = '15.6.83';
+  const BUILD = 50683;
   const SCHEMA = 10400;
   const PRIMARY_STORAGE_KEY = 'arc_v10400_web';
   const MIRROR_STORAGE_KEY = 'arc_v10400_mirror';
@@ -10726,6 +10726,12 @@ function failStartupLoader(err){
  }
 }
 async function initialiseApplication(){
+ let startupFinished=false;
+ const startupWatchdog=setTimeout(()=>{
+  if(startupFinished)return;
+  appStartupInProgress=false;
+  failStartupLoader(new Error('Startup readiness timed out.'));
+ },15000);
  try{
   startupLoaderStatus('Loading training data…');
   await new Promise(resolve=>requestAnimationFrame(resolve));
@@ -10743,8 +10749,12 @@ async function initialiseApplication(){
   if(activeStartupInjury)rehabModel(activeStartupInjury);
   await new Promise(resolve=>requestAnimationFrame(resolve));
 
-  startupLoaderStatus('Preparing shoes…');
-  refreshAuthoritativeShoeSnapshot('startup-ready');
+  startupLoaderStatus('Loading shoes…');
+  // Startup readiness means the persisted shoe state is available and reconciled.
+  // Do NOT run the full future lifecycle optimiser here: it is the heaviest
+  // computation in the app and previously blocked the main thread during startup.
+  reconcileShoeUsage();
+  updateRuntimeDomainRevisions();
   await new Promise(resolve=>requestAnimationFrame(resolve));
 
   startupLoaderStatus('Rendering…');
@@ -10753,11 +10763,21 @@ async function initialiseApplication(){
   await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
 
   appStartupInProgress=false;
+  startupFinished=true;
+  clearTimeout(startupWatchdog);
   finishStartupLoader();
+
+  // Re-optimise future shoe lifecycle only after the app is usable. Existing
+  // persisted shoe inventory, usage and assignments are already available to
+  // Today/Plan/Rehab/Shoes on the first render.
+  setTimeout(()=>scheduleAuthoritativeShoeSnapshotRefresh('post-startup-refresh'),60);
+
   if(startupStorageFailure)setTimeout(()=>toast(startupStorageFailure,true,8000),380);
   console.info(`AI Running Coach v${CORE.VERSION} stable build ${BUILD}`);
  }catch(err){
   appStartupInProgress=false;
+  startupFinished=true;
+  clearTimeout(startupWatchdog);
   failStartupLoader(err);
  }
 }
