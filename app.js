@@ -4964,18 +4964,20 @@ function runEvidence(checks){
  // was not assessed. Those response fields determine whether it was tolerated, not
  // whether the run happened.
  const completed=normalized.filter(c=>c.runStatus==='completed'&&Number(c.runMinutes)>0);
- const tolerated=completed.filter(c=>c.nextDayWorse===false&&c.alteredGait===false);
- const provisionallyTolerated=completed.filter(c=>c.nextDayWorse!==true&&c.alteredGait!==true);
+ const tolerated=completed.filter(c=>{const pain=Number.isFinite(Number(c.runPain))?Number(c.runPain):(Number.isFinite(Number(c.pain))?Number(c.pain):null);return c.nextDayWorse===false&&c.alteredGait===false&&c.newSwelling!==true&&(pain===null||pain<=2)});
+ // A completed run without a recorded delayed response remains useful execution evidence,
+ // but it must not satisfy progression criteria until next-morning tolerance is known.
+ const provisionallyTolerated=completed.filter(c=>c.nextDayWorse!==true&&c.alteredGait!==true&&c.newSwelling!==true);
  const lastCompleted=completed.at(-1)||null;
  const lastTolerated=tolerated.at(-1)||null;
  const lastAttempt=normalized.slice().reverse().find(c=>['completed','stopped','unable'].includes(c.runStatus)||Number(c.runMinutes)>0)||null;
  const latest=normalized.at(-1)||{};
  const latestNeutral=['not_planned','rest_day','not_assessed',undefined,null,''].includes(latest.runStatus);
  return{
-  completed,tolerated,successful:provisionallyTolerated,lastCompleted,lastTolerated,lastSuccess:lastTolerated,lastAttempt,
+  completed,tolerated,provisional:provisionallyTolerated,successful:tolerated,lastCompleted,lastTolerated,lastSuccess:lastTolerated,lastAttempt,
   preserved:!!lastCompleted&&latestNeutral,
   bestCompletedMinutes:completed.length?Math.max(...completed.map(c=>Number(c.runMinutes)||0)):0,
-  bestMinutes:provisionallyTolerated.length?Math.max(...provisionallyTolerated.map(c=>Number(c.runMinutes)||0)):0,
+  bestMinutes:tolerated.length?Math.max(...tolerated.map(c=>Number(c.runMinutes)||0)):0,
   lastCompletedMinutes:lastCompleted?Number(lastCompleted.runMinutes)||0:null,
   lastMinutes:lastTolerated?Number(lastTolerated.runMinutes)||0:null
  };
@@ -5202,6 +5204,58 @@ function recoveryScoreExplanation(i,p,factors=comparisonFactors(i,p)){
 function exerciseList(i,p){if(p.safetyHold)return INJURY_EXERCISES.bone;let family=p.diag.family||'generic',list=INJURY_EXERCISES[family]||INJURY_EXERCISES.muscle,exact=list.filter(x=>x.stage===p.stage);if(!exact.length)exact=list.filter(x=>x.stage<=p.stage).slice(-1);return exact;}
 
 function rehabCalendarSignature(day){return JSON.stringify({type:day.type,title:day.title,items:day.items,running:day.running,rationale:day.rationale,rule:day.rule,stage:day.stage,walkingTarget:day.walkingTarget,stretchGoal:day.stretchGoal,stretchGoalWhy:day.stretchGoalWhy,bestOutcome:day.bestOutcome,evidence:day.evidence});}
+// A future day is labelled Updated only when the PRESCRIPTION changed. Changes to
+// rationale/evidence wording alone are intentionally excluded so the badge remains meaningful.
+function rehabPrescriptionSignature(day){return JSON.stringify({type:day?.type||'',title:day?.title||'',items:Array.isArray(day?.items)?day.items:[],running:day?.running||'',stage:Number(day?.stage),walkingTarget:day?.walkingTarget||'',stretchGoalOffered:!!day?.stretchGoalOffered,stretchGoal:day?.stretchGoal||''});}
+function rehabPlannedRunMinutes(plan){
+ const source=[plan?.running,...(Array.isArray(plan?.items)?plan.items:[])].filter(Boolean).join(' | ');
+ const mmss=source.match(/\b(\d{1,3}):(\d{2})\b/);if(mmss)return Number(mmss[1])+Number(mmss[2])/60;
+ const minute=source.match(/\b(\d{1,3})(?:\s*[-–]\s*\d{1,3})?\s*(?:minutes?|min)\b/i);return minute?Number(minute[1]):null;
+}
+function rehabLatestStableCapacityEvidence(i){
+ const checks=sortedChecks(i);
+ for(let n=checks.length-1;n>=0;n--){
+  const c=checks[n],plan=historicalRehabPrescriptionForCheck(i,c),planned=rehabPlannedRunMinutes(plan),actual=Number(c.runMinutes);
+  const pain=Number.isFinite(Number(c.runPain))?Number(c.runPain):(Number.isFinite(Number(c.pain))?Number(c.pain):null);
+  const stable=c.runStatus==='completed'&&Number.isFinite(actual)&&actual>0&&c.nextDayWorse===false&&c.alteredGait===false&&c.newSwelling!==true&&(pain===null||pain<=2);
+  const exceeded=stable&&Number.isFinite(planned)&&actual>planned+0.25;
+  const strengthStable=['all'].includes(c.rehabExerciseStatus)&&c.bridge===true&&c.nextDayWorse===false&&c.newSwelling!==true;
+  const optionalAchieved=c.stretchGoalStatus==='achieved'&&c.nextDayWorse===false&&c.newSwelling!==true;
+  if(exceeded||strengthStable||optionalAchieved)return{check:c,plan,plannedRunMinutes:planned,actualRunMinutes:actual,runExceeded:exceeded,strengthStable,optionalAchieved};
+ }
+ return null;
+}
+function rehabUpdateExplanation(i,p,previous,fresh){
+ const changes=[];
+ const add=(label,before,after)=>{if(String(before??'')!==String(after??''))changes.push(`${label}: ${before||'none'} → ${after||'none'}`)};
+ if(Number(previous?.stage)!==Number(fresh?.stage))changes.push(`Rehabilitation phase: ${Number(previous?.stage)+1} → ${Number(fresh?.stage)+1}`);
+ add('Session',previous?.title,fresh?.title);add('Walking',previous?.walkingTarget,fresh?.walkingTarget);add('Running',previous?.running,fresh?.running);
+ const beforeItems=Array.isArray(previous?.items)?previous.items:[],afterItems=Array.isArray(fresh?.items)?fresh.items:[];
+ if(JSON.stringify(beforeItems)!==JSON.stringify(afterItems)){
+  const removed=beforeItems.filter(x=>!afterItems.includes(x)),added=afterItems.filter(x=>!beforeItems.includes(x));
+  if(removed.length)changes.push(`Removed/reduced: ${removed.join('; ')}`);
+  if(added.length)changes.push(`Added/increased: ${added.join('; ')}`);
+  if(!removed.length&&!added.length)changes.push('Exercise dose changed.');
+ }
+ if(!!previous?.stretchGoalOffered!==!!fresh?.stretchGoalOffered||String(previous?.stretchGoal||'')!==String(fresh?.stretchGoal||''))add('Optional progression',previous?.stretchGoal,fresh?.stretchGoal);
+ const latest=(p?.checks||[]).at(-1)||null,capacity=rehabLatestStableCapacityEvidence(i),why=[];
+ if(latest){
+  const facts=[];
+  if(Number.isFinite(Number(latest.pain)))facts.push(`pain ${Number(latest.pain)}/10`);
+  if(Number.isFinite(Number(latest.walkPain)))facts.push(`walking pain ${Number(latest.walkPain)}/10`);
+  if(Number.isFinite(Number(latest.runMinutes))&&latest.runStatus==='completed')facts.push(`${Number(latest.runMinutes).toFixed(Number(latest.runMinutes)%1?1:0)} min running completed`);
+  if(latest.nextDayWorse===false)facts.push('no next-morning worsening');
+  if(latest.alteredGait===false)facts.push('normal gait');
+  if(latest.newSwelling===false)facts.push('no new swelling');
+  if(latest.bridge===true)facts.push('strength task controlled');
+  if(latest.hop===true)facts.push('impact task tolerated');
+  if(facts.length)why.push(`Latest usable check-in (${fmtDate(latest.date)}): ${facts.join(', ')}.`);
+ }
+ if(capacity?.runExceeded)why.push(`The runner exceeded the planned ${Math.round(capacity.plannedRunMinutes)}-minute running dose and completed ${Number(capacity.actualRunMinutes).toFixed(Number(capacity.actualRunMinutes)%1?1:0)} minutes with a stable next-morning response. This demonstrated capacity can support the next criteria-based step, but it does not skip untested strength, impact or symptom criteria.`);
+ if(capacity?.strengthStable||capacity?.optionalAchieved)why.push('A higher prescribed exercise dose is allowed only after controlled completion and a stable delayed response; the plan still changes one loading variable at a time.');
+ if(!why.length)why.push('The prescription changed because the criteria-based rehabilitation state changed after newly recorded symptom or function evidence.');
+ return{changes,why,evidence:'Evidence basis: London International Consensus on hamstring rehabilitation (BJSM 2023) recommends criteria-based progression using symptoms, strength and response to previous loading; systematic reviews likewise identify pain/clinical function and performance criteria as the basis for progression rather than time alone. No universal running-volume percentage or strength-dose increment is assumed where the literature has not established one.'};
+}
 function walkingPrescription(i,p,offset,type){
  const snap=p.snapshot||longitudinalSnapshot(i,p.checks),last=Number.isFinite(snap.walkMinutes)?snap.walkMinutes:null,stage=p.stage;
  const defaults=[5,10,15,20,30,40],caps=[15,25,40,60,75,90];
@@ -5250,7 +5304,7 @@ function stageSpecificStretchGoal(i,p,type,walk,items){
  }
 
  if(type==='run'){
-  return{offered:true,title:'Optional progression',text:'If the full prescribed easy run is completed with pain ≤2/10 and normal gait, increase total running time by no more than 5–10%. Confirm that symptoms remain stable later and the next morning before retaining the increase.',why:'Running is explicitly scheduled today, so a small running-volume progression is appropriate only after stable completion.'};
+  return{offered:true,title:'Optional progression',text:'Complete the prescribed easy run first. If you choose to continue beyond it, keep the effort easy and record the actual running time, pain, gait and next-morning response. The app will only retain that extra capacity in the FOLLOWING prescription when the delayed response is stable.',why:'Consensus supports criteria-based progression from symptoms, capacity and response to previous loading, but does not establish a universal percentage increase for hamstring rehabilitation. The app therefore avoids a fixed 10% rule.'};
  }
 
  // Defensive fallback for any future day type.
@@ -5402,7 +5456,7 @@ function buildRehabCalendar(i,p){
   const displayedDay=frozenHistorical||freezeCompletedToday||fresh;
   let execution=rehabExecutionMeta(check);
   if(!check){const isToday=date===todayKey,isPast=date<todayKey,pending=isToday?'Rehab report pending':isPast?'Past check-in missing':'Future rehab day';execution={label:isToday?'Today’s rehabilitation completion has not been reported yet':isPast?'No check-in was recorded for this scheduled rehabilitation day':'Rehabilitation completion will be reported after this day',short:pending,className:'unknown',score:null,assessed:false,exercise:{label:isToday?'Rehab exercise completion has not been reported yet':isPast?'Exercise completion was not recorded':'Future rehabilitation exercise day',short:pending,className:'unknown',score:null,assessed:false},locomotion:{label:isToday?'Walking-target completion has not been reported yet':isPast?'Walking-target completion was not recorded':'Future walking-target day',short:pending,className:'unknown',score:null,assessed:false},walking:{label:isToday?'Walking-target completion has not been reported yet':isPast?'Walking-target completion was not recorded':'Future walking-target day',short:pending,className:'unknown',score:null,assessed:false},running:{label:isToday?'Running exposure has not been reported yet':isPast?'Running exposure was not recorded':'Future running-exposure day',short:pending,className:'unknown',score:null,assessed:false}};}else if(!check.rehabExerciseStatus&&!check.locomotionStatus&&!check.rehabStatus){execution={label:'The questionnaire was completed, but rehabilitation completion was not answered',short:'Rehab not answered',className:'unknown',score:null,assessed:false,exercise:{label:'Rehab exercise completion was not answered',short:'Exercises not reported',className:'unknown',score:null,assessed:false},locomotion:{label:'Walking-target completion was not answered',short:'Walking not assessed',className:'unknown',score:null,assessed:false},walking:{label:'Walking-target completion was not answered',short:'Walking not assessed',className:'unknown',score:null,assessed:false},running:{label:'Running exposure was not assessed',short:'Running not assessed',className:'unknown',score:null,assessed:false}};}
-  const changed=date>todayKey&&!!previous&&rehabCalendarSignature(previous)!==rehabCalendarSignature(fresh);
+  const changed=date>todayKey&&!!previous&&rehabPrescriptionSignature(previous)!==rehabPrescriptionSignature(fresh),updateExplanation=changed?rehabUpdateExplanation(i,p,previous,fresh):null;
   const normalizedDay={
    ...fresh,
    ...(displayedDay||{}),
@@ -5415,7 +5469,8 @@ function buildRehabCalendar(i,p){
    execution,
    executionImpact:check?.hop,
    executionStrength:check?.bridge,
-   updated:changed
+   updated:changed,
+   updateExplanation
   };
   days.push(normalizedDay);
  }
@@ -5424,7 +5479,7 @@ function buildRehabCalendar(i,p){
 function rehabCalendarHtml(i,p){
  const days=buildRehabCalendar(i,p),todayKey=iso(today());
  const temporalClass=date=>date<todayKey?'rehabPast':date===todayKey?'rehabToday':'rehabFuture';
- return `<section class="injuryTopicCard rehabCalendarSection"><div class="injurySectionHead"><div><h4>Rehab timeline</h4><p class="muted compact">3 days back · today · 4 days ahead.</p></div><strong>${fmtDate(days[0].date)}–${fmtDate(days.at(-1).date)}</strong></div><div class="rehabCalendar">${days.map((d,n)=>`<details class="rehabDay ${d.type} rehab-${d.execution.className} ${temporalClass(d.date)} ${d.checkInCompleted?'hasCheckin':''}"><summary><div class="rehabDate"><b>${esc(String(d.weekday||dte(d.date).toLocaleDateString(undefined,{weekday:'short'})).slice(0,3))}</b><span>${dte(d.date).getDate()}</span></div><div class="rehabDayTitle"><strong>${esc(d.title)}</strong><small>${esc(d.walkingTarget)}</small><div class="rehabStatusPair">${d.checkInCompleted?`<span class="executionBadge ${d.execution.className}"><i class="rehabCheckTick" aria-hidden="true">✓</i><span>Check-in · ${Number.isFinite(d.execution.score)?`${d.execution.score}% execution${d.type==='impact'&&d.executionImpact===false?' · impact not tolerated':''}`:'execution unavailable'}</span></span>`:`<span class="checkinBadge pending">${d.date>iso(today())?'Planned':'Check-in pending'}</span>`}</div></div><div class="rehabDayStatus">${d.date===todayKey?'<span class="rehabTemporalBadge">TODAY</span>':d.updated?'Updated':''}</div></summary><div class="rehabDayBody"><div><b>Prescription</b><ul>${d.items.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div>${d.stretchGoalOffered?`<div class="rehabStretchGoal"><b>Optional progression</b><p>${esc(d.stretchGoal)}</p></div>`:''}<div class="rehabBestOutcome"><b>Today’s objective</b><p>${esc(d.bestOutcome||d.rationale||'')}</p></div>${rehabShoePlanHtml(i,d)}<details class="rehabDayDetails"><summary>Why this plan and safety rules</summary><div class="rehabDayWhy"><p>${esc(d.rationale)}</p></div><div class="rehabDayRule"><b>Adjustment rule</b><p>${esc(d.rule)}</p></div><div class="rehabEvidenceMeter ${esc(d.evidence?.className||'low')}"><b>Evidence: ${esc(d.evidence?.level||'Low')}</b><p>${esc(d.evidence?.text||'More check-in evidence is needed.')}</p></div></details>${d.checkInCompleted?`<div class="rehabCompletionClarifier"><b>Recorded result</b><p>${esc(d.execution.label)}${Number.isFinite(d.execution.score)?` · ${d.execution.score}%`:''}</p></div>`:''}${d.updated?'<p class="rehabUpdatedNote">Updated after new check-in evidence.</p>':''}${d.date<=iso(today())?`<button type="button" class="secondary full rehabDayCheckinBtn" data-injury-check-date="${i.id}" data-check-date="${d.date}">${d.checkInCompleted?'Edit this day’s check-in':'Add check-in for this day'}</button>`:''}</div></details>`).join('')}</div></section>`;
+ return `<section class="injuryTopicCard rehabCalendarSection"><div class="injurySectionHead"><div><h4>Rehab timeline</h4><p class="muted compact">3 days back · today · 4 days ahead.</p></div><strong>${fmtDate(days[0].date)}–${fmtDate(days.at(-1).date)}</strong></div><div class="rehabCalendar">${days.map((d,n)=>`<details class="rehabDay ${d.type} rehab-${d.execution.className} ${temporalClass(d.date)} ${d.checkInCompleted?'hasCheckin':''}"><summary><div class="rehabDate"><b>${esc(String(d.weekday||dte(d.date).toLocaleDateString(undefined,{weekday:'short'})).slice(0,3))}</b><span>${dte(d.date).getDate()}</span></div><div class="rehabDayTitle"><strong>${esc(d.title)}</strong><small>${esc(d.walkingTarget)}</small><div class="rehabStatusPair">${d.checkInCompleted?`<span class="executionBadge ${d.execution.className}"><i class="rehabCheckTick" aria-hidden="true">✓</i><span>Check-in · ${Number.isFinite(d.execution.score)?`${d.execution.score}% execution${d.type==='impact'&&d.executionImpact===false?' · impact not tolerated':''}`:'execution unavailable'}</span></span>`:`<span class="checkinBadge pending">${d.date>iso(today())?'Planned':'Check-in pending'}</span>`}</div></div><div class="rehabDayStatus">${d.date===todayKey?'<span class="rehabTemporalBadge">TODAY</span>':d.updated?'Updated':''}</div></summary><div class="rehabDayBody"><div><b>Prescription</b><ul>${d.items.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div>${d.stretchGoalOffered?`<div class="rehabStretchGoal"><b>Optional progression</b><p>${esc(d.stretchGoal)}</p></div>`:''}<div class="rehabBestOutcome"><b>Today’s objective</b><p>${esc(d.bestOutcome||d.rationale||'')}</p></div>${rehabShoePlanHtml(i,d)}<details class="rehabDayDetails"><summary>Why this plan and safety rules</summary><div class="rehabDayWhy"><p>${esc(d.rationale)}</p></div><div class="rehabDayRule"><b>Adjustment rule</b><p>${esc(d.rule)}</p></div><div class="rehabEvidenceMeter ${esc(d.evidence?.className||'low')}"><b>Evidence: ${esc(d.evidence?.level||'Low')}</b><p>${esc(d.evidence?.text||'More check-in evidence is needed.')}</p></div></details>${d.checkInCompleted?`<div class="rehabCompletionClarifier"><b>Recorded result</b><p>${esc(d.execution.label)}${Number.isFinite(d.execution.score)?` · ${d.execution.score}%`:''}</p></div>`:''}${d.updated&&d.updateExplanation?`<div class="rehabUpdatedNote"><b>What changed</b><ul>${(d.updateExplanation.changes||[]).map(x=>`<li>${esc(x)}</li>`).join('')}</ul><b>Why it changed</b>${(d.updateExplanation.why||[]).map(x=>`<p>${esc(x)}</p>`).join('')}<small>${esc(d.updateExplanation.evidence||'')}</small></div>`:''}${d.date<=iso(today())?`<button type="button" class="secondary full rehabDayCheckinBtn" data-injury-check-date="${i.id}" data-check-date="${d.date}">${d.checkInCompleted?'Edit this day’s check-in':'Add check-in for this day'}</button>`:''}</div></details>`).join('')}</div></section>`;
 }
 
 function rehabExerciseMuscles(name,family='generic'){
@@ -9287,7 +9342,7 @@ function shoeEngineCanonicalFinalizePortfolio(result,manual,weeks){
 function shoeEngineBuildRehabSessions(now,raceDate){const injury=(state.injuries||[]).find(x=>x.id===state.activeInjuryPlanId);if(!injury)return[];const progress=injuryPrediction(injury),rehabEnd=[raceDate,progress?.windowEnd||raceDate].filter(Boolean).sort()[0],rows=[];for(let d=new Date(dte(now).getTime()+DAY),guard=0;d<=dte(rehabEnd)&&guard<120;d=new Date(d.getTime()+DAY),guard++){const date=iso(d),day=rehabCalendarDay(injury,progress,date,rehabPlanDayIndex(injury,date));if(!rehabDayNeedsShoe(day))continue;const exp=rehabExpectedDistance(day),km=Math.max(0,Number(exp.totalKm)||0);if(km<=0)continue;rows.push({id:`rehab-shoe-${injury.id}-${date}`,date,type:'Rehab recovery',distance:km,surface:'road',rehab:true,walkMinutes:exp.walkMinutes,runMinutes:exp.runMinutes,importance:shoeEngineSessionImportance({type:'Rehab recovery',distance:km,runMinutes:exp.runMinutes},{rehab:true}),injuryId:injury.id})}return rows}
 
 const SHOE_PLAN_SNAPSHOT_VERSION=3;
-const SHOE_ENGINE_CACHE_VERSION='15.6.74-50674-terminal-retirement-reconcile-r8';
+const SHOE_ENGINE_CACHE_VERSION='15.6.73-50673-terminal-retirement-reconcile-r8';
 function shoeStableSerialize(value){
  if(value===null||typeof value!=='object')return JSON.stringify(value);
  if(Array.isArray(value))return'['+value.map(shoeStableSerialize).join(',')+']';
@@ -9369,7 +9424,7 @@ function freshShoeLifecyclePlan(){
   racePair:null,raceWindow:null,
   catalogueSource:'offline',catalogueVersion:OFFLINE_ASICS_CATALOGUE_VERSION,
   footMechanics:runnerFootMechanics(),
-  engine:'v15.6.74-necessity-driven-portfolio'
+  engine:'v15.6.73-necessity-driven-portfolio'
  };
  shoeEngineCanonicalFinalizePortfolio(result,manual,weeks);
 

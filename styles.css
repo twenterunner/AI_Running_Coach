@@ -5159,7 +5159,7 @@ body:has(#dashboard.progressPage.active),#mainContent:has(#dashboard.progressPag
 
 /* v14.6.4 — Shoes decision dashboard */
 #shoes .shoeKeyDashboard{display:grid;gap:14px;margin-top:12px}
-#shoes .shoeKeyTile{margin:0;border:1px solid rgba(76,221,211,.38);border-radius:24px;background:linear-gradient(145deg,#075468 0%,#073c50 52%,#062c3d 100%);box-shadow:inset 0 1px rgba(255,255,255,.04);overflow:hidden}
+#shoes .shoeKeyTile{margin:0;border:1px solid rgba(76,221,211,.38);border-radius:24px;background:linear-gradient(145deg,rgba(5,113,130,.94),rgba(3,54,69,.97));box-shadow:inset 0 1px rgba(255,255,255,.04);overflow:hidden}
 #shoes .shoeKeyTile>summary{list-style:none;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:20px 22px;cursor:pointer;min-width:0}
 #shoes .shoeKeyTile>summary::-webkit-details-marker{display:none}
 #shoes .shoeKeyTile>summary>div{display:grid;gap:5px;min-width:0}
@@ -6154,7 +6154,7 @@ body:has(#dashboard.progressPage.active),#mainContent:has(#dashboard.progressPag
 #shoes .shoeGraphOnlyTile{
   width:100%;max-width:100%;min-width:0;box-sizing:border-box;
   border:1px solid rgba(76,221,211,.38);border-radius:24px;
-  background:linear-gradient(145deg,#075468 0%,#073c50 52%,#062c3d 100%);
+  background:linear-gradient(145deg,rgba(5,113,130,.94),rgba(3,54,69,.97));
   box-shadow:inset 0 1px rgba(255,255,255,.04);overflow:hidden;
 }
 #shoes .shoeGraphOnlyHead{padding:20px 22px 14px;min-width:0}
@@ -6191,3 +6191,4 @@ body:has(#dashboard.progressPage.active),#mainContent:has(#dashboard.progressPag
 .logDetailModal .comparisonValues strong{display:inline-block!important;margin:0!important}
 .logDetailModal .comparisonValues span{display:inline-block!important;margin:0!important;color:#b7c8cf!important}
 .logDetailModal .comparableMatch{display:flex!important;justify-content:space-between!important;align-items:baseline!important;gap:8px!important;flex-wrap:wrap!important}
+\n/* v15.6.74 — auditable evidence-based rehabilitation updates */\n#injury .rehabUpdatedNote{margin:10px 0 2px;padding:10px 11px;border:1px solid rgba(87,230,214,.24);border-radius:12px;background:rgba(25,184,169,.07)}\n#injury .rehabUpdatedNote>b{display:block;margin:0 0 5px;color:#dffbf7;font-size:11px;letter-spacing:.02em}\n#injury .rehabUpdatedNote ul{margin:0 0 9px;padding-left:18px}\n#injury .rehabUpdatedNote li,#injury .rehabUpdatedNote p{margin:3px 0;color:var(--muted,#a8bac2);font-size:11px;line-height:1.45}\n#injury .rehabUpdatedNote small{display:block;margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,.08);color:#8fa6af;font-size:10px;line-height:1.45}\n
