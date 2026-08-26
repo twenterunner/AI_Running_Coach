@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '15.6.84';
-  const BUILD = 50684;
+  const VERSION = '15.6.85';
+  const BUILD = 50685;
   const SCHEMA = 10400;
   const PRIMARY_STORAGE_KEY = 'arc_v10400_web';
   const MIRROR_STORAGE_KEY = 'arc_v10400_mirror';
@@ -10724,52 +10724,33 @@ function failStartupLoader(err){
  const loader=$('appStartupLoader');if(!loader)return;
  const card=loader.querySelector('.startupLoaderCard');
  if(card){
-  card.innerHTML=`<strong>Startup could not complete</strong><small style="display:block;color:#c4d5df;font-size:11px;line-height:1.35">Your stored data were not deleted. Reload the app to retry.</small><button id="startupRetryBtn" type="button" class="secondary small">Reload</button>`;
+  card.innerHTML=`<strong>Startup could not complete</strong><small style="display:block;color:#c4d5df;font-size:11px;line-height:1.35">A startup error occurred. Your stored data were not deleted. Reload to retry.</small><button id="startupRetryBtn" type="button" class="secondary small">Reload</button>`;
   const retry=$('startupRetryBtn');if(retry)retry.onclick=()=>location.reload();
  }
 }
-async function initialiseApplication(){
- let startupFinished=false;
- const startupWatchdog=setTimeout(()=>{
-  if(startupFinished)return;
-  appStartupInProgress=false;
-  failStartupLoader(new Error('Startup readiness timed out.'));
- },15000);
+function initialiseApplication(){
  try{
   startupLoaderStatus('Loading training data…');
-  // The persisted state has already been parsed and normalised above. Historical
-  // migration, FIT-stream compaction and prediction-history reconstruction are
-  // maintenance tasks, not prerequisites for showing the current programme.
-  await new Promise(resolve=>requestAnimationFrame(resolve));
 
-  startupLoaderStatus('Preparing programme…');
-  if(!Array.isArray(state.plan)||!state.plan.length)buildPlan();
-  await new Promise(resolve=>requestAnimationFrame(resolve));
+  // Stored state has already been loaded and normalised above. Only regenerate
+  // the programme if the persisted programme is genuinely absent.
+  if(!Array.isArray(state.plan)||!state.plan.length){
+   startupLoaderStatus('Preparing programme…');
+   buildPlan();
+  }
 
-  startupLoaderStatus('Preparing rehabilitation…');
-  const activeStartupInjury=(state.injuries||[]).find(x=>x.id===state.activeInjuryPlanId);
-  if(activeStartupInjury)rehabModel(activeStartupInjury);
-  await new Promise(resolve=>requestAnimationFrame(resolve));
-
-  startupLoaderStatus('Loading shoes…');
-  // Startup readiness means the persisted shoe state is available and reconciled.
-  // Do NOT run the full future lifecycle optimiser here: it is the heaviest
-  // computation in the app and previously blocked the main thread during startup.
-  reconcileShoeUsage();
-  await new Promise(resolve=>requestAnimationFrame(resolve));
-
-  startupLoaderStatus('Rendering…');
+  // renderAll is the single authoritative first-load pass. It renders the
+  // current programme, rehabilitation state, shoe inventory/usage/assignments,
+  // recovery and derived UI. Do not duplicate those calculations beforehand.
+  startupLoaderStatus('Preparing your coach…');
   renderAll();
   initOnboarding();
-  await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
 
   appStartupInProgress=false;
-  startupFinished=true;
-  clearTimeout(startupWatchdog);
   finishStartupLoader();
 
-  // Maintenance is deliberately post-startup. Run one task per turn so a large
-  // history cannot monopolise the main thread before the user can use the app.
+  // Nonessential migrations, history compaction, fingerprints and future shoe
+  // re-optimisation remain post-startup maintenance.
   setTimeout(()=>{
    try{
     const changed=migrateAssessmentRuns()||migrateImportedPower();
@@ -10792,10 +10773,8 @@ async function initialiseApplication(){
   console.info(`AI Running Coach v${CORE.VERSION} stable build ${BUILD}`);
  }catch(err){
   appStartupInProgress=false;
-  startupFinished=true;
-  clearTimeout(startupWatchdog);
   failStartupLoader(err);
  }
 }
 initialiseApplication();
-})();
+})();;
