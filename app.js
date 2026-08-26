@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '15.6.83';
-  const BUILD = 50683;
+  const VERSION = '15.6.84';
+  const BUILD = 50684;
   const SCHEMA = 10400;
   const PRIMARY_STORAGE_KEY = 'arc_v10400_web';
   const MIRROR_STORAGE_KEY = 'arc_v10400_mirror';
@@ -449,9 +449,11 @@ function normaliseState(input){
  const onboardingComplete=src.onboardingComplete===true||Boolean(input?.setup&&Number(src.schemaVersion||0)<SCHEMA);
  return{...base,...src,schemaVersion:SCHEMA,setup,days,runs,assessments,injuries,shoes,shoeUsage,plannedShoeAssignments,plannedShoePurchases,plan,predictionHistory,programStartPrediction,weekView:Number(src.weekView)||null,onboardingComplete,storageRevision:Math.max(0,Number(src.storageRevision)||0),updatedAt:src.updatedAt||new Date().toISOString(),migration:{...migrationReport,time:new Date().toISOString()}};
 }
+(()=>{const l=document.getElementById('appStartupLoader'),s=l?.querySelector('strong');if(s)s.textContent='Reading saved data…';})();
 let rawState=loadStoredState();
 try{if(rawState&&CORE.LEGACY_STORAGE_KEYS.includes(migrationReport.source))localStorage.setItem('arc_v10400_migration_backup',JSON.stringify(rawState))}catch(err){recordDiagnostic('Pre-migration backup',err)}
 let state;try{state=normaliseState(rawState||defaults())}catch(err){recordDiagnostic('Migration failure',err);migrationReport.status='recovered defaults';migrationReport.warning=err.message;state=defaults()}
+(()=>{const l=document.getElementById('appStartupLoader'),s=l?.querySelector('strong');if(s)s.textContent='Training data ready…';})();
 
 const runtimeDomainRevisions={setup:0,plan:0,runs:0,assessments:0,injury:0,shoes:0};
 let runtimeDomainFingerprints=null;
@@ -486,7 +488,8 @@ function updateRuntimeDomainRevisions(){
 function shoeDomainRevisionKey(){
  return['setup','plan','runs','injury','shoes'].map(k=>`${k}:${runtimeDomainRevisions[k]}`).join('|')+`|day:${iso(today())}`;
 }
-updateRuntimeDomainRevisions();
+// Runtime fingerprints are intentionally initialised after first usable render.
+ // Hashing the full run/injury/shoe state here can block startup on a large history.
 let appStartupInProgress=true,startupStorageFailure=null,storageRedundancyDegraded=false;
 function isStorageQuotaError(err){
  return !!err&&(err.name==='QuotaExceededError'||err.name==='NS_ERROR_DOM_QUOTA_REACHED'||Number(err.code)===22||Number(err.code)===1014);
@@ -10734,11 +10737,10 @@ async function initialiseApplication(){
  },15000);
  try{
   startupLoaderStatus('Loading training data…');
+  // The persisted state has already been parsed and normalised above. Historical
+  // migration, FIT-stream compaction and prediction-history reconstruction are
+  // maintenance tasks, not prerequisites for showing the current programme.
   await new Promise(resolve=>requestAnimationFrame(resolve));
-  const assessmentRunsMigrated=migrateAssessmentRuns();
-  const importedPowerMigrated=migrateImportedPower();
-  const compactedHistoricalStreams=compactHistoricalActivityStreams();
-  if(assessmentRunsMigrated||importedPowerMigrated||compactedHistoricalStreams||reconcilePredictionHistory())save();
 
   startupLoaderStatus('Preparing programme…');
   if(!Array.isArray(state.plan)||!state.plan.length)buildPlan();
@@ -10754,7 +10756,6 @@ async function initialiseApplication(){
   // Do NOT run the full future lifecycle optimiser here: it is the heaviest
   // computation in the app and previously blocked the main thread during startup.
   reconcileShoeUsage();
-  updateRuntimeDomainRevisions();
   await new Promise(resolve=>requestAnimationFrame(resolve));
 
   startupLoaderStatus('Rendering…');
@@ -10767,10 +10768,25 @@ async function initialiseApplication(){
   clearTimeout(startupWatchdog);
   finishStartupLoader();
 
-  // Re-optimise future shoe lifecycle only after the app is usable. Existing
-  // persisted shoe inventory, usage and assignments are already available to
-  // Today/Plan/Rehab/Shoes on the first render.
-  setTimeout(()=>scheduleAuthoritativeShoeSnapshotRefresh('post-startup-refresh'),60);
+  // Maintenance is deliberately post-startup. Run one task per turn so a large
+  // history cannot monopolise the main thread before the user can use the app.
+  setTimeout(()=>{
+   try{
+    const changed=migrateAssessmentRuns()||migrateImportedPower();
+    if(changed)save();
+   }catch(err){recordDiagnostic('Post-startup migration',err)}
+   setTimeout(()=>{
+    try{
+     const compacted=compactHistoricalActivityStreams();
+     const predictions=reconcilePredictionHistory();
+     if(compacted||predictions)save();
+    }catch(err){recordDiagnostic('Post-startup history maintenance',err)}
+    setTimeout(()=>{
+     try{updateRuntimeDomainRevisions()}catch(err){recordDiagnostic('Post-startup domain fingerprint',err)}
+     scheduleAuthoritativeShoeSnapshotRefresh('post-startup-refresh');
+    },80);
+   },80);
+  },120);
 
   if(startupStorageFailure)setTimeout(()=>toast(startupStorageFailure,true,8000),380);
   console.info(`AI Running Coach v${CORE.VERSION} stable build ${BUILD}`);
