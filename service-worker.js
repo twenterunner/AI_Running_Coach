@@ -1,57 +1,11 @@
-// AI Running Coach v15.6.92 · build 50692
+// AI Running Coach v15.6.93 · build 50693
 'use strict';
 
-const BUILD = 50692;
-const CACHE = 'arc-v15692-build-50692';
+const BUILD = 50693;
 const CACHE_PREFIX = 'arc-v';
-const APP_SHELL = './index.html';
-const ASSETS = [
-  './',
-  './index.html',
-  './styles.css?v=50692',
-  './app.js?v=50692',
-  './manifest.webmanifest?v=50692',
-  './icon-192.png?v=50692',
-  './icon-512.png?v=50692',
-  './apple-touch-icon.png?v=50692',
-  './favicon-32x32.png?v=50692',
-  './favicon-16x16.png?v=50692',
-  './favicon.ico?v=50692',
-  './startup-icon.png?v=50692',
-  './dynablast-transparent.webp',
-  './evoride-transparent.webp',
-  './gel-cumulus-transparent.webp',
-  './gel-kayano-transparent.webp',
-  './gel-nimbus-transparent.webp',
-  './gel-pulse-transparent.webp',
-  './glideride-transparent.webp',
-  './gt-1000-transparent.webp',
-  './gt-2000-transparent.webp',
-  './magic-speed-transparent.webp',
-  './megablast-transparent.webp',
-  './metaspeed-edge-transparent.webp',
-  './metaspeed-ray-transparent.webp',
-  './metaspeed-sky-transparent.webp',
-  './noosa-tri-transparent.webp',
-  './novablast-4-transparent.webp',
-  './novablast-transparent.webp',
-  './sonicblast-transparent.webp',
-  './superblast-transparent.webp',
-];
 
-async function resilientPrecache() {
-  const cache = await caches.open(CACHE);
-  await Promise.allSettled(ASSETS.map(async asset => {
-    const request = new Request(asset, { cache: 'reload' });
-    const response = await fetch(request);
-    if (response.ok) await cache.put(request, response.clone());
-  }));
-}
-
-self.addEventListener('install', event => {
-  event.waitUntil(
-    resilientPrecache().finally(() => self.skipWaiting())
-  );
+self.addEventListener('install', () => {
+  self.skipWaiting();
 });
 
 self.addEventListener('activate', event => {
@@ -59,13 +13,18 @@ self.addEventListener('activate', event => {
     caches.keys()
       .then(keys => Promise.all(
         keys
-          .filter(key => key.startsWith(CACHE_PREFIX) && key !== CACHE)
+          .filter(key => key.startsWith(CACHE_PREFIX))
           .map(key => caches.delete(key))
       ))
       .then(() => self.clients.claim())
       .then(async () => {
-        const clients = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
-        for (const client of clients) client.postMessage({ type: 'ARC_BUILD_ACTIVE', build: BUILD });
+        const clients = await self.clients.matchAll({
+          type: 'window',
+          includeUncontrolled: true
+        });
+        for (const client of clients) {
+          client.postMessage({ type: 'ARC_BUILD_ACTIVE', build: BUILD });
+        }
       })
   );
 });
@@ -74,52 +33,5 @@ self.addEventListener('message', event => {
   if (event.data?.type === 'SKIP_WAITING') self.skipWaiting();
 });
 
-async function networkFirst(request, fallback) {
-  try {
-    const response = await fetch(request, { cache: 'no-store' });
-    if (response.ok && response.type === 'basic') {
-      const cache = await caches.open(CACHE);
-      await cache.put(fallback || request, response.clone());
-    }
-    return response;
-  } catch {
-    return (await caches.match(fallback || request)) || Response.error();
-  }
-}
-
-self.addEventListener('fetch', event => {
-  const request = event.request;
-  if (request.method !== 'GET') return;
-
-  const url = new URL(request.url);
-  if (url.origin !== self.location.origin) return;
-
-  if (request.mode === 'navigate') {
-    event.respondWith((async () => {
-      try {
-        const fresh = new URL(request.url);
-        fresh.searchParams.set('build', String(BUILD));
-        fresh.searchParams.set('cachebust', Date.now().toString());
-        const liveRequest = new Request(fresh.toString(), request);
-        const response = await fetch(liveRequest, { cache: 'no-store' });
-        if (response.ok) {
-          const cache = await caches.open(CACHE);
-          await cache.put(APP_SHELL, response.clone());
-        }
-        return response;
-      } catch {
-        return (await caches.match(APP_SHELL)) || Response.error();
-      }
-    })());
-    return;
-  }
-
-  if (/\.(?:js|css|webmanifest)$/i.test(url.pathname)) {
-    const fresh = new URL(request.url);
-    fresh.searchParams.set('v', String(BUILD));
-    event.respondWith(networkFirst(new Request(fresh.toString(), request), request));
-    return;
-  }
-
-  event.respondWith(networkFirst(request));
-});
+// Intentionally no fetch event handler.
+// Browser navigation and assets load directly from GitHub Pages.
