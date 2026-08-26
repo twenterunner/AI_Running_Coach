@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '15.6.86';
-  const BUILD = 50686;
+  const VERSION = '15.6.87';
+  const BUILD = 50687;
   const SCHEMA = 10400;
   const PRIMARY_STORAGE_KEY = 'arc_v10400_web';
   const MIRROR_STORAGE_KEY = 'arc_v10400_mirror';
@@ -10722,12 +10722,23 @@ if('serviceWorker'in navigator&&(location.protocol==='https:'||['localhost','127
    });
   }).catch(()=>{});
 }
+
+function bindRunnerAnimationFallback(){
+ const img=document.querySelector('.startupRunnerGif');
+ if(!img||img.dataset.fallbackBound)return;
+ img.dataset.fallbackBound='1';
+ img.addEventListener('error',()=>{
+  img.src='icon-192.png';
+  img.classList.add('runnerFallback');
+ },{once:true});
+}
 let planLoaderDepth=0;
 function startupLoaderStatus(text){
  const loader=$('appStartupLoader'),label=loader?.querySelector('strong');
  if(label)label.textContent=text;
 }
 function showPlanLoader(text='Loading…'){
+ bindRunnerAnimationFallback();
  const loader=$('appStartupLoader');if(!loader)return;
  planLoaderDepth++;
  startupLoaderStatus(text);
@@ -10771,6 +10782,7 @@ function failStartupLoader(err){
 }
 function initialiseApplication(){
  try{
+  bindRunnerAnimationFallback();
   startupLoaderStatus('Loading training data…');
 
   // Stored state has already been loaded and normalised above. Only regenerate
