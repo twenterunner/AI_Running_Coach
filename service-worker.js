@@ -1,22 +1,22 @@
-// AI Running Coach v15.6.87 · build 50687
+// AI Running Coach v15.6.89 · build 50689
 'use strict';
 
-const BUILD = 50687;
-const CACHE = 'arc-v15687-build-50687';
+const BUILD = 50689;
+const CACHE = 'arc-v15689-build-50689';
 const CACHE_PREFIX = 'arc-v';
 const APP_SHELL = './index.html';
 const ASSETS = [
   './',
   './index.html',
-  './styles.css?v=50687',
-  './app.js?v=50687',
-  './manifest.webmanifest?v=50687',
-  './icon-192.png?v=50687',
-  './icon-512.png?v=50687',
-  './apple-touch-icon.png?v=50687',
-  './favicon-32x32.png?v=50687',
-  './favicon-16x16.png?v=50687',
-  './favicon.ico?v=50687',
+  './styles.css?v=50689',
+  './app.js?v=50689',
+  './manifest.webmanifest?v=50689',
+  './icon-192.png?v=50689',
+  './icon-512.png?v=50689',
+  './apple-touch-icon.png?v=50689',
+  './favicon-32x32.png?v=50689',
+  './favicon-16x16.png?v=50689',
+  './favicon.ico?v=50689',
   './dynablast-transparent.webp',
   './evoride-transparent.webp',
   './gel-cumulus-transparent.webp',
@@ -62,6 +62,10 @@ self.addEventListener('activate', event => {
           .map(key => caches.delete(key))
       ))
       .then(() => self.clients.claim())
+      .then(async () => {
+        const clients = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+        for (const client of clients) client.postMessage({ type: 'ARC_BUILD_ACTIVE', build: BUILD });
+      })
   );
 });
 
@@ -90,9 +94,22 @@ self.addEventListener('fetch', event => {
   if (url.origin !== self.location.origin) return;
 
   if (request.mode === 'navigate') {
-    const fresh = new URL(request.url);
-    fresh.searchParams.set('build', String(BUILD));
-    event.respondWith(networkFirst(new Request(fresh.toString(), request), APP_SHELL));
+    event.respondWith((async () => {
+      try {
+        const fresh = new URL(request.url);
+        fresh.searchParams.set('build', String(BUILD));
+        fresh.searchParams.set('cachebust', Date.now().toString());
+        const liveRequest = new Request(fresh.toString(), request);
+        const response = await fetch(liveRequest, { cache: 'no-store' });
+        if (response.ok) {
+          const cache = await caches.open(CACHE);
+          await cache.put(APP_SHELL, response.clone());
+        }
+        return response;
+      } catch {
+        return (await caches.match(APP_SHELL)) || Response.error();
+      }
+    })());
     return;
   }
 

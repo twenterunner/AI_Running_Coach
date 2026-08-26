@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '15.6.87';
-  const BUILD = 50687;
+  const VERSION = '15.6.89';
+  const BUILD = 50689;
   const SCHEMA = 10400;
   const PRIMARY_STORAGE_KEY = 'arc_v10400_web';
   const MIRROR_STORAGE_KEY = 'arc_v10400_mirror';
@@ -10705,9 +10705,15 @@ if('serviceWorker'in navigator&&(location.protocol==='https:'||['localhost','127
  navigator.serviceWorker.addEventListener('controllerchange',()=>{
   if(sessionStorage.getItem(reloadKey))return;
   sessionStorage.setItem(reloadKey,'1');
-  location.reload();
+  const u=new URL(location.href);u.searchParams.set('build',String(CORE.BUILD));u.searchParams.set('refresh',Date.now().toString());
+  location.replace(u.toString());
  });
- navigator.serviceWorker.register(`service-worker.js?v=${CORE.BUILD}-rev-sync`,{updateViaCache:'none'})
+ navigator.serviceWorker.addEventListener('message',event=>{
+  if(event.data?.type!=='ARC_BUILD_ACTIVE'||Number(event.data.build)!==CORE.BUILD)return;
+  const key=`arc-build-active-${CORE.BUILD}`;if(sessionStorage.getItem(key))return;
+  sessionStorage.setItem(key,'1');
+ });
+ navigator.serviceWorker.register(`service-worker.js?v=${CORE.BUILD}-force-refresh`,{updateViaCache:'none'})
   .then(async reg=>{
    await reg.update().catch(()=>{});
    if(reg.waiting)reg.waiting.postMessage({type:'SKIP_WAITING',build:CORE.BUILD});
@@ -10723,15 +10729,7 @@ if('serviceWorker'in navigator&&(location.protocol==='https:'||['localhost','127
   }).catch(()=>{});
 }
 
-function bindRunnerAnimationFallback(){
- const img=document.querySelector('.startupRunnerGif');
- if(!img||img.dataset.fallbackBound)return;
- img.dataset.fallbackBound='1';
- img.addEventListener('error',()=>{
-  img.src='icon-192.png';
-  img.classList.add('runnerFallback');
- },{once:true});
-}
+function bindRunnerAnimationFallback(){ /* v15.6.89: inline SVG runner requires no external asset fallback. */ }
 let planLoaderDepth=0;
 function startupLoaderStatus(text){
  const loader=$('appStartupLoader'),label=loader?.querySelector('strong');
