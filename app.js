@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '15.6.79';
-  const BUILD = 50679;
+  const VERSION = '15.6.80';
+  const BUILD = 50680;
   const SCHEMA = 10400;
   const PRIMARY_STORAGE_KEY = 'arc_v10400_web';
   const MIRROR_STORAGE_KEY = 'arc_v10400_mirror';
@@ -487,17 +487,62 @@ function shoeDomainRevisionKey(){
  return['setup','plan','runs','injury','shoes'].map(k=>`${k}:${runtimeDomainRevisions[k]}`).join('|')+`|day:${iso(today())}`;
 }
 updateRuntimeDomainRevisions();
-let appStartupInProgress=true,startupStorageFailure=null;
+let appStartupInProgress=true,startupStorageFailure=null,storageRedundancyDegraded=false;
+function isStorageQuotaError(err){
+ return !!err&&(err.name==='QuotaExceededError'||err.name==='NS_ERROR_DOM_QUOTA_REACHED'||Number(err.code)===22||Number(err.code)===1014);
+}
+function reclaimObsoleteStorage(){
+ // Current-schema primary/mirror are authoritative. Old full-state copies are only migration artefacts and can consume several MB.
+ let removed=0;
+ try{
+  if(localStorage.getItem(MIGRATION_MARKER)!=='true')return 0;
+  const primary=parseStored(localStorage.getItem(STORAGE_KEY)),mirror=parseStored(localStorage.getItem(MIRROR_KEY));
+  if(!primary&&!mirror)return 0;
+  for(const key of CORE.LEGACY_STORAGE_KEYS){if(localStorage.getItem(key)!=null){localStorage.removeItem(key);removed++}}
+  if(localStorage.getItem('arc_v10400_migration_backup')!=null){localStorage.removeItem('arc_v10400_migration_backup');removed++}
+ }catch(err){recordDiagnostic('Storage cleanup',err)}
+ return removed;
+}
+function writePrimaryWithQuotaRecovery(text){
+ try{localStorage.setItem(STORAGE_KEY,text);return true}catch(err){
+  if(!isStorageQuotaError(err))throw err;
+  recordDiagnostic('Primary save quota pressure',err);
+  reclaimObsoleteStorage();
+  localStorage.setItem(STORAGE_KEY,text);
+  return true;
+ }
+}
+function writeMirrorBestEffort(text){
+ try{localStorage.setItem(MIRROR_KEY,text);storageRedundancyDegraded=false;return true}catch(err){
+  if(isStorageQuotaError(err)){
+   // The primary has already committed. Replacing/removing a stale mirror must never turn a successful primary save into a false data-loss warning.
+   recordDiagnostic('Mirror save quota pressure',err);
+   try{localStorage.removeItem(MIRROR_KEY);localStorage.setItem(MIRROR_KEY,text);storageRedundancyDegraded=false;return true}catch(retryErr){
+    recordDiagnostic('Mirror save unavailable',retryErr);storageRedundancyDegraded=true;return false;
+   }
+  }
+  recordDiagnostic('Mirror save unavailable',err);storageRedundancyDegraded=true;return false;
+ }
+}
 function save(){
  reconcileShoeUsage();prunePlannedShoeAssignments();
  const changedDomains=updateRuntimeDomainRevisions();
  state.storageRevision=Math.max(0,Number(state.storageRevision)||0)+1;state.updatedAt=new Date().toISOString();
  const text=JSON.stringify(state);
  try{
-  localStorage.setItem(STORAGE_KEY,text);localStorage.setItem(MIRROR_KEY,text);localStorage.setItem(MIGRATION_MARKER,'true');
+  writePrimaryWithQuotaRecovery(text);
+  writeMirrorBestEffort(text);
+  localStorage.setItem(MIGRATION_MARKER,'true');
+  // Once both current-schema copies exist, remove obsolete migration-era full copies proactively before they create quota pressure later.
+  if(!storageRedundancyDegraded)reclaimObsoleteStorage();
   if(changedDomains.some(k=>['setup','plan','runs','injury','shoes'].includes(k)))scheduleAuthoritativeShoeSnapshotRefresh('state-change');
   return true
- }catch(err){recordDiagnostic('Save failure',err);if(appStartupInProgress)startupStorageFailure='Data could not be saved on this device. Your current data remain loaded, but this save attempt failed.';else toast('Data could not be saved on this device.',true);return false}
+ }catch(err){
+  recordDiagnostic('Primary save failure',err);
+  const message='Data could not be saved on this device. Your current data remain loaded, but this save attempt failed.';
+  if(appStartupInProgress)startupStorageFailure=message;else toast('Data could not be saved on this device.',true);
+  return false;
+ }
 }
 let lastModalFocus=null,modalWasOpen=false;
 function resetModalViewport(){const card=document.querySelector('#modal .modalCard');if(card)card.scrollTop=0;requestAnimationFrame(()=>{const c=document.querySelector('#modal .modalCard');if(c)c.scrollTop=0})}
