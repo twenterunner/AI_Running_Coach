@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '15.6.80';
-  const BUILD = 50680;
+  const VERSION = '15.6.81';
+  const BUILD = 50681;
   const SCHEMA = 10400;
   const PRIMARY_STORAGE_KEY = 'arc_v10400_web';
   const MIRROR_STORAGE_KEY = 'arc_v10400_mirror';
@@ -492,13 +492,14 @@ function isStorageQuotaError(err){
  return !!err&&(err.name==='QuotaExceededError'||err.name==='NS_ERROR_DOM_QUOTA_REACHED'||Number(err.code)===22||Number(err.code)===1014);
 }
 function reclaimObsoleteStorage(){
- // Current-schema primary/mirror are authoritative. Old full-state copies are only migration artefacts and can consume several MB.
+ // A readable current-schema primary/mirror is enough authority to remove migration-era full copies.
+ // Do not depend on the tiny migration marker: that marker itself can fail under quota pressure.
  let removed=0;
  try{
-  if(localStorage.getItem(MIGRATION_MARKER)!=='true')return 0;
   const primary=parseStored(localStorage.getItem(STORAGE_KEY)),mirror=parseStored(localStorage.getItem(MIRROR_KEY));
-  if(!primary&&!mirror)return 0;
-  for(const key of CORE.LEGACY_STORAGE_KEYS){if(localStorage.getItem(key)!=null){localStorage.removeItem(key);removed++}}
+  const current=[primary,mirror].some(x=>x&&Number(x.schemaVersion)===Number(SCHEMA));
+  if(!current)return 0;
+  for(const key of CORE.LEGACY_STORAGE_KEYS){if(key!==STORAGE_KEY&&key!==MIRROR_KEY&&localStorage.getItem(key)!=null){localStorage.removeItem(key);removed++}}
   if(localStorage.getItem('arc_v10400_migration_backup')!=null){localStorage.removeItem('arc_v10400_migration_backup');removed++}
  }catch(err){recordDiagnostic('Storage cleanup',err)}
  return removed;
@@ -529,20 +530,23 @@ function save(){
  const changedDomains=updateRuntimeDomainRevisions();
  state.storageRevision=Math.max(0,Number(state.storageRevision)||0)+1;state.updatedAt=new Date().toISOString();
  const text=JSON.stringify(state);
+ // Only failure of the authoritative primary write is a data-save failure.
  try{
   writePrimaryWithQuotaRecovery(text);
-  writeMirrorBestEffort(text);
-  localStorage.setItem(MIGRATION_MARKER,'true');
-  // Once both current-schema copies exist, remove obsolete migration-era full copies proactively before they create quota pressure later.
-  if(!storageRedundancyDegraded)reclaimObsoleteStorage();
-  if(changedDomains.some(k=>['setup','plan','runs','injury','shoes'].includes(k)))scheduleAuthoritativeShoeSnapshotRefresh('state-change');
-  return true
  }catch(err){
   recordDiagnostic('Primary save failure',err);
   const message='Data could not be saved on this device. Your current data remain loaded, but this save attempt failed.';
   if(appStartupInProgress)startupStorageFailure=message;else toast('Data could not be saved on this device.',true);
   return false;
  }
+ // A successful later primary write supersedes any transient startup failure from an earlier maintenance save.
+ if(appStartupInProgress)startupStorageFailure=null;
+ // Redundancy, migration markers and cleanup are best-effort housekeeping and must never masquerade as primary data loss.
+ writeMirrorBestEffort(text);
+ try{localStorage.setItem(MIGRATION_MARKER,'true')}catch(err){recordDiagnostic('Migration marker save unavailable',err)}
+ reclaimObsoleteStorage();
+ if(changedDomains.some(k=>['setup','plan','runs','injury','shoes'].includes(k)))scheduleAuthoritativeShoeSnapshotRefresh('state-change');
+ return true;
 }
 let lastModalFocus=null,modalWasOpen=false;
 function resetModalViewport(){const card=document.querySelector('#modal .modalCard');if(card)card.scrollTop=0;requestAnimationFrame(()=>{const c=document.querySelector('#modal .modalCard');if(c)c.scrollTop=0})}
