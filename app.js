@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '15.6.77';
-  const BUILD = 50677;
+  const VERSION = '15.6.78';
+  const BUILD = 50678;
   const SCHEMA = 10400;
   const PRIMARY_STORAGE_KEY = 'arc_v10400_web';
   const MIRROR_STORAGE_KEY = 'arc_v10400_mirror';
@@ -324,7 +324,7 @@ function normalizeRunDurationText(v){
 }
 
 function refineTimeErrors(errors,specs){let output=[...(errors||[])];for(const spec of specs||[]){if(String(spec.value??'').trim()&&parseTime(spec.value)===null){output=output.filter(error=>error.field!==spec.field);output.unshift({field:spec.field,message:`${spec.label} must use M:SS or H:MM:SS with seconds from 00 to 59.`})}}return output}
-function pace(s){return Number.isFinite(s)?fmtTime(s)+'/km':'—'} function toast(t,bad=false){$('toast').textContent=t;$('toast').className='toast'+(bad?' bad':'');setTimeout(()=>$('toast').className='toast hidden',3500)}
+function pace(s){return Number.isFinite(s)?fmtTime(s)+'/km':'—'} function toast(t,bad=false,duration=3500){$('toast').textContent=t;$('toast').className='toast'+(bad?' bad':'');setTimeout(()=>$('toast').className='toast hidden',duration)}
 function fmtEstimate(seconds,provisional=false){return provisional?fmtTime(Math.round(Number(seconds)/60)*60):fmtTime(seconds)}
 function paceEstimate(seconds,provisional=false){const paceSeconds=Number(seconds)/Math.max(.1,Number(state?.setup?.raceDistance)||1);return pace(provisional?Math.round(paceSeconds/10)*10:paceSeconds)}
 let toastTimer=null;
@@ -487,6 +487,7 @@ function shoeDomainRevisionKey(){
  return['setup','plan','runs','injury','shoes'].map(k=>`${k}:${runtimeDomainRevisions[k]}`).join('|')+`|day:${iso(today())}`;
 }
 updateRuntimeDomainRevisions();
+let appStartupInProgress=true,startupStorageFailure=null;
 function save(){
  reconcileShoeUsage();prunePlannedShoeAssignments();
  const changedDomains=updateRuntimeDomainRevisions();
@@ -496,7 +497,7 @@ function save(){
   localStorage.setItem(STORAGE_KEY,text);localStorage.setItem(MIRROR_KEY,text);localStorage.setItem(MIGRATION_MARKER,'true');
   if(changedDomains.some(k=>['setup','plan','runs','injury','shoes'].includes(k)))scheduleAuthoritativeShoeSnapshotRefresh('state-change');
   return true
- }catch(err){recordDiagnostic('Save failure',err);toast('Data could not be saved on this device.',true);return false}
+ }catch(err){recordDiagnostic('Save failure',err);if(appStartupInProgress)startupStorageFailure='Data could not be saved on this device. Your current data remain loaded, but this save attempt failed.';else toast('Data could not be saved on this device.',true);return false}
 }
 let lastModalFocus=null,modalWasOpen=false;
 function resetModalViewport(){const card=document.querySelector('#modal .modalCard');if(card)card.scrollTop=0;requestAnimationFrame(()=>{const c=document.querySelector('#modal .modalCard');if(c)c.scrollTop=0})}
@@ -10666,5 +10667,9 @@ renderAll();
 scheduleAuthoritativeShoeSnapshotRefresh('startup-prewarm');
 
 initOnboarding();
+appStartupInProgress=false;
+const startupLoader=$('appStartupLoader');
+if(startupLoader){startupLoader.classList.add('done');setTimeout(()=>startupLoader.remove(),320)}
+if(startupStorageFailure)setTimeout(()=>toast(startupStorageFailure,true,8000),380);
 console.info(`AI Running Coach v${CORE.VERSION} stable build ${BUILD}`);
 })();
