@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '15.6.85';
-  const BUILD = 50685;
+  const VERSION = '15.6.86';
+  const BUILD = 50686;
   const SCHEMA = 10400;
   const PRIMARY_STORAGE_KEY = 'arc_v10400_web';
   const MIRROR_STORAGE_KEY = 'arc_v10400_mirror';
@@ -5958,7 +5958,7 @@ const openInjuryFormUnvalidated=openInjuryForm;
 openInjuryForm=function(i){
  openInjuryFormUnvalidated(i);ensureAccessibleForms($('modalContent'));
  $('injDate').max=iso(today());const unsafeSave=$('saveInjury').onclick;
- $('saveInjury').onclick=()=>{const candidate={date:$('injDate').value,rehabStartDate:$('injRehabStart').value,bodyRegion:$('injRegion').value,location:$('injLocation').value,initialPain:nullableNumber($('injInitialPain').value),initialWalkPain:nullableNumber($('injInitialWalk').value),currentPain:nullableNumber($('injCurrentPain').value),currentWalkPain:nullableNumber($('injCurrentWalk').value),clinicianExpectedDays:nullableNumber($('injClinicianDays').value),checkIns:i?.checkIns||[]};const errors=CORE.validateInjury(candidate,{today:iso(today())});if(errors.length){showFieldErrors(errors,{date:'#injDate',rehabStartDate:'#injRehabStart',bodyRegion:'#injRegion',location:'#injLocation',initialPain:'#injInitialPain',initialWalkPain:'#injInitialWalk',currentPain:'#injCurrentPain',currentWalkPain:'#injCurrentWalk',clinicianExpectedDays:'#injClinicianDays'},$('modalContent'));return toast(CORE.firstErrorMessage(errors),true)}unsafeSave()};
+ $('saveInjury').onclick=()=>{const candidate={date:$('injDate').value,rehabStartDate:$('injRehabStart').value,bodyRegion:$('injRegion').value,location:$('injLocation').value,initialPain:nullableNumber($('injInitialPain').value),initialWalkPain:nullableNumber($('injInitialWalk').value),currentPain:nullableNumber($('injCurrentPain').value),currentWalkPain:nullableNumber($('injCurrentWalk').value),clinicianExpectedDays:nullableNumber($('injClinicianDays').value),checkIns:i?.checkIns||[]};const errors=CORE.validateInjury(candidate,{today:iso(today())});if(errors.length){showFieldErrors(errors,{date:'#injDate',rehabStartDate:'#injRehabStart',bodyRegion:'#injRegion',location:'#injLocation',initialPain:'#injInitialPain',initialWalkPain:'#injInitialWalk',currentPain:'#injCurrentPain',currentWalkPain:'#injCurrentWalk',clinicianExpectedDays:'#injClinicianDays'},$('modalContent'));return toast(CORE.firstErrorMessage(errors),true)}withPlanLoader('Updating injury plan…',unsafeSave)};
 };
 function triSelect(id,label,value,yes='Yes',no='No'){return`<div class="field"><label>${label}</label><select id="${id}"><option value="" ${!known(value)?'selected':''}>Not assessed</option><option value="true" ${value===true?'selected':''}>${yes}</option><option value="false" ${value===false?'selected':''}>${no}</option></select></div>`}
 function readTri(id){let v=$(id).value;return v===''?null:v==='true'}
@@ -6141,7 +6141,7 @@ function openInjuryCheck(i,existing=null,options={}){
 const openInjuryCheckUnvalidated=openInjuryCheck;
 openInjuryCheck=function(injury,existing=null){
  openInjuryCheckUnvalidated(injury,existing);ensureAccessibleForms($('modalContent'));$('icDate').max=iso(today());const unsafeSave=$('saveCheck').onclick;
- $('saveCheck').onclick=()=>{const check={date:$('icDate').value,pain:nullableNumber($('icPain').value),walkPain:nullableNumber($('icWalk').value),morningStiffness:nullableNumber($('icStiff').value),confidence:nullableNumber($('icConfidence').value),walkMinutes:durationFromFields($('icWalkMinutes'),$('icWalkSeconds')),runMinutes:durationFromFields($('icRun'),$('icRunSeconds')),runPain:nullableNumber($('icRunPain').value)};const errors=CORE.validateInjury({...injury,checkIns:[check]},{today:iso(today())}).filter(error=>error.field.startsWith('checkIns.'));if(errors.length){showFieldErrors(errors,{['checkIns.0.date']:'#icDate',['checkIns.0.pain']:'#icPain',['checkIns.0.walkPain']:'#icWalk',['checkIns.0.morningStiffness']:'#icStiff',['checkIns.0.confidence']:'#icConfidence',['checkIns.0.walkMinutes']:'#icWalkMinutes',['checkIns.0.runMinutes']:'#icRun',['checkIns.0.runPain']:'#icRunPain'},$('modalContent'));return toast(CORE.firstErrorMessage(errors),true)}unsafeSave()};
+ $('saveCheck').onclick=()=>{const check={date:$('icDate').value,pain:nullableNumber($('icPain').value),walkPain:nullableNumber($('icWalk').value),morningStiffness:nullableNumber($('icStiff').value),confidence:nullableNumber($('icConfidence').value),walkMinutes:durationFromFields($('icWalkMinutes'),$('icWalkSeconds')),runMinutes:durationFromFields($('icRun'),$('icRunSeconds')),runPain:nullableNumber($('icRunPain').value)};const errors=CORE.validateInjury({...injury,checkIns:[check]},{today:iso(today())}).filter(error=>error.field.startsWith('checkIns.'));if(errors.length){showFieldErrors(errors,{['checkIns.0.date']:'#icDate',['checkIns.0.pain']:'#icPain',['checkIns.0.walkPain']:'#icWalk',['checkIns.0.morningStiffness']:'#icStiff',['checkIns.0.confidence']:'#icConfidence',['checkIns.0.walkMinutes']:'#icWalkMinutes',['checkIns.0.runMinutes']:'#icRun',['checkIns.0.runPain']:'#icRunPain'},$('modalContent'));return toast(CORE.firstErrorMessage(errors),true)}withPlanLoader('Updating injury plan…',unsafeSave)};
 };
 function renderUndoButtons(){try{$('undoSettingsBtn')?.classList.toggle('hidden',!localStorage.getItem(UNDO_KEY));$('undoRestoreBtn')?.classList.toggle('hidden',!localStorage.getItem(BACKUP_KEY))}catch{}}
 
@@ -6915,14 +6915,19 @@ function scheduleAuthoritativeShoeSnapshotRefresh(reason='idle'){
  authoritativeShoeRefreshScheduled=true;
  const run=()=>{
   authoritativeShoeRefreshScheduled=false;
-  const beforeKey=shoeDomainRevisionKey(),life=refreshAuthoritativeShoeSnapshot(reason);
-  if(beforeKey!==shoeDomainRevisionKey()){scheduleAuthoritativeShoeSnapshotRefresh('state-changed-during-refresh');return}
-  if(life&&typeof activePageId==='function'&&activePageId()==='shoes'){
+  showPlanLoader('Updating shoe plan…');
+  setTimeout(()=>{
    try{
-    renderShoes();
-    if(typeof pageRenderSignature==='function')pageRenderCache.set('shoes',pageRenderSignature('shoes'));
-   }catch(err){recordDiagnostic('Async Shoes paint',err)}
-  }
+    const beforeKey=shoeDomainRevisionKey(),life=refreshAuthoritativeShoeSnapshot(reason);
+    if(beforeKey!==shoeDomainRevisionKey()){scheduleAuthoritativeShoeSnapshotRefresh('state-changed-during-refresh');return}
+    if(life&&typeof activePageId==='function'&&activePageId()==='shoes'){
+     try{
+      renderShoes();
+      if(typeof pageRenderSignature==='function')pageRenderCache.set('shoes',pageRenderSignature('shoes'));
+     }catch(err){recordDiagnostic('Async Shoes paint',err)}
+    }
+   }finally{requestAnimationFrame(()=>hidePlanLoader())}
+  },34);
  };
  if(typeof requestIdleCallback==='function')requestIdleCallback(run,{timeout:450});
  else setTimeout(run,0);
@@ -10605,7 +10610,7 @@ $('activityFile').onchange=async e=>{
 $('addAssessmentBtn').onclick=()=>{
  const form=$('assessmentForm');form.className='panel';form.innerHTML=`<h3>Fitness assessment result</h3><form id="assessmentEntryForm" novalidate><div class="formGrid"><div class="field"><label>Date</label><input id="aDate" type="date" max="${iso(today())}" required value="${iso(today())}"></div><div class="field"><label>Distance km</label><input id="aDist" type="number" inputmode="decimal" min="0.1" max="200" step="0.01" required value="5"></div><div class="field"><label>Time (M:SS or H:MM:SS)</label><input id="aTime" inputmode="numeric" required placeholder="25:15"></div><div class="field"><label>Average / threshold HR</label><input id="aHr" type="number" min="60" max="240" value="${state.setup.thresholdHr}"></div><div class="field"><label>Average / critical power W</label><input id="aCp" type="number" min="50" max="1000" value="${state.setup.criticalPower}"></div><div class="field"><label>Valid result</label><select id="aValid"><option value="true">Yes</option><option value="false">No</option></select></div></div><button id="saveAssessment" type="submit" class="primary full">Save assessment and completed run</button></form>`;
  ensureAccessibleForms(form);
- $('assessmentEntryForm').onsubmit=event=>{event.preventDefault();const a={id:'a-'+Date.now(),date:$('aDate').value,distance:Number($('aDist').value),time:parseTime($('aTime').value),thresholdHr:optionalBounded($('aHr').value,60,240),criticalPower:optionalBounded($('aCp').value,50,1000),valid:$('aValid').value==='true'};const errors=refineTimeErrors(CORE.validateAssessment(a,{today:iso(today())}),[{field:'time',label:'Assessment time',value:$('aTime').value}]);if(errors.length){showFieldErrors(errors,{date:'#aDate',distance:'#aDist',time:'#aTime',thresholdHr:'#aHr',criticalPower:'#aCp'},form);return toast(CORE.firstErrorMessage(errors),true)}state.assessments.push(a);syncAssessmentRun(a);buildPlan();syncAssessmentRun(a);recordPredictionSnapshot(a.date,'Fitness assessment',a.id);save();renderAll();form.className='hidden';toast(a.valid?'Assessment saved, added to run history and applied to future targets.':'Assessment saved and added to run history, but not applied to prediction.')};
+ $('assessmentEntryForm').onsubmit=event=>{event.preventDefault();const a={id:'a-'+Date.now(),date:$('aDate').value,distance:Number($('aDist').value),time:parseTime($('aTime').value),thresholdHr:optionalBounded($('aHr').value,60,240),criticalPower:optionalBounded($('aCp').value,50,1000),valid:$('aValid').value==='true'};const errors=refineTimeErrors(CORE.validateAssessment(a,{today:iso(today())}),[{field:'time',label:'Assessment time',value:$('aTime').value}]);if(errors.length){showFieldErrors(errors,{date:'#aDate',distance:'#aDist',time:'#aTime',thresholdHr:'#aHr',criticalPower:'#aCp'},form);return toast(CORE.firstErrorMessage(errors),true)}state.assessments.push(a);syncAssessmentRun(a);withPlanLoader('Updating running plan…',()=>{buildPlan();syncAssessmentRun(a);recordPredictionSnapshot(a.date,'Fitness assessment',a.id);save();renderAll();form.className='hidden';toast(a.valid?'Assessment saved, added to run history and applied to future targets.':'Assessment saved and added to run history, but not applied to prediction.')})};
 };
 
 function validateSetup(candidate){return CORE.validateSetup(candidate).map(error=>error.message)}
@@ -10629,16 +10634,22 @@ function applySettingsDraft(candidate,days){
  state.setup={...candidate,raceName:CORE.cleanText(candidate.raceName,100).trim()||'Goal race',footMechanics:candidate.footMechanics||'unknown'};
  state.days=days;
  if(baselineChanged){state.programStartPrediction=initialProgrammePrediction(state.setup);state.predictionHistory=[]}
- if(trainingChanged){buildPlan();state.weekView=currentWeek()}
- if(trainingChanged||shoeContextChanged)invalidateShoeDerivedPlanningCaches()
- // Persist and dismiss the confirmation immediately. Shoe-context changes do not need
- // to synchronously run the lifecycle planner while this modal is open; the canonical
- // shoe engine recalculates lazily when Shoes/session recommendations are rendered.
+ if(trainingChanged){
+  return withPlanLoader('Updating running plan…',()=>{
+   buildPlan();state.weekView=currentWeek();
+   if(trainingChanged||shoeContextChanged)invalidateShoeDerivedPlanningCaches();
+   save();closeDialog();renderAll();
+   toast('Settings saved. Future workouts were rebuilt; Undo is available in Settings.');
+  })
+ }
+ if(shoeContextChanged)invalidateShoeDerivedPlanningCaches()
+ // Shoe-context-only changes do not rebuild the running plan. The shoe planner
+ // will show its own loading overlay when the canonical lifecycle refresh runs.
  save();closeDialog();renderAll();
- toast(trainingChanged?'Settings saved. Future workouts were rebuilt; Undo is available in Settings.':'Shoe context saved. Training plan unchanged; shoe recommendations were recalculated.');
+ toast('Shoe context saved. Training plan unchanged; shoe recommendations were recalculated.');
 }
 $('saveSettings').onclick=()=>{const{candidate,days}=readSettingsDraft(),errors=refineTimeErrors([...CORE.validateSetup(candidate),...CORE.validateDays(days)],[{field:'targetTime',label:'Target time',value:document.querySelector('[data-setting="targetTime"]')?.value},{field:'testTime',label:'Recent test time',value:document.querySelector('[data-setting="testTime"]')?.value}]);if(errors.length){showFieldErrors(errors,{},$('settings'));return toast(CORE.firstErrorMessage(errors),true)}const setupLabels={planStart:'Plan start',raceDate:'Race date',raceName:'Race name',raceDistance:'Race distance',targetTime:'Target time',currentWeekly:'Current weekly distance',currentLongest:'Current longest run',testDistance:'Test distance',testTime:'Test time',thresholdHr:'Threshold HR',criticalPower:'Critical power',bodyWeight:'Body weight',footMechanics:'Foot mechanics / pronation',maxWeekly:'Maximum weekly distance',growth:'Weekly growth limit',peakLong:'Peak long run',taperDays:'Taper days'};const changes=Object.keys(setupLabels).filter(key=>String(candidate[key])!==String(state.setup[key])).map(key=>`<li><b>${esc(setupLabels[key])}</b>: ${esc(state.setup[key])} → ${esc(candidate[key])}</li>`);if(JSON.stringify(days)!==JSON.stringify(state.days))changes.push('<li><b>Training days</b>: availability or long-run day changed</li>');if(!changes.length)return toast('No settings changed.');const trainingKeys=['planStart','raceDate','raceName','raceDistance','targetTime','testDistance','testTime','currentWeekly','currentLongest','thresholdHr','criticalPower','bodyWeight','maxWeekly','growth','peakLong','taperDays'],trainingChanged=trainingKeys.some(key=>String(candidate[key])!==String(state.setup[key]))||JSON.stringify(days)!==JSON.stringify(state.days),title=trainingChanged?'Preview plan rebuild':'Preview shoe-context update',message=trainingChanged?'These changes will rebuild future workouts. Completed history is preserved.':'This changes only the Shoes recommendation/planning context. Your marathon training plan will not be rebuilt.',action=trainingChanged?'Apply and rebuild':'Save shoe context';showDialog(`<h2>${title}</h2><p>${message}</p><ul class="changePreview">${changes.join('')}</ul><div class="buttonRow"><button id="confirmSettings" class="primary" type="button">${action}</button><button id="cancelSettings" class="secondary" type="button">Cancel</button></div>`,title);$('confirmSettings').onclick=()=>applySettingsDraft(candidate,days);$('cancelSettings').onclick=closeDialog};
-$('undoSettingsBtn').onclick=()=>{try{const prior=JSON.parse(localStorage.getItem(UNDO_KEY)||'null');if(!prior)throw Error('No plan rebuild is available to undo.');const restored=normaliseState(prior),check=CORE.validateBackup(restored,{today:iso(today())});if(!check.valid)throw Error(CORE.firstErrorMessage(check.errors));state=restored;buildPlan();save();localStorage.removeItem(UNDO_KEY);renderAll();toast('The previous settings and plan have been restored.')}catch(err){toast(err.message||'Undo failed.',true)}};
+$('undoSettingsBtn').onclick=()=>{try{const prior=JSON.parse(localStorage.getItem(UNDO_KEY)||'null');if(!prior)throw Error('No plan rebuild is available to undo.');const restored=normaliseState(prior),check=CORE.validateBackup(restored,{today:iso(today())});if(!check.valid)throw Error(CORE.firstErrorMessage(check.errors));state=restored;withPlanLoader('Restoring running plan…',()=>{buildPlan();save();localStorage.removeItem(UNDO_KEY);renderAll();toast('The previous settings and plan have been restored.')})}catch(err){toast(err.message||'Undo failed.',true)}};
 function download(n,t,m){let a=document.createElement('a');a.href=URL.createObjectURL(new Blob([t],{type:m}));a.download=n;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
 $('planHealthBtn').onclick=()=>{renderPlanHealth();const ok=validatePlan(state.plan).valid;toast(ok?'Plan validation passed.':'Plan validation found issues.',!ok)};
 $('backupBtn').onclick=()=>download('ai-running-coach-backup.json',JSON.stringify(state,null,2),'application/json');$('restoreFile').onchange=e=>e.target.files[0]?.text().then(t=>{let candidate=JSON.parse(t);if(!validateBackup(candidate))throw new Error('Backup structure is incomplete.');let errors=validateSetup(candidate.setup);if(errors.length)throw new Error(errors[0]);candidate.schemaVersion=SCHEMA;candidate.plan=Array.isArray(candidate.plan)?candidate.plan:[];state=candidate;buildPlan();save();renderAll();toast('Backup restored and migrated.')}).catch(err=>toast(err?.message||'Invalid backup.',true));$('exportBtn').onclick=()=>download('run-log.csv',['Date,Type,Distance km,Duration sec,HR,Power,RPE,Pain,Previous-night Garmin HRV,Match status,Plan ID,Day offset,Notes',...state.runs.map(r=>[r.date,r.type,r.distanceKm,r.durationSec,r.avgHr,r.avgPower,r.rpe,r.pain,r.hrv??'',r.matchStatus||'',r.planId||'',r.dayOffset??'',`"${String(r.notes||'').replaceAll('"','""')}"`].join(','))].join('\n'),'text/csv');$('resetBtn').onclick=()=>{if(confirm('Delete all app data?')){state=defaults();buildPlan();save();renderAll();initOnboarding();toast('App reset. Enter your own details to start again.')}};
@@ -10649,7 +10660,7 @@ $('pillarCards')?.addEventListener('click',e=>{const card=e.target.closest('.pil
 $('pillarCards')?.addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&e.target.classList.contains('pillarCard')){e.preventDefault();e.target.click()}});
 function setOnboardingOpen(open){const overlay=$('onboarding');overlay.classList.toggle('hidden',!open);document.body.classList.toggle('onboardingOpen',open);$('mainContent').inert=open;$('nav').inert=open;$('moreNav').inert=open;if(open)requestAnimationFrame(()=>$('obRaceName').focus())}
 function onboardingDraft(){const profile=raceProfile(Number($('obRaceDistance').value));const setup={...state.setup,planStart:iso(today()),raceName:CORE.cleanText($('obRaceName').value,100).trim(),raceDate:$('obRaceDate').value,raceDistance:Number($('obRaceDistance').value),targetTime:parseTime($('obTargetTime').value),currentWeekly:Number($('obCurrentWeekly').value),currentLongest:Number($('obCurrentLongest').value),bodyWeight:Number($('obBodyWeight').value),testDistance:Number($('obTestDistance').value),testTime:parseTime($('obTestTime').value),thresholdHr:Number($('obThresholdHr').value),criticalPower:Number($('obCriticalPower').value),maxWeekly:Math.max(Number($('obCurrentWeekly').value),profile.maxWeekly),growth:profile.growth,peakLong:profile.peakLong,taperDays:profile.taperDays};return{setup,days:profile.days.map(day=>[...day])}}
-function initOnboarding(){if(state.onboardingComplete)return setOnboardingOpen(false);$('obRaceDate').value=state.setup.raceDate;const form=$('onboardingForm'),submit=form.querySelector('[type="submit"]'),summary=$('onboardingErrors');form.addEventListener('input',()=>{form.dataset.reviewed='';submit.textContent='Review and create my plan';summary.className='formErrors hidden';summary.textContent=''});form.onsubmit=event=>{event.preventDefault();const{setup,days}=onboardingDraft(),errors=refineTimeErrors([...CORE.validateSetup(setup),...CORE.validateDays(days)],[{field:'targetTime',label:'Target time',value:$('obTargetTime').value},{field:'testTime',label:'Recent test time',value:$('obTestTime').value}]);if(!$('obConfirm').checked)errors.push({field:'confirm',message:'Confirm that the values are yours before creating the plan.'});const mapping={raceName:'#obRaceName',raceDate:'#obRaceDate',raceDistance:'#obRaceDistance',targetTime:'#obTargetTime',currentWeekly:'#obCurrentWeekly',currentLongest:'#obCurrentLongest',bodyWeight:'#obBodyWeight',testDistance:'#obTestDistance',testTime:'#obTestTime',thresholdHr:'#obThresholdHr',criticalPower:'#obCriticalPower',confirm:'#obConfirm'};if(errors.length){showFieldErrors(errors,mapping,form);summary.className='formErrors';summary.setAttribute('role','alert');summary.textContent=CORE.firstErrorMessage(errors);return toast(CORE.firstErrorMessage(errors),true)}if(form.dataset.reviewed!=='true'){form.dataset.reviewed='true';summary.className='onboardingReview';summary.setAttribute('role','status');summary.innerHTML=`<b>Review your plan inputs</b><p>${esc(setup.raceName)} · ${esc(setup.raceDistance)} km on ${esc(fmtDate(setup.raceDate))}</p><p>Target ${esc(fmtTime(setup.targetTime))}; recent ${esc(setup.testDistance)} km in ${esc(fmtTime(setup.testTime))}; ${esc(setup.currentWeekly)} km/week.</p>`;submit.textContent='Create my plan';submit.focus();return}state.setup=setup;state.days=days;state.onboardingComplete=true;state.programStartPrediction=initialProgrammePrediction(setup);state.predictionHistory=[];buildPlan();save();setOnboardingOpen(false);renderAll();toast('Your personal plan is ready. Today is your starting view.')};setOnboardingOpen(true)}
+function initOnboarding(){if(state.onboardingComplete)return setOnboardingOpen(false);$('obRaceDate').value=state.setup.raceDate;const form=$('onboardingForm'),submit=form.querySelector('[type="submit"]'),summary=$('onboardingErrors');form.addEventListener('input',()=>{form.dataset.reviewed='';submit.textContent='Review and create my plan';summary.className='formErrors hidden';summary.textContent=''});form.onsubmit=event=>{event.preventDefault();const{setup,days}=onboardingDraft(),errors=refineTimeErrors([...CORE.validateSetup(setup),...CORE.validateDays(days)],[{field:'targetTime',label:'Target time',value:$('obTargetTime').value},{field:'testTime',label:'Recent test time',value:$('obTestTime').value}]);if(!$('obConfirm').checked)errors.push({field:'confirm',message:'Confirm that the values are yours before creating the plan.'});const mapping={raceName:'#obRaceName',raceDate:'#obRaceDate',raceDistance:'#obRaceDistance',targetTime:'#obTargetTime',currentWeekly:'#obCurrentWeekly',currentLongest:'#obCurrentLongest',bodyWeight:'#obBodyWeight',testDistance:'#obTestDistance',testTime:'#obTestTime',thresholdHr:'#obThresholdHr',criticalPower:'#obCriticalPower',confirm:'#obConfirm'};if(errors.length){showFieldErrors(errors,mapping,form);summary.className='formErrors';summary.setAttribute('role','alert');summary.textContent=CORE.firstErrorMessage(errors);return toast(CORE.firstErrorMessage(errors),true)}if(form.dataset.reviewed!=='true'){form.dataset.reviewed='true';summary.className='onboardingReview';summary.setAttribute('role','status');summary.innerHTML=`<b>Review your plan inputs</b><p>${esc(setup.raceName)} · ${esc(setup.raceDistance)} km on ${esc(fmtDate(setup.raceDate))}</p><p>Target ${esc(fmtTime(setup.targetTime))}; recent ${esc(setup.testDistance)} km in ${esc(fmtTime(setup.testTime))}; ${esc(setup.currentWeekly)} km/week.</p>`;submit.textContent='Create my plan';submit.focus();return}state.setup=setup;state.days=days;state.onboardingComplete=true;state.programStartPrediction=initialProgrammePrediction(setup);state.predictionHistory=[];withPlanLoader('Creating running plan…',()=>{buildPlan();save();setOnboardingOpen(false);renderAll();toast('Your personal plan is ready. Today is your starting view.')})};setOnboardingOpen(true)}
 $('onboarding').addEventListener('keydown',event=>{if($('onboarding').classList.contains('hidden'))return;if(event.key==='Escape'){event.preventDefault();toast('Complete first-time setup before using the coach.',true);$('onboardingTitle').focus?.();return}if(event.key!=='Tab')return;const focusable=[...$('onboarding').querySelectorAll('button,input,select,textarea,[tabindex]:not([tabindex="-1"])')].filter(el=>!el.disabled&&el.offsetParent!==null);if(!focusable.length)return;const first=focusable[0],last=focusable.at(-1);if(event.shiftKey&&document.activeElement===first){event.preventDefault();last.focus()}else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first.focus()}});
 
 
@@ -10711,17 +10722,47 @@ if('serviceWorker'in navigator&&(location.protocol==='https:'||['localhost','127
    });
   }).catch(()=>{});
 }
+let planLoaderDepth=0;
 function startupLoaderStatus(text){
  const loader=$('appStartupLoader'),label=loader?.querySelector('strong');
  if(label)label.textContent=text;
 }
+function showPlanLoader(text='Loading…'){
+ const loader=$('appStartupLoader');if(!loader)return;
+ planLoaderDepth++;
+ startupLoaderStatus(text);
+ loader.classList.remove('done');
+}
+function hidePlanLoader(){
+ const loader=$('appStartupLoader');if(!loader)return;
+ planLoaderDepth=Math.max(0,planLoaderDepth-1);
+ if(planLoaderDepth===0)loader.classList.add('done');
+}
+function withPlanLoader(text,work){
+ showPlanLoader(text);
+ setTimeout(()=>{
+  try{
+   const result=work();
+   if(result&&typeof result.then==='function'){
+    result.then(()=>requestAnimationFrame(()=>hidePlanLoader()))
+          .catch(err=>{hidePlanLoader();recordDiagnostic('Plan loading task',err);toast(err?.message||'The plan could not be updated.',true)});
+   }else requestAnimationFrame(()=>hidePlanLoader());
+  }catch(err){
+   hidePlanLoader();
+   recordDiagnostic('Plan loading task',err);
+   toast(err?.message||'The plan could not be updated.',true);
+  }
+ },34);
+}
 function finishStartupLoader(){
  const loader=$('appStartupLoader');if(!loader)return;
- loader.classList.add('done');setTimeout(()=>loader.remove(),320);
+ planLoaderDepth=0;
+ loader.classList.add('done');
 }
 function failStartupLoader(err){
  recordDiagnostic('Startup readiness',err);
  const loader=$('appStartupLoader');if(!loader)return;
+ planLoaderDepth=1;loader.classList.remove('done');
  const card=loader.querySelector('.startupLoaderCard');
  if(card){
   card.innerHTML=`<strong>Startup could not complete</strong><small style="display:block;color:#c4d5df;font-size:11px;line-height:1.35">A startup error occurred. Your stored data were not deleted. Reload to retry.</small><button id="startupRetryBtn" type="button" class="secondary small">Reload</button>`;
@@ -10735,19 +10776,20 @@ function initialiseApplication(){
   // Stored state has already been loaded and normalised above. Only regenerate
   // the programme if the persisted programme is genuinely absent.
   if(!Array.isArray(state.plan)||!state.plan.length){
-   startupLoaderStatus('Preparing programme…');
+   startupLoaderStatus('Loading running plan…');
    buildPlan();
   }
 
   // renderAll is the single authoritative first-load pass. It renders the
   // current programme, rehabilitation state, shoe inventory/usage/assignments,
   // recovery and derived UI. Do not duplicate those calculations beforehand.
-  startupLoaderStatus('Preparing your coach…');
+  startupLoaderStatus('Loading injury and recovery plan…');
   renderAll();
   initOnboarding();
+  startupLoaderStatus('Finalizing…');
 
   appStartupInProgress=false;
-  finishStartupLoader();
+  requestAnimationFrame(()=>requestAnimationFrame(()=>finishStartupLoader()));
 
   // Nonessential migrations, history compaction, fingerprints and future shoe
   // re-optimisation remain post-startup maintenance.

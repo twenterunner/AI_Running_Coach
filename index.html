@@ -3,11 +3,11 @@
 <head>
 <meta charset="utf-8"><meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"><meta http-equiv="Pragma" content="no-cache"><meta http-equiv="Expires" content="0"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,interactive-widget=resizes-content">
 <meta name="theme-color" content="#07111D"><title>AI Running Coach</title>
-<link rel="manifest" href="manifest.webmanifest?v=50685"><link rel="stylesheet" href="styles.css?v=50685">
-<link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png?v=50685">
-<link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png?v=50685">
-<link rel="icon" href="favicon.ico?v=50685">
-<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=50685">
+<link rel="manifest" href="manifest.webmanifest?v=50686"><link rel="stylesheet" href="styles.css?v=50686">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png?v=50686">
+<link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png?v=50686">
+<link rel="icon" href="favicon.ico?v=50686">
+<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=50686">
 <meta property="og:image" content="github-banner.png">
 
 
@@ -186,24 +186,44 @@
 </head>
 <body>
 <style id="startupLoaderCriticalCss">
-#appStartupLoader{position:fixed;inset:0;z-index:20000;display:grid;place-items:center;background:rgba(7,17,29,.82);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);transition:opacity .22s ease,visibility .22s ease}
+#appStartupLoader{position:fixed;inset:0;z-index:20000;display:grid;place-items:center;background:rgba(7,17,29,.84);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);transition:opacity .2s ease,visibility .2s ease}
 #appStartupLoader.done{opacity:0;visibility:hidden;pointer-events:none}
-#appStartupLoader .startupLoaderCard{width:154px;min-height:112px;box-sizing:border-box;padding:14px 12px 12px;border-radius:18px;background:#09202a;border:1px solid rgba(77,224,209,.25);box-shadow:0 12px 35px rgba(0,0,0,.34);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;text-align:center;color:#f3fbff}
-#appStartupLoader .startupRunnerTrack{position:relative;width:92px;height:48px;overflow:hidden}
-#appStartupLoader .startupRunner{position:absolute;left:5px;top:2px;width:44px;height:44px;display:grid;place-items:center;animation:startupRunTravel .82s ease-in-out infinite alternate}
-#appStartupLoader .startupRunner img{display:block;width:42px!important;height:42px!important;max-width:42px!important;max-height:42px!important;object-fit:cover;border-radius:10px;animation:startupRunBob .24s ease-in-out infinite alternate;box-shadow:0 0 12px rgba(77,224,209,.22)}
-#appStartupLoader .startupTrail{position:absolute;left:6px;right:6px;bottom:2px;height:2px;border-radius:999px;background:linear-gradient(90deg,transparent,rgba(77,224,209,.75),transparent);animation:startupTrailPulse .5s ease-in-out infinite alternate}
-#appStartupLoader strong{font-size:13px;line-height:1.2;letter-spacing:.01em}
+#appStartupLoader .startupLoaderCard{width:166px;min-height:126px;box-sizing:border-box;padding:13px 12px 14px;border-radius:20px;background:#09202a;border:1px solid rgba(77,224,209,.28);box-shadow:0 14px 38px rgba(0,0,0,.34);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;text-align:center;color:#f3fbff}
+#appStartupLoader .startupRunnerTrack{position:relative;width:104px;height:58px;overflow:hidden}
+#appStartupLoader .startupRunnerFigure{position:absolute;left:25px;top:2px;width:54px;height:54px;filter:drop-shadow(0 0 8px rgba(77,224,209,.34));animation:startupRunnerBob .28s ease-in-out infinite alternate}
+#appStartupLoader .startupRunnerFigure svg{display:block;width:54px;height:54px;overflow:visible}
+#appStartupLoader .runnerStroke{fill:none;stroke:#68eee0;stroke-width:4.8;stroke-linecap:round;stroke-linejoin:round}
+#appStartupLoader .runnerHead{fill:#68eee0}
+#appStartupLoader .runnerArmFront,#appStartupLoader .runnerLegBack{transform-box:fill-box;transform-origin:8% 8%;animation:startupLimbA .34s ease-in-out infinite alternate}
+#appStartupLoader .runnerArmBack,#appStartupLoader .runnerLegFront{transform-box:fill-box;transform-origin:8% 8%;animation:startupLimbB .34s ease-in-out infinite alternate}
+#appStartupLoader .startupTrail{position:absolute;left:3px;right:3px;bottom:4px;height:2px;border-radius:999px;background:linear-gradient(90deg,transparent,rgba(77,224,209,.85),transparent);animation:startupTrailPulse .45s ease-in-out infinite alternate}
+#appStartupLoader .startupSpeedLine{position:absolute;height:2px;border-radius:999px;background:linear-gradient(90deg,transparent,rgba(77,224,209,.55));animation:startupSpeed .62s linear infinite}
+#appStartupLoader .startupSpeedLine.one{width:38px;left:1px;top:20px}
+#appStartupLoader .startupSpeedLine.two{width:29px;left:8px;top:31px;animation-delay:-.23s}
+#appStartupLoader strong{font-size:13px;line-height:1.25;letter-spacing:.01em;max-width:140px}
 #appStartupLoader small{display:none}
-@keyframes startupRunTravel{from{transform:translateX(0)}to{transform:translateX(38px)}}
-@keyframes startupRunBob{from{transform:translateY(2px) rotate(-2deg)}to{transform:translateY(-2px) rotate(2deg)}}
-@keyframes startupTrailPulse{from{opacity:.35;transform:scaleX(.72)}to{opacity:1;transform:scaleX(1)}}
-@media (prefers-reduced-motion:reduce){#appStartupLoader .startupRunner,#appStartupLoader .startupRunner img,#appStartupLoader .startupTrail{animation-duration:1.8s}}
+@keyframes startupRunnerBob{from{transform:translateY(2px) translateX(-1px)}to{transform:translateY(-2px) translateX(1px)}}
+@keyframes startupLimbA{from{transform:rotate(-18deg)}to{transform:rotate(20deg)}}
+@keyframes startupLimbB{from{transform:rotate(18deg)}to{transform:rotate(-20deg)}}
+@keyframes startupTrailPulse{from{opacity:.35;transform:scaleX(.68)}to{opacity:1;transform:scaleX(1)}}
+@keyframes startupSpeed{0%{opacity:0;transform:translateX(-8px) scaleX(.5)}30%{opacity:1}100%{opacity:0;transform:translateX(20px) scaleX(1)}}
+@media (prefers-reduced-motion:reduce){#appStartupLoader .startupRunnerFigure,#appStartupLoader .runnerArmFront,#appStartupLoader .runnerArmBack,#appStartupLoader .runnerLegFront,#appStartupLoader .runnerLegBack,#appStartupLoader .startupTrail,#appStartupLoader .startupSpeedLine{animation-duration:1.8s}}
 </style>
 <div id="appStartupLoader" class="appStartupLoader" role="status" aria-live="polite" aria-label="Loading AI Running Coach">
   <div class="startupLoaderCard">
     <div class="startupRunnerTrack" aria-hidden="true">
-      <span class="startupRunner"><img src="icon-192.png?v=50685" alt=""></span>
+      <span class="startupSpeedLine one"></span>
+      <span class="startupSpeedLine two"></span>
+      <span class="startupRunnerFigure">
+        <svg viewBox="0 0 64 64" focusable="false" aria-hidden="true">
+          <circle class="runnerHead" cx="42" cy="10" r="5"/>
+          <path class="runnerStroke" d="M38 18l-8 13 10 7 7-13"/>
+          <g class="runnerArmBack"><path class="runnerStroke" d="M35 21L23 17l-7 7"/></g>
+          <g class="runnerArmFront"><path class="runnerStroke" d="M39 22l11 7 7-6"/></g>
+          <g class="runnerLegFront"><path class="runnerStroke" d="M39 38l12 7 7 10"/></g>
+          <g class="runnerLegBack"><path class="runnerStroke" d="M37 37L25 45 14 52"/></g>
+        </svg>
+      </span>
       <span class="startupTrail"></span>
     </div>
     <strong>Starting AI Running Coach…</strong>
@@ -212,7 +232,7 @@
 
 <a class="skipLink" href="#mainContent">Skip to main content</a>
 <header class="topbar">
-  <div class="brand"><img class="logo" src="icon-192.png?v=50685" alt="AI Running Coach logo"><div class="brand-copy"><h1>AI Running Coach</h1><p>Race-specific adaptive planning · v15.6.85 · build 50685</p></div></div>
+  <div class="brand"><img class="logo" src="icon-192.png?v=50686" alt="AI Running Coach logo"><div class="brand-copy"><h1>AI Running Coach</h1><p>Race-specific adaptive planning · v15.6.86 · build 50686</p></div></div>
   <button id="installBtn" class="install hidden">Install</button>
 </header>
 <nav id="nav" aria-label="Primary navigation"></nav>
@@ -452,10 +472,10 @@
   <article class="settingsSection"><div class="settingsSectionHead"><span>02</span><div><small>TRAINING STRUCTURE</small><h3>When can you train?</h3><p>Availability and the long-run day used when the plan is rebuilt.</p></div></div><div id="daysGrid"></div></article>
   <article class="settingsSection"><div class="settingsSectionHead"><span>03</span><div><small>ADAPTIVE MODEL</small><h3>Is the configured plan structurally sound?</h3><p>Plan Health validates the programme structure without duplicating Progress.</p></div></div><div class="settingsNested"><div class="panelHead"><div><h3>Plan Health</h3><p class="muted compact">Structure score, calculation and recommendations for the configured plan.</p></div><button id="planHealthBtn" class="secondary">Validate plan</button></div><div id="planHealthContent"></div></div></article>
   <article class="settingsSection"><div class="settingsSectionHead"><span>04</span><div><small>DATA & IMPORTS</small><h3>Manage your local training data</h3><p>Back up, restore or export data. Destructive actions remain clearly separated.</p></div></div><div class="settingsNested"><div class="buttonRow settingsDataActions"><button id="backupBtn">Download backup</button><label for="restoreFile" class="buttonLike">Restore backup</label><input id="restoreFile" type="file" accept=".json"><button id="undoRestoreBtn" type="button" class="secondary hidden">Undo last restore</button><button id="exportBtn">Export runs CSV</button></div><div class="settingsDangerZone"><b>Reset local app data</b><p>Use only when you intend to remove the current local programme and history.</p><button id="resetBtn" class="danger">Reset app</button></div></div></article>
-  <article class="settingsSection"><div class="settingsSectionHead"><span>05</span><div><small>APP & MODEL INFORMATION</small><h3>Which version is running?</h3><p>Reference information for this local build.</p></div></div><div class="settingsNested settingsAppInfo"><div><small>APP VERSION</small><strong>v15.6.85</strong></div><div><small>BUILD</small><strong>50685</strong></div><div><small>DATA</small><strong>Stored locally</strong></div><div><small>ACTIVITY STORAGE</small><strong>Compact derived evidence</strong></div><div><small>EXPECTED CAPACITY</small><strong>≈250–350+ imported sessions</strong><span>Device dependent · a 150-session programme is comfortably within the expected range.</span></div></div><details id="modelDiagnostics" class="settingsNested modelDiagnostics"><summary><div><small>MODEL INTEGRITY</small><b>Checking…</b><span>Read-only consistency diagnostics</span></div></summary></details></article>
+  <article class="settingsSection"><div class="settingsSectionHead"><span>05</span><div><small>APP & MODEL INFORMATION</small><h3>Which version is running?</h3><p>Reference information for this local build.</p></div></div><div class="settingsNested settingsAppInfo"><div><small>APP VERSION</small><strong>v15.6.86</strong></div><div><small>BUILD</small><strong>50686</strong></div><div><small>DATA</small><strong>Stored locally</strong></div><div><small>ACTIVITY STORAGE</small><strong>Compact derived evidence</strong></div><div><small>EXPECTED CAPACITY</small><strong>≈250–350+ imported sessions</strong><span>Device dependent · a 150-session programme is comfortably within the expected range.</span></div></div><details id="modelDiagnostics" class="settingsNested modelDiagnostics"><summary><div><small>MODEL INTEGRITY</small><b>Checking…</b><span>Read-only consistency diagnostics</span></div></summary></details></article>
 </section>
 </main>
-<footer class="appFooter"><span>AI Running Coach</span><small>v15.6.85 · build 50685</small></footer>
+<footer class="appFooter"><span>AI Running Coach</span><small>v15.6.86 · build 50686</small></footer>
 
 <div id="modal" class="modal hidden" role="dialog" aria-modal="true" aria-label="AI Running Coach dialog" tabindex="-1"><div class="modalCard"><button id="closeModal" class="close" type="button" aria-label="Close dialog">×</button><div id="modalContent"></div></div></div>
 
@@ -484,5 +504,5 @@
     <button class="primary full" type="submit">Review and create my plan</button>
   </form>
 </div>
-<script src="app.js?v=50685"></script>
+<script src="app.js?v=50686"></script>
 </body></html>
