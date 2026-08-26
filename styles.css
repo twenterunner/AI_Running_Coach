@@ -6192,3 +6192,8 @@ body:has(#dashboard.progressPage.active),#mainContent:has(#dashboard.progressPag
 .logDetailModal .comparisonValues span{display:inline-block!important;margin:0!important;color:#b7c8cf!important}
 .logDetailModal .comparableMatch{display:flex!important;justify-content:space-between!important;align-items:baseline!important;gap:8px!important;flex-wrap:wrap!important}
 \n/* v15.6.74 — auditable evidence-based rehabilitation updates */\n#injury .rehabUpdatedNote{margin:10px 0 2px;padding:10px 11px;border:1px solid rgba(87,230,214,.24);border-radius:12px;background:rgba(25,184,169,.07)}\n#injury .rehabUpdatedNote>b{display:block;margin:0 0 5px;color:#dffbf7;font-size:11px;letter-spacing:.02em}\n#injury .rehabUpdatedNote ul{margin:0 0 9px;padding-left:18px}\n#injury .rehabUpdatedNote li,#injury .rehabUpdatedNote p{margin:3px 0;color:var(--muted,#a8bac2);font-size:11px;line-height:1.45}\n#injury .rehabUpdatedNote small{display:block;margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,.08);color:#8fa6af;font-size:10px;line-height:1.45}\n
+/* v15.6.75 — persistent, immediately visible rehab update provenance */
+#injury .rehabUpdatedBadge{display:inline-flex;align-items:center;white-space:nowrap;color:#7ef0df;font-size:11px;font-weight:800}
+#injury .rehabUpdatedNoteLead{margin:3px 0 12px;border-color:rgba(87,230,214,.42);background:rgba(25,184,169,.11)}
+#injury .rehabUpdatedNoteLead>b{font-size:12px;color:#f1fffd}
+#injury .rehabUpdateGrid>div>strong{display:block;margin:6px 0 3px;color:#c9f8f1;font-size:11px}
