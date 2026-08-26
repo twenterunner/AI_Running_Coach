@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '15.6.81';
-  const BUILD = 50681;
+  const VERSION = '15.6.82';
+  const BUILD = 50682;
   const SCHEMA = 10400;
   const PRIMARY_STORAGE_KEY = 'arc_v10400_web';
   const MIRROR_STORAGE_KEY = 'arc_v10400_mirror';
@@ -10708,17 +10708,58 @@ if('serviceWorker'in navigator&&(location.protocol==='https:'||['localhost','127
    });
   }).catch(()=>{});
 }
-const assessmentRunsMigrated=migrateAssessmentRuns();
-const importedPowerMigrated=migrateImportedPower();
-const compactedHistoricalStreams=compactHistoricalActivityStreams();
-if(assessmentRunsMigrated||importedPowerMigrated||compactedHistoricalStreams||reconcilePredictionHistory())save();
-renderAll();
-scheduleAuthoritativeShoeSnapshotRefresh('startup-prewarm');
+function startupLoaderStatus(text){
+ const loader=$('appStartupLoader'),label=loader?.querySelector('strong');
+ if(label)label.textContent=text;
+}
+function finishStartupLoader(){
+ const loader=$('appStartupLoader');if(!loader)return;
+ loader.classList.add('done');setTimeout(()=>loader.remove(),320);
+}
+function failStartupLoader(err){
+ recordDiagnostic('Startup readiness',err);
+ const loader=$('appStartupLoader');if(!loader)return;
+ const card=loader.querySelector('.startupLoaderCard');
+ if(card){
+  card.innerHTML=`<strong>Startup could not complete</strong><small style="display:block;color:#c4d5df;font-size:11px;line-height:1.35">Your stored data were not deleted. Reload the app to retry.</small><button id="startupRetryBtn" type="button" class="secondary small">Reload</button>`;
+  const retry=$('startupRetryBtn');if(retry)retry.onclick=()=>location.reload();
+ }
+}
+async function initialiseApplication(){
+ try{
+  startupLoaderStatus('Loading training data…');
+  await new Promise(resolve=>requestAnimationFrame(resolve));
+  const assessmentRunsMigrated=migrateAssessmentRuns();
+  const importedPowerMigrated=migrateImportedPower();
+  const compactedHistoricalStreams=compactHistoricalActivityStreams();
+  if(assessmentRunsMigrated||importedPowerMigrated||compactedHistoricalStreams||reconcilePredictionHistory())save();
 
-initOnboarding();
-appStartupInProgress=false;
-const startupLoader=$('appStartupLoader');
-if(startupLoader){startupLoader.classList.add('done');setTimeout(()=>startupLoader.remove(),320)}
-if(startupStorageFailure)setTimeout(()=>toast(startupStorageFailure,true,8000),380);
-console.info(`AI Running Coach v${CORE.VERSION} stable build ${BUILD}`);
+  startupLoaderStatus('Preparing programme…');
+  if(!Array.isArray(state.plan)||!state.plan.length)buildPlan();
+  await new Promise(resolve=>requestAnimationFrame(resolve));
+
+  startupLoaderStatus('Preparing rehabilitation…');
+  const activeStartupInjury=(state.injuries||[]).find(x=>x.id===state.activeInjuryPlanId);
+  if(activeStartupInjury)rehabModel(activeStartupInjury);
+  await new Promise(resolve=>requestAnimationFrame(resolve));
+
+  startupLoaderStatus('Preparing shoes…');
+  refreshAuthoritativeShoeSnapshot('startup-ready');
+  await new Promise(resolve=>requestAnimationFrame(resolve));
+
+  startupLoaderStatus('Rendering…');
+  renderAll();
+  initOnboarding();
+  await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
+
+  appStartupInProgress=false;
+  finishStartupLoader();
+  if(startupStorageFailure)setTimeout(()=>toast(startupStorageFailure,true,8000),380);
+  console.info(`AI Running Coach v${CORE.VERSION} stable build ${BUILD}`);
+ }catch(err){
+  appStartupInProgress=false;
+  failStartupLoader(err);
+ }
+}
+initialiseApplication();
 })();
