@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '15.6.98';
-  const BUILD = 50698;
+  const VERSION = '15.6.99';
+  const BUILD = 50699;
   const SCHEMA = 10400;
   const PRIMARY_STORAGE_KEY = 'arc_v10400_web';
   const MIRROR_STORAGE_KEY = 'arc_v10400_mirror';
@@ -529,10 +529,25 @@ function writeMirrorBestEffort(text){
  }
 }
 function save(){
- reconcileShoeUsage();prunePlannedShoeAssignments();
- const changedDomains=updateRuntimeDomainRevisions();
+ // Derived shoe/runtime maintenance must never be allowed to block authoritative user-data persistence.
+ // A rehab check-in is primary user data; shoe reconciliation is secondary/derived data.
+ let changedDomains=[];
+ try{
+  reconcileShoeUsage();
+  prunePlannedShoeAssignments();
+  changedDomains=updateRuntimeDomainRevisions();
+ }catch(err){
+  recordDiagnostic('Pre-save derived-state maintenance',err);
+ }
  state.storageRevision=Math.max(0,Number(state.storageRevision)||0)+1;state.updatedAt=new Date().toISOString();
- const text=JSON.stringify(state);
+ let text;
+ try{
+  text=JSON.stringify(state);
+ }catch(err){
+  recordDiagnostic('Primary serialization failure',err);
+  if(!appStartupInProgress)toast('Data could not be saved on this device.',true);
+  return false;
+ }
  // Only failure of the authoritative primary write is a data-save failure.
  try{
   writePrimaryWithQuotaRecovery(text);
@@ -6132,7 +6147,17 @@ function openInjuryCheck(i,existing=null,options={}){
  if(runStatus==='completed'&&(!Number.isFinite(runMinutes)||runMinutes<=0))return toast('A completed run requires positive running minutes.',true);
  if(runStatus==='stopped'&&(!Number.isFinite(runMinutes)||runMinutes<=0))return toast('Enter the minutes completed before the run was stopped.',true);
  let legacyRehabStatus=rehabExerciseStatus==='not_planned'&&locomotionStatus==='not_planned'?'not_planned':stretchGoalStatus==='achieved'&&rehabExerciseStatus==='all'&&locomotionStatus==='completed'?'stretch':rehabExerciseStatus==='all'&&locomotionStatus==='completed'?'completed':rehabExerciseStatus==='some'||locomotionStatus==='partial'?'reduced':rehabExerciseStatus==='none'&&locomotionStatus==='completed'?'walking_only':rehabExerciseStatus==='stopped'||locomotionStatus==='stopped'?'stopped':rehabExerciseStatus==='none'&&locomotionStatus==='none'?'not_completed':null;let c={date:$('icDate').value,rehabShoeId:selectedRehabShoeId||null,rehabShoeChoiceMade:true,walkDistanceKm:$('icWalkDistanceKm')&&$('icWalkDistanceKm').value!==''?Math.max(0,Number($('icWalkDistanceKm').value)):null,runDistanceKm:$('icRunDistanceKm')&&$('icRunDistanceKm').value!==''?Math.max(0,Number($('icRunDistanceKm').value)):null,pain:nullableNumber($('icPain').value),walkPain:nullableNumber($('icWalk').value),morningStiffness:nullableNumber($('icStiff').value),symptomTrend:$('icTrend').value||null,newSwelling:readTri('icSwelling'),walkMinutes,stairs:readTri('icStairs'),confidence:nullableNumber($('icConfidence').value),rehabExerciseStatus,locomotionStatus,stretchGoalStatus,rehabStatus:legacyRehabStatus,bridge:activeScheduled.strengthPlanned?(rehabExerciseStatus==='stopped'?false:['all','some'].includes(rehabExerciseStatus)?readTri('icBridge'):null):null,hop:activeScheduled.impactPlanned?(rehabExerciseStatus==='stopped'?false:['all','some'].includes(rehabExerciseStatus)?readTri('icHop'):null):null,runStatus,runMinutes,runPain:activeScheduled.runningPlanned?nullableNumber($('icRunPain').value):null,alteredGait:activeScheduled.runningPlanned?readTri('icGait'):null,runQualityTolerated:activeScheduled.qualityPlanned&&runStatus==='completed'?readTri('icRunQuality'):null,runIntensity:activeScheduled.qualityPlanned&&runStatus==='completed'?'quality':null,hillsTolerated:null,planSnapshot:{date:activePlan.date,type:activePlan.type,title:activePlan.title,items:[...(activePlan.items||[])],walkingTarget:activePlan.walkingTarget,stretchGoal:activePlan.stretchGoal,stretchGoalTitle:activePlan.stretchGoalTitle,stretchGoalWhy:activePlan.stretchGoalWhy,stretchGoalOffered:activePlan.stretchGoalOffered,bestOutcome:activePlan.bestOutcome,evidence:activePlan.evidence,running:activePlan.running,rationale:activePlan.rationale,rule:activePlan.rule,stage:activePlan.stage},nextDayWorse:readTri('icWorse'),loadResponse:$('icResponse').value||null,symptoms:$('icSymptoms').value.trim()};const executionCheck=rehabExecutionMeta(c);if((activeScheduled.exercisePlanned||activeScheduled.walkingPlanned||activeScheduled.runningPlanned)&&!executionCheck.assessed)return toast('Complete all scheduled execution questions so this check-in can be scored.',true);if(!c.date)return toast('Enter the check-in date.',true);if(dte(c.date)<dte(i.date))return toast('A check-in cannot be dated before the injury date.',true);const hasObs=Object.entries(c).some(([k,v])=>k!=='date'&&k!=='symptoms'&&v!==null&&v!==''&&v!==undefined);if(!hasObs&&!c.symptoms)return toast('Record at least one observation.',true);if(['stopped','unable'].includes(runStatus)&&Number.isFinite(runMinutes)&&runMinutes<0)return toast('Running minutes cannot be negative.',true);const oldRehabShoeId=existing?.rehabShoeId||null,rehabShoeId=c.rehabShoeId||null,rehabShoeBefore=rehabShoeId?shoeMileage((state.shoes||[]).find(s=>s.id===rehabShoeId)||{}):null;i.checkIns=i.checkIns||[];if(editing&&originalDate!==c.date&&i.checkIns.some(x=>x.date===c.date))return toast('A check-in already exists for that date.',true);let n=i.checkIns.findIndex(x=>x.date===(editing?originalDate:c.date));n>=0?i.checkIns[n]=c:i.checkIns.push(c);const savedCheck=i.checkIns.find(x=>x.date===c.date);if(savedCheck){savedCheck.rehabShoeId=rehabShoeId;savedCheck.rehabShoeChoiceMade=true;syncShoeAcrossMatchedRehabRun(savedCheck,rehabShoeId)}const saveOk=save();if(saveOk===false)return;
- const persistedCheck=i.checkIns.find(x=>x.date===c.date);refreshShoeActualsAfterActivity();const rehabKm=rehabUsageFromCheckIn(i,savedCheck||c)?.distanceKm||Number(matchingLoggedRunForRehab(savedCheck||c)?.distanceKm)||0,shoeNote=shoeReallocationConfirmation(oldRehabShoeId,rehabShoeId,rehabKm,'rehab')||shoeMileageConfirmation(rehabShoeId,rehabShoeBefore,'rehab');$('modal').className='modal hidden';renderInjury();renderToday();toast(shoeNote||(editing?'Check-in updated and full trajectory recalculated.':'Check-in saved. The full history—not this day alone—was used.'));};if(editing)$('deleteCheck').onclick=()=>{if(confirm('Delete this check-in?')){i.checkIns=i.checkIns.filter(x=>x.date!==originalDate);save();refreshShoeActualsAfterActivity();$('modal').className='modal hidden';renderInjury();renderToday();toast('Check-in deleted and trajectory recalculated.')}};
+ const persistedCheck=i.checkIns.find(x=>x.date===c.date);
+ let shoeNote='';
+ try{
+  refreshShoeActualsAfterActivity();
+  const rehabKm=rehabUsageFromCheckIn(i,savedCheck||c)?.distanceKm||Number(matchingLoggedRunForRehab(savedCheck||c)?.distanceKm)||0;
+  shoeNote=shoeReallocationConfirmation(oldRehabShoeId,rehabShoeId,rehabKm,'rehab')||shoeMileageConfirmation(rehabShoeId,rehabShoeBefore,'rehab')||'';
+ }catch(err){recordDiagnostic('Post-check-in shoe refresh',err)}
+ $('modal').className='modal hidden';
+ try{renderInjury()}catch(err){recordDiagnostic('Post-check-in injury render',err)}
+ try{renderToday()}catch(err){recordDiagnostic('Post-check-in Today render',err)}
+ toast(shoeNote||(editing?'Check-in updated and full trajectory recalculated.':'Check-in saved. The full history—not this day alone—was used.'));};if(editing)$('deleteCheck').onclick=()=>{if(confirm('Delete this check-in?')){i.checkIns=i.checkIns.filter(x=>x.date!==originalDate);save();refreshShoeActualsAfterActivity();$('modal').className='modal hidden';renderInjury();renderToday();toast('Check-in deleted and trajectory recalculated.')}};
 }
 function renderUndoButtons(){try{$('undoSettingsBtn')?.classList.toggle('hidden',!localStorage.getItem(UNDO_KEY));$('undoRestoreBtn')?.classList.toggle('hidden',!localStorage.getItem(BACKUP_KEY))}catch{}}
 
