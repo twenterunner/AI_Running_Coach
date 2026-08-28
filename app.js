@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '15.6.95';
-  const BUILD = 50695;
+  const VERSION = '15.6.96';
+  const BUILD = 50696;
   const SCHEMA = 10400;
   const PRIMARY_STORAGE_KEY = 'arc_v10400_web';
   const MIRROR_STORAGE_KEY = 'arc_v10400_mirror';
@@ -2703,7 +2703,7 @@ function todayRehabCard(active){
    <div class="rehabPrioritySummary"><strong>${esc(injuryDay.title)}</strong>${completed?`<span>✓ ${esc(execution)}</span>`:pain?`<span>${esc(pain)}</span>`:''}</div>
    ${todayBulletList(items.length?items:[injuryDay.rule],'runnerBullets rehabBullets')}
    ${completed?`<div class="runnerCallout completed"><b>Today is recorded</b><span>${esc(injuryDay.execution?.label||'The daily check-in has been saved.')} Future rehabilitation days may adapt from this evidence; today’s prescription stays unchanged.</span></div>`:`<div class="runnerCallout"><b>Safety rule</b><span>${esc(injuryDay.rule)}</span></div>`}
-   <button type="button" class="runnerTextButton rehabPrimaryButton" data-injury-check="${esc(injury.id)}">${completed?'Review / edit today’s check-in':'Open daily rehab check-in'}</button>
+   <button type="button" class="runnerTextButton rehabPrimaryButton" data-today-injury-check="${esc(injury.id)}">${completed?'Review / edit today’s check-in':'Open daily rehab check-in'}</button>
  </section>`;
 }
 function todayMiniValueClass(kind,value,context={}){
@@ -2897,6 +2897,19 @@ function renderToday(){
    if(!details)return;
    const opening=details.hidden;details.hidden=!opening;
    btn.setAttribute('aria-expanded',opening?'true':'false');
+ }));
+ document.querySelectorAll('#today [data-today-injury-check]').forEach(btn=>btn.addEventListener('click',event=>{
+   event.preventDefault();event.stopPropagation();
+   const id=btn.dataset.todayInjuryCheck;
+   activatePage('injury');
+   requestAnimationFrame(()=>{
+     const canonical=[...document.querySelectorAll('#injury [data-injury-check]')].find(node=>node.dataset.injuryCheck===id);
+     if(!canonical){
+       toast('The active injury check-in could not be opened. Open Injury and retry.',true);
+       return;
+     }
+     canonical.click();
+   });
  }));
  document.querySelectorAll('#today [data-go]').forEach(btn=>btn.addEventListener('click',()=>showPage(btn.dataset.go)));
 }
