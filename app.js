@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '15.6.94';
-  const BUILD = 50694;
+  const VERSION = '15.6.95';
+  const BUILD = 50695;
   const SCHEMA = 10400;
   const PRIMARY_STORAGE_KEY = 'arc_v10400_web';
   const MIRROR_STORAGE_KEY = 'arc_v10400_mirror';
@@ -2703,7 +2703,7 @@ function todayRehabCard(active){
    <div class="rehabPrioritySummary"><strong>${esc(injuryDay.title)}</strong>${completed?`<span>✓ ${esc(execution)}</span>`:pain?`<span>${esc(pain)}</span>`:''}</div>
    ${todayBulletList(items.length?items:[injuryDay.rule],'runnerBullets rehabBullets')}
    ${completed?`<div class="runnerCallout completed"><b>Today is recorded</b><span>${esc(injuryDay.execution?.label||'The daily check-in has been saved.')} Future rehabilitation days may adapt from this evidence; today’s prescription stays unchanged.</span></div>`:`<div class="runnerCallout"><b>Safety rule</b><span>${esc(injuryDay.rule)}</span></div>`}
-   <button type="button" class="runnerTextButton rehabPrimaryButton" data-rehab-checkin="today">${completed?'Review / edit today’s check-in':'Open daily rehab check-in'}</button>
+   <button type="button" class="runnerTextButton rehabPrimaryButton" data-injury-check="${esc(injury.id)}">${completed?'Review / edit today’s check-in':'Open daily rehab check-in'}</button>
  </section>`;
 }
 function todayMiniValueClass(kind,value,context={}){
@@ -2897,11 +2897,6 @@ function renderToday(){
    if(!details)return;
    const opening=details.hidden;details.hidden=!opening;
    btn.setAttribute('aria-expanded',opening?'true':'false');
- }));
- document.querySelectorAll('#today [data-rehab-checkin]').forEach(btn=>btn.addEventListener('click',()=>{
-   const injury=(state.injuries||[]).find(x=>x.id===state.activeInjuryPlanId);
-   if(injury){const existing=(injury.checkIns||[]).find(c=>c.date===iso(today()))||null;openInjuryCheck(injury,existing);}
-   else showPage('injury');
  }));
  document.querySelectorAll('#today [data-go]').forEach(btn=>btn.addEventListener('click',()=>showPage(btn.dataset.go)));
 }
