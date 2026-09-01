@@ -99,6 +99,7 @@ canvas{display:block;width:100%!important;max-width:100%;height:auto!important;m
 #today .rehabPrioritySummary strong{font-size:15px;color:#fff;overflow-wrap:anywhere}
 #today .rehabPrioritySummary span{font-size:11px;color:#ffc28c;white-space:nowrap}
 #today .rehabPrimaryButton{background:linear-gradient(180deg,#d97b3d,#b85b29)!important;border-color:rgba(255,184,121,.35)!important;color:#fff!important}
+#today .todayRehabCard.completed .rehabPrimaryButton,#today .rehabPrimaryButton.completed{background:linear-gradient(180deg,#43b977,#2f8f5a)!important;border-color:rgba(146,235,181,.48)!important;color:#fff!important}
 
 #today .todayStatusGrid{grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
 #today .todayStatusCard{grid-template-rows:26px 82px minmax(58px,auto)!important;text-align:center!important}
