@@ -6198,3 +6198,15 @@ body:has(#dashboard.progressPage.active),#mainContent:has(#dashboard.progressPag
 #injury .rehabUpdatedNoteLead{margin:3px 0 12px;border-color:rgba(87,230,214,.42);background:rgba(25,184,169,.11)}
 #injury .rehabUpdatedNoteLead>b{font-size:12px;color:#f1fffd}
 #injury .rehabUpdateGrid>div>strong{display:block;margin:6px 0 3px;color:#c9f8f1;font-size:11px}
+
+/* v15.6.103 — terminal rehabilitation state */
+#injury .injuryRunnerNotice.completedRecoveryNotice{background:rgba(121,214,155,.07);border-color:rgba(121,214,155,.28)}
+#injury .injuryRunnerParallelCard.completedRecovery{border-color:rgba(121,214,155,.34)}
+#injury .injuryRunnerParallelCard.completedRecovery .injuryRunnerParallelMetrics b{color:#9ae7aa}
+#injury .rehabCompletionBanner{display:grid;gap:3px;margin:0 0 10px;padding:11px 12px;border-radius:12px;background:rgba(121,214,155,.08);border:1px solid rgba(121,214,155,.24)}
+#injury .rehabCompletionBanner b{font-size:12px;color:#b8f0c7}
+#injury .rehabCompletionBanner span{font-size:10px;line-height:1.35;color:var(--text-2)}
+
+/* v15.6.104 — Today training-status tile after rehabilitation */
+#today .todayStatusCard.training.good .statusCopy>strong{color:#9ae77d!important}
+#today .todayStatusCard.training.good .statusCopy>p{color:#d4e3e8!important}
