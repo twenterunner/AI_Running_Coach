@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '15.6.104';
-  const BUILD = 50704;
+  const VERSION = '15.6.105';
+  const BUILD = 50705;
   const SCHEMA = 10400;
   const PRIMARY_STORAGE_KEY = 'arc_v10400_web';
   const MIRROR_STORAGE_KEY = 'arc_v10400_mirror';
@@ -87,6 +87,8 @@
     numberError(errors, 'growth', 'Maximum weekly growth', setup.growth, 0.01, 0.25, { required: true });
     numberError(errors, 'peakLong', 'Peak long run', setup.peakLong, 0.1, 100, { required: true });
     numberError(errors, 'taperDays', 'Taper days', setup.taperDays, 0, 42, { required: true, integer: true });
+    if (Number.isFinite(Number(setup.maxWeekly)) && Number(setup.maxWeekly) < 6) errors.push({ field: 'maxWeekly', message: 'Maximum weekly distance must be at least 6 km so a minimum viable long-run session can exist.' });
+    if (Number.isFinite(Number(setup.peakLong)) && Number.isFinite(Number(setup.maxWeekly)) && Number(setup.peakLong) > Number(setup.maxWeekly)) errors.push({ field: 'peakLong', message: 'Peak long run cannot exceed the maximum weekly distance.' });
     numberError(errors, 'minFactor', 'Minimum adaptive factor', setup.minFactor, 0.5, 1.25, { required: true });
     numberError(errors, 'maxFactor', 'Maximum adaptive factor', setup.maxFactor, 0.5, 1.25, { required: true });
     if (Number(setup.maxFactor) < Number(setup.minFactor)) errors.push({ field: 'maxFactor', message: 'Maximum adaptive factor must be at least the minimum factor.' });
@@ -252,15 +254,23 @@
     return { provisional: !Number.isFinite(coverage) || coverage < 0.25, coverage: Number.isFinite(coverage) ? Math.max(0, Math.min(1, coverage)) : 0 };
   }
 
-  function validatePlanInvariants(plan, setup) {
+  function validatePlanInvariants(plan, setup, options = {}) {
     const errors = [];
     if (!Array.isArray(plan) || !plan.length) return [{ field: 'plan', message: 'Plan must contain at least one workout.' }];
-    const ids = new Set();
+    const DAY_MS = 86400000;
+    const ordinal = value => {
+      const text = String(value || '');
+      const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(text);
+      return match ? Math.floor(Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3])) / DAY_MS) : null;
+    };
+    const ids = new Set(), dates = new Set();
     plan.forEach((workout, index) => {
       if (!workout || typeof workout !== 'object') return errors.push({ field: `plan.${index}`, message: 'Workout must be an object.' });
       if (!workout.id || ids.has(workout.id)) errors.push({ field: `plan.${index}.id`, message: 'Workout identifiers must be present and unique.' });
       ids.add(workout.id);
       if (!isIsoDate(workout.date)) errors.push({ field: `plan.${index}.date`, message: 'Workout date must be valid.' });
+      else if (dates.has(workout.date)) errors.push({ field: `plan.${index}.date`, message: 'Only one canonical plan slot is allowed per calendar date.' });
+      dates.add(workout.date);
       if (setup && isIsoDate(setup.planStart) && isIsoDate(workout.date) && workout.date < setup.planStart) errors.push({ field: `plan.${index}.date`, message: 'Workout cannot precede the plan start.' });
       if (setup && isIsoDate(setup.raceDate) && isIsoDate(workout.date) && workout.date > setup.raceDate) errors.push({ field: `plan.${index}.date`, message: 'Workout cannot follow race day.' });
       const distance = Number(workout.distance);
@@ -268,6 +278,27 @@
       const parts = ['warmDistance', 'mainDistance', 'coolDistance'].map(field => Number(workout[field])).filter(Number.isFinite);
       if (parts.length === 3 && Math.abs(parts.reduce((sum, value) => sum + value, 0) - distance) > 0.11) errors.push({ field: `plan.${index}.components`, message: 'Workout components do not equal its distance.' });
     });
+    if (setup && isIsoDate(setup.raceDate)) {
+      const race = plan.filter(workout => workout?.type === 'Race Day');
+      if (race.length !== 1) errors.push({ field: 'plan.raceDay', message: `Plan must contain exactly one Race Day workout; found ${race.length}.` });
+      else {
+        if (race[0].date !== setup.raceDate) errors.push({ field: 'plan.raceDay.date', message: 'Race Day must occur on the configured race date.' });
+        if (Number.isFinite(Number(setup.raceDistance)) && Math.abs(Number(race[0].distance) - Number(setup.raceDistance)) > 0.011) errors.push({ field: 'plan.raceDay.distance', message: 'Race Day distance must equal the configured race distance.' });
+      }
+    }
+    if (setup && isIsoDate(setup.planStart) && Number.isFinite(Number(setup.maxWeekly))) {
+      const start = ordinal(setup.planStart), asOf = options.asOf ? ordinal(options.asOf) : null;
+      const asOfWeek = start != null && asOf != null ? Math.max(1, Math.floor((asOf - start) / 7) + 1) : 0;
+      const byWeek = new Map();
+      for (const workout of plan) {
+        if (!isIsoDate(workout?.date) || ['Rest', 'Race Day'].includes(workout.type)) continue;
+        const day = ordinal(workout.date); if (day == null || start == null) continue;
+        const week = Math.floor((day - start) / 7) + 1;
+        byWeek.set(week, (byWeek.get(week) || 0) + (Number(workout.distance) || 0));
+        if (week > asOfWeek && ['Long run', 'Specific long run', 'Race rehearsal', 'Progression'].includes(workout.type) && Number.isFinite(Number(setup.peakLong)) && Number(workout.distance) > Number(setup.peakLong) + 0.11) errors.push({ field: `plan.${workout.id}.distance`, message: `Long-run distance ${Number(workout.distance).toFixed(1)} km exceeds configured peak-long-run cap ${Number(setup.peakLong).toFixed(1)} km.` });
+      }
+      for (const [week, distance] of byWeek) if (week > asOfWeek && distance > Number(setup.maxWeekly) + 0.11) errors.push({ field: `plan.week.${week}`, message: `Week ${week} prescribes ${distance.toFixed(1)} km, above the configured ${Number(setup.maxWeekly).toFixed(1)} km maximum.` });
+    }
     return errors;
   }
 
@@ -305,11 +336,18 @@
 let preview=null;
 (()=>{'use strict';
 const CORE=window.ARC_CORE;if(!CORE)throw new Error('Core utilities failed to load.');
-const DAY=86400050, $=id=>document.getElementById(id), clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const DAY=86400000, $=id=>document.getElementById(id), clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 function today(){return dte(iso(new Date()))}
 const iso=d=>{let x=new Date(d),y=x.getFullYear(),m=String(x.getMonth()+1).padStart(2,'0'),q=String(x.getDate()).padStart(2,'0');return `${y}-${m}-${q}`},
 dte=s=>{let [y,m,d]=String(s).split('-').map(Number);return new Date(y,m-1,d,12,0,0,0)},
 fmtDate=s=>dte(s).toLocaleDateString(undefined,{weekday:'short',day:'numeric',month:'short'});
+function civilIso(value){if(typeof value==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(value))return value;return iso(value instanceof Date?value:new Date(value))}
+function civilOrdinal(value){const key=civilIso(value),parts=key.split('-').map(Number);return Math.floor(Date.UTC(parts[0],parts[1]-1,parts[2])/DAY)}
+function civilDayDiff(a,b){return civilOrdinal(a)-civilOrdinal(b)}
+function civilAddDays(value,days){const key=civilIso(value),parts=key.split('-').map(Number),u=new Date(Date.UTC(parts[0],parts[1]-1,parts[2]+Math.trunc(Number(days)||0)));return `${u.getUTCFullYear()}-${String(u.getUTCMonth()+1).padStart(2,'0')}-${String(u.getUTCDate()).padStart(2,'0')}`}
+function civilDate(value,days=0){return dte(civilAddDays(value,days))}
+function civilWithinDays(later,earlier,days){const delta=civilDayDiff(later,earlier);return delta>=0&&delta<=days}
+
 const sum=a=>a.reduce((x,y)=>x+(Number.isFinite(y)?y:0),0), avg=a=>{let v=a.filter(Number.isFinite);return v.length?sum(v)/v.length:null};
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const dec=(v,n=2)=>Number.isFinite(v)?v.toFixed(n):'—';
@@ -327,8 +365,8 @@ function refineTimeErrors(errors,specs){let output=[...(errors||[])];for(const s
 function pace(s){return Number.isFinite(s)?fmtTime(s)+'/km':'—'} function toast(t,bad=false,duration=3500){$('toast').textContent=t;$('toast').className='toast'+(bad?' bad':'');setTimeout(()=>$('toast').className='toast hidden',duration)}
 function fmtEstimate(seconds,provisional=false){return provisional?fmtTime(Math.round(Number(seconds)/60)*60):fmtTime(seconds)}
 function paceEstimate(seconds,provisional=false){const paceSeconds=Number(seconds)/Math.max(.1,Number(state?.setup?.raceDistance)||1);return pace(provisional?Math.round(paceSeconds/10)*10:paceSeconds)}
-let toastTimer=null;
-toast=function(t,bad=false){const el=$('toast');clearTimeout(toastTimer);el.textContent=t;el.className='toast'+(bad?' bad':'');el.setAttribute('role',bad?'alert':'status');el.setAttribute('aria-live',bad?'assertive':'polite');toastTimer=setTimeout(()=>{el.className='toast hidden'},bad?6000:4500)};
+let toastTimer=null,lastSaveFailureAt=0;
+toast=function(t,bad=false){if(!bad&&lastSaveFailureAt&&Date.now()-lastSaveFailureAt<1800)return;const el=$('toast');clearTimeout(toastTimer);el.textContent=t;el.className='toast'+(bad?' bad':'');el.setAttribute('role',bad?'alert':'status');el.setAttribute('aria-live',bad?'assertive':'polite');toastTimer=setTimeout(()=>{el.className='toast hidden'},bad?6000:4500)};
 const optionalBounded=(value,min,max)=>{if(value===null||value===undefined||value==='')return null;const n=Number(value);return Number.isFinite(n)&&n>=min&&n<=max?n:null};
 function ensureAccessibleForms(root=document){root.querySelectorAll('.field').forEach((field,index)=>{const control=field.querySelector('input,select,textarea'),label=field.querySelector('label');if(!control||!label)return;if(!control.id)control.id=`field-${Date.now()}-${index}`;label.htmlFor=control.id});document.querySelectorAll('[data-day]').forEach(control=>{const day=state?.days?.[Number(control.dataset.day)]?.[0]||'Day';control.setAttribute('aria-label',`${day}: available to run`)});document.querySelectorAll('[data-long-day]').forEach(control=>{const day=state?.days?.[Number(control.dataset.longDay)]?.[0]||'Day';control.setAttribute('aria-label',`${day}: use as long-run day`)})}
 function clearFieldErrors(root=document){root.querySelectorAll('[aria-invalid="true"]').forEach(el=>{el.removeAttribute('aria-invalid');el.removeAttribute('aria-describedby')});root.querySelectorAll('.fieldError').forEach(el=>el.remove())}
@@ -410,7 +448,7 @@ function recommendedRaceDate(setup){
  let p=raceProfile(setup.raceDistance),minimumTotal={"5k":6,"10k":8,"half":12,"marathon":20,"50k":22,"75k":24,"100k":26}[p.key]||12;
  let req=buildRequirementEstimate(setup),taperWeeks=Math.max(1,Number(setup.taperDays||p.taperDays)/7);
  let totalWeeks=Math.ceil(Math.max(minimumTotal,req.requiredBuildWeeks+taperWeeks+2));
- return{date:iso(new Date(dte(setup.planStart).getTime()+totalWeeks*7*DAY)),totalWeeks,requiredBuildWeeks:req.requiredBuildWeeks,taperWeeks};
+ return{date:civilAddDays(setup.planStart,totalWeeks*7),totalWeeks,requiredBuildWeeks:req.requiredBuildWeeks,taperWeeks};
 }
 const BUILD=CORE.BUILD, SCHEMA=CORE.SCHEMA, STORAGE_KEY=CORE.PRIMARY_STORAGE_KEY, MIRROR_KEY=CORE.MIRROR_STORAGE_KEY, MIGRATION_MARKER='arc_v10400_migration_complete', BACKUP_KEY='arc_v10400_restore_rollback', UNDO_KEY='arc_v10400_settings_undo';
 const defaults=()=>{let start=iso(new Date()),setup={planStart:start,raceDate:start,raceName:'Goal Race',raceDistance:42.195,targetTime:15300,currentWeekly:35,currentLongest:18,testDistance:5,testTime:1515,thresholdHr:168,criticalPower:300,bodyWeight:70,maxWeekly:65,growth:.07,peakLong:32,taperDays:14,minFactor:.85,maxFactor:1.05,adaptive:true};setup.raceDate=recommendedRaceDate(setup).date;return({schemaVersion:SCHEMA,setup,days:FIVE_DAY_TEMPLATE.map(d=>[...d]),runs:[],assessments:[],injuries:[],activeInjuryPlanId:null,shoes:[],shoeUsage:[],plannedShoeAssignments:[],plannedShoePurchases:[],plan:[],predictionHistory:[],weekView:null,onboardingComplete:false,storageRevision:0,updatedAt:new Date().toISOString(),migration:{to:SCHEMA,status:'new',time:new Date().toISOString()}})};
@@ -453,6 +491,7 @@ function normaliseState(input){
 let rawState=loadStoredState();
 try{if(rawState&&CORE.LEGACY_STORAGE_KEYS.includes(migrationReport.source))localStorage.setItem('arc_v10400_migration_backup',JSON.stringify(rawState))}catch(err){recordDiagnostic('Pre-migration backup',err)}
 let state;try{state=normaliseState(rawState||defaults())}catch(err){recordDiagnostic('Migration failure',err);migrationReport.status='recovered defaults';migrationReport.warning=err.message;state=defaults()}
+let lastPersistedStateText=JSON.stringify(state);
 (()=>{const l=document.getElementById('appStartupLoader'),s=l?.querySelector('strong');if(s)s.textContent='Training data ready…';})();
 
 const runtimeDomainRevisions={setup:0,plan:0,runs:0,assessments:0,injury:0,shoes:0};
@@ -537,28 +576,39 @@ function writeMirrorBestEffort(text){
   recordDiagnostic('Mirror save unavailable',err);storageRedundancyDegraded=true;return false;
  }
 }
+function restoreLastPersistedState(reason){
+ try{state=normaliseState(JSON.parse(lastPersistedStateText));runtimeDomainFingerprints=null;updateRuntimeDomainRevisions();return true}catch(err){recordDiagnostic(reason||'State rollback',err);return false}
+}
 function save(){
+ const rollbackText=lastPersistedStateText;
  reconcileShoeUsage();prunePlannedShoeAssignments();
  const changedDomains=updateRuntimeDomainRevisions();
  state.storageRevision=Math.max(0,Number(state.storageRevision)||0)+1;state.updatedAt=new Date().toISOString();
- const text=JSON.stringify(state);
- // Only failure of the authoritative primary write is a data-save failure.
+ const text=JSON.stringify(state),expectedRevision=Number(state.storageRevision),expectedUpdatedAt=String(state.updatedAt);
  try{
   writePrimaryWithQuotaRecovery(text);
+  const verified=parseStored(localStorage.getItem(STORAGE_KEY));
+  if(!verified||Number(verified.storageRevision)!==expectedRevision||String(verified.updatedAt)!==expectedUpdatedAt)throw new Error('Authoritative storage read-back did not match the state just written.');
  }catch(err){
-  recordDiagnostic('Primary save failure',err);
-  const message='Data could not be saved on this device. Your current data remain loaded, but this save attempt failed.';
-  if(appStartupInProgress)startupStorageFailure=message;else toast('Data could not be saved on this device.',true);
+  recordDiagnostic('Primary save failure',err);lastSaveFailureAt=Date.now();lastPersistedStateText=rollbackText;
+  restoreLastPersistedState('Rollback after failed save');
+  try{if(rollbackText)writePrimaryWithQuotaRecovery(rollbackText)}catch(rollbackErr){recordDiagnostic('Rollback persistence failure',rollbackErr)}
+  const message='Data could not be saved on this device. The unsaved change was rolled back.';
+  if(appStartupInProgress)startupStorageFailure=message;else toast(message,true);
   return false;
  }
- // A successful later primary write supersedes any transient startup failure from an earlier maintenance save.
+ lastPersistedStateText=text;
  if(appStartupInProgress)startupStorageFailure=null;
- // Redundancy, migration markers and cleanup are best-effort housekeeping and must never masquerade as primary data loss.
  writeMirrorBestEffort(text);
  try{localStorage.setItem(MIGRATION_MARKER,'true')}catch(err){recordDiagnostic('Migration marker save unavailable',err)}
  reclaimObsoleteStorage();
  if(changedDomains.some(k=>['setup','plan','runs','injury','shoes'].includes(k)))scheduleAuthoritativeShoeSnapshotRefresh('state-change');
  return true;
+}
+function requirePlanBuild(message='The requested change could not produce a valid running plan.'){
+ if(buildPlan())return true;
+ restoreLastPersistedState('Rollback after invalid plan rebuild');
+ toast(`${message} Your previously saved plan was kept.`,true);return false;
 }
 function rehabCheckForDate(injury,date=iso(today())){
  const key=CORE.isIsoDate(date)?date:iso(dte(date));
@@ -1042,10 +1092,18 @@ function loadDecisionSignalForRun(run,plan=run?.planId?state.plan.find(p=>p.id==
  return{pathway:'load',family,score,signals,signalComponents,completionSignal,toleranceSignal,executionSignal,personalSignal,personalResponse:personal,rawIntegratedSignal,finalSignal:clamp(combined,-1,1),baseConfidenceWeight:loadWeight,confidenceWeight,confidencePct,confidence,confidenceMultipliers,confidenceReasons,safeguardNote,interpretation,action,completion,componentDerivation:{completion:Number.isFinite(completion)?`${Math.round(completion*100)}% completion → ${completionSignal>=0?'+':''}${completionSignal.toFixed(2)} by the completion rule`:'No matched planned distance',tolerance:toleranceDetails.length?toleranceDetails.join(' · '):'No strong run-specific tolerance observation',execution:Number.isFinite(score)?`${score}/100 execution → ${executionSignal>=0?'+':''}${executionSignal.toFixed(2)} support signal`:'No execution score',personal:personalSignal!==0?personal.detail:'No mature personal-response contribution'}};
 }
 function twoPathwayDecisionForRun(run,plan=run?.planId?state.plan.find(p=>p.id===run.planId):null){
- return{pace:decisionSignalForRun(run,plan),load:loadDecisionSignalForRun(run,plan)};
+ const key=run?`${run.id||run.date||''}|${plan?.id||''}|${plan?.type||''}|${Number(plan?.distance)||0}`:'';
+ if(planCalculationMemo&&key){const cached=planMemoGet('runPathwayDecision',key);if(cached!==undefined)return cached;}
+ const value={pace:decisionSignalForRun(run,plan),load:loadDecisionSignalForRun(run,plan)};
+ return planCalculationMemo&&key?planMemoSet('runPathwayDecision',key,value):value;
 }
+let planCalculationMemo=null;
+function planMemoMap(name){if(!planCalculationMemo)return null;if(!planCalculationMemo[name])planCalculationMemo[name]=new Map();return planCalculationMemo[name]}
+function planMemoGet(name,key){const m=planMemoMap(name);return m&&m.has(key)?m.get(key):undefined}
+function planMemoSet(name,key,value){const m=planMemoMap(name);if(m)m.set(key,value);return value}
 function trainingEvidence(asOf=iso(today())){
- let valid=state.assessments.filter(a=>a.valid&&a.date<=asOf).sort((a,b)=>a.date.localeCompare(b.date)),anchor=valid.at(-1),anchorDate=anchor?.date||state.setup.planStart,runs=state.runs.filter(r=>r.date>=anchorDate&&r.date<=asOf&&r.source!=='assessment').sort((a,b)=>a.date.localeCompare(b.date)),raw=100,evidence=0,events=[];
+ const effectiveAsOf=String(asOf||'')>iso(today())?iso(today()):String(asOf||iso(today())),memoKey=effectiveAsOf;const memo=planMemoGet('trainingEvidence',memoKey);if(memo!==undefined)return memo;
+ let valid=state.assessments.filter(a=>a.valid&&a.date<=effectiveAsOf).sort((a,b)=>a.date.localeCompare(b.date)),anchor=valid.at(-1),anchorDate=anchor?.date||state.setup.planStart,runs=state.runs.filter(r=>r.date>=anchorDate&&r.date<=effectiveAsOf&&r.source!=='assessment').sort((a,b)=>a.date.localeCompare(b.date)),raw=100,evidence=0,events=[];
  runs.forEach(r=>{
    const p=r.planId?state.plan.find(x=>x.id===r.planId):null,decision=twoPathwayDecisionForRun(r,p).pace;
    if(decision.score==null)return;
@@ -1055,12 +1113,11 @@ function trainingEvidence(asOf=iso(today())){
  });
  let applied=Math.round((raw-100)*2)/2+100;if(Math.abs(applied-100)<.75)applied=100;
  let confidence=clamp(Math.round(evidence/4*100),0,100);
- return{rawIndex:raw,index:applied,adjustment:applied/100,confidence,events,anchorDate,anchorType:anchor?'Fitness assessment':'Setup baseline'};
+ return planMemoSet('trainingEvidence',memoKey,{rawIndex:raw,index:applied,adjustment:applied/100,confidence,events,anchorDate,anchorType:anchor?'Fitness assessment':'Setup baseline'});
 }
 function trainingWeekForDate(date=iso(today())){
- const d=dte(date);
- if(!(d instanceof Date)||Number.isNaN(d.getTime()))return currentWeek();
- return clamp(Math.floor((d-dte(state.setup.planStart))/(7*DAY))+1,1,weeks());
+ if(!CORE.isIsoDate(civilIso(date)))return currentWeek();
+ return clamp(Math.floor(civilDayDiff(date,state.setup.planStart)/7)+1,1,weeks());
 }
 function reviewWeekForDate(date=iso(today())){
  const w=Math.max(1,Math.min(weeks(),trainingWeekForDate(date)));
@@ -1069,7 +1126,7 @@ function reviewWeekForDate(date=iso(today())){
 function pacePowerCommittedFactor(date=iso(today())){
  const w=reviewWeekForDate(date);
  if(w<=1)return 1;
- const priorWeekEnd=new Date(weekStart(w).getTime()-DAY);
+ const priorWeekEnd=civilDate(weekStart(w),-1);
  return trainingEvidence(iso(priorWeekEnd)).adjustment;
 }
 function pacePowerProvisionalFactor(date=iso(today())){
@@ -1079,12 +1136,13 @@ function pacePowerReviewState(date=iso(today())){
  const applied=pacePowerCommittedFactor(date),provisional=pacePowerProvisionalFactor(date);
  return{applied,provisional,delta:provisional-applied};
 }
-function baselineOn(date){let valid=state.assessments.filter(a=>a.valid&&a.date<=date).sort((a,b)=>a.date.localeCompare(b.date)),a=valid.at(-1),base=a?{pace:a.time/a.distance,hr:a.thresholdHr||state.setup.thresholdHr,cp:a.criticalPower||state.setup.criticalPower}:{pace:state.setup.testTime/state.setup.testDistance,hr:state.setup.thresholdHr,cp:state.setup.criticalPower},ev=trainingEvidence(date),applied=pacePowerCommittedFactor(date);return{pace:base.pace/applied,hr:base.hr,cp:base.cp*applied,evidence:{...ev,appliedAdjustment:applied,provisionalAdjustment:ev.adjustment}}}
+function baselineOn(date){const effectiveDate=String(date||'')>iso(today())?iso(today()):String(date||iso(today())),key=effectiveDate;const memo=planMemoGet('baseline',key);if(memo!==undefined)return memo;let valid=state.assessments.filter(a=>a.valid&&a.date<=effectiveDate).sort((a,b)=>a.date.localeCompare(b.date)),a=valid.at(-1),base=a?{pace:a.time/a.distance,hr:a.thresholdHr||state.setup.thresholdHr,cp:a.criticalPower||state.setup.criticalPower}:{pace:state.setup.testTime/state.setup.testDistance,hr:state.setup.thresholdHr,cp:state.setup.criticalPower},ev=trainingEvidence(effectiveDate),applied=pacePowerCommittedFactor(effectiveDate);return planMemoSet('baseline',key,{pace:base.pace/applied,hr:base.hr,cp:base.cp*applied,evidence:{...ev,appliedAdjustment:applied,provisionalAdjustment:ev.adjustment}})}
 const zoneDef={Recovery:[1.42,.78,.72,'RPE 2–3 · relaxed and restorative'],Easy:[1.30,.84,.78,'RPE 3–4 · conversational aerobic running'],Steady:[1.20,.89,.84,'RPE 5 · controlled moderate work'],Marathon:[1.15,.92,.88,'RPE 5–6 · race-specific control'],Tempo:[1.08,1,.95,'RPE 7–8 · strong but sustainable'],Intervals:[.98,1.04,1.05,'RPE 8–9 · quality repetitions'],Repetition:[.92,1.08,1.15,'RPE 9 · short fast work'],['Fitness assessment']:[1,1,1,'Even maximal benchmark'],['Race Day']:[1.15,.92,.88,'Controlled race execution']};
-function zone(type,date){let b=baselineOn(date),z=zoneDef[baseType(type)]||zoneDef.Easy;return{pace:b.pace*z[0],hr:Math.round(b.hr*z[1]),power:Math.round(b.cp*z[2]),guide:z[3],fitnessIndex:b.evidence?.index||100}}
-function weeks(){return Math.max(1,Math.floor((dte(state.setup.raceDate)-dte(state.setup.planStart))/(7*DAY))+1)}function weekStart(w){return new Date(dte(state.setup.planStart).getTime()+(w-1)*7*DAY)}
-function currentWeek(){return clamp(Math.floor((today()-dte(state.setup.planStart))/(7*DAY))+1,1,weeks())}
-function raceTimeRemaining(){const days=Math.max(0,Math.ceil((dte(state.setup.raceDate)-today())/DAY));return{days,weeks:Math.ceil(days/7),label:days<14?`${days} ${days===1?'day':'days'}`:`${Math.ceil(days/7)} weeks`}}
+function zone(type,date){const effectiveDate=String(date||'')>iso(today())?iso(today()):String(date||iso(today())),key=`${type}|${effectiveDate}`;const memo=planMemoGet('zone',key);if(memo!==undefined)return memo;let b=baselineOn(effectiveDate),z=zoneDef[baseType(type)]||zoneDef.Easy;return planMemoSet('zone',key,{pace:b.pace*z[0],hr:Math.round(b.hr*z[1]),power:Math.round(b.cp*z[2]),guide:z[3],fitnessIndex:b.evidence?.index||100})}
+function weeks(){return Math.max(1,Math.floor(civilDayDiff(state.setup.raceDate,state.setup.planStart)/7)+1)}
+function weekStart(w){return civilDate(state.setup.planStart,(Math.max(1,Number(w)||1)-1)*7)}
+function currentWeek(){return clamp(Math.floor(civilDayDiff(iso(today()),state.setup.planStart)/7)+1,1,weeks())}
+function raceTimeRemaining(){const days=Math.max(0,civilDayDiff(state.setup.raceDate,iso(today())));return{days,weeks:Math.ceil(days/7),label:days<14?`${days} ${days===1?'day':'days'}`:`${Math.ceil(days/7)} weeks`}}
 let completedRunsCache={revision:null,values:new Map()};
 function completedRuns(asOf=iso(today())){
  const revision=runtimeDomainRevisions.runs;
@@ -1095,7 +1153,7 @@ function completedRuns(asOf=iso(today())){
  completedRunsCache.values.set(key,value);
  return value;
 }
-function recentRuns(days=28){return completedRuns().filter(r=>today()-dte(r.date)<=days*DAY)}
+function recentRuns(days=28){return completedRuns().filter(r=>civilDayDiff(iso(today()),r.date)<=days)}
 function metrics(r){let dur=Number(r.durationSec),km=Number(r.distanceKm),hr=Number(r.avgHr),pw=Number(r.avgPower),kg=Number(state.setup.bodyWeight);
 let validRun=dur>0&&km>0,validHr=validRun&&hr>0,validPw=validRun&&pw>0&&kg>0;
 return{pace:validRun?dur/km:null,dph:validHr?km*1000/(dur/60*hr):null,wpb:validHr&&pw>0?pw/hr:null,
@@ -1109,7 +1167,7 @@ function typeMetricSummary(runs){return metricRunTypes.map(type=>{
  let group=runs.filter(r=>r.type===type),eff=group.map(r=>metrics(r).efficiencyJ).filter(Number.isFinite),drift=group.map(r=>r.powerDrift).filter(Number.isFinite);
  return{type,count:group.length,effAvg:avg(eff),effBest:eff.length?Math.max(...eff):null,driftAvg:avg(drift),driftBest:drift.length?Math.min(...drift):null};
 }).filter(x=>x.effAvg!==null||x.driftAvg!==null)}
-function weekData(w){let st=weekStart(w),en=new Date(st.getTime()+7*DAY),p=state.plan.filter(x=>x.week===w&&x.type!=='Rest'),r=completedRuns().filter(x=>dte(x.date)>=st&&dte(x.date)<en);return{planned:sum(p.map(x=>x.distance)),actual:sum(r.map(x=>x.distanceKm)),runs:r,plan:p}}
+function weekData(w){let start=iso(weekStart(w)),end=civilAddDays(start,7),p=state.plan.filter(x=>x.week===w&&x.type!=='Rest'),r=completedRuns().filter(x=>x.date>=start&&x.date<end);return{planned:sum(p.map(x=>x.distance)),actual:sum(r.map(x=>x.distanceKm)),runs:r,plan:p}}
 
 let hrvHistoryCache={revision:null,day:null,value:null};
 function hrvHistory(excludeRunId=null){
@@ -1177,8 +1235,9 @@ function painAdjustment(pain=recoveryPainState()){
  return{adjustment:0,detail:`Recent maximum pain ${max}/10 adds no load reduction.`};
 }
 function weeklyLoadEvidence(w,finalised=true,asOf=null){
+ const memoKey=`${w}|${finalised?1:0}|${asOf||''}`;const memo=planMemoGet('weeklyLoad',memoKey);if(memo!==undefined)return memo;
  const allRuns=(state.runs||[]).filter(r=>trainingWeekForDate(r.date)===w&&r.source!=='assessment'&&(!asOf||r.date<=asOf)).sort((a,b)=>a.date.localeCompare(b.date));
- const wd=weekData(w),decisions=allRuns.map(r=>{const decision=loadDecisionSignalForRun(r,r.planId?state.plan.find(p=>p.id===r.planId):null);return{run:r,decision,contribution:loadAcceptedContribution(decision)}});
+ const wd=weekData(w),decisions=allRuns.map(r=>{const plan=r.planId?state.plan.find(p=>p.id===r.planId):null,decision=twoPathwayDecisionForRun(r,plan).load;return{run:r,decision,contribution:loadAcceptedContribution(decision)}});
  const usable=decisions.filter(x=>Number.isFinite(x.decision.finalSignal)&&x.decision.confidenceWeight>0);
  const plannedSessions=(state.plan||[]).filter(p=>p.week===w&&!['Rest','Race Day'].includes(p.type));
  const linkedIds=new Set(allRuns.map(r=>r.planId).filter(Boolean));
@@ -1190,19 +1249,20 @@ function weeklyLoadEvidence(w,finalised=true,asOf=null){
    completionDetail=missedSessions.length?`${missedSessions.length} planned session${missedSessions.length===1?' was':'s were'} not recorded (${missedKm.toFixed(1)} km; ${Math.round(missedRatio*100)}% of planned week). This week-level penalty covers missed sessions only.`:'Every planned session has a linked run. No additional week-level completion penalty is applied; shortened runs were already assessed at run level.';
  }
  const rawRunBucket=sum(usable.map(x=>x.contribution)),runDelta=clamp(rawRunBucket,-.035,.015),learningDelta=clamp(completionDelta+runDelta,-.05,.015);
- return{week:w,planned:wd.planned,actual:wd.actual,completion:wd.planned>0?wd.actual/wd.planned:null,decisions,completionDelta,rawRunBucket,runDelta,learningDelta,missedSessions,missedKm,missedRatio,
- items:[{name:'Missed-session adherence',adjustment:completionDelta,detail:completionDetail,status:finalised?'available':'pending'},{name:'Accepted run evidence',adjustment:runDelta,detail:usable.length?`${usable.length} analysed run${usable.length===1?'':'s'} currently contribute ${signedFactorDelta(rawRunBucket)} before the weekly bound.`:'No qualifying run-level load evidence yet.',status:usable.length?'available':'insufficient'}]};
+ return planMemoSet('weeklyLoad',memoKey,{week:w,planned:wd.planned,actual:wd.actual,completion:wd.planned>0?wd.actual/wd.planned:null,decisions,completionDelta,rawRunBucket,runDelta,learningDelta,missedSessions,missedKm,missedRatio,
+ items:[{name:'Missed-session adherence',adjustment:completionDelta,detail:completionDetail,status:finalised?'available':'pending'},{name:'Accepted run evidence',adjustment:runDelta,detail:usable.length?`${usable.length} analysed run${usable.length===1?'':'s'} currently contribute ${signedFactorDelta(rawRunBucket)} before the weekly bound.`:'No qualifying run-level load evidence yet.',status:usable.length?'available':'insufficient'}]});
 }
 function adaptiveFactorDetails(w){
- if(!state.setup.adaptive||w<=1)return{factor:1,rawFactor:1,baseFactor:1,cumulativeFactor:1,weeklyLearningDelta:0,temporaryAdjustment:0,items:[{name:'Baseline',adjustment:0,detail:w<=1?'No previous training week is available.':'Adaptive planning is disabled.'}],previousWeek:w-1,plannedKm:null,completedKm:null,status:w<=1?'baseline':'disabled'};
- const previousWeek=w-1,previousEnd=new Date(weekStart(previousWeek).getTime()+7*DAY);
- if(previousEnd>today()){const prior=w>1?adaptiveFactorDetails(w-1).cumulativeFactor:1;return{factor:prior,rawFactor:prior,baseFactor:prior,cumulativeFactor:prior,weeklyLearningDelta:0,temporaryAdjustment:0,items:[{name:'Pending evidence',adjustment:0,detail:`Week ${previousWeek} is not complete. Distance & Load remains ${prior.toFixed(3)} until the weekly review.`}],previousWeek,plannedKm:null,completedKm:null,status:'pending'};}
+ const memoKey=String(w);const memo=planMemoGet('adaptive',memoKey);if(memo!==undefined)return memo;
+ if(!state.setup.adaptive||w<=1)return planMemoSet('adaptive',memoKey,{factor:1,rawFactor:1,baseFactor:1,cumulativeFactor:1,weeklyLearningDelta:0,temporaryAdjustment:0,items:[{name:'Baseline',adjustment:0,detail:w<=1?'No previous training week is available.':'Adaptive planning is disabled.'}],previousWeek:w-1,plannedKm:null,completedKm:null,status:w<=1?'baseline':'disabled'});
+ const previousWeek=w-1,previousEnd=civilDate(weekStart(previousWeek),7);
+ if(civilIso(previousEnd)>iso(today())){const prior=w>1?adaptiveFactorDetails(w-1).cumulativeFactor:1;return planMemoSet('adaptive',memoKey,{factor:prior,rawFactor:prior,baseFactor:prior,cumulativeFactor:prior,weeklyLearningDelta:0,temporaryAdjustment:0,items:[{name:'Pending evidence',adjustment:0,detail:`Week ${previousWeek} is not complete. Distance & Load remains ${prior.toFixed(3)} until the weekly review.`}],previousWeek,plannedKm:null,completedKm:null,status:'pending'});}
  const review=weeklyLoadEvidence(previousWeek,true),previousCumulative=w>1?adaptiveFactorDetails(w-1).cumulativeFactor:1,weeklyLearningDelta=review.learningDelta;
  const cumulativeFactor=clamp(previousCumulative*(1+weeklyLearningDelta),state.setup.minFactor,state.setup.maxFactor);
  const hrv=hrvModel(),painAdj=painAdjustment(),temporaryAdjustment=(hrv.ready?hrv.factor-1:0)+painAdj.adjustment;
  const rawFactor=cumulativeFactor*(1+temporaryAdjustment),factor=clamp(rawFactor,state.setup.minFactor,state.setup.maxFactor);
  const items=[...review.items,{name:'Readiness overlay',adjustment:temporaryAdjustment,detail:`Temporary only: ${hrv.detail} ${painAdj.detail}`}];
- return{factor,rawFactor,baseFactor:previousCumulative,cumulativeFactor,weeklyLearningDelta,temporaryAdjustment,trainingResponse:1+weeklyLearningDelta,hrvFactor:hrv.factor,hrv,items,previousWeek,plannedKm:review.planned,completedKm:review.actual,status:'calculated',loadReview:review};
+ return planMemoSet('adaptive',memoKey,{factor,rawFactor,baseFactor:previousCumulative,cumulativeFactor,weeklyLearningDelta,temporaryAdjustment,trainingResponse:1+weeklyLearningDelta,hrvFactor:hrv.factor,hrv,items,previousWeek,plannedKm:review.planned,completedKm:review.actual,status:'calculated',loadReview:review});
 }
 function adaptiveFactor(w){return adaptiveFactorDetails(w).factor}
 
@@ -1210,7 +1270,7 @@ function pathwayFactorHistory(asOfWeek=currentWeek()){
  const endWeek=Math.max(1,Math.min(weeks(),Number(asOfWeek)||1));
  const rows=[];
  for(let w=1;w<=endWeek;w++){
-  const endDate=new Date(Math.min(today().getTime(),new Date(weekStart(w).getTime()+7*DAY-1).getTime()));
+  const endDate=new Date(Math.min(today().getTime(),civilDate(weekStart(w),6).getTime()));
   const pace=trainingEvidence(iso(endDate)).adjustment;
   const load=adaptiveFactorDetails(w).cumulativeFactor;
   rows.push({week:w,date:iso(endDate),pace,load});
@@ -1257,7 +1317,7 @@ function athleteState(w=currentWeek()){
  const current=Math.max(1,Math.min(weeks(),w)),next=Math.min(weeks(),current+1),ev=trainingEvidence(),applied=adaptiveFactorDetails(current),nextAfd=adaptiveFactorDetails(next),preview=provisionalWeeklyAdjustment(current),pain=recoveryPainState(),hrv=hrvModel(),pathways=pathwayFactorSummary(current);
  const fitnessDelta=ev.index-100,fitnessTrend=fitnessDelta>.5?'Improving':fitnessDelta<-.5?'Declining':'Stable';
  const wd=weekData(current),completion=wd.planned>0?wd.actual/wd.planned:null;
- const currentWeekEnd=new Date(weekStart(current).getTime()+7*DAY),weekComplete=currentWeekEnd<=today();
+ const currentWeekEnd=civilDate(weekStart(current),7),weekComplete=currentWeekEnd<=today();
  let readiness='Normal';
  if((pain.max??0)>=5||hrv.factor<=.94)readiness='Restricted';else if((pain.max??0)>=3||hrv.factor<1)readiness='Reduced';
  let tolerance=weekComplete?'Normal':'In progress';
@@ -1265,7 +1325,7 @@ function athleteState(w=currentWeek()){
  const adjustment=applied.cumulativeFactor,isPending=nextAfd.status==='pending',direction=adjustment<.995?'Reduce':adjustment>1.005?'Increase':'Maintain',pct=Math.round(Math.abs(adjustment-1)*100),reasons=[];
  (applied.items||[]).forEach(i=>{if(Math.abs(Number(i.adjustment)||0)>.0001)reasons.push(`${i.name.toLowerCase()} ${i.adjustment>0?'+':''}${Math.round(i.adjustment*100)}%`)});
  if(!reasons.length)reasons.push(current<=1?'baseline factor for the opening week':'all finalised inputs were neutral');
- const nextStart=weekStart(next),reviewDate=iso(new Date(nextStart.getTime()-DAY));
+ const nextStart=weekStart(next),reviewDate=civilAddDays(iso(nextStart),-1);
  return{currentWeek:current,nextWeek:next,pathways,fitnessTrend,fitnessIndex:ev.index,fitnessDelta,evidenceConfidence:ev.confidence,fitnessEvidence:ev,readiness,tolerance,completion,weekComplete,adjustment,direction,pct,reasons,applied,nextAfd,preview,isPending,pain,hrv,reviewDate,nextStart:iso(nextStart)};
 }
 function validateWorkout(workout){
@@ -1288,19 +1348,20 @@ function validateWorkout(workout){
  if(baseType(workout.type)==='Fitness assessment'&&Number(workout.assessmentDistance)<=0)errors.push('Assessment distance is missing.');
  return{valid:errors.length===0,errors};
 }
-function validatePlan(plan=state.plan){
- const issues=[],ids=new Set();
+function validatePlan(plan=state.plan,runs=state.runs){
+ const issues=[],ids=new Set(),planIds=new Set((plan||[]).map(p=>p?.id).filter(Boolean)),todayKey=iso(today());
  (plan||[]).forEach((p,i)=>{
   if(ids.has(p.id))issues.push({severity:'error',id:p.id,message:'Duplicate workout ID.'});
   ids.add(p.id);
   const check=validateWorkout(p);
   check.errors.forEach(message=>issues.push({severity:'error',id:p.id,index:i,message}));
   const cfg=state.days.find(d=>d[0]===p.day);
-  if(p.type!=='Rest'&&p.type!=='Race Day'&&cfg&&!cfg[1])issues.push({severity:'error',id:p.id,message:`Workout scheduled on disabled day ${p.day}.`});
+  if(p.date>=todayKey&&p.type!=='Rest'&&p.type!=='Race Day'&&cfg&&!cfg[1])issues.push({severity:'error',id:p.id,message:`Workout scheduled on disabled day ${p.day}.`});
   if(p.phase==='Taper'&&p.type==='Fitness assessment')issues.push({severity:'warning',id:p.id,message:'Maximal assessment appears during taper.'});
   if(p.type!=='Rest'&&p.type!=='Race Day'&&(!p.zone||![p.zone.pace,p.zone.hr,p.zone.power].every(Number.isFinite)))issues.push({severity:'error',id:p.id,message:'Training targets are missing or invalid.'});
  });
- CORE.validatePlanInvariants(plan,state.setup).forEach(error=>issues.push({severity:'error',id:error.field,message:error.message}));
+ CORE.validatePlanInvariants(plan,state.setup,{asOf:todayKey}).forEach(error=>issues.push({severity:'error',id:error.field,message:error.message}));
+ for(const run of runs||[])if(run?.planId&&!planIds.has(run.planId))issues.push({severity:'error',id:run.id||'run',message:`Completed activity references missing plan slot ${run.planId}.`});
  const errors=issues.filter(x=>x.severity==='error').length,warnings=issues.length-errors;
  const score=Math.max(0,100-errors*8-warnings*2);
  return{checked:(plan||[]).length,issues,errors,warnings,score,valid:errors===0};
@@ -1310,67 +1371,101 @@ function safeWorkoutFallback(item){
  return{...item,type:'Easy',distance:Math.round((warm+main+cool)*10)/10,warmDistance:Math.round(warm*10)/10,mainDistance:Math.round(main*10)/10,coolDistance:Math.round(cool*10)/10,
   warmup:`${warm.toFixed(1)} km very easy`,main:`${main.toFixed(1)} km conversational easy running`,cooldown:`${cool.toFixed(1)} km very easy`,distanceCheck:`${warm.toFixed(1)} + ${main.toFixed(1)} + ${cool.toFixed(1)} = ${(warm+main+cool).toFixed(1)} km`,purpose:'Preserve aerobic continuity with a safe fallback session.',coach:'The original workout failed internal validation and was replaced with an easy run. Review Plan Health for details.',fuel:'Water according to thirst.',targetScope:'Entire easy run',whyThis:'A safe aerobic session preserves consistency without relying on an invalid prescription.',whyAmount:'The distance is limited to the planned session allowance.',skipImpact:'Skipping one fallback easy run has little fitness impact; do not compensate later.'};
 }
+function stablePlanId(date){return `plan-${date}`}
+function planSessionPriority(type){if(type==='Recovery')return 1;if(type==='Easy'||type==='Easy + strides')return 2;if(type==='Medium-long'||type==='Steady aerobic')return 3;if(['Intervals','Tempo','Fitness assessment','Hills','Fartlek','Threshold','Threshold intervals','VO₂max intervals','Race-pace intervals','Marathon-specific','Half-marathon-specific'].includes(type))return 4;if(['Long run','Specific long run','Race rehearsal','Progression'].includes(type))return 5;return 2}
+function restPlanItem(item){const detail=prescription('Rest',0,item.week,item.phase,null);return{...item,type:'Rest',distance:0,zone:null,...detail,warmDistance:0,mainDistance:0,coolDistance:0}}
+function shrinkPlanItem(item,target){
+ if(['Rest','Race Day'].includes(item.type))return item;
+ const minDetail=prescription(item.type,0,item.week,item.phase,item.zone),minimum=Number(minDetail.totalDistance)||0;
+ if(target<minimum-.051)return null;
+ let lo=0,hi=Math.max(Number(item.distance)||0,target,minimum),best=minDetail;
+ for(let n=0;n<22;n++){const mid=(lo+hi)/2,detail=prescription(item.type,mid,item.week,item.phase,item.zone),d=Number(detail.totalDistance)||0;if(d<=target+.001){best=detail;lo=mid}else hi=mid}
+ return{...item,distance:Number(best.totalDistance)||0,...best};
+}
+function fitGeneratedWeekToCap(items,cap,frozenDates){
+ const raceExcluded=x=>!['Rest','Race Day'].includes(x.type),total=()=>sum(items.filter(raceExcluded).map(x=>Number(x.distance)||0));
+ let excess=total()-cap;if(excess<=.051)return items;
+ const mutable=()=>items.filter(x=>raceExcluded(x)&&!frozenDates.has(x.date)).sort((a,b)=>planSessionPriority(a.type)-planSessionPriority(b.type)||Number(b.distance)-Number(a.distance));
+ for(const item of mutable()){
+  if(excess<=.051)break;
+  const current=Number(item.distance)||0,min=Number(prescription(item.type,0,item.week,item.phase,item.zone).totalDistance)||0,reduction=Math.min(excess,Math.max(0,current-min));
+  if(reduction>.001){const shrunk=shrinkPlanItem(item,current-reduction);if(shrunk){Object.assign(item,shrunk);excess=total()-cap}}
+ }
+ for(const item of mutable()){
+  if(excess<=.051)break;
+  Object.assign(item,restPlanItem(item));excess=total()-cap;
+ }
+ return items;
+}
+function remapPlanReferences(oldPlan,newPlan,runs,assignments=state.plannedShoeAssignments){
+ const oldById=new Map((oldPlan||[]).map(p=>[p.id,p])),newByDate=new Map((newPlan||[]).map(p=>[p.date,p]));
+ const mappedRuns=(runs||[]).map(run=>{
+  if(!run?.planId)return run;
+  const old=oldById.get(run.planId),plannedDate=run.plannedDate||old?.date||(Number.isFinite(Number(run.dayOffset))?civilAddDays(run.date,-Number(run.dayOffset)):null),target=plannedDate?newByDate.get(plannedDate):null;
+  if(!target)return run;
+  return{...run,planId:target.id,plannedDate:target.date,dayOffset:civilDayDiff(run.date,target.date),matchStatus:'matched',matchMethod:run.matchMethod||'stable-slot-migration'};
+ });
+ const assignmentMap=new Map((oldPlan||[]).map(p=>[p.id,p.date])),newIds=new Set(newPlan.filter(p=>p.type!=='Rest').map(p=>p.id));
+ const mappedAssignments=(assignments||[]).map(a=>{const date=assignmentMap.get(a.planId),target=date?newByDate.get(date):null;return target?{...a,planId:target.id}:a}).filter(a=>newIds.has(a.planId));
+ return{runs:mappedRuns,assignments:mappedAssignments};
+}
 function buildPlan(){
- let old=new Map((state.plan||[]).filter(p=>dte(p.date)<today()).map(p=>[p.id,p])),out=[],total=weeks(),taper=Math.ceil(state.setup.taperDays/7);
- for(let w=1;w<=total;w++){
+ const priorMemo=planCalculationMemo;planCalculationMemo={};
+ const oldPlan=Array.isArray(state.plan)?state.plan.slice():[],oldRuns=Array.isArray(state.runs)?state.runs.slice():[],todayKey=iso(today()),oldByDate=new Map(oldPlan.map(p=>[p.date,p])),frozenDates=new Set(oldPlan.filter(p=>p.date<=todayKey).map(p=>p.date));
+ let out=[],total=weeks(),taper=Math.ceil(state.setup.taperDays/7);
+ try{
+  const historicalOutside=oldPlan.filter(p=>p.date<todayKey&&(p.date<state.setup.planStart||p.date>state.setup.raceDate));
+  if(historicalOutside.length){recordDiagnostic('Plan rebuild blocked',new Error('New settings would remove historical prescribed sessions.'));return false}
+  for(let w=1;w<=total;w++){
    let dp=detailedPhase(w),ph=phase(w),factor=adaptiveFactor(w),base=Math.min(state.setup.maxWeekly,state.setup.currentWeekly*Math.pow(1+state.setup.growth,w-1));
    if(w%4===0&&ph==='Build')base*=.9;
    if(ph==='Taper'){let left=total-w;base*=left===0?.42:left===1?.62:.78}
-   base*=factor;
+   base=Math.min(Number(state.setup.maxWeekly)||base,base*factor);
 
    let prog=clamp((w-1)/Math.max(1,total-taper-2),0,1);
    let long=state.setup.currentLongest+(state.setup.peakLong-state.setup.currentLongest)*prog;
    if(w%4===0&&ph==='Build')long*=.85;
    if(ph==='Taper'){let left=total-w;long=Math.min(long,left===0?0:left===1?18:24)}
+   long=Math.min(long,Number(state.setup.peakLong)||long);
 
    let weekDates=[];
    for(let offset=0;offset<7;offset++){
-     let dateObj=new Date(weekStart(w).getTime()+offset*DAY),date=iso(dateObj);
-     if(dte(date)>dte(state.setup.raceDate))continue;
-     let dayName=dateObj.toLocaleDateString('en-US',{weekday:'long'});
-     let cfg=state.days.find(x=>x[0]===dayName)||[dayName,false,'Easy'];
-     weekDates.push({dateObj,date,dayName,cfg});
+    let date=civilAddDays(iso(weekStart(w)),offset),dateObj=dte(date);
+    if(date>state.setup.raceDate)continue;
+    let dayName=dateObj.toLocaleDateString('en-US',{weekday:'long'}),cfg=state.days.find(x=>x[0]===dayName)||[dayName,false,'Easy'];
+    weekDates.push({dateObj,date,dayName,cfg});
    }
 
    let isRaceWeek=weekDates.some(x=>x.date===state.setup.raceDate),assignments=weekTypeAssignments(w,weekDates);
-   let training=weekDates.filter(x=>x.cfg[1]&&x.date!==state.setup.raceDate);
-   let assignedTypes=training.map(x=>assignments.get(x.date)||'Easy');
+   let training=weekDates.filter(x=>x.cfg[1]&&x.date!==state.setup.raceDate),assignedTypes=training.map(x=>assignments.get(x.date)||'Easy');
    let hasLong=assignedTypes.some(x=>['Long run','Specific long run','Race rehearsal','Progression'].includes(x));
    let qualityTypes=['Intervals','Tempo','Fitness assessment','Hills','Fartlek','Threshold','Threshold intervals','VO₂max intervals','Race-pace intervals','Marathon-specific','Half-marathon-specific'];
-   let quality=training.filter(x=>qualityTypes.includes(assignments.get(x.date)));
-   let aerobic=training.filter(x=>!qualityTypes.includes(assignments.get(x.date))&&!['Long run','Specific long run','Race rehearsal','Progression'].includes(assignments.get(x.date)));
+   let quality=training.filter(x=>qualityTypes.includes(assignments.get(x.date))),aerobic=training.filter(x=>!qualityTypes.includes(assignments.get(x.date))&&!['Long run','Specific long run','Race rehearsal','Progression'].includes(assignments.get(x.date)));
+   let trainingBudget=isRaceWeek?Math.min(18,Math.max(8,base*.32)):base,immutableWeekKm=sum(weekDates.filter(x=>frozenDates.has(x.date)).map(x=>Number(oldByDate.get(x.date)?.distance)||0));
+   trainingBudget=Math.max(0,Math.min(trainingBudget,Math.max(0,Number(state.setup.maxWeekly)-immutableWeekKm)+immutableWeekKm));
+   let longDistance=hasLong?Math.min(long,trainingBudget*.62):0,remaining=Math.max(0,trainingBudget-longDistance),qualityBudget=quality.length?remaining*(isRaceWeek?.32:.48):0,aerobicBudget=Math.max(0,remaining-qualityBudget),qualityShare=quality.length?qualityBudget/quality.length:0,aerobicShare=aerobic.length?aerobicBudget/aerobic.length:0;
 
-   // In race week the race itself is not counted as ordinary training volume.
-   // Retain short taper sessions before race day instead of assigning zero km.
-   let trainingBudget=isRaceWeek?Math.min(18,Math.max(8,base*.32)):base;
-   let longDistance=hasLong?Math.min(long,trainingBudget*.62):0;
-   let remaining=Math.max(0,trainingBudget-longDistance);
-   let qualityBudget=quality.length?remaining*(isRaceWeek?.32:.48):0;
-   let aerobicBudget=Math.max(0,remaining-qualityBudget);
-   let qualityShare=quality.length?qualityBudget/quality.length:0;
-   let aerobicShare=aerobic.length?aerobicBudget/aerobic.length:0;
-
-   weekDates.forEach(({dateObj,date,dayName,cfg})=>{
-     let type=date===state.setup.raceDate?'Race Day':(cfg[1]?(assignments.get(date)||'Easy'):'Rest');
-     if(isRaceWeek&&type==='Fitness assessment')type='Easy';
-     if(isRaceWeek&&['Long run','Specific long run','Race rehearsal','Progression'].includes(type))type='Easy';
-
-     let dist=0;
-     if(type==='Race Day')dist=state.setup.raceDistance;
-     else if(['Long run','Specific long run','Race rehearsal','Progression'].includes(type))dist=longDistance;
-     else if(qualityTypes.includes(type))dist=qualityShare;
-     else if(type!=='Rest')dist=aerobicShare;
-
-     let z=zone(type,date),id=`${date}-${type}`,detail=prescription(type,dist,w,ph,z);
-     let prescribedDistance=Number.isFinite(detail.totalDistance)?detail.totalDistance:Math.round(dist*10)/10;
-     let item={id,week:w,date,day:dayName,type,distance:prescribedDistance,phase:ph,detailedPhase:dp,factor,zone:z,...detail};
-     let selected=old.get(id)||item;
-     let check=validateWorkout(selected);
-     if(!check.valid){recordDiagnostic(`Invalid generated workout ${id}`,new Error(check.errors.join(' ')));selected=safeWorkoutFallback(item)}
-     out.push(selected);
-   });
- }
- state.plan=out;state.schemaVersion=SCHEMA;state.lastPlanHealth=validatePlan(out);save()
+   const weekItems=[];
+   for(const {dateObj,date,dayName,cfg} of weekDates){
+    if(frozenDates.has(date)&&oldByDate.has(date)){const historic=oldByDate.get(date);weekItems.push({...historic,id:stablePlanId(date),week:w,date,day:dayName});continue}
+    let type=date===state.setup.raceDate?'Race Day':(cfg[1]?(assignments.get(date)||'Easy'):'Rest');
+    if(isRaceWeek&&type==='Fitness assessment')type='Easy';
+    if(isRaceWeek&&['Long run','Specific long run','Race rehearsal','Progression'].includes(type))type='Easy';
+    if(['Specific long run','Race rehearsal'].includes(type)&&Number(state.setup.peakLong)<14)type='Long run';
+    if(type==='Progression'&&Number(state.setup.peakLong)<8)type='Long run';
+    let dist=0;if(type==='Race Day')dist=state.setup.raceDistance;else if(['Long run','Specific long run','Race rehearsal','Progression'].includes(type))dist=longDistance;else if(qualityTypes.includes(type))dist=qualityShare;else if(type!=='Rest')dist=aerobicShare;
+    let z=type==='Rest'?null:zone(type,date),id=stablePlanId(date),detail=prescription(type,dist,w,ph,z),prescribedDistance=Number.isFinite(detail.totalDistance)?detail.totalDistance:Math.round(dist*10)/10;
+    let item={id,week:w,date,day:dayName,type,distance:prescribedDistance,phase:ph,detailedPhase:dp,factor,zone:z,...detail},check=validateWorkout(item);
+    if(!check.valid){recordDiagnostic(`Invalid generated workout ${id}`,new Error(check.errors.join(' ')));item=safeWorkoutFallback(item);item.id=id}
+    weekItems.push(item);
+   }
+   fitGeneratedWeekToCap(weekItems,Number(state.setup.maxWeekly)||Infinity,frozenDates);
+   out.push(...weekItems);
+  }
+  const remapped=remapPlanReferences(oldPlan,out,oldRuns),migratedRuns=remapped.runs,health=validatePlan(out,migratedRuns);
+  if(!health.valid){recordDiagnostic('Generated plan rejected by hard invariants',new Error(health.issues.filter(x=>x.severity==='error').slice(0,8).map(x=>x.message).join(' | ')));return false}
+  state.plan=out;state.runs=migratedRuns;state.plannedShoeAssignments=remapped.assignments;state.schemaVersion=SCHEMA;state.lastPlanHealth=health;return true;
+ }finally{planCalculationMemo=priorMemo}
 }
 function prescription(type,km,w,ph,z){
  const r1=v=>Math.round((Number(v)||0)*10)/10;
@@ -1435,9 +1530,8 @@ function prescription(type,km,w,ph,z){
  }
  return{totalDistance:km,warmup:'Pre-race mobility and easy jogging as needed (outside the official race distance)',main:`${fmt(km)} km race`,cooldown:'Walk and begin recovery nutrition after finishing (outside the official race distance)',purpose:'Execute the race plan.',coach:'The displayed distance is the official race distance. Pace, HR and power refer to the race itself; pre-race warm-up and post-race walking are additional.',fuel:'60–90 g carbohydrate/hour and 400–800 ml fluid/hour.',targetScope:'Race effort'};
 }
-if(state.schemaVersion!==SCHEMA){state.plan=[];buildPlan()}else if(!state.plan?.length)buildPlan();
-state.runs.forEach(r=>{if(r.planId&&!state.plan.some(p=>p.id===r.planId)){delete r.planId;delete r.plannedDate;delete r.dayOffset;r.matchStatus='adHoc';r.matchMethod='schema-remap'}if(r.planId){r.matchStatus='matched';r.matchMethod=r.matchMethod||'legacy';let p=state.plan.find(x=>x.id===r.planId);if(p){r.plannedDate=p.date;r.dayOffset=Math.round((dte(r.date)-dte(p.date))/DAY)}}else if(!r.matchStatus)r.matchStatus='adHoc'});save();
-reconcileExactDateMatches();
+const startupNeedsPlanMigration=!Array.isArray(state.plan)||!state.plan.length||(state.plan||[]).some(p=>p?.id!==stablePlanId(p?.date));
+state.runs.forEach(r=>{if(!r.matchStatus)r.matchStatus=r.planId?'matched':'adHoc'});
 function compatibleRunType(planType,runType){
  const groups={
   'Long run':['Long run','Specific long run','Race rehearsal','Progression'],'Specific long run':['Long run','Specific long run','Race rehearsal'],'Race rehearsal':['Long run','Specific long run','Race rehearsal'],'Progression':['Long run','Easy','Steady aerobic','Medium-long'],
@@ -1478,7 +1572,7 @@ function reconcileExactDateMatches(){
 }
 function matchTimingCredit(run,plan){
  if(!run||!plan)return 0;
- let offset=Math.round((dte(run.date)-dte(plan.date))/DAY),a=Math.abs(offset);
+ let offset=civilDayDiff(run.date,plan.date),a=Math.abs(offset);
  return a===0?100:a===1?90:a===2?75:50;
 }
 function applyRunMatch(run,selection,method='user'){
@@ -1490,7 +1584,7 @@ function applyRunMatch(run,selection,method='user'){
   let occupied=state.runs.find(x=>x.id!==run.id&&x.planId===p.id);
   if(occupied)throw Error('That planned workout is already linked to another run.');
   run.planId=p.id;run.matchStatus='matched';run.plannedDate=p.date;
-  run.dayOffset=Math.round((dte(run.date)-dte(p.date))/DAY);
+  run.dayOffset=civilDayDiff(run.date,p.date);
  }else run.matchStatus=selection==='unresolved'?'unresolved':'adHoc';
  return run;
 }
@@ -1505,7 +1599,7 @@ function suggestedPlanId(run){
   return as-bs||ac-bc||ad-bd||ag-bg;
  });
  let best=candidates[0];
- return best&&Math.abs(dte(best.date)-dte(run.date))<=14*DAY?best.id:null;
+ return best&&Math.abs(civilDayDiff(best.date,run.date))<=14?best.id:null;
 }
 function planMatchOptions(run,selected){
  const actual=dte(run.date),actualTime=actual.getTime();
@@ -1514,7 +1608,7 @@ function planMatchOptions(run,selected){
  const details=p=>{
   const planned=dte(p.date),plannedTime=planned.getTime();
   const validPlanned=Number.isFinite(plannedTime);
-  const offset=validActual&&validPlanned?Math.round((actualTime-plannedTime)/DAY):null;
+  const offset=validActual&&validPlanned?civilDayDiff(run.date,p.date):null;
   const linked=state.runs.find(r=>r.id!==run.id&&r.planId===p.id);
   return {p,offset,linked,distance:offset===null?Number.MAX_SAFE_INTEGER:Math.abs(offset)};
  };
@@ -1526,7 +1620,7 @@ function planMatchOptions(run,selected){
   return `<option value="${esc(p.id)}" ${selected===p.id?'selected':''} ${linked?'disabled':''}>${fmtDate(p.date)} · ${esc(p.type)} · ${p.distance.toFixed(1)} km · ${timing} · ${type}${linked?' · already linked':''}</option>`;
  };
  const suggestedId=suggestedPlanId(run),suggested=rows.find(x=>x.p.id===suggestedId&&!x.linked);
- const sameWeek=rows.filter(x=>x.offset!==null&&Math.floor((actualTime-dte(state.setup.planStart).getTime())/(7*DAY))===Math.floor((dte(x.p.date).getTime()-dte(state.setup.planStart).getTime())/(7*DAY))&&x.p.id!==suggestedId);
+ const sameWeek=rows.filter(x=>x.offset!==null&&trainingWeekForDate(run.date)===trainingWeekForDate(x.p.date)&&x.p.id!==suggestedId);
  const nearby=rows.filter(x=>!sameWeek.includes(x)&&x.p.id!==suggestedId).slice(0,24);
  let html='';
  if(suggested)html+=`<optgroup label="Suggested match">${option(suggested)}</optgroup>`;
@@ -1536,7 +1630,7 @@ function planMatchOptions(run,selected){
  return html;
 }
 function matchSummary(run){
- if(run.planId){let p=state.plan.find(x=>x.id===run.planId);if(p){let o=Math.round((dte(run.date)-dte(p.date))/DAY),timing=o===0?'same day':o>0?`${o} day${o===1?'':'s'} late`:`${Math.abs(o)} day${o===-1?'':'s'} early`;return `${p.type} · ${timing}${compatibleRunType(p.type,run.type)?'':' · different type'}`}}
+ if(run.planId){let p=state.plan.find(x=>x.id===run.planId);if(p){let o=civilDayDiff(run.date,p.date),timing=o===0?'same day':o>0?`${o} day${o===1?'':'s'} late`:`${Math.abs(o)} day${o===-1?'':'s'} early`;return `${p.type} · ${timing}${compatibleRunType(p.type,run.type)?'':' · different type'}`}}
  return run.matchStatus==='unresolved'?'Needs matching review':'Ad hoc';
 }
 function status(p){let done=matchingRun(p);if(done)return'completed';if(p.type==='Rest')return'rest';let d=dte(p.date);if(d<today())return'missed';if(d.getTime()===today().getTime())return'today';return'upcoming'}
@@ -2752,7 +2846,7 @@ function todayWeekCard(ast){
  const w=currentWeek(),wd=weekData(w),planned=Number(wd.planned)||0,actual=Number(wd.actual)||0,pct=planned>0?clamp(actual/planned*100,0,130):0;
  const sessions=wd.plan.filter(p=>p.type!=='Rest').length,completed=wd.plan.filter(p=>p.type!=='Rest'&&matchingRun(p)).length;
  const pathways=ast.pathways||pathwayFactorSummary(w);
- const elapsedDays=clamp(Math.floor((today()-weekStart(w))/DAY)+1,1,7),expectedPct=elapsedDays/7*100,weekClass=todayMiniValueClass('week',pct,{expected:expectedPct});
+ const elapsedDays=clamp(civilDayDiff(iso(today()),iso(weekStart(w)))+1,1,7),expectedPct=elapsedDays/7*100,weekClass=todayMiniValueClass('week',pct,{expected:expectedPct});
  return`<section class="todayRunnerCard todayWeekCard">
    <div class="runnerSectionHead"><span class="runnerCardIcon">${todayPictogram('week')}</span><div><small>THIS TRAINING WEEK</small><h3>Week ${w} · ${esc(detailedPhase(w))}</h3></div><span class="runnerStatus miniValue ${weekClass}">${Math.round(pct)}%</span></div>
    <div class="weekDistanceLine"><strong>${actual.toFixed(1)} km</strong><span>of ${planned.toFixed(1)} km planned</span></div>
@@ -2993,7 +3087,7 @@ function planProgrammeHeaderHtml(){
  </section>`;
 }
 function planSelectedWeekHeaderHtml(w){
- const wd=weekData(w),current=currentWeek(),focus=planPhasePriority(w),pct=wd.planned>0?clamp(wd.actual/wd.planned*100,0,100):0,weekStartDate=iso(weekStart(w)),weekEndDate=iso(new Date(weekStart(w).getTime()+6*DAY));
+ const wd=weekData(w),current=currentWeek(),focus=planPhasePriority(w),pct=wd.planned>0?clamp(wd.actual/wd.planned*100,0,100):0,weekStartDate=iso(weekStart(w)),weekEndDate=civilAddDays(iso(weekStart(w)),6);
  const viewLabel=w===current?'Current week':w<current?'Past week':'Future week';
  const sessions=wd.plan.filter(p=>p.type!=='Rest'),qualitySet=['Intervals','Tempo','Fitness assessment','Hills','Fartlek','Threshold','Threshold intervals','VO₂max intervals','Race-pace intervals','Marathon-specific','Half-marathon-specific','Specific long run','Race rehearsal'],quality=sessions.filter(p=>qualitySet.includes(p.type)),long=sessions.filter(p=>['Long run','Specific long run','Race rehearsal','Progression'].includes(p.type));
  const longKm=sum(long.map(p=>Number(p.distance)||0)),longest=sessions.length?Math.max(...sessions.map(p=>Number(p.distance)||0)):0;
@@ -3189,11 +3283,29 @@ function summariseCSV(rows){
 }
 
 
-const FIT_SDK_URL='https://cdn.jsdelivr.net/npm/@garmin/fitsdk@21.208.0/src/index.js';
-let fitSdkPromise=null;
-async function loadFitSdk(){
- if(!fitSdkPromise)fitSdkPromise=import(FIT_SDK_URL).catch(err=>{fitSdkPromise=null;throw new Error('The Garmin FIT decoder could not be loaded. Check your internet connection and try again.');});
- return fitSdkPromise;
+const FIT_EPOCH_UNIX_SECONDS=631065600;
+function localFitDate(raw){const n=Number(raw);return Number.isFinite(n)&&n>0?new Date((n+FIT_EPOCH_UNIX_SECONDS)*1000):null}
+function decodeLocalFitActivity(bytes){
+ const data=bytes instanceof Uint8Array?bytes:new Uint8Array(bytes||[]);if(data.length<12||String.fromCharCode(...data.slice(8,12))!=='.FIT')throw Error('The selected file is not a valid FIT file.');
+ const view=new DataView(data.buffer,data.byteOffset,data.byteLength),headerSize=data[0],dataSize=view.getUint32(4,true),end=Math.min(data.length,headerSize+dataSize);if(headerSize<12||headerSize>end)throw Error('The FIT header is invalid.');
+ const definitions=new Map(),baseSize={0:1,1:1,2:1,3:2,4:2,5:4,6:4,7:1,8:4,9:8,10:1,11:2,12:4,13:1,14:8,15:8,16:8},typeId=t=>Number(t)&31;
+ const numeric=(pos,size,type,little)=>{const t=typeId(type);if(pos<0||pos+size>data.length)return null;try{let v=null;if(t===0||t===2||t===10||t===13)v=view.getUint8(pos);else if(t===1)v=view.getInt8(pos);else if(t===3)v=view.getInt16(pos,little);else if(t===4||t===11)v=view.getUint16(pos,little);else if(t===5)v=view.getInt32(pos,little);else if(t===6||t===12)v=view.getUint32(pos,little);else if(t===8)v=view.getFloat32(pos,little);else if(t===9)v=view.getFloat64(pos,little);else if(t===14)v=Number(view.getBigInt64(pos,little));else if(t===15||t===16)v=Number(view.getBigUint64(pos,little));if(!Number.isFinite(v))return null;const invalid=(t===0||t===2||t===13)?255:t===1?127:t===3?32767:(t===4?65535:null);if(invalid!==null&&v===invalid)return null;if((t===5&&v===2147483647)||(t===6&&v===4294967295)||(t===10&&v===0)||(t===11&&v===0)||(t===12&&v===0))return null;return v}catch{return null}};
+ const fieldValue=(pos,size,type,little)=>{const t=typeId(type);if(t===7){let out='';for(let i=0;i<size&&pos+i<data.length;i++){const c=data[pos+i];if(!c)break;out+=String.fromCharCode(c)}return out.trim()}const unit=baseSize[t]||size;if(size===unit)return numeric(pos,size,type,little);const out=[];for(let off=0;off+unit<=size;off+=unit)out.push(numeric(pos+off,unit,type,little));return out};
+ let pos=headerSize,lastTimestamp=null,fileType=null,session=null,records=[],laps=[],messageCount=0;
+ while(pos<end){
+  if(++messageCount>MAX_FIT_RECORDS*4)throw Error('The FIT file contains too many messages and was stopped to protect app responsiveness.');
+  const header=data[pos++],compressed=!!(header&128);let local,isDefinition=false,hasDeveloper=false,timeOffset=null;
+  if(compressed){local=(header>>5)&3;timeOffset=header&31}else{local=header&15;isDefinition=!!(header&64);hasDeveloper=!!(header&32)}
+  if(isDefinition){if(pos+5>end)throw Error('The FIT definition message is truncated.');pos++;const little=data[pos++]===0,global=view.getUint16(pos,little);pos+=2;const count=data[pos++],fields=[];for(let i=0;i<count;i++){if(pos+3>end)throw Error('The FIT field definition is truncated.');fields.push({number:data[pos],size:data[pos+1],type:data[pos+2]});pos+=3}const developer=[];if(hasDeveloper){if(pos>=end)throw Error('The FIT developer definition is truncated.');const n=data[pos++];for(let i=0;i<n;i++){if(pos+3>end)throw Error('The FIT developer field definition is truncated.');developer.push({number:data[pos],size:data[pos+1],index:data[pos+2]});pos+=3}}definitions.set(local,{global,little,fields,developer});continue}
+  const def=definitions.get(local);if(!def)throw Error('The FIT activity references an undefined local message.');const values={};for(const f of def.fields){if(pos+f.size>end)throw Error('The FIT data message is truncated.');values[f.number]=fieldValue(pos,f.size,f.type,def.little);pos+=f.size}for(const f of def.developer){if(pos+f.size>end)throw Error('The FIT developer data are truncated.');pos+=f.size}
+  if(compressed&&Number.isFinite(lastTimestamp)){let ts=(Math.trunc(lastTimestamp)&~31)+timeOffset;if(ts<lastTimestamp)ts+=32;values[253]=ts}
+  if(Number.isFinite(Number(values[253])))lastTimestamp=Number(values[253]);
+  if(def.global===0&&Number.isFinite(Number(values[0])))fileType=Number(values[0]);
+  else if(def.global===18&&!session)session={raw:values,startTime:localFitDate(values[2]||values[253]),sport:Number(values[5]),totalTimerTime:Number(values[8])/1000,totalElapsedTime:Number(values[7])/1000,totalDistance:Number(values[9])/100,avgHeartRate:Number(values[16]),avgCadence:Number(values[18]),avgPower:Number(values[20])};
+  else if(def.global===19){const start=localFitDate(values[2]||values[253]),elapsed=Number(values[8])/1000,distance=Number(values[9])/100,speedRaw=Number.isFinite(Number(values[110]))?Number(values[110]):Number(values[13]);laps.push({startTime:start,totalTimerTime:elapsed,totalElapsedTime:Number(values[7])/1000,totalDistance:distance,enhancedAvgSpeed:Number.isFinite(speedRaw)?speedRaw/1000:null,avgHeartRate:Number(values[15]),avgCadence:Number(values[17]),avgPower:Number(values[19])})}
+  else if(def.global===20){if(records.length>=MAX_FIT_RECORDS)throw Error(`The FIT activity contains more than ${MAX_FIT_RECORDS.toLocaleString()} records and was stopped to protect app responsiveness.`);const stamp=localFitDate(values[253]);if(!stamp)continue;const speedRaw=Number.isFinite(Number(values[73]))?Number(values[73]):Number(values[6]),distanceRaw=Number(values[5]),hr=Number(values[3]),cadence=Number(values[4]),power=Number(values[7]);records.push({timestamp:stamp,t:stamp.getTime()/1000,hr:hr>0&&hr<255?hr:null,speed:Number.isFinite(speedRaw)&&speedRaw>=0&&speedRaw<100000?speedRaw/1000:null,power:power>0&&power<3000?power:null,distance:Number.isFinite(distanceRaw)&&distanceRaw>=0?distanceRaw/100:null,cadence:cadence>=0&&cadence<255?cadence:null})}
+ }
+ records.sort((a,b)=>a.t-b.t);return{fileType,session:session||{},records,laps};
 }
 function fitArray(messages,names){
  for(const name of names){const value=messages?.[name];if(Array.isArray(value))return value;if(value&&typeof value==='object')return [value]}
@@ -3551,64 +3663,29 @@ function refreshIntervalAnalysis(run,plan){
 }
 
 async function summariseFIT(file){
- const {Decoder,Stream}=await loadFitSdk();
- const bytes=new Uint8Array(await file.arrayBuffer());
- if(bytes.length<12||String.fromCharCode(...bytes.slice(8,12))!=='.FIT')throw Error('The selected file is not a valid FIT file.');
- const stream=Stream.fromByteArray(Array.from(bytes));
- const decoder=new Decoder(stream);
- if(!decoder.isFIT())throw Error('The selected file is not a valid FIT file.');
- const {messages,errors}=decoder.read({applyScaleAndOffset:true,expandSubFields:true,expandComponents:true,convertTypesToStrings:true,convertDateTimesToDates:true,includeUnknownData:true,mergeHeartRates:true});
- const fileIds=fitArray(messages,['fileIdMesgs','fileIdMesg','fileId']);
- const fileType=String(fileIds[0]?.type||'').toLowerCase();
- if(fileType&&fileType!=='activity')throw Error(`This FIT file is a ${fileType} file, not a recorded activity.`);
- const sessions=fitArray(messages,['sessionMesgs','sessionMesg','sessions']);
- const recordsRaw=fitArray(messages,['recordMesgs','recordMesg','records']);
- const laps=fitArray(messages,['lapMesgs','lapMesg','laps']);
- const session=sessions.find(x=>String(x?.sport||'').toLowerCase()==='running')||sessions[0]||{};
- const sport=String(session.sport||'').toLowerCase();
- if(sport&&sport!=='running')throw Error(`This FIT activity is recorded as ${sport}, not running.`);
- const powerFieldDiagnostics=new Set();
- const developerFieldMap=fitDeveloperFieldMap(messages);
- let records=recordsRaw.map(r=>{
-   const d=fitDateValue(r.timestamp);
-   return{t:d?d.getTime()/1000:null,hr:fitNumber(r,['heartRate','heart_rate']),speed:fitNumber(r,['enhancedSpeed','speed']),power:findFitPower(r,developerFieldMap,powerFieldDiagnostics),distance:fitDistanceMeters(fitNumber(r,['distance'])),cadence:fitNumber(r,['cadence','fractionalCadence'])};
- }).filter(r=>Number.isFinite(r.t)).sort((a,b)=>a.t-b.t);
- const startDate=fitDateValue(session.startTime||session.timestamp)||fitDateValue(recordsRaw[0]?.timestamp);
+ const bytes=new Uint8Array(await file.arrayBuffer());if(bytes.length<12||String.fromCharCode(...bytes.slice(8,12))!=='.FIT')throw Error('The selected file is not a valid FIT file.');
+ const decoded=decodeLocalFitActivity(bytes);if(decoded.fileType!=null&&decoded.fileType!==4)throw Error('This FIT file is not a recorded activity.');
+ const session=decoded.session||{};if(Number.isFinite(session.sport)&&session.sport!==1)throw Error('This FIT activity is not recorded as running.');
+ let records=(decoded.records||[]).map(r=>({t:r.t,hr:r.hr,speed:r.speed,power:r.power,distance:r.distance,cadence:r.cadence})),startDate=session.startTime||(decoded.records||[])[0]?.timestamp;
  if(!startDate)throw Error('The FIT file does not contain a valid activity start time.');
- let duration=fitNumber(session,['totalTimerTime','totalElapsedTime']);
- if(!(duration>0)&&records.length>1)duration=records.at(-1).t-records[0].t;
- let distanceM=fitNumber(session,['totalDistance','distance']);
- if(!(distanceM>0)){const ds=records.map(r=>r.distance).filter(Number.isFinite);if(ds.length)distanceM=Math.max(...ds)}
+ let duration=Number(session.totalTimerTime)>0?Number(session.totalTimerTime):Number(session.totalElapsedTime);if(!(duration>0)&&records.length>1)duration=records.at(-1).t-records[0].t;
+ let distanceM=Number(session.totalDistance);if(!(distanceM>0)){const ds=records.map(r=>r.distance).filter(Number.isFinite);if(ds.length)distanceM=Math.max(...ds)}
  if(!(duration>0)||!(distanceM>0))throw Error('The FIT activity does not contain valid duration and distance data.');
- const positive=(key)=>records.map(r=>r[key]).filter(v=>Number.isFinite(v)&&v>0);
- const mean=(arr)=>arr.length?avg(arr):null;
- const avgHr=fitNumber(session,['avgHeartRate','averageHeartRate'])??mean(positive('hr'));
- const decodedPower=findFitPower(session,developerFieldMap,powerFieldDiagnostics)??mean(positive('power'));
- const rawStrydPower=rawFitStrydRunningPower(bytes);
- const rawMap=attachRawStrydPowerToRecords(records,rawStrydPower);
- records=rawMap.records;
- const recordPowerMean=mean(records.map(r=>Number(r.power)).filter(v=>Number.isFinite(v)&&v>0));
- const avgPower=decodedPower??recordPowerMean??rawStrydPower?.average??null;
- if(rawStrydPower)powerFieldDiagnostics.add(`${rawStrydPower.source} (${rawStrydPower.count} samples${rawMap.method?`; ${rawMap.method}`:''})`);
- const avgCadence=fitNumber(session,['avgRunningCadence','avgCadence','averageCadence'])??mean(positive('cadence'));
- const analysis=streamAnalysis(records);
- const fitLaps=laps.map((lap,i)=>fitLapSummary(lap,i,developerFieldMap,records)).filter(l=>Number(l.durationSec)>0||Number(l.distanceKm)>0);
- const sourceHint=/stryd/i.test(file.name)||recordsRaw.some(r=>Object.keys(r||{}).some(k=>/stryd|formPower|legSpring/i.test(k)))?'Stryd FIT':'Garmin FIT';
- const startSeconds=Math.round(startDate.getTime()/1000);
- return{
-   id:'fit-'+startSeconds+'-'+Math.round(distanceM),date:iso(startDate),type:'Easy',distanceKm:distanceM/1000,durationSec:duration,
-   avgHr:Number.isFinite(avgHr)?Math.round(avgHr):null,avgPower:Number.isFinite(avgPower)?Math.round(avgPower):null,
-   cadence:Number.isFinite(avgCadence)?Math.round(avgCadence):null,gct:null,vo:null,rpe:null,pain:null,recovery:null,temperature:null,
-   notes:`Imported from ${sourceHint}`,
-   drift:null,powerDrift:null,paceDrift:null,candidateDrift:analysis?.drift??null,candidatePowerDrift:analysis?.powerDrift??null,candidatePaceDrift:analysis?.paceDrift??null,
-   candidateStreamEvidence:analysis,streamEvidence:null,sourceFormat:'fit-activity',sourceDevice:sourceHint,powerDiagnostics:{recordCount:records.length,poweredRecords:records.filter(r=>Number(r.power)>0).length,coverage:records.length?records.filter(r=>Number(r.power)>0).length/records.length:0,mapping:rawMap.method||null,rawSource:rawStrydPower?.source||null,rawCount:rawStrydPower?.count||0},fitWarnings:[...(errors||[]).map(String).slice(0,5),...(rawStrydPower?[`Running power read from Stryd developer Power (${rawStrydPower.count} samples).${rawMap.method?' '+rawMap.method+'.':''}`]:[]),...(avgPower?[]:['No usable native or developer running-power field was found.'])],lapCount:laps.length,fitLaps,fitRecords:records.map(r=>({t:r.t,hr:r.hr,speed:r.speed,power:r.power,distance:r.distance}))
- };
+ const positive=key=>records.map(r=>r[key]).filter(v=>Number.isFinite(v)&&v>0),mean=arr=>arr.length?avg(arr):null;
+ const avgHr=Number(session.avgHeartRate)>0?Number(session.avgHeartRate):mean(positive('hr')),rawStrydPower=rawFitStrydRunningPower(bytes),rawMap=attachRawStrydPowerToRecords(records,rawStrydPower);records=rawMap.records;
+ const recordPowerMean=mean(records.map(r=>Number(r.power)).filter(v=>Number.isFinite(v)&&v>0)),avgPower=Number(session.avgPower)>0?Number(session.avgPower):(recordPowerMean??rawStrydPower?.average??null),avgCadence=Number(session.avgCadence)>0?Number(session.avgCadence):mean(positive('cadence')),analysis=streamAnalysis(records);
+ const fitLaps=(decoded.laps||[]).map((lap,i)=>{const start=lap.startTime,elapsed=Number(lap.totalTimerTime)>0?Number(lap.totalTimerTime):Number(lap.totalElapsedTime),distance=Number(lap.totalDistance),speed=Number(lap.enhancedAvgSpeed),startSec=start?.getTime()/1000,endSec=Number.isFinite(startSec)&&elapsed>0?startSec+elapsed:null,segment=Number.isFinite(startSec)&&Number.isFinite(endSec)?records.filter(r=>r.t>=startSec-.5&&r.t<=endSec+.5):[],vals=k=>segment.map(r=>Number(r[k])).filter(v=>Number.isFinite(v)&&v>0),power=Number(lap.avgPower)>0?Number(lap.avgPower):avg(vals('power')),hr=Number(lap.avgHeartRate)>0?Number(lap.avgHeartRate):avg(vals('hr')),paceSecPerKm=speed>0?1000/speed:(distance>0&&elapsed>0?elapsed/(distance/1000):null);return{index:i+1,durationSec:elapsed>0?elapsed:null,distanceKm:distance>0?distance/1000:null,paceSecPerKm:Number.isFinite(paceSecPerKm)?paceSecPerKm:null,avgPower:Number.isFinite(power)?power:null,avgHr:Number.isFinite(hr)?hr:null}}).filter(l=>Number(l.durationSec)>0||Number(l.distanceKm)>0);
+ const sourceHint=/stryd/i.test(file.name)||rawStrydPower?.count?'Stryd FIT':'Garmin FIT',startSeconds=Math.round(startDate.getTime()/1000),powerWarnings=rawStrydPower?.count?[`Running power read locally from ${rawStrydPower.source} (${rawStrydPower.count} samples).${rawMap.method?' '+rawMap.method+'.':''}`]:[];
+ return{id:'fit-'+startSeconds+'-'+Math.round(distanceM),date:iso(startDate),type:'Easy',distanceKm:distanceM/1000,durationSec:duration,avgHr:Number.isFinite(avgHr)?Math.round(avgHr):null,avgPower:Number.isFinite(avgPower)?Math.round(avgPower):null,cadence:Number.isFinite(avgCadence)?Math.round(avgCadence):null,gct:null,vo:null,rpe:null,pain:null,recovery:null,temperature:null,notes:`Imported from ${sourceHint}`,drift:null,powerDrift:null,paceDrift:null,candidateDrift:analysis?.drift??null,candidatePowerDrift:analysis?.powerDrift??null,candidatePaceDrift:analysis?.paceDrift??null,candidateStreamEvidence:analysis,streamEvidence:null,sourceFormat:'fit-activity',sourceDevice:sourceHint,powerDiagnostics:{recordCount:records.length,poweredRecords:records.filter(r=>Number(r.power)>0).length,coverage:records.length?records.filter(r=>Number(r.power)>0).length/records.length:0,mapping:rawMap.method||null,rawSource:rawStrydPower?.source||null,rawCount:rawStrydPower?.count||0},fitWarnings:[...powerWarnings,...(avgPower?[]:['No usable native or developer running-power field was found.'])],lapCount:fitLaps.length,fitLaps,fitRecords:records.map(r=>({t:r.t,hr:r.hr,speed:r.speed,power:r.power,distance:r.distance}))};
 }
+const MAX_ACTIVITY_IMPORT_BYTES=15*1024*1024,MAX_ACTIVITY_CSV_ROWS=250000,MAX_FIT_RECORDS=250000;
 async function parseRunImportFile(file){
+ if(!file||!Number.isFinite(Number(file.size)))throw Error('The selected activity file is unavailable.');
+ if(Number(file.size)>MAX_ACTIVITY_IMPORT_BYTES)throw Error(`Activity files larger than ${Math.round(MAX_ACTIVITY_IMPORT_BYTES/1024/1024)} MB are not imported. Export a single activity or a smaller detailed file.`);
  const ext=(file.name.split('.').pop()||'').toLowerCase();
  if(ext==='csv'){
    const text=await file.text();if(!text.trim())throw Error('The selected CSV file is empty.');
-   const rows=parseCSV(text);if(!rows?.length||rows.length<2)throw Error('The CSV does not contain activity rows.');
+   const rows=parseCSV(text);if(!rows?.length||rows.length<2)throw Error('The CSV does not contain activity rows.');if(rows.length>MAX_ACTIVITY_CSV_ROWS)throw Error(`The CSV contains more than ${MAX_ACTIVITY_CSV_ROWS.toLocaleString()} rows and was stopped to protect app responsiveness.`);
    return summariseCSV(rows);
  }
  if(ext==='fit')return summariseFIT(file);
@@ -4487,12 +4564,12 @@ function weeklyCompletedLongs(){
 
 let recoveryPainCache={key:null,value:null};
 function recoveryPainState(){
- const key=`${runtimeDomainRevisions.runs}|${iso(today())}`;
+ const key=`${runtimeDomainRevisions.runs}|${runtimeDomainRevisions.injury}|${iso(today())}`;
  if(recoveryPainCache.key===key&&recoveryPainCache.value)return recoveryPainCache.value;
- const recent=completedRuns().filter(r=>Number.isFinite(Number(r.pain))).sort((a,b)=>b.date.localeCompare(a.date)).slice(0,5);
- let value;
- if(!recent.length)value={count:0,average:null,max:null,status:'No pain data'};
- else{const vals=recent.map(r=>Number(r.pain)),average=avg(vals),max=Math.max(...vals);value={count:vals.length,average,max,status:max>=5?'Pain needs attention':max>=3?'Monitor pain':'No significant pain signal'}}
+ const observations=completedRuns().filter(r=>Number.isFinite(Number(r.pain))).sort((a,b)=>b.date.localeCompare(a.date)).slice(0,5).map(r=>({date:r.date,value:Number(r.pain),source:'run'}));
+ const active=(state.injuries||[]).find(x=>x.id===state.activeInjuryPlanId),rehab=(active?.checkIns||[]).filter(c=>CORE.isIsoDate(c.date)&&c.date<=iso(today())&&civilDayDiff(iso(today()),c.date)<=3&&Number.isFinite(Number(c.pain))).sort((a,b)=>b.date.localeCompare(a.date))[0];
+ if(rehab)observations.push({date:rehab.date,value:Number(rehab.pain),source:'rehab'});
+ let value;if(!observations.length)value={count:0,average:null,max:null,status:'No pain data',sources:[]};else{const vals=observations.map(x=>x.value),average=avg(vals),max=Math.max(...vals);value={count:vals.length,average,max,status:max>=5?'Pain needs attention':max>=3?'Monitor pain':'No significant pain signal',sources:observations}}
  recoveryPainCache={key,value};return value;
 }
 function hrvDirection(hist){
@@ -4509,7 +4586,7 @@ function recoveryConclusion(hrv,pain){
 }
 let readinessModelCache={key:null,value:null};
 function readinessModel(){
- const key=`${runtimeDomainRevisions.runs}|${runtimeDomainRevisions.plan}|${runtimeDomainRevisions.setup}|${iso(today())}`;
+ const key=`${runtimeDomainRevisions.runs}|${runtimeDomainRevisions.plan}|${runtimeDomainRevisions.setup}|${runtimeDomainRevisions.injury}|${iso(today())}`;
  if(readinessModelCache.key===key&&readinessModelCache.value)return readinessModelCache.value;
  const compute=()=>{
 
@@ -5041,15 +5118,15 @@ function injuryCausePrevention(i,diag){
 function known(v){return v!==null&&v!==undefined}
 function sortedChecks(i){return(i.checkIns||[]).filter(check=>CORE.isIsoDate(check.date)&&check.date<=iso(today())).slice().sort((a,b)=>a.date.localeCompare(b.date))}
 function rehabPlanStart(i){const raw=i?.rehabStartDate||i?.date||iso(today());try{return iso(dte(raw))}catch{return i?.date||iso(today())}}
-function rehabPlanDayIndex(i,date){return Math.max(0,Math.round((dte(date)-dte(rehabPlanStart(i)))/DAY))}
+function rehabPlanDayIndex(i,date){return Math.max(0,civilDayDiff(date,rehabPlanStart(i)))}
 function lastObserved(checks,field,predicate=v=>known(v)){
  for(let n=checks.length-1;n>=0;n--){const v=checks[n]?.[field];if(predicate(v))return{value:v,date:checks[n].date,check:checks[n],index:n};}
  return{value:null,date:null,check:null,index:-1};
 }
 function observedValue(checks,field,fallback=null,predicate=v=>known(v)){const x=lastObserved(checks,field,predicate);return x.index>=0?x.value:fallback}
-function daysSinceObserved(obs){return obs?.date?Math.max(0,Math.round((today()-dte(obs.date))/DAY)):null}
+function daysSinceObserved(obs){return obs?.date?Math.max(0,civilDayDiff(iso(today()),obs.date)):null}
 function latestAdverse(checks,field){const x=lastObserved(checks,field);return x.index>=0&&x.value===true&&daysSinceObserved(x)<=2}
-function recentChecks(checks,days=14){const cut=today().getTime()-days*DAY;return checks.filter(c=>dte(c.date).getTime()>=cut)}
+function recentChecks(checks,days=14){return checks.filter(c=>CORE.isIsoDate(c.date)&&civilDayDiff(iso(today()),c.date)<=days)}
 function runEvidence(checks){
  const normalized=checks.map(c=>Number(c.runMinutes)>0&&['not_assessed','not_planned',null,undefined,''].includes(c.runStatus)?{...c,runStatus:'completed'}:c);
  // A completed exposure is historical evidence even when gait or next-day tolerance
@@ -5196,46 +5273,29 @@ function injuryStageForChecks(i,checks,diag){
  if(diag?.urgent)stage=Math.min(stage,1);
  return stage;
 }
-function rehabTrajectoryCompletion(i,checks=sortedChecks(i),diag=workingDiagnosis(i)){
- const observed=(checks||[]).filter(c=>CORE.isIsoDate(c?.date)&&c.date<=iso(today())).slice().sort((a,b)=>a.date.localeCompare(b.date));
- const finalStageIndex=INJURY_STAGES.length-1;
- if(!observed.length||diag?.urgent)return{complete:false,completedAt:null,stage:injuryStageForChecks(i,observed,diag),criteria:[]};
- const stage=injuryStageForChecks(i,observed,diag);
- const scoped={...i,checkIns:observed};
- const criteria=criterionState(scoped,{},finalStageIndex);
- const complete=stage===finalStageIndex&&criteria.length>0&&criteria.every(x=>x.status==='met');
- let completedAt=null;
- if(complete){
-  for(let n=1;n<=observed.length;n++){
-   const prefix=observed.slice(0,n),prefixInjury={...i,checkIns:prefix};
-   if(injuryStageForChecks(prefixInjury,prefix,diag)!==finalStageIndex)continue;
-   const prefixCriteria=criterionState(prefixInjury,{},finalStageIndex);
-   if(prefixCriteria.length&&prefixCriteria.every(x=>x.status==='met')){completedAt=prefix.at(-1)?.date||null;break}
-  }
- }
- return{complete,completedAt,stage,criteria};
+function finalRehabStageEnteredAt(i,checks=sortedChecks(i),diag=workingDiagnosis(i)){
+ const observed=(checks||[]).filter(c=>CORE.isIsoDate(c?.date)&&c.date<=iso(today())).slice().sort((a,b)=>a.date.localeCompare(b.date)),target=INJURY_STAGES.length-1;
+ for(let n=1;n<=observed.length;n++)if(injuryStageForChecks(i,observed.slice(0,n),diag)>=target)return observed[n-1].date;
+ return null;
 }
-function syncRehabCompletionState(injury){
+function rehabTrajectoryCompletion(i,checks=sortedChecks(i),diag=workingDiagnosis(i)){
+ const observed=(checks||[]).filter(c=>CORE.isIsoDate(c?.date)&&c.date<=iso(today())).slice().sort((a,b)=>a.date.localeCompare(b.date)),finalStageIndex=INJURY_STAGES.length-1;
+ if(!observed.length||diag?.urgent)return{complete:false,completedAt:null,stage:injuryStageForChecks(i,observed,diag),criteria:[],finalStageEnteredAt:null};
+ const stage=injuryStageForChecks(i,observed,diag),enteredAt=finalRehabStageEnteredAt(i,observed,diag);
+ if(stage!==finalStageIndex||!enteredAt)return{complete:false,completedAt:null,stage,criteria:[],finalStageEnteredAt:enteredAt};
+ const eligible=observed.filter(c=>c.date>=enteredAt),scoped={...i,checkIns:eligible},criteria=criterionState(scoped,{},finalStageIndex),complete=criteria.length>0&&criteria.every(x=>x.status==='met');
+ let completedAt=null;
+ if(complete){for(let n=1;n<=eligible.length;n++){const prefix=eligible.slice(0,n),prefixCriteria=criterionState({...i,checkIns:prefix},{},finalStageIndex);if(prefixCriteria.length&&prefixCriteria.every(x=>x.status==='met')){completedAt=prefix.at(-1)?.date||null;break}}}
+ return{complete,completedAt,stage,criteria,finalStageEnteredAt:enteredAt};
+}
+function syncRehabCompletionState(injury,{activateOnReopen=false}={}){
  if(!injury)return{complete:false,completedAt:null,changed:false};
- const previous=CORE.isIsoDate(injury.rehabCompletedAt)?injury.rehabCompletedAt:null;
- const status=rehabTrajectoryCompletion(injury);
- if(status.complete){
-  const completedAt=status.completedAt||previous||sortedChecks(injury).at(-1)?.date||iso(today());
-  const changed=previous!==completedAt||injury.rehabCompletionStatus!=='criteria_met'||state.activeInjuryPlanId===injury.id;
-  injury.rehabCompletedAt=completedAt;
-  injury.rehabCompletionStatus='criteria_met';
-  if(state.activeInjuryPlanId===injury.id)state.activeInjuryPlanId=null;
-  return{...status,completedAt,changed};
- }
- let changed=false;
- if(previous||injury.rehabCompletionStatus){delete injury.rehabCompletedAt;delete injury.rehabCompletionStatus;changed=true;if(!state.activeInjuryPlanId){state.activeInjuryPlanId=injury.id}}
+ const previous=CORE.isIsoDate(injury.rehabCompletedAt)?injury.rehabCompletedAt:null,status=rehabTrajectoryCompletion(injury);
+ if(status.complete){const completedAt=status.completedAt||previous||sortedChecks(injury).at(-1)?.date||iso(today()),changed=previous!==completedAt||injury.rehabCompletionStatus!=='criteria_met'||state.activeInjuryPlanId===injury.id;injury.rehabCompletedAt=completedAt;injury.rehabCompletionStatus='criteria_met';injury.finalRehabStageEnteredAt=status.finalStageEnteredAt||injury.finalRehabStageEnteredAt||null;if(state.activeInjuryPlanId===injury.id)state.activeInjuryPlanId=null;return{...status,completedAt,changed}}
+ let changed=false;if(previous||injury.rehabCompletionStatus){delete injury.rehabCompletedAt;delete injury.rehabCompletionStatus;delete injury.finalRehabStageEnteredAt;changed=true;if(activateOnReopen&&!state.activeInjuryPlanId)state.activeInjuryPlanId=injury.id}
  return{...status,changed};
 }
-function reconcileCompletedRehabilitation(){
- let changed=false;
- for(const injury of state.injuries||[]){const result=syncRehabCompletionState(injury);if(result.changed)changed=true}
- return changed;
-}
+function reconcileCompletedRehabilitation(){let changed=false;for(const injury of state.injuries||[]){const result=syncRehabCompletionState(injury,{activateOnReopen:false});if(result.changed)changed=true}return changed}
 function injuryStageHistory(i,checks,diag){
  const rows=(checks||[]).filter(c=>CORE.isIsoDate(c.date)&&c.date<=iso(today())).sort((a,b)=>a.date.localeCompare(b.date));
  let peakStage=0,peakDate=null;
@@ -5261,7 +5321,7 @@ function completedPhaseCriterionState(i,stageIndex,diag){
 
 function injuryPrediction(i){
  const checks=sortedChecks(i),latest=checks.at(-1)||{},diag=workingDiagnosis(i),initialPain=nullableNumber(i.initialPain),walkInitially=nullableNumber(i.initialWalkPain);let nominalTotal=Number(diag.nominalDays)||56;const severityKnown=Number.isFinite(initialPain)||Number.isFinite(walkInitially)||i.pop||i.bruising;const severityFactor=!severityKnown?1:(initialPain>=8||i.pop||walkInitially>=8?1.18:initialPain>=6||i.bruising||walkInitially>=5?1.08:initialPain<=2&&walkInitially<=1?.88:1);nominalTotal=Math.round(nominalTotal*severityFactor);const baselineMin=Math.max(7,Math.round((Number(diag.minDays)||nominalTotal*.7)*severityFactor)),baselineMax=Math.max(baselineMin+7,Math.round((Number(diag.maxDays)||nominalTotal*1.5)*severityFactor));
- const snap=longitudinalSnapshot(i,checks),currentPain=Number.isFinite(snap.currentPain)?snap.currentPain:initialPain,walkPain=Number.isFinite(snap.walkPain)?snap.walkPain:walkInitially,elapsed=Math.max(0,Math.floor((today()-dte(i.date))/DAY));
+ const snap=longitudinalSnapshot(i,checks),currentPain=Number.isFinite(snap.currentPain)?snap.currentPain:initialPain,walkPain=Number.isFinite(snap.walkPain)?snap.walkPain:walkInitially,elapsed=Math.max(0,civilDayDiff(iso(today()),i.date));
  const criteriaStage=injuryStageForChecks(i,checks,diag),stageHistory=injuryStageHistory(i,checks,diag),peakStage=Math.max(criteriaStage,stageHistory.peakStage),stage=peakStage,regressedBy=0,setback=false,terminal=rehabTrajectoryCompletion(i,checks,diag);
  const completion=terminal.complete?100:injuryCompletionForChecks(i,checks,diag,initialPain,walkInitially),nominal=Math.round(clamp(elapsed/nominalTotal*100,0,100)),delta=completion===null?null:completion-nominal;
  if(terminal.complete){
@@ -5269,7 +5329,7 @@ function injuryPrediction(i){
   return{nominalTotal,baselineMin,baselineMax,total:elapsed,elapsed,remaining:0,stage,peakStage,regressedBy,setback,peakStageDate:stageHistory.peakDate,fullDate:completedAt,windowStart:completedAt,windowEnd:completedAt,confidence:'Confirmed',currentPain,walkPain,completion,nominal,delta,latest,checks,diag,safetyHold:false,trendRate:null,snapshot:snap,completed:true,completedAt,finalCriteria:terminal.criteria};
  }
  const nominalRemaining=Math.max(7,nominalTotal-elapsed),stageRemaining=Math.max(7,Math.round(nominalTotal*[.94,.78,.60,.42,.25,.10][stage]));
- let trendRemaining=null,trendRate=null;if(checks.length>=2){const points=checks.map((c,idx)=>({day:Math.max(0,Math.round((dte(c.date)-dte(i.date))/DAY)),score:injuryCompletionForChecks(i,checks.slice(0,idx+1),diag,initialPain,walkInitially)})).filter(x=>Number.isFinite(x.score));if(points.length>=2){const first=points[0],last=points.at(-1),span=Math.max(1,last.day-first.day),gain=last.score-first.score;trendRate=gain/span;if(trendRate>.15)trendRemaining=Math.round((100-last.score)/trendRate);}}
+ let trendRemaining=null,trendRate=null;if(checks.length>=2){const points=checks.map((c,idx)=>({day:Math.max(0,civilDayDiff(c.date,i.date)),score:injuryCompletionForChecks(i,checks.slice(0,idx+1),diag,initialPain,walkInitially)})).filter(x=>Number.isFinite(x.score));if(points.length>=2){const first=points[0],last=points.at(-1),span=Math.max(1,last.day-first.day),gain=last.score-first.score;trendRate=gain/span;if(trendRate>.15)trendRemaining=Math.round((100-last.score)/trendRate);}}
  let remaining=trendRemaining!==null?Math.round(nominalRemaining*.35+stageRemaining*.35+clamp(trendRemaining,7,baselineMax)*.30):Math.round(nominalRemaining*.55+stageRemaining*.45);
  if(Number.isFinite(delta))remaining+=Math.round(clamp(-delta*.20,-14,21));if(latestAdverse(checks,'nextDayWorse'))remaining+=7;if(latestAdverse(checks,'newSwelling'))remaining+=7;if(latestAdverse(checks,'alteredGait'))remaining+=4;if(snap.run.lastAttempt?.runStatus==='unable'||snap.run.lastAttempt?.runStatus==='stopped')remaining+=4;if(diag.urgent)remaining=Math.max(remaining,Math.max(14,baselineMin-elapsed));
  remaining=Math.max(7,Math.min(Math.max(14,Math.round(baselineMax*1.25)),remaining));const total=elapsed+remaining,central=new Date(today().getTime()+remaining*DAY),uncertainty=checks.length>=7?Math.max(7,Math.round(nominalTotal*.12)):checks.length>=3?Math.max(10,Math.round(nominalTotal*.18)):Math.max(14,Math.round(nominalTotal*.25)),rangeStartTotal=Math.max(elapsed+7,Math.max(baselineMin,total-uncertainty)),rangeEndTotal=Math.max(rangeStartTotal+7,Math.min(Math.round(baselineMax*1.25),total+uncertainty)),windowStart=iso(new Date(dte(i.date).getTime()+rangeStartTotal*DAY)),windowEnd=iso(new Date(dte(i.date).getTime()+rangeEndTotal*DAY)),confidence=checks.length>=7?'Moderate':checks.length>=3?'Developing':'Low';return{nominalTotal,baselineMin,baselineMax,total,elapsed,remaining,stage,peakStage,regressedBy,setback,peakStageDate:stageHistory.peakDate,fullDate:iso(central),windowStart,windowEnd,confidence,currentPain,walkPain,completion,nominal,delta,latest,checks,diag,safetyHold:diag.urgent,trendRate,snapshot:snap,completed:false,completedAt:null,finalCriteria:terminal.criteria};
@@ -5670,7 +5730,7 @@ function injuryTrajectorySvg(i,p){
  const pts=observedChecks.map((c,idx)=>{
    const prefix=observedChecks.slice(0,idx+1);
    const score=injuryCompletionForChecks(i,prefix,p.diag,nullableNumber(i.initialPain),nullableNumber(i.initialWalkPain));
-   const day=Math.min(todayDay,Math.max(0,Math.round((dte(c.date)-dte(i.date))/DAY)));
+   const day=Math.min(todayDay,Math.max(0,civilDayDiff(c.date,i.date)));
    return{day,score,date:c.date};
  }).filter(q=>Number.isFinite(q.score)&&q.day<=todayDay);
  if(!pts.length&&Number.isFinite(p.completion))pts.push({day:todayDay,score:p.completion,date:iso(today())});
@@ -5687,7 +5747,7 @@ function injuryTrajectorySvg(i,p){
  const transitions=Array(INJURY_STAGES.length).fill(null);transitions[0]=0;
  observedChecks.forEach((c,idx)=>{
    const prefix=observedChecks.slice(0,idx+1),stageAtCheck=injuryStageForChecks(i,prefix,p.diag);
-   const day=Math.min(todayDay,Math.max(0,Math.round((dte(c.date)-dte(i.date))/DAY)));
+   const day=Math.min(todayDay,Math.max(0,civilDayDiff(c.date,i.date)));
    for(let s=1;s<=stageAtCheck;s++)if(transitions[s]===null)transitions[s]=day;
  });
  if(transitions[p.stage]===null)transitions[p.stage]=p.stage===0?0:Math.min(todayDay,transitions[p.stage-1]??todayDay);
@@ -6038,7 +6098,7 @@ function injuryForm(i={}){const regions=['','Hip / pelvis','Groin / inner thigh'
 <section class="injuryFormStep clinicalReasoningStep"><header><i>4</i><div><b>Clinical reasoning questions</b><small>These answers help separate similar injuries and identify when self-management may be enough.</small></div></header><div class="formGrid">${selectField('injQuality','Symptom quality',i.symptomQuality,[['','Select'],['aching','Aching'],['sharp','Sharp'],['burning','Burning'],['cramp_like','Cramp-like / tight'],['pressure','Pressure / fullness'],['stiff','Stiffness'],['unstable','Instability']])}${selectField('injTiming','When is it worst?',i.timingPattern,[['','Select'],['during_early','Early during running'],['during_late','Later as fatigue builds'],['immediately_after','Immediately after running'],['after_shoes_off','After taking shoes off'],['next_morning','The next morning'],['constant','Also present at rest']])}<div class="field fieldWide"><label>Path or distribution of symptoms</label><input id="injDistribution" value="${esc(i.painDistribution||'')}" placeholder="e.g. bottom outer foot, little-toe side, front to back"></div>${triSelect('injMorning','Pain on the first steps in the morning?',i.morningFirstStep)}${triSelect('injFocal','One precise point is markedly tender?',i.focalTenderness)}${triSelect('injHopPain','Single-leg hopping reproduces it?',i.hopPain)}${triSelect('injNumb','Burning, numbness or tingling?',i.numbTingle)}${triSelect('injShoes','Tighter shoes or lacing make it worse?',i.shoeRelated)}${triSelect('injBarefoot','Removing shoes or walking barefoot improves it?',i.barefootBetter)}${triSelect('inj48h','Usually settles within 24–48 hours?',i.resolves48h)}${triSelect('injNight','Pain at night or while resting?',i.nightPain)}${triSelect('injLock','Locking, catching or joint swelling?',i.lockingCatching)}${triSelect('injInstability','Giving way or instability?',i.instability)}${triSelect('injSitting','Prolonged sitting reproduces it?',i.sittingPain)}${triSelect('injResisted','Resisted muscle contraction reproduces it?',i.resistedPain)}${triSelect('injExertional','Does it reliably settle within minutes after stopping the run?',i.exertionalResolution)}${triSelect('injLoadIncrease','Recent increase in distance, speed, hills or frequency?',i.recentLoadIncrease)}${triSelect('injNewShoes','Recent change in shoes, insoles or lacing?',i.newShoes)}${triSelect('injCamber','Often runs on cambered or uneven surfaces?',i.camberedSurface)}<div class="field fieldWide"><label>Other clinically relevant detail</label><textarea id="injClinicalFree" placeholder="Recurrence, exact duration, what relieves it, or anything that does not fit above">${esc(i.freeTextClinical||'')}</textarea></div></div></section>
 <details class="injuryClinicianStep"><summary>Clinician information (optional — independently cross-checked)</summary><div class="formGrid"><div class="field"><label>Clinician diagnosis</label><input id="injDiagnosis" value="${esc(i.clinicalDiagnosis||'')}" placeholder="The app will independently compare this with your symptoms"></div><div class="field"><label>Expected recovery days</label><input id="injClinicianDays" type="number" min="1" value="${i.clinicianExpectedDays??''}" placeholder="Use clinician estimate when supplied"></div></div></details>
 </div><div class="note bad"><b>Stop and seek assessment</b> for major trauma, inability to bear weight, marked weakness or deformity, rapidly increasing swelling, numbness, fever, severe night pain, focal bone pain, or calf swelling/breathlessness.</div><button id="saveInjury" class="primary full">Save injury assessment</button>`}
-function openInjuryForm(i){$('modalContent').innerHTML=injuryForm(i);$('modal').className='modal';resetModalViewport();$('saveInjury').onclick=()=>{let obj={...(i||{}),id:i?.id||'inj-'+Date.now(),date:$('injDate').value,rehabStartDate:$('injRehabStart').value,bodyRegion:$('injRegion').value,location:$('injLocation').value.trim(),onset:$('injOnset').value,mechanism:$('injMechanism').value.trim(),painTriggers:$('injTriggers').value.trim(),clinicalDiagnosis:$('injDiagnosis').value.trim(),clinicianExpectedDays:nullableNumber($('injClinicianDays').value),initialPain:nullableNumber($('injInitialPain').value),initialWalkPain:nullableNumber($('injInitialWalk').value),pop:$('injPop').checked,bruising:$('injBruise').checked,initialSymptoms:$('injInitialSymptoms').value.trim(),currentSymptoms:$('injCurrentSymptoms').value.trim(),currentPain:nullableNumber($('injCurrentPain').value),currentWalkPain:nullableNumber($('injCurrentWalk').value),symptomQuality:$('injQuality').value||null,timingPattern:$('injTiming').value||null,painDistribution:$('injDistribution').value.trim(),morningFirstStep:readTri('injMorning'),focalTenderness:readTri('injFocal'),hopPain:readTri('injHopPain'),numbTingle:readTri('injNumb'),shoeRelated:readTri('injShoes'),barefootBetter:readTri('injBarefoot'),resolves48h:readTri('inj48h'),nightPain:readTri('injNight'),lockingCatching:readTri('injLock'),instability:readTri('injInstability'),sittingPain:readTri('injSitting'),resistedPain:readTri('injResisted'),exertionalResolution:readTri('injExertional'),recentLoadIncrease:readTri('injLoadIncrease'),newShoes:readTri('injNewShoes'),camberedSurface:readTri('injCamber'),freeTextClinical:$('injClinicalFree').value.trim(),checkIns:i?.checkIns||[]};if(!obj.date||!obj.rehabStartDate||!obj.bodyRegion||!obj.location)return toast('Enter the injury date, rehabilitation-plan start date, body region and exact location.',true);if(dte(obj.rehabStartDate)<dte(obj.date))return toast('The rehabilitation-plan start date cannot be before the injury date.',true);state.injuries=state.injuries||[];let n=state.injuries.findIndex(x=>x.id===obj.id);n>=0?state.injuries[n]=obj:state.injuries.push(obj);save();$('modal').className='modal hidden';renderInjury();toast(n>=0?'Injury assessment updated.':'Injury assessed. Choose whether to follow its recovery plan.')}}
+function openInjuryForm(i){$('modalContent').innerHTML=injuryForm(i);$('modal').className='modal';resetModalViewport();$('saveInjury').onclick=()=>{let obj={...(i||{}),id:i?.id||'inj-'+Date.now(),date:$('injDate').value,rehabStartDate:$('injRehabStart').value,bodyRegion:$('injRegion').value,location:$('injLocation').value.trim(),onset:$('injOnset').value,mechanism:$('injMechanism').value.trim(),painTriggers:$('injTriggers').value.trim(),clinicalDiagnosis:$('injDiagnosis').value.trim(),clinicianExpectedDays:nullableNumber($('injClinicianDays').value),initialPain:nullableNumber($('injInitialPain').value),initialWalkPain:nullableNumber($('injInitialWalk').value),pop:$('injPop').checked,bruising:$('injBruise').checked,initialSymptoms:$('injInitialSymptoms').value.trim(),currentSymptoms:$('injCurrentSymptoms').value.trim(),currentPain:nullableNumber($('injCurrentPain').value),currentWalkPain:nullableNumber($('injCurrentWalk').value),symptomQuality:$('injQuality').value||null,timingPattern:$('injTiming').value||null,painDistribution:$('injDistribution').value.trim(),morningFirstStep:readTri('injMorning'),focalTenderness:readTri('injFocal'),hopPain:readTri('injHopPain'),numbTingle:readTri('injNumb'),shoeRelated:readTri('injShoes'),barefootBetter:readTri('injBarefoot'),resolves48h:readTri('inj48h'),nightPain:readTri('injNight'),lockingCatching:readTri('injLock'),instability:readTri('injInstability'),sittingPain:readTri('injSitting'),resistedPain:readTri('injResisted'),exertionalResolution:readTri('injExertional'),recentLoadIncrease:readTri('injLoadIncrease'),newShoes:readTri('injNewShoes'),camberedSurface:readTri('injCamber'),freeTextClinical:$('injClinicalFree').value.trim(),checkIns:i?.checkIns||[]};if(!obj.date||!obj.rehabStartDate||!obj.bodyRegion||!obj.location)return toast('Enter the injury date, rehabilitation-plan start date, body region and exact location.',true);if(dte(obj.rehabStartDate)<dte(obj.date))return toast('The rehabilitation-plan start date cannot be before the injury date.',true);state.injuries=state.injuries||[];let n=state.injuries.findIndex(x=>x.id===obj.id);n>=0?state.injuries[n]=obj:state.injuries.push(obj);if(!save())return;$('modal').className='modal hidden';renderInjury();toast(n>=0?'Injury assessment updated.':'Injury assessed. Choose whether to follow its recovery plan.')}}
 const openInjuryFormUnvalidated=openInjuryForm;
 openInjuryForm=function(i){
  openInjuryFormUnvalidated(i);ensureAccessibleForms($('modalContent'));
@@ -6239,7 +6299,7 @@ function openInjuryCheck(i,existing=null,options={}){
  if(locomotionStatus==='none'&&Number.isFinite(walkMinutes)&&walkMinutes>0)return toast('Walking minutes must be zero when the walking target was not started.',true);
  if(runStatus==='completed'&&(!Number.isFinite(runMinutes)||runMinutes<=0))return toast('A completed run requires positive running minutes.',true);
  if(runStatus==='stopped'&&(!Number.isFinite(runMinutes)||runMinutes<=0))return toast('Enter the minutes completed before the run was stopped.',true);
- let legacyRehabStatus=rehabExerciseStatus==='not_planned'&&locomotionStatus==='not_planned'?'not_planned':stretchGoalStatus==='achieved'&&rehabExerciseStatus==='all'&&locomotionStatus==='completed'?'stretch':rehabExerciseStatus==='all'&&locomotionStatus==='completed'?'completed':rehabExerciseStatus==='some'||locomotionStatus==='partial'?'reduced':rehabExerciseStatus==='none'&&locomotionStatus==='completed'?'walking_only':rehabExerciseStatus==='stopped'||locomotionStatus==='stopped'?'stopped':rehabExerciseStatus==='none'&&locomotionStatus==='none'?'not_completed':null;let c={date:$('icDate').value,rehabShoeId:selectedRehabShoeId||null,rehabShoeChoiceMade:true,walkDistanceKm:$('icWalkDistanceKm')&&$('icWalkDistanceKm').value!==''?Math.max(0,Number($('icWalkDistanceKm').value)):null,runDistanceKm:$('icRunDistanceKm')&&$('icRunDistanceKm').value!==''?Math.max(0,Number($('icRunDistanceKm').value)):null,pain:nullableNumber($('icPain').value),walkPain:nullableNumber($('icWalk').value),morningStiffness:nullableNumber($('icStiff').value),symptomTrend:$('icTrend').value||null,newSwelling:readTri('icSwelling'),walkMinutes,stairs:readTri('icStairs'),confidence:nullableNumber($('icConfidence').value),rehabExerciseStatus,locomotionStatus,stretchGoalStatus,rehabStatus:legacyRehabStatus,bridge:activeScheduled.strengthPlanned?(rehabExerciseStatus==='stopped'?false:['all','some'].includes(rehabExerciseStatus)?readTri('icBridge'):null):null,hop:activeScheduled.impactPlanned?(rehabExerciseStatus==='stopped'?false:['all','some'].includes(rehabExerciseStatus)?readTri('icHop'):null):null,runStatus,runMinutes,runPain:activeScheduled.runningPlanned?nullableNumber($('icRunPain').value):null,alteredGait:activeScheduled.runningPlanned?readTri('icGait'):null,runQualityTolerated:activeScheduled.qualityPlanned&&runStatus==='completed'?readTri('icRunQuality'):null,runIntensity:activeScheduled.qualityPlanned&&runStatus==='completed'?'quality':null,hillsTolerated:null,planSnapshot:{date:activePlan.date,type:activePlan.type,title:activePlan.title,items:[...(activePlan.items||[])],walkingTarget:activePlan.walkingTarget,stretchGoal:activePlan.stretchGoal,stretchGoalTitle:activePlan.stretchGoalTitle,stretchGoalWhy:activePlan.stretchGoalWhy,stretchGoalOffered:activePlan.stretchGoalOffered,bestOutcome:activePlan.bestOutcome,evidence:activePlan.evidence,running:activePlan.running,rationale:activePlan.rationale,rule:activePlan.rule,stage:activePlan.stage},nextDayWorse:readTri('icWorse'),loadResponse:$('icResponse').value||null,symptoms:$('icSymptoms').value.trim()};const executionCheck=rehabExecutionMeta(c);if((activeScheduled.exercisePlanned||activeScheduled.walkingPlanned||activeScheduled.runningPlanned)&&!executionCheck.assessed)return toast('Complete all scheduled execution questions so this check-in can be scored.',true);if(!c.date)return toast('Enter the check-in date.',true);if(dte(c.date)<dte(i.date))return toast('A check-in cannot be dated before the injury date.',true);const hasObs=Object.entries(c).some(([k,v])=>k!=='date'&&k!=='symptoms'&&v!==null&&v!==''&&v!==undefined);if(!hasObs&&!c.symptoms)return toast('Record at least one observation.',true);if(['stopped','unable'].includes(runStatus)&&Number.isFinite(runMinutes)&&runMinutes<0)return toast('Running minutes cannot be negative.',true);const oldRehabShoeId=existing?.rehabShoeId||null,rehabShoeId=c.rehabShoeId||null,rehabShoeBefore=rehabShoeId?shoeMileage((state.shoes||[]).find(s=>s.id===rehabShoeId)||{}):null;i.checkIns=i.checkIns||[];if(editing&&originalDate!==c.date&&i.checkIns.some(x=>x.date===c.date))return toast('A check-in already exists for that date.',true);const stateBeforeSave=JSON.parse(JSON.stringify(state)),injuryId=i.id;let n=i.checkIns.findIndex(x=>x.date===(editing?originalDate:c.date));n>=0?i.checkIns[n]=c:i.checkIns.push(c);const savedCheck=rehabCheckForDate(i,c.date);if(savedCheck){savedCheck.rehabShoeId=rehabShoeId;savedCheck.rehabShoeChoiceMade=true;syncShoeAcrossMatchedRehabRun(savedCheck,rehabShoeId)}const wasCompleted=Boolean(stateBeforeSave.injuries?.find(x=>x.id===injuryId)?.rehabCompletedAt),completionState=syncRehabCompletionState(i),completedNow=completionState.complete&&!wasCompleted;const saveOk=save();if(!saveOk||!savedCheck||!rehabCheckPersistedExactly(injuryId,savedCheck)){recordDiagnostic('Rehab check-in save verification',new Error(saveOk?'Primary storage did not round-trip the saved check-in.':'Primary storage write failed.'));state=stateBeforeSave;i=state.injuries.find(x=>x.id===injuryId)||i;runtimeDomainFingerprints=null;updateRuntimeDomainRevisions();return toast('Check-in was not saved to device storage. Your previous saved data were kept; free some browser storage and retry.',true)}refreshShoeActualsAfterActivity();const rehabKm=rehabUsageFromCheckIn(i,savedCheck||c)?.distanceKm||Number(matchingLoggedRunForRehab(savedCheck||c)?.distanceKm)||0,shoeNote=shoeReallocationConfirmation(oldRehabShoeId,rehabShoeId,rehabKm,'rehab')||shoeMileageConfirmation(rehabShoeId,rehabShoeBefore,'rehab');$('modal').className='modal hidden';renderInjury();renderToday();toast(completedNow?`Rehabilitation trajectory completed on ${fmtDate(completionState.completedAt)}. Normal training is now authoritative on Today.`:shoeNote||(editing?'Check-in updated and verified on this device.':'Check-in saved and verified on this device.'));};if(editing)$('deleteCheck').onclick=()=>{if(confirm('Delete this check-in?')){i.checkIns=i.checkIns.filter(x=>x.date!==originalDate);const completionState=syncRehabCompletionState(i);save();refreshShoeActualsAfterActivity();$('modal').className='modal hidden';renderInjury();renderToday();toast(completionState.complete?'Check-in deleted; rehabilitation remains completed from the remaining evidence.':'Check-in deleted and trajectory recalculated.')}};
+ let legacyRehabStatus=rehabExerciseStatus==='not_planned'&&locomotionStatus==='not_planned'?'not_planned':stretchGoalStatus==='achieved'&&rehabExerciseStatus==='all'&&locomotionStatus==='completed'?'stretch':rehabExerciseStatus==='all'&&locomotionStatus==='completed'?'completed':rehabExerciseStatus==='some'||locomotionStatus==='partial'?'reduced':rehabExerciseStatus==='none'&&locomotionStatus==='completed'?'walking_only':rehabExerciseStatus==='stopped'||locomotionStatus==='stopped'?'stopped':rehabExerciseStatus==='none'&&locomotionStatus==='none'?'not_completed':null;let c={date:$('icDate').value,rehabShoeId:selectedRehabShoeId||null,rehabShoeChoiceMade:true,walkDistanceKm:$('icWalkDistanceKm')&&$('icWalkDistanceKm').value!==''?Math.max(0,Number($('icWalkDistanceKm').value)):null,runDistanceKm:$('icRunDistanceKm')&&$('icRunDistanceKm').value!==''?Math.max(0,Number($('icRunDistanceKm').value)):null,pain:nullableNumber($('icPain').value),walkPain:nullableNumber($('icWalk').value),morningStiffness:nullableNumber($('icStiff').value),symptomTrend:$('icTrend').value||null,newSwelling:readTri('icSwelling'),walkMinutes,stairs:readTri('icStairs'),confidence:nullableNumber($('icConfidence').value),rehabExerciseStatus,locomotionStatus,stretchGoalStatus,rehabStatus:legacyRehabStatus,bridge:activeScheduled.strengthPlanned?(rehabExerciseStatus==='stopped'?false:['all','some'].includes(rehabExerciseStatus)?readTri('icBridge'):null):null,hop:activeScheduled.impactPlanned?(rehabExerciseStatus==='stopped'?false:['all','some'].includes(rehabExerciseStatus)?readTri('icHop'):null):null,runStatus,runMinutes,runPain:activeScheduled.runningPlanned?nullableNumber($('icRunPain').value):null,alteredGait:activeScheduled.runningPlanned?readTri('icGait'):null,runQualityTolerated:activeScheduled.qualityPlanned&&runStatus==='completed'?readTri('icRunQuality'):null,runIntensity:activeScheduled.qualityPlanned&&runStatus==='completed'?'quality':null,hillsTolerated:null,planSnapshot:{date:activePlan.date,type:activePlan.type,title:activePlan.title,items:[...(activePlan.items||[])],walkingTarget:activePlan.walkingTarget,stretchGoal:activePlan.stretchGoal,stretchGoalTitle:activePlan.stretchGoalTitle,stretchGoalWhy:activePlan.stretchGoalWhy,stretchGoalOffered:activePlan.stretchGoalOffered,bestOutcome:activePlan.bestOutcome,evidence:activePlan.evidence,running:activePlan.running,rationale:activePlan.rationale,rule:activePlan.rule,stage:activePlan.stage},nextDayWorse:readTri('icWorse'),loadResponse:$('icResponse').value||null,symptoms:$('icSymptoms').value.trim()};const executionCheck=rehabExecutionMeta(c);if((activeScheduled.exercisePlanned||activeScheduled.walkingPlanned||activeScheduled.runningPlanned)&&!executionCheck.assessed)return toast('Complete all scheduled execution questions so this check-in can be scored.',true);if(!c.date)return toast('Enter the check-in date.',true);if(dte(c.date)<dte(i.date))return toast('A check-in cannot be dated before the injury date.',true);const hasObs=Object.entries(c).some(([k,v])=>k!=='date'&&k!=='symptoms'&&v!==null&&v!==''&&v!==undefined);if(!hasObs&&!c.symptoms)return toast('Record at least one observation.',true);if(['stopped','unable'].includes(runStatus)&&Number.isFinite(runMinutes)&&runMinutes<0)return toast('Running minutes cannot be negative.',true);const oldRehabShoeId=existing?.rehabShoeId||null,rehabShoeId=c.rehabShoeId||null,rehabShoeBefore=rehabShoeId?shoeMileage((state.shoes||[]).find(s=>s.id===rehabShoeId)||{}):null;i.checkIns=i.checkIns||[];if(editing&&originalDate!==c.date&&i.checkIns.some(x=>x.date===c.date))return toast('A check-in already exists for that date.',true);const stateBeforeSave=JSON.parse(JSON.stringify(state)),persistedBeforeSave=lastPersistedStateText,injuryId=i.id;let n=i.checkIns.findIndex(x=>x.date===(editing?originalDate:c.date));n>=0?i.checkIns[n]=c:i.checkIns.push(c);const savedCheck=rehabCheckForDate(i,c.date);if(savedCheck){savedCheck.rehabShoeId=rehabShoeId;savedCheck.rehabShoeChoiceMade=true;syncShoeAcrossMatchedRehabRun(savedCheck,rehabShoeId)}const wasCompleted=Boolean(stateBeforeSave.injuries?.find(x=>x.id===injuryId)?.rehabCompletedAt),completionState=syncRehabCompletionState(i,{activateOnReopen:Boolean(wasCompleted)}),completedNow=completionState.complete&&!wasCompleted;const saveOk=save();if(!saveOk||!savedCheck||!rehabCheckPersistedExactly(injuryId,savedCheck)){recordDiagnostic('Rehab check-in save verification',new Error(saveOk?'Primary storage did not round-trip the saved check-in.':'Primary storage write failed.'));lastPersistedStateText=persistedBeforeSave||JSON.stringify(stateBeforeSave);if(!restoreLastPersistedState('Rehab check-in verification rollback')){state=stateBeforeSave;runtimeDomainFingerprints=null;updateRuntimeDomainRevisions()}i=state.injuries.find(x=>x.id===injuryId)||i;try{if(lastPersistedStateText){writePrimaryWithQuotaRecovery(lastPersistedStateText);writeMirrorBestEffort(lastPersistedStateText)}}catch(rollbackErr){recordDiagnostic('Rehab verification rollback persistence',rollbackErr)}return toast('Check-in was not saved to device storage. Your previous saved data were kept; free some browser storage and retry.',true)}refreshShoeActualsAfterActivity();const rehabKm=rehabUsageFromCheckIn(i,savedCheck||c)?.distanceKm||Number(matchingLoggedRunForRehab(savedCheck||c)?.distanceKm)||0,shoeNote=shoeReallocationConfirmation(oldRehabShoeId,rehabShoeId,rehabKm,'rehab')||shoeMileageConfirmation(rehabShoeId,rehabShoeBefore,'rehab');$('modal').className='modal hidden';renderInjury();renderToday();toast(completedNow?`Rehabilitation trajectory completed on ${fmtDate(completionState.completedAt)}. Normal training is now authoritative on Today.`:shoeNote||(editing?'Check-in updated and verified on this device.':'Check-in saved and verified on this device.'));};if(editing)$('deleteCheck').onclick=()=>{if(confirm('Delete this check-in?')){i.checkIns=i.checkIns.filter(x=>x.date!==originalDate);const completionState=syncRehabCompletionState(i,{activateOnReopen:true});if(!save())return;refreshShoeActualsAfterActivity();$('modal').className='modal hidden';renderInjury();renderToday();toast(completionState.complete?'Check-in deleted; rehabilitation remains completed from the remaining evidence.':'Check-in deleted and trajectory recalculated.')}};
 }
 const openInjuryCheckUnvalidated=openInjuryCheck;
 openInjuryCheck=function(injury,existing=null,options={}){
@@ -10221,7 +10281,7 @@ function shoeCurrentRotationTileHtml(life,active){
  const healthy=active.filter(s=>shoeWearState(s).status!=='retire').length;
  return`<details class="shoeKeyTile" id="shoeCurrentRotationDetails"><summary><div><small>CURRENT ROTATION</small><b>${active.length} active pair${active.length===1?'':'s'} · ${healthy===active.length?'healthy':'review lifecycle'}</b><span>${active.map(s=>`${shoeDisplayName(s)} ${Math.round(shoeMileage(s))} km`).join(' · ')||'No active shoes'}</span></div></summary><div class="shoeKeyDetail" data-lazy-current-rotation><div class="shoeEmpty">Open to load pair details.</div></div></details>`
 }
-function shoeNextPurchaseTileHtml(life){const buys=life.purchases.filter(x=>x.role!=='race'),next=buys[0],pair=next?life.pairs.find(p=>p.id===next.pairId):null;const summary=next&&pair?`${lifecyclePairLabel(pair)} · ${fmtDate(next.purchaseDate)}`:'No purchase currently required';return`<details class="shoeKeyTile"><summary><div><small>NEXT PURCHASE</small><b>${esc(summary)}</b><span>${next?`${Math.max(0,Math.ceil((dte(next.purchaseDate)-today())/DAY))} days · first meaningful use`:'Current rotation covers the programme'}</span></div></summary><div class="shoeKeyDetail"><p class="shoeKeyIntro">Purchases are need-driven. A future pair is introduced only when lifecycle, maintaining a useful active rotation, quality-session coverage or Race Day readiness requires it. You can override the proposed future training model; the engine then recalculates lifecycle allocation around that choice.</p>${buys.length?buys.map((buy,n)=>{const p=life.pairs.find(x=>x.id===buy.pairId),sel=shoeFuturePairOverrideKeys()[n]||'';return`<div class="shoeOverrideRow"><div><small>FUTURE PAIR ${n+1}</small><b>${esc(p?lifecyclePairLabel(p):'Future pair')}</b><span>First meaningful use ${esc(fmtDate(buy.firstUseDate||buy.purchaseDate))}</span></div><label>Runner override<select data-future-pair-override="${n}">${shoeOverrideProfileOptions(sel,true)}</select></label><p>${esc(buy.reason||'')}</p></div>`}).join(''):'<div class="shoeEmpty">No future training purchase is currently required.</div>'}</div></details>`}
+function shoeNextPurchaseTileHtml(life){const buys=life.purchases.filter(x=>x.role!=='race'),next=buys[0],pair=next?life.pairs.find(p=>p.id===next.pairId):null;const summary=next&&pair?`${lifecyclePairLabel(pair)} · ${fmtDate(next.purchaseDate)}`:'No purchase currently required';return`<details class="shoeKeyTile"><summary><div><small>NEXT PURCHASE</small><b>${esc(summary)}</b><span>${next?`${Math.max(0,civilDayDiff(next.purchaseDate,iso(today())))} days · first meaningful use`:'Current rotation covers the programme'}</span></div></summary><div class="shoeKeyDetail"><p class="shoeKeyIntro">Purchases are need-driven. A future pair is introduced only when lifecycle, maintaining a useful active rotation, quality-session coverage or Race Day readiness requires it. You can override the proposed future training model; the engine then recalculates lifecycle allocation around that choice.</p>${buys.length?buys.map((buy,n)=>{const p=life.pairs.find(x=>x.id===buy.pairId),sel=shoeFuturePairOverrideKeys()[n]||'';return`<div class="shoeOverrideRow"><div><small>FUTURE PAIR ${n+1}</small><b>${esc(p?lifecyclePairLabel(p):'Future pair')}</b><span>First meaningful use ${esc(fmtDate(buy.firstUseDate||buy.purchaseDate))}</span></div><label>Runner override<select data-future-pair-override="${n}">${shoeOverrideProfileOptions(sel,true)}</select></label><p>${esc(buy.reason||'')}</p></div>`}).join(''):'<div class="shoeEmpty">No future training purchase is currently required.</div>'}</div></details>`}
 function shoeRaceDayTileHtml(life){const pair=life.racePair,window=life.raceWindow,name=pair?lifecyclePairLabel(pair):'Race Day pair unavailable',km=pair?Math.round(shoeEngineRaceStartKm(life,pair)):0,sel=String(state.setup?.shoeRacePairOverride||'');return`<details class="shoeKeyTile"><summary><div><small>RACE-DAY SHOE</small><b>${esc(name)}</b><span>${pair?`~${km} km at race start${window?` · target ${Math.round(window.minKm)}–${Math.round(window.maxKm)} km`:''}`:'Planner error'}</span></div></summary><div class="shoeKeyDetail"><div class="shoeOverrideRow race"><div><small>RACE-DAY MODEL</small><b>${esc(name)}</b><span>Coach-selected unless you override it below.</span></div><label>Runner override<select id="shoeRacePairOverride">${shoeOverrideProfileOptions(sel,true)}</select></label><p>The override changes the model preference, not the safety boundaries: the pair must still be available, sufficiently familiar, below 250 km at race start and comfortably inside its useful lifecycle.</p></div>${raceDayShoeTargetHtml()}</div></details>`}
 function shoeMileageBarState(current,retire){
  const ratio=retire>0?current/retire:0;
@@ -10308,8 +10368,8 @@ function invalidateShoeDerivedPlanningCaches(){
 }
 
 function futureRehabShoeUsageStamp(){const injury=(state.injuries||[]).find(x=>x.id===state.activeInjuryPlanId);return [state.storageRevision||0,state.activeInjuryPlanId||'',state.setup?.raceDate||'',(state.shoes||[]).filter(s=>s.status!=='retired').map(s=>`${s.id}:${s.status}:${shoeMileage(s).toFixed(3)}`).join(','),injury?JSON.stringify({id:injury.id,checks:(injury.checkIns||[]).map(c=>[c.date,c.walkMinutes,c.runMinutes,c.rehabShoeId,c.walkDistanceKm,c.runDistanceKm])}):''].join('|')}
-function buildFutureRehabShoeUsageCache(){const stamp=futureRehabShoeUsageStamp();if(futureRehabShoeUsageCache.stamp===stamp)return futureRehabShoeUsageCache.byShoe;const byShoe=new Map(),injury=(state.injuries||[]).find(x=>x.id===state.activeInjuryPlanId);if(injury){const progress=injuryPrediction(injury),todayDate=iso(today()),todayCompleted=(injury.checkIns||[]).some(c=>c.date===todayDate),start=todayCompleted?iso(new Date(today().getTime()+DAY)):todayDate,end=iso(dte(state.setup?.raceDate||start));for(let d=dte(start),n=0;d<=dte(end)&&n<120;d=new Date(d.getTime()+DAY),n++){const date=iso(d),day=rehabCalendarDay(injury,progress,date,rehabPlanDayIndex(injury,date));if(!rehabDayNeedsShoe(day))continue;const sid=plannedRehabShoeForDay(injury,day);if(!sid)continue;const exp=rehabExpectedDistance(day);if(exp.totalKm<=0)continue;if(!byShoe.has(sid))byShoe.set(sid,[]);byShoe.get(sid).push({date,distanceKm:exp.totalKm,sourceType:'planned_rehab',distanceMethod:'estimated',walkMinutes:exp.walkMinutes,runMinutes:exp.runMinutes})}}futureRehabShoeUsageCache={stamp,byShoe};return byShoe}
-function futureRehabShoeUsage(shoeId,days=null){const all=buildFutureRehabShoeUsageCache().get(shoeId)||[];if(days==null)return all;const end=iso(new Date(today().getTime()+days*DAY));return all.filter(x=>x.date<=end)}
+function buildFutureRehabShoeUsageCache(){const stamp=futureRehabShoeUsageStamp();if(futureRehabShoeUsageCache.stamp===stamp)return futureRehabShoeUsageCache.byShoe;const byShoe=new Map(),injury=(state.injuries||[]).find(x=>x.id===state.activeInjuryPlanId);if(injury){const progress=injuryPrediction(injury),todayDate=iso(today()),todayCompleted=(injury.checkIns||[]).some(c=>c.date===todayDate),start=todayCompleted?civilAddDays(todayDate,1):todayDate,end=iso(dte(state.setup?.raceDate||start));for(let date=start,n=0;date<=end&&n<120;date=civilAddDays(date,1),n++){const day=rehabCalendarDay(injury,progress,date,rehabPlanDayIndex(injury,date));if(!rehabDayNeedsShoe(day))continue;const sid=plannedRehabShoeForDay(injury,day);if(!sid)continue;const exp=rehabExpectedDistance(day);if(exp.totalKm<=0)continue;if(!byShoe.has(sid))byShoe.set(sid,[]);byShoe.get(sid).push({date,distanceKm:exp.totalKm,sourceType:'planned_rehab',distanceMethod:'estimated',walkMinutes:exp.walkMinutes,runMinutes:exp.runMinutes})}}futureRehabShoeUsageCache={stamp,byShoe};return byShoe}
+function futureRehabShoeUsage(shoeId,days=null){const all=buildFutureRehabShoeUsageCache().get(shoeId)||[];if(days==null)return all;const end=civilAddDays(iso(today()),days);return all.filter(x=>x.date<=end)}
 function refreshShoeActualsAfterActivity(){
  reconcileShoeUsage();
  futureRehabShoeUsageCache={stamp:null,byShoe:new Map()};
@@ -10339,7 +10399,7 @@ function shoeReallocationConfirmation(oldShoeId,newShoeId,distanceKm,context='ac
 
 
 function shoeFormHtml(shoe={}){const known=knownShoeProfile(shoe.brand,shoe.model,shoe.version),c=shoe.characteristics||{};return`<div class="shoeModalHead"><span>${todayPictogram('shoe')}</span><div><small>${shoe.id?'EDIT SHOE':'ADD RUNNING SHOE'}</small><h2>${shoe.id?'Edit running shoe':'Add running shoe'}</h2><p>Known ASICS neutral models populate their practical profile automatically.</p></div></div><form id="shoeForm" novalidate>${!shoe.id&&shoePurchaseProposals().length?`<div class="field shoePlanPurchasePicker"><label>Planned / proposed shoe</label><select id="sfPlannedPurchase"><option value="">Different shoe — enter manually</option>${shoePurchaseProposals().map(x=>`<option value="${esc(x.id)}">${x.kind==='race'?'Race Day':'Training replacement'} · ${esc([x.brand,x.model,x.version].filter(Boolean).join(' '))}${x.recommendedPurchaseStart?` · ${fmtDate(x.recommendedPurchaseStart)}`:''}</option>`).join('')}</select><small>Select a shoe already proposed by the lifecycle plan, or choose a different shoe. Either choice recalculates the plan around the pair you actually bought.</small></div>`:''}<div class="formGrid"><div class="field"><label>Brand</label><input id="sfBrand" value="${esc(shoe.brand||'ASICS')}" required></div><div class="field"><label>Model</label><input id="sfModel" list="asicsShoeModels" value="${esc(shoe.model||'')}" required><datalist id="asicsShoeModels">${[...new Set(ASICS_SHOE_PROFILES.map(p=>p.family))].map(x=>`<option value="${esc(x)}">`).join('')}</datalist></div><div class="field"><label>Version / generation</label><input id="sfVersion" value="${esc(shoe.version||'')}"></div><div class="field"><label>Optional nickname</label><input id="sfNickname" value="${esc(shoe.nickname||'')}"></div><div class="field"><label>Current accumulated mileage</label><input id="sfMileage" type="number" min="0" max="5000" step="0.1" value="${shoe.id?Math.round(shoeMileage(shoe)*10)/10:Number(shoe.startingKm||0)}"></div><div class="field"><label>Purchase date</label><input id="sfPurchase" type="date" value="${esc(shoe.purchaseDate||'')}"></div><div class="field"><label>First-use date</label><input id="sfFirstUse" type="date" value="${esc(shoe.firstUseDate||'')}"></div><div class="field"><label>Notes</label><textarea id="sfNotes" maxlength="1000">${esc(shoe.notes||'')}</textarea></div></div><div id="unknownShoeFields" class="unknownShoeFields ${known?'hidden':''}"><h3>Unknown shoe profile</h3><div class="formGrid"><div class="field"><label>Support</label><select id="sfSupport"><option value="neutral" ${c.neutral!==false?'selected':''}>Neutral</option><option value="stability" ${c.neutral===false?'selected':''}>Stability</option><option value="unknown">Unknown</option></select></div><div class="field"><label>Surface</label><select id="sfSurface"><option>road</option><option>trail</option><option>mixed</option></select></div><div class="field"><label>Cushioning</label><select id="sfCushion"><option value="2">Low</option><option value="3" selected>Moderate</option><option value="4">High</option><option value="5">Maximum</option></select></div><div class="field"><label>Ride</label><select id="sfRide"><option value="balanced">Balanced</option><option value="responsive">Responsive</option><option value="soft">Soft</option></select></div></div><fieldset><legend>Typical uses</legend><div class="shoeRoleChecks">${['daily','recovery','long','tempo','intervals','race','mixed'].map(r=>`<label><input type="checkbox" name="sfRole" value="${r}" ${Array.isArray(c.roles)&&c.roles.includes(r)?'checked':''}> ${SHOE_ROLE_LABELS[r]}</label>`).join('')}</div></fieldset></div><div id="knownShoeNotice" class="shoeKnownNotice ${known?'':'hidden'}"></div><button id="saveShoeBtn" class="primary full" type="submit">${shoe.id?'Save shoe':'Add shoe'}</button>${shoe.id?`<button id="deleteShoeFromEdit" class="danger full" type="button">Delete shoe</button>`:''}</form>`}
-function bindShoeForm(shoe={}){const plannedPicker=$('sfPlannedPurchase');if(plannedPicker)plannedPicker.onchange=()=>{const pp=shoePurchaseProposals().find(x=>x.id===plannedPicker.value);if(pp){$('sfBrand').value=pp.brand||'ASICS';$('sfModel').value=pp.model||'';$('sfVersion').value=pp.version||'';$('sfPurchase').value=iso(today());$('sfFirstUse').value='';refresh()}};const refresh=()=>{const p=knownShoeProfile($('sfBrand').value,$('sfModel').value,$('sfVersion').value);$('unknownShoeFields').classList.toggle('hidden',!!p);$('knownShoeNotice').classList.toggle('hidden',!p);if(p)$('knownShoeNotice').innerHTML=`<b>Recognised ASICS profile</b><p>${esc(p.manufacturerPositioning)}</p><small>Manufacturer positioning is kept separate from app-derived recommendation scores.</small>`};['sfBrand','sfModel','sfVersion'].forEach(id=>$(id).addEventListener('input',refresh));refresh();if($('deleteShoeFromEdit'))$('deleteShoeFromEdit').onclick=()=>{const existing=(state.shoes||[]).find(s=>s.id===shoe.id);if(existing)deleteOwnedShoe(existing)};$('shoeForm').onsubmit=e=>{e.preventDefault();const brand=CORE.cleanText($('sfBrand').value,80).trim(),model=CORE.cleanText($('sfModel').value,100).trim(),version=CORE.cleanText($('sfVersion').value,30).trim();if(!brand||!model)return toast('Brand and model are required.',true);const p=knownShoeProfile(brand,model,version),current=Number($('sfMileage').value);if(!Number.isFinite(current)||current<0)return toast('Current accumulated mileage must be zero or greater.',true);let characteristics=p?{profileKey:`${p.family}-${p.version}${p.variant?'-'+p.variant:''}`,source:'manufacturer/known profile'}:{source:'user-entered',neutral:$('sfSupport').value==='unknown'?null:$('sfSupport').value==='stability'?false:true,surfaces:[$('sfSurface').value],roles:[...document.querySelectorAll('input[name="sfRole"]:checked')].map(x=>x.value),cushioning:Number($('sfCushion').value),ride:$('sfRide').value};if(!p&&!characteristics.roles.length)characteristics.roles=['mixed'];const existing=shoe.id?(state.shoes||[]).find(s=>s.id===shoe.id):null;const trackingStart=iso(today());if(existing){const before=shoeMileage(existing),diff=current-before;Object.assign(existing,{brand,model,version,nickname:CORE.cleanText($('sfNickname').value,100),purchaseDate:$('sfPurchase').value||null,firstUseDate:$('sfFirstUse').value||null,notes:CORE.cleanText($('sfNotes').value,1000),surface:p?(p.surfaces||[]).join('/'):$('sfSurface').value,category:p?(p.roles||[])[0]:'mixed',characteristics,replacementRangeKm:{low:p?.typicalReplacementLowKm||existing.replacementRangeKm?.low||550,high:p?.typicalReplacementHighKm||existing.replacementRangeKm?.high||850},updatedAt:new Date().toISOString()});if(Math.abs(diff)>.01)state.shoeUsage.push({id:`shoe-adj-${Date.now()}`,shoeId:existing.id,runId:null,date:iso(today()),distanceKm:0,adjustmentKm:diff,source:'manual-adjustment',note:'Mileage correction from shoe edit'});}else{const id=`shoe-${Date.now()}`;state.shoes.push({id,brand,model,version,nickname:CORE.cleanText($('sfNickname').value,100),colour:'',purchaseDate:$('sfPurchase').value||null,firstUseDate:$('sfFirstUse').value||null,startingKm:current,manualAdjustmentKm:0,surface:p?(p.surfaces||[]).join('/'):$('sfSurface').value,category:p?(p.roles||[])[0]:'mixed',characteristics,replacementRangeKm:{low:p?.typicalReplacementLowKm||550,high:p?.typicalReplacementHighKm||850},status:'active',condition:'Feels normal',conditionFeedback:'Feels normal',notes:CORE.cleanText($('sfNotes').value,1000),createdAt:new Date().toISOString(),trackingStartDate:trackingStart})}if(!existing){const pickedId=$('sfPlannedPurchase')?.value||'';const picked=shoePurchaseProposals().find(x=>x.id===pickedId);const samePicked=picked&&normalizeShoeFamily(picked.brand)===normalizeShoeFamily(brand)&&normalizeShoeFamily(picked.model)===normalizeShoeFamily(model)&&String(picked.version||'')===String(version||'');if(samePicked){const persisted=(state.plannedShoePurchases||[]).find(x=>x.id===picked.id);if(persisted){persisted.status='purchased';persisted.purchasedShoeId=id;persisted.purchasedAt=new Date().toISOString()}const added=(state.shoes||[]).find(x=>x.id===id);if(added){added.sourceProposalId=picked.id;added.sourceProposalRole=picked.kind||picked.intendedRole||null;added.sourceProposalReplacesShoeId=picked.replacesShoeId||null}}else if(picked){const persisted=(state.plannedShoePurchases||[]).find(x=>x.id===picked.id);if(persisted){persisted.status='dismissed';persisted.rationale=(persisted.rationale||'')+' Replaced by the runner’s actual purchase: '+[brand,model,version].filter(Boolean).join(' ')+'.'}}else{const planned=(state.plannedShoePurchases||[]).find(x=>x.status==='planned'&&normalizeShoeFamily(x.brand)===normalizeShoeFamily(brand)&&normalizeShoeFamily(x.model)===normalizeShoeFamily(model));if(planned){planned.status='purchased';planned.purchasedShoeId=id}}}reconcileShoeUsage();shoeAutoAssignments();save();closeDialog();renderAll();toast(existing?'Shoe updated.':'Running shoe added.')};}
+function bindShoeForm(shoe={}){const plannedPicker=$('sfPlannedPurchase');if(plannedPicker)plannedPicker.onchange=()=>{const pp=shoePurchaseProposals().find(x=>x.id===plannedPicker.value);if(pp){$('sfBrand').value=pp.brand||'ASICS';$('sfModel').value=pp.model||'';$('sfVersion').value=pp.version||'';$('sfPurchase').value=iso(today());$('sfFirstUse').value='';refresh()}};const refresh=()=>{const p=knownShoeProfile($('sfBrand').value,$('sfModel').value,$('sfVersion').value);$('unknownShoeFields').classList.toggle('hidden',!!p);$('knownShoeNotice').classList.toggle('hidden',!p);if(p)$('knownShoeNotice').innerHTML=`<b>Recognised ASICS profile</b><p>${esc(p.manufacturerPositioning)}</p><small>Manufacturer positioning is kept separate from app-derived recommendation scores.</small>`};['sfBrand','sfModel','sfVersion'].forEach(id=>$(id).addEventListener('input',refresh));refresh();if($('deleteShoeFromEdit'))$('deleteShoeFromEdit').onclick=()=>{const existing=(state.shoes||[]).find(s=>s.id===shoe.id);if(existing)deleteOwnedShoe(existing)};$('shoeForm').onsubmit=e=>{e.preventDefault();const brand=CORE.cleanText($('sfBrand').value,80).trim(),model=CORE.cleanText($('sfModel').value,100).trim(),version=CORE.cleanText($('sfVersion').value,30).trim();if(!brand||!model)return toast('Brand and model are required.',true);const p=knownShoeProfile(brand,model,version),current=Number($('sfMileage').value);if(!Number.isFinite(current)||current<0)return toast('Current accumulated mileage must be zero or greater.',true);let characteristics=p?{profileKey:`${p.family}-${p.version}${p.variant?'-'+p.variant:''}`,source:'manufacturer/known profile'}:{source:'user-entered',neutral:$('sfSupport').value==='unknown'?null:$('sfSupport').value==='stability'?false:true,surfaces:[$('sfSurface').value],roles:[...document.querySelectorAll('input[name="sfRole"]:checked')].map(x=>x.value),cushioning:Number($('sfCushion').value),ride:$('sfRide').value};if(!p&&!characteristics.roles.length)characteristics.roles=['mixed'];const existing=shoe.id?(state.shoes||[]).find(s=>s.id===shoe.id):null;const trackingStart=iso(today());if(existing){const before=shoeMileage(existing),diff=current-before;Object.assign(existing,{brand,model,version,nickname:CORE.cleanText($('sfNickname').value,100),purchaseDate:$('sfPurchase').value||null,firstUseDate:$('sfFirstUse').value||null,notes:CORE.cleanText($('sfNotes').value,1000),surface:p?(p.surfaces||[]).join('/'):$('sfSurface').value,category:p?(p.roles||[])[0]:'mixed',characteristics,replacementRangeKm:{low:p?.typicalReplacementLowKm||existing.replacementRangeKm?.low||550,high:p?.typicalReplacementHighKm||existing.replacementRangeKm?.high||850},updatedAt:new Date().toISOString()});if(Math.abs(diff)>.01)state.shoeUsage.push({id:`shoe-adj-${Date.now()}`,shoeId:existing.id,runId:null,date:iso(today()),distanceKm:0,adjustmentKm:diff,source:'manual-adjustment',note:'Mileage correction from shoe edit'});}else{const id=`shoe-${Date.now()}`;state.shoes.push({id,brand,model,version,nickname:CORE.cleanText($('sfNickname').value,100),colour:'',purchaseDate:$('sfPurchase').value||null,firstUseDate:$('sfFirstUse').value||null,startingKm:current,manualAdjustmentKm:0,surface:p?(p.surfaces||[]).join('/'):$('sfSurface').value,category:p?(p.roles||[])[0]:'mixed',characteristics,replacementRangeKm:{low:p?.typicalReplacementLowKm||550,high:p?.typicalReplacementHighKm||850},status:'active',condition:'Feels normal',conditionFeedback:'Feels normal',notes:CORE.cleanText($('sfNotes').value,1000),createdAt:new Date().toISOString(),trackingStartDate:trackingStart})}if(!existing){const pickedId=$('sfPlannedPurchase')?.value||'';const picked=shoePurchaseProposals().find(x=>x.id===pickedId);const samePicked=picked&&normalizeShoeFamily(picked.brand)===normalizeShoeFamily(brand)&&normalizeShoeFamily(picked.model)===normalizeShoeFamily(model)&&String(picked.version||'')===String(version||'');if(samePicked){const persisted=(state.plannedShoePurchases||[]).find(x=>x.id===picked.id);if(persisted){persisted.status='purchased';persisted.purchasedShoeId=id;persisted.purchasedAt=new Date().toISOString()}const added=(state.shoes||[]).find(x=>x.id===id);if(added){added.sourceProposalId=picked.id;added.sourceProposalRole=picked.kind||picked.intendedRole||null;added.sourceProposalReplacesShoeId=picked.replacesShoeId||null}}else if(picked){const persisted=(state.plannedShoePurchases||[]).find(x=>x.id===picked.id);if(persisted){persisted.status='dismissed';persisted.rationale=(persisted.rationale||'')+' Replaced by the runner’s actual purchase: '+[brand,model,version].filter(Boolean).join(' ')+'.'}}else{const planned=(state.plannedShoePurchases||[]).find(x=>x.status==='planned'&&normalizeShoeFamily(x.brand)===normalizeShoeFamily(brand)&&normalizeShoeFamily(x.model)===normalizeShoeFamily(model));if(planned){planned.status='purchased';planned.purchasedShoeId=id}}}reconcileShoeUsage();shoeAutoAssignments();if(!save())return;closeDialog();renderAll();toast(existing?'Shoe updated.':'Running shoe added.')};}
 function openShoeForm(shoe=null){$('modalContent').innerHTML=shoeFormHtml(shoe||{});$('modal').className='modal shoeEditModal';bindShoeForm(shoe||{})}
 function shoeDetailHtml(shoe){const p=shoeProfileForShoe(shoe),f=shoeForecast(shoe),runs=shoeRunUsage(shoe.id).slice().sort((a,b)=>b.date.localeCompare(a.date)),rehab=shoeRehabUsage(shoe.id).slice().sort((a,b)=>b.date.localeCompare(a.date)),all=shoeDistanceUsage(shoe.id),longest=runs.length?Math.max(...runs.map(u=>Number(u.distanceKm)||0)):0,race=raceShoeCondition(shoe),recent=[...runs,...rehab].sort((a,b)=>b.date.localeCompare(a.date)).slice(0,10);return`<div class="shoeDetailHead">${shoeImageHtml(shoe,{className:'shoeDetailPhoto',eager:true})}<div><small>${esc(shoe.brand)}</small><h2>${esc([shoe.model,shoe.version].filter(Boolean).join(' '))}</h2>${shoe.nickname?`<p>${esc(shoe.nickname)}</p>`:''}</div><span class="shoeStatus ${shoeStatusClass(f.status)}">${esc(f.label)}</span></div><div class="shoeDetailMetrics"><div><small>CURRENT MILEAGE</small><b>${f.km.toFixed(1)} km</b></div><div><small>TOTAL ACTIVITIES</small><b>${all.length}</b></div><div><small>AVG KM/WEEK</small><b>${shoeWeeklyActual(shoe.id).toFixed(1)}</b></div><div><small>LONGEST RUN</small><b>${longest.toFixed(1)} km</b></div></div><section class="shoeDetailSection"><h3>Characteristics</h3><ul>${shoeCharacteristicLanguage(p).map(x=>`<li>${esc(x)}</li>`).join('')}</ul><p class="muted">${esc(p.manufacturerPositioning)}</p><small>${p.profileConfidence==='user-entered'?'User-entered profile':'Manufacturer/known profile'} · recommendation suitability is model-derived.</small></section><section class="shoeDetailSection"><h3>Mileage history</h3>${shoeMileageChartSingleHtml(shoe)}</section><section class="shoeDetailSection"><h3>Replacement outlook</h3><div class="shoeDetailOutlook"><b>${Math.round(f.low)}–${Math.round(f.high)} km expected range</b><span>${esc(shoeForecastDateText(f))}</span><small>${f.weekly?`${f.weekly.toFixed(1)} km/week from ${f.source}`:'No reliable usage rate yet'} · ${f.confidence} confidence</small></div><div class="field"><label>Shoe condition</label><select id="shoeConditionSelect">${SHOE_CONDITIONS.map(x=>`<option ${shoe.condition===x?'selected':''}>${x}</option>`).join('')}</select></div></section><section class="shoeDetailSection"><h3>Race-day outlook</h3><div class="shoeDetailOutlook"><b>${esc(race.label)}</b><span>${Math.round(race.projected)} km projected on race day</span><small>${race.fam.runs} verified runs · ${race.fam.km.toFixed(1)} km verified running familiarity</small></div></section><section class="shoeDetailSection"><h3>Recent usage</h3>${recent.length?recent.map(u=>`<div class="shoeRecentRun"><span>${fmtDate(u.date)} · ${u.sourceType==='logged_run'?'Run':u.sourceType==='rehab_walk'?'Rehab walk':'Rehab run'}${u.distanceMethod==='estimated'?' · estimated':''}</span><b>${Number(u.distanceKm).toFixed(1)} km</b></div>`).join(''):'<p class="muted">No linked usage yet.</p>'}${rehab.length?`<p class="muted compact">Rehabilitation usage: ${rehab.length} activities · ${sum(rehab.map(x=>Number(x.distanceKm)||0)).toFixed(1)} km${rehab.some(x=>x.distanceMethod==='estimated')?' including estimated distance':''}.</p>`:''}</section><div class="buttonRow"><button id="editShoeDetail" class="secondary" type="button">Edit shoe</button><button id="retireShoe" class="secondary" type="button">${shoe.status==='retired'?'Reactivate':'Retire'}</button><button id="deleteShoe" class="danger" type="button">Delete</button></div>`}
 function shoeMileageChartSingleHtml(shoe){const pts=shoeMileageSeries(shoe);if(!pts.length)return'<p class="muted">No mileage history yet.</p>';const values=pts.map(x=>x.km),dates=pts.map(x=>x.date),minD=dte(dates[0]).getTime(),maxD=Math.max(minD+DAY,dte(dates.at(-1)).getTime()),maxY=Math.max(50,Math.ceil(Math.max(...values)*1.15/50)*50),W=680,H=280,L=72,R=24,T=28,B=54,x=d=>L+(dte(d).getTime()-minD)/(maxD-minD)*(W-L-R),y=v=>T+(maxY-v)/maxY*(H-T-B),line=pts.map(p=>`${x(p.date).toFixed(1)},${y(p.km).toFixed(1)}`).join(' '),ticks=[0,.25,.5,.75,1].map(f=>{const v=Math.round(maxY*f);return`<line x1="${L}" y1="${y(v)}" x2="${W-R}" y2="${y(v)}" class="shoeHistoryGrid"/><text x="${L-12}" y="${y(v)+5}" text-anchor="end" class="shoeHistoryLabel">${v}</text>`}).join(''),estimated=pts.filter(p=>p.distanceMethod==='estimated').map(p=>`<circle cx="${x(p.date)}" cy="${y(p.km)}" r="5" class="shoeEstimatedPoint"/>`).join(''),last=pts.at(-1);return`<div class="shoeChartWrap single"><div class="shoeHistoryHeadline"><b>${Number(last.km).toFixed(1)} km</b><span>accumulated through ${fmtDate(last.date)}</span></div><svg viewBox="0 0 ${W} ${H}" role="img">${ticks}<polyline class="shoeLine" points="${line}"/>${estimated}<circle cx="${x(last.date)}" cy="${y(last.km)}" r="5" class="shoeHistoryCurrent"/><text x="${L}" y="${H-15}" class="shoeHistoryLabel">${esc(fmtDate(dates[0]))}</text><text x="${W-R}" y="${H-15}" text-anchor="end" class="shoeHistoryLabel">${esc(fmtDate(dates.at(-1)))}</text><text transform="translate(20 ${H/2}) rotate(-90)" text-anchor="middle" class="shoeHistoryLabel">Accumulated km</text></svg>${estimated?'<small>Hollow points = rehabilitation distance estimated from recorded minutes.</small>':''}</div>`}
@@ -10362,15 +10422,15 @@ function deleteOwnedShoe(shoe){
  });
  (state.plannedShoePurchases||[]).forEach(item=>{if(item.purchasedShoeId===shoe.id)item.purchasedShoeId=null;if(item.replacesShoeId===shoe.id)item.replacesShoeId=null});
  shoeAutoAssignments();
- save();
+ if(!save())return false;
  closeDialog();
  renderAll();
  toast('Shoe permanently deleted. Historical activities were preserved with shoe set to unknown.');
  return true;
 }
-function openShoeDetail(id){const shoe=(state.shoes||[]).find(s=>s.id===id);if(!shoe)return;$('modalContent').innerHTML=shoeDetailHtml(shoe);$('modal').className='modal shoeDetailModal';$('shoeConditionSelect').onchange=()=>{shoe.condition=$('shoeConditionSelect').value;shoe.conditionFeedback=shoe.condition;save();openShoeDetail(shoe.id);renderShoes()};$('editShoeDetail').onclick=()=>openShoeForm(shoe);$('retireShoe').onclick=()=>{shoe.status=shoe.status==='retired'?'active':'retired';shoe.retiredAt=shoe.status==='retired'?new Date().toISOString():null;state.plannedShoeAssignments=(state.plannedShoeAssignments||[]).filter(a=>a.shoeId!==shoe.id||shoe.status!=='retired');shoeAutoAssignments();save();closeDialog();renderAll();toast(shoe.status==='retired'?'Shoe retired; history preserved.':'Shoe reactivated.')};$('deleteShoe').onclick=()=>deleteOwnedShoe(shoe)}
-function openShoeAdjustment(shoe){const current=shoeMileage(shoe);$('modalContent').innerHTML=`<h2>Adjust shoe mileage</h2><p>${esc(shoeDisplayName(shoe))}</p><div class="shoeAdjustSummary"><span>Current calculated mileage</span><b>${current.toFixed(1)} km</b></div><div class="field"><label>Correct mileage</label><input id="shoeCorrectMileage" type="number" min="0" step="0.1" value="${current.toFixed(1)}"></div><div id="shoeAdjustmentDiff" class="shoeAdjustmentDiff">Difference 0.0 km</div><button id="saveShoeAdjustment" class="primary full" type="button">Save adjustment</button>`;$('modal').className='modal shoeAdjustModal';const refresh=()=>{const n=Number($('shoeCorrectMileage').value),d=n-current;$('shoeAdjustmentDiff').textContent=`Difference ${d>=0?'+':''}${Number.isFinite(d)?d.toFixed(1):'—'} km`};$('shoeCorrectMileage').oninput=refresh;$('saveShoeAdjustment').onclick=()=>{const n=Number($('shoeCorrectMileage').value);if(!Number.isFinite(n)||n<0)return toast('Enter a valid non-negative mileage.',true);const diff=n-current;if(Math.abs(diff)>.001)state.shoeUsage.push({id:`shoe-adj-${Date.now()}`,shoeId:shoe.id,runId:null,date:iso(today()),distanceKm:0,adjustmentKm:diff,source:'manual-adjustment',note:`Corrected calculated mileage from ${current.toFixed(1)} to ${n.toFixed(1)} km`});save();closeDialog();renderAll();toast('Mileage adjustment saved with audit history.')}}
-function choosePlanShoe(planId){const plan=(state.plan||[]).find(p=>p.id===planId);if(!plan)return;const current=canonicalOwnedShoeForPlan(plan);$('modalContent').innerHTML=`<h2>Choose another shoe</h2><p>${fmtDate(plan.date)} · ${esc(plan.type)} · ${Number(plan.distance).toFixed(1)} km</p><div class="field"><label>Planned shoe</label><select id="planShoeChoice"><option value="">Use shoe-engine recommendation</option>${shoeSelectOptions(current,false)}</select><small class="muted">The shoe engine is the default. A manual choice is retained as a runner override for this session.</small></div><button id="savePlanShoeChoice" class="primary full" type="button">Save shoe assignment</button>`;$('modal').className='modal shoeChoiceModal';$('savePlanShoeChoice').onclick=()=>{setRunnerSessionShoe(planId,$('planShoeChoice').value||'');save();closeDialog();renderAll();toast('Session shoe updated. Completed mileage will be credited to the shoe actually used.')}}
+function openShoeDetail(id){const shoe=(state.shoes||[]).find(s=>s.id===id);if(!shoe)return;$('modalContent').innerHTML=shoeDetailHtml(shoe);$('modal').className='modal shoeDetailModal';$('shoeConditionSelect').onchange=()=>{shoe.condition=$('shoeConditionSelect').value;shoe.conditionFeedback=shoe.condition;if(!save())return;openShoeDetail(shoe.id);renderShoes()};$('editShoeDetail').onclick=()=>openShoeForm(shoe);$('retireShoe').onclick=()=>{shoe.status=shoe.status==='retired'?'active':'retired';shoe.retiredAt=shoe.status==='retired'?new Date().toISOString():null;state.plannedShoeAssignments=(state.plannedShoeAssignments||[]).filter(a=>a.shoeId!==shoe.id||shoe.status!=='retired');shoeAutoAssignments();if(!save())return;closeDialog();renderAll();toast(shoe.status==='retired'?'Shoe retired; history preserved.':'Shoe reactivated.')};$('deleteShoe').onclick=()=>deleteOwnedShoe(shoe)}
+function openShoeAdjustment(shoe){const current=shoeMileage(shoe);$('modalContent').innerHTML=`<h2>Adjust shoe mileage</h2><p>${esc(shoeDisplayName(shoe))}</p><div class="shoeAdjustSummary"><span>Current calculated mileage</span><b>${current.toFixed(1)} km</b></div><div class="field"><label>Correct mileage</label><input id="shoeCorrectMileage" type="number" min="0" step="0.1" value="${current.toFixed(1)}"></div><div id="shoeAdjustmentDiff" class="shoeAdjustmentDiff">Difference 0.0 km</div><button id="saveShoeAdjustment" class="primary full" type="button">Save adjustment</button>`;$('modal').className='modal shoeAdjustModal';const refresh=()=>{const n=Number($('shoeCorrectMileage').value),d=n-current;$('shoeAdjustmentDiff').textContent=`Difference ${d>=0?'+':''}${Number.isFinite(d)?d.toFixed(1):'—'} km`};$('shoeCorrectMileage').oninput=refresh;$('saveShoeAdjustment').onclick=()=>{const n=Number($('shoeCorrectMileage').value);if(!Number.isFinite(n)||n<0)return toast('Enter a valid non-negative mileage.',true);const diff=n-current;if(Math.abs(diff)>.001)state.shoeUsage.push({id:`shoe-adj-${Date.now()}`,shoeId:shoe.id,runId:null,date:iso(today()),distanceKm:0,adjustmentKm:diff,source:'manual-adjustment',note:`Corrected calculated mileage from ${current.toFixed(1)} to ${n.toFixed(1)} km`});if(!save())return;closeDialog();renderAll();toast('Mileage adjustment saved with audit history.')}}
+function choosePlanShoe(planId){const plan=(state.plan||[]).find(p=>p.id===planId);if(!plan)return;const current=canonicalOwnedShoeForPlan(plan);$('modalContent').innerHTML=`<h2>Choose another shoe</h2><p>${fmtDate(plan.date)} · ${esc(plan.type)} · ${Number(plan.distance).toFixed(1)} km</p><div class="field"><label>Planned shoe</label><select id="planShoeChoice"><option value="">Use shoe-engine recommendation</option>${shoeSelectOptions(current,false)}</select><small class="muted">The shoe engine is the default. A manual choice is retained as a runner override for this session.</small></div><button id="savePlanShoeChoice" class="primary full" type="button">Save shoe assignment</button>`;$('modal').className='modal shoeChoiceModal';$('savePlanShoeChoice').onclick=()=>{setRunnerSessionShoe(planId,$('planShoeChoice').value||'');if(!save())return;closeDialog();renderAll();toast('Session shoe updated. Completed mileage will be credited to the shoe actually used.')}}
 /* === End Shoes module === */
 
 // Performance layer hotfix: keep cached tabs instant, but never render hidden tabs
@@ -10445,7 +10505,7 @@ const pages=[['today','Today'],['plan','Plan'],['runs','Log'],['dashboard','Prog
 $('nav').innerHTML=pages.map((p,i)=>`<button data-page="${p[0]}" class="${i?'':'active'}">${p[1]}</button>`).join('');
 const pageNodes=new Map([...document.querySelectorAll('.page')].map(node=>[node.id,node]));
 const navButtons=new Map([...document.querySelectorAll('#nav button')].map(node=>[node.dataset.page,node]));
-document.body.onclick=e=>{if(e.target.id==='addShoeBtn'){openShoeForm();return}let sd=e.target.closest('[data-shoe-detail]');if(sd){openShoeDetail(sd.dataset.shoeDetail);return}let cps=e.target.closest('[data-choose-plan-shoe]');if(cps){choosePlanShoe(cps.dataset.choosePlanShoe);return}if(e.target.id==='addInjuryBtn'){openInjuryForm();return}let activate=e.target.closest('[data-activate-injury-plan]');if(activate){let id=activate.dataset.activateInjuryPlan,current=state.injuries.find(x=>x.id===state.activeInjuryPlanId),next=state.injuries.find(x=>x.id===id);if(next&&injuryPrediction(next).completed){toast('This rehabilitation trajectory is already completed. Its history remains available without reactivating a rehab constraint.');return}if(next&&confirm(`Switch the active recovery plan from ${current?.location||'the current injury'} to ${next.location||'this injury'}? Only one plan can be followed at a time.`)){state.activeInjuryPlanId=id;save();renderInjury();renderToday();toast('Active recovery plan switched.')}return;}let phaseTile=e.target.closest('[data-injury-phase]');if(phaseTile){
+document.body.onclick=e=>{if(e.target.id==='addShoeBtn'){openShoeForm();return}let sd=e.target.closest('[data-shoe-detail]');if(sd){openShoeDetail(sd.dataset.shoeDetail);return}let cps=e.target.closest('[data-choose-plan-shoe]');if(cps){choosePlanShoe(cps.dataset.choosePlanShoe);return}if(e.target.id==='addInjuryBtn'){openInjuryForm();return}let activate=e.target.closest('[data-activate-injury-plan]');if(activate){let id=activate.dataset.activateInjuryPlan,current=state.injuries.find(x=>x.id===state.activeInjuryPlanId),next=state.injuries.find(x=>x.id===id);if(next&&injuryPrediction(next).completed){toast('This rehabilitation trajectory is already completed. Its history remains available without reactivating a rehab constraint.');return}if(next&&confirm(`Switch the active recovery plan from ${current?.location||'the current injury'} to ${next.location||'this injury'}? Only one plan can be followed at a time.`)){state.activeInjuryPlanId=id;if(!save())return;renderInjury();renderToday();toast('Active recovery plan switched.')}return;}let phaseTile=e.target.closest('[data-injury-phase]');if(phaseTile){
  const wrap=phaseTile.closest('.injuryTrajectoryWrap'),n=Number(phaseTile.dataset.injuryPhase);
  if(wrap&&Number.isInteger(n)){
   const alreadyOpen=phaseTile.getAttribute('aria-expanded')==='true';
@@ -10461,7 +10521,7 @@ document.body.onclick=e=>{if(e.target.id==='addShoeBtn'){openShoeForm();return}l
   }
  }
  return;
-}let ib=e.target.closest('[data-injury-check]');if(ib){const injury=state.injuries.find(x=>x.id===ib.dataset.injuryCheck);if(injury){const existing=rehabCheckForDate(injury,iso(today()));openInjuryCheck(injury,existing)}return}let ice=e.target.closest('[data-injury-check-edit]');if(ice){let injury=state.injuries.find(x=>x.id===ice.dataset.injuryCheckEdit),check=rehabCheckForDate(injury,ice.dataset.checkDate);if(injury&&check)openInjuryCheck(injury,check);return}let icd=e.target.closest('[data-injury-check-date]');if(icd){let injury=state.injuries.find(x=>x.id===icd.dataset.injuryCheckDate),check=rehabCheckForDate(injury,icd.dataset.checkDate);if(injury)openInjuryCheck(injury,check,{date:icd.dataset.checkDate});return}let ie=e.target.closest('[data-injury-edit]');if(ie){openInjuryForm(state.injuries.find(x=>x.id===ie.dataset.injuryEdit));return}let idel=e.target.closest('[data-injury-delete]');if(idel){if(confirm('Delete this injury and its check-ins?')){state.injuries=state.injuries.filter(x=>x.id!==idel.dataset.injuryDelete);if(state.activeInjuryPlanId===idel.dataset.injuryDelete)state.activeInjuryPlanId=state.injuries.find(x=>!injuryPrediction(x).completed)?.id||null;save();renderInjury()}return}const go=e.target.closest('[data-go]');if(go){closeDialog();activatePage(go.dataset.go,go.dataset.anchor||null);return}const scoreLink=e.target.closest('.wiScoreLink');if(scoreLink){setTimeout(()=>{const d=document.getElementById('executionBreakdownFoldout');if(d)d.open=true},0)}const planRunBtn=e.target.closest('[data-plan-run]');if(planRunBtn){openRunDetails(planRunBtn.dataset.planRun);return}let factorToggle=e.target.closest('.factorToggle');if(factorToggle){let tile=factorToggle.closest('.factorKpi'),open=tile.classList.toggle('open');factorToggle.setAttribute('aria-expanded',String(open));return}let w=e.target.closest('.workout');if(w&&!e.target.closest('button')){document.querySelectorAll('.workout[open]').forEach(x=>{if(x!==w)x.removeAttribute('open')});}};
+}let ib=e.target.closest('[data-injury-check]');if(ib){const injury=state.injuries.find(x=>x.id===ib.dataset.injuryCheck);if(injury){const existing=rehabCheckForDate(injury,iso(today()));openInjuryCheck(injury,existing)}return}let ice=e.target.closest('[data-injury-check-edit]');if(ice){let injury=state.injuries.find(x=>x.id===ice.dataset.injuryCheckEdit),check=rehabCheckForDate(injury,ice.dataset.checkDate);if(injury&&check)openInjuryCheck(injury,check);return}let icd=e.target.closest('[data-injury-check-date]');if(icd){let injury=state.injuries.find(x=>x.id===icd.dataset.injuryCheckDate),check=rehabCheckForDate(injury,icd.dataset.checkDate);if(injury)openInjuryCheck(injury,check,{date:icd.dataset.checkDate});return}let ie=e.target.closest('[data-injury-edit]');if(ie){openInjuryForm(state.injuries.find(x=>x.id===ie.dataset.injuryEdit));return}let idel=e.target.closest('[data-injury-delete]');if(idel){if(confirm('Delete this injury and its check-ins?')){state.injuries=state.injuries.filter(x=>x.id!==idel.dataset.injuryDelete);if(state.activeInjuryPlanId===idel.dataset.injuryDelete)state.activeInjuryPlanId=state.injuries.find(x=>!injuryPrediction(x).completed)?.id||null;if(!save())return;renderInjury()}return}const go=e.target.closest('[data-go]');if(go){closeDialog();activatePage(go.dataset.go,go.dataset.anchor||null);return}const scoreLink=e.target.closest('.wiScoreLink');if(scoreLink){setTimeout(()=>{const d=document.getElementById('executionBreakdownFoldout');if(d)d.open=true},0)}const planRunBtn=e.target.closest('[data-plan-run]');if(planRunBtn){openRunDetails(planRunBtn.dataset.planRun);return}let factorToggle=e.target.closest('.factorToggle');if(factorToggle){let tile=factorToggle.closest('.factorKpi'),open=tile.classList.toggle('open');factorToggle.setAttribute('aria-expanded',String(open));return}let w=e.target.closest('.workout');if(w&&!e.target.closest('button')){document.querySelectorAll('.workout[open]').forEach(x=>{if(x!==w)x.removeAttribute('open')});}};
 const navigationPages=pages.filter(item=>item[0]!=='assessments');
 const primaryPages=navigationPages.slice(0,4),secondaryPages=navigationPages.slice(4);
 function navIcon(page){
@@ -10621,12 +10681,12 @@ function openRunDetails(runId){
     let updated=updatedRunFromForm(r),i=state.runs.findIndex(x=>x.id===r.id);
     if(i<0)throw Error('Run not found.');
     const oldShoeId=selectedShoeIdForRun(r)||null,shoeId=updated.shoeId||null,shoeBefore=shoeId?shoeMileage((state.shoes||[]).find(s=>s.id===shoeId)||{}):null;
-    state.runs.splice(i,1);const before=postRunCoachSnapshot(updated.date);state.runs.splice(i,0,updated);assignRunShoe(updated,shoeId,'run-edit');(state.injuries||[]).forEach(injury=>(injury.checkIns||[]).forEach(check=>{const matched=matchingLoggedRunForRehab(check);if(matched?.id===updated.id)check.rehabShoeId=shoeId||null}));recordPredictionSnapshot(updated.date,'Run update',updated.id);const after=postRunCoachSnapshot(updated.date);updated.coachUpdate=postRunCoachUpdate(updated,before,after);save();refreshShoeActualsAfterActivity();const shoeNote=shoeReallocationConfirmation(oldShoeId,shoeId,updated.distanceKm,'run')||shoeMileageConfirmation(shoeId,shoeBefore,'run');renderAll();$('modalContent').innerHTML=runAnalysisStackHtml(updated,false)+`<button id="closeCoachUpdate" class="primary full" type="button">Done</button>`;$('modal').className='modal logDetailModal';$('closeCoachUpdate').onclick=closeDialog;toast(shoeNote||'Run updated and coaching update recalculated.');
+    state.runs.splice(i,1);const before=postRunCoachSnapshot(updated.date);state.runs.splice(i,0,updated);assignRunShoe(updated,shoeId,'run-edit');(state.injuries||[]).forEach(injury=>(injury.checkIns||[]).forEach(check=>{const matched=matchingLoggedRunForRehab(check);if(matched?.id===updated.id)check.rehabShoeId=shoeId||null}));recordPredictionSnapshot(updated.date,'Run update',updated.id);const after=postRunCoachSnapshot(updated.date);updated.coachUpdate=postRunCoachUpdate(updated,before,after);if(!save())return;refreshShoeActualsAfterActivity();const shoeNote=shoeReallocationConfirmation(oldShoeId,shoeId,updated.distanceKm,'run')||shoeMileageConfirmation(shoeId,shoeBefore,'run');renderAll();$('modalContent').innerHTML=runAnalysisStackHtml(updated,false)+`<button id="closeCoachUpdate" class="primary full" type="button">Done</button>`;$('modal').className='modal logDetailModal';$('closeCoachUpdate').onclick=closeDialog;toast(shoeNote||'Run updated and coaching update recalculated.');
    }catch(err){toast(err.message,true)}
  };
  $('deleteEditedRun').onclick=()=>{
    if(!confirm('Delete this run?'))return;
-   state.runs=state.runs.filter(x=>x.id!==r.id);state.shoeUsage=(state.shoeUsage||[]).filter(u=>u.runId!==r.id);state.predictionHistory=(state.predictionHistory||[]).filter(x=>x.entityId!==r.id);save();refreshShoeActualsAfterActivity();$('modal').className='modal hidden';renderAll();toast('Run deleted.');
+   state.runs=state.runs.filter(x=>x.id!==r.id);state.shoeUsage=(state.shoeUsage||[]).filter(u=>u.runId!==r.id);state.predictionHistory=(state.predictionHistory||[]).filter(x=>x.entityId!==r.id);if(!save())return;refreshShoeActualsAfterActivity();$('modal').className='modal hidden';renderAll();toast('Run deleted.');
  };
 }
 $('runList').onclick=e=>{const card=e.target.closest('[data-run]');if(card)openRunDetails(card.dataset.run)};
@@ -10637,7 +10697,7 @@ $('manualRunBtn').onclick=()=>{
  $('modal').className='modal logEditModal';
  bindEditorPlanRefresh(r);
  $('saveRunEdit').onclick=()=>{
-   try{let created=updatedRunFromForm(r),before=postRunCoachSnapshot(created.date),shoeId=created.shoeId||null,shoeBefore=shoeId?shoeMileage((state.shoes||[]).find(s=>s.id===shoeId)||{}):null;state.runs.push(created);assignRunShoe(created,shoeId,'manual-run');recordPredictionSnapshot(created.date,'Run saved',created.id);let after=postRunCoachSnapshot(created.date);created.coachUpdate=postRunCoachUpdate(created,before,after);save();refreshShoeActualsAfterActivity();const shoeNote=shoeMileageConfirmation(shoeId,shoeBefore,'run');renderAll();$('modalContent').innerHTML=runAnalysisStackHtml(created,false)+`<button id="closeCoachUpdate" class="primary full" type="button">Done</button>`;$('modal').className='modal logEditModal';$('closeCoachUpdate').onclick=closeDialog;toast(shoeNote||'Run saved and coaching update calculated.')}catch(err){toast(err.message,true)}
+   try{let created=updatedRunFromForm(r),before=postRunCoachSnapshot(created.date),shoeId=created.shoeId||null,shoeBefore=shoeId?shoeMileage((state.shoes||[]).find(s=>s.id===shoeId)||{}):null;state.runs.push(created);assignRunShoe(created,shoeId,'manual-run');recordPredictionSnapshot(created.date,'Run saved',created.id);let after=postRunCoachSnapshot(created.date);created.coachUpdate=postRunCoachUpdate(created,before,after);if(!save())return;refreshShoeActualsAfterActivity();const shoeNote=shoeMileageConfirmation(shoeId,shoeBefore,'run');renderAll();$('modalContent').innerHTML=runAnalysisStackHtml(created,false)+`<button id="closeCoachUpdate" class="primary full" type="button">Done</button>`;$('modal').className='modal logEditModal';$('closeCoachUpdate').onclick=closeDialog;toast(shoeNote||'Run saved and coaching update calculated.')}catch(err){toast(err.message,true)}
  };
 };
 $('closeModal').onclick=closeDialog;
@@ -10703,7 +10763,7 @@ $('activityFile').onchange=async e=>{
       recordPredictionSnapshot(savedRun.date,savedRun.sourceFormat==='fit-activity'?'FIT import':'Stryd import',savedRun.id);
       let coachHtml='',coachWarning='';
       try{const after=postRunCoachSnapshot(savedRun.date);if(before){savedRun.coachUpdate=postRunCoachUpdate(savedRun,before,after);coachHtml=postRunCoachUpdateHtml(savedRun)}}catch(e){console.warn('Coach update failed',e);coachWarning=' Run saved; Coach Update unavailable for this import.'}
-      save();refreshShoeActualsAfterActivity();const shoeNote=shoeMileageConfirmation(shoeId,shoeBefore,'run');$('importPreview').className='hidden';preview=null;input.value='';renderAll();
+      if(!save())return;refreshShoeActualsAfterActivity();const shoeNote=shoeMileageConfirmation(shoeId,shoeBefore,'run');$('importPreview').className='hidden';preview=null;input.value='';renderAll();
       if(coachHtml){$('modalContent').innerHTML=coachHtml+`<button id="closeCoachUpdate" class="primary full" type="button">Done</button>`;$('modal').className='modal logDetailModal';$('closeCoachUpdate').onclick=closeDialog}
       toast(shoeNote||`Activity analysed and run saved.${coachWarning}`,!!coachWarning);
     }catch(err){toast(err?.message||'The run could not be saved.',true)}
@@ -10713,12 +10773,11 @@ $('activityFile').onchange=async e=>{
 $('addAssessmentBtn').onclick=()=>{
  const form=$('assessmentForm');form.className='panel';form.innerHTML=`<h3>Fitness assessment result</h3><form id="assessmentEntryForm" novalidate><div class="formGrid"><div class="field"><label>Date</label><input id="aDate" type="date" max="${iso(today())}" required value="${iso(today())}"></div><div class="field"><label>Distance km</label><input id="aDist" type="number" inputmode="decimal" min="0.1" max="200" step="0.01" required value="5"></div><div class="field"><label>Time (M:SS or H:MM:SS)</label><input id="aTime" inputmode="numeric" required placeholder="25:15"></div><div class="field"><label>Average / threshold HR</label><input id="aHr" type="number" min="60" max="240" value="${state.setup.thresholdHr}"></div><div class="field"><label>Average / critical power W</label><input id="aCp" type="number" min="50" max="1000" value="${state.setup.criticalPower}"></div><div class="field"><label>Valid result</label><select id="aValid"><option value="true">Yes</option><option value="false">No</option></select></div></div><button id="saveAssessment" type="submit" class="primary full">Save assessment and completed run</button></form>`;
  ensureAccessibleForms(form);
- $('assessmentEntryForm').onsubmit=event=>{event.preventDefault();const a={id:'a-'+Date.now(),date:$('aDate').value,distance:Number($('aDist').value),time:parseTime($('aTime').value),thresholdHr:optionalBounded($('aHr').value,60,240),criticalPower:optionalBounded($('aCp').value,50,1000),valid:$('aValid').value==='true'};const errors=refineTimeErrors(CORE.validateAssessment(a,{today:iso(today())}),[{field:'time',label:'Assessment time',value:$('aTime').value}]);if(errors.length){showFieldErrors(errors,{date:'#aDate',distance:'#aDist',time:'#aTime',thresholdHr:'#aHr',criticalPower:'#aCp'},form);return toast(CORE.firstErrorMessage(errors),true)}state.assessments.push(a);syncAssessmentRun(a);withPlanLoader('Updating running plan…',()=>{buildPlan();syncAssessmentRun(a);recordPredictionSnapshot(a.date,'Fitness assessment',a.id);save();renderAll();form.className='hidden';toast(a.valid?'Assessment saved, added to run history and applied to future targets.':'Assessment saved and added to run history, but not applied to prediction.')})};
+ $('assessmentEntryForm').onsubmit=event=>{event.preventDefault();const a={id:'a-'+Date.now(),date:$('aDate').value,distance:Number($('aDist').value),time:parseTime($('aTime').value),thresholdHr:optionalBounded($('aHr').value,60,240),criticalPower:optionalBounded($('aCp').value,50,1000),valid:$('aValid').value==='true'};const errors=refineTimeErrors(CORE.validateAssessment(a,{today:iso(today())}),[{field:'time',label:'Assessment time',value:$('aTime').value}]);if(errors.length){showFieldErrors(errors,{date:'#aDate',distance:'#aDist',time:'#aTime',thresholdHr:'#aHr',criticalPower:'#aCp'},form);return toast(CORE.firstErrorMessage(errors),true)}state.assessments.push(a);syncAssessmentRun(a);withPlanLoader('Updating running plan…',()=>{if(!requirePlanBuild('The assessment could not be integrated into a valid plan.')){renderAll();return}syncAssessmentRun(a);recordPredictionSnapshot(a.date,'Fitness assessment',a.id);if(!save())return;renderAll();form.className='hidden';toast(a.valid?'Assessment saved, added to run history and applied to future targets.':'Assessment saved and added to run history, but not applied to prediction.')})};
 };
 
 function validateSetup(candidate){return CORE.validateSetup(candidate).map(error=>error.message)}
 function validateBackup(obj){return obj&&typeof obj==='object'&&obj.setup&&Array.isArray(obj.runs)&&Array.isArray(obj.assessments)&&Array.isArray(obj.days)}
-$('saveSettings').onclick=()=>{let candidate={...state.setup};document.querySelectorAll('[data-setting]').forEach(el=>{let k=el.dataset.setting,t=el.dataset.type,v=el.value;if(t==='number')v=Number(v);if(t==='time')v=parseTime(v);if(t==='percent')v=Number(v)/100;candidate[k]=v});let errors=validateSetup(candidate);if(errors.length)return toast(errors[0],true);let selectedDays=[...document.querySelectorAll('[data-day]')].filter(el=>el.checked).length;if(selectedDays<1)return toast('Select at least one training day.',true);const baselineKeys=['planStart','raceDistance','targetTime','testDistance','testTime','currentWeekly','currentLongest','maxWeekly','peakLong'];const baselineChanged=baselineKeys.some(k=>String(candidate[k])!==String(state.setup[k]));state.setup=candidate;if(baselineChanged){state.programStartPrediction=initialProgrammePrediction(candidate);state.predictionHistory=[];}document.querySelectorAll('[data-day]').forEach(el=>state.days[Number(el.dataset.day)][1]=el.checked);let longRadio=document.querySelector('[data-long-day]:checked'),longIdx=longRadio?Number(longRadio.dataset.longDay):null;if(longIdx==null||!state.days[longIdx]?.[1])return toast('Select one enabled running day as the long-run day.',true);state.days.forEach((d,i)=>d[2]=i===longIdx?'Long run':'Adaptive');buildPlan();state.weekView=currentWeek();save();renderAll();toast('Settings saved. Training frequency and race outlook and preparation model were recalculated; future workouts rebuilt.')};
 function readSettingsDraft(){const candidate={...state.setup};document.querySelectorAll('[data-setting]').forEach(el=>{let value=el.value;const type=el.dataset.type;if(type==='number')value=el.value.trim()===''?null:Number(value);if(type==='time')value=parseTime(value);if(type==='percent')value=el.value.trim()===''?null:Number(value)/100;candidate[el.dataset.setting]=value});const longRadio=document.querySelector('[data-long-day]:checked'),longIdx=longRadio?Number(longRadio.dataset.longDay):null;const days=state.days.map((day,index)=>[day[0],Boolean(document.querySelector(`[data-day="${index}"]`)?.checked),index===longIdx?'Long run':day[2]==='Long run'?'Adaptive':day[2]]);return{candidate,days}}
 function applySettingsDraft(candidate,days){
  const baselineKeys=['planStart','raceDistance','targetTime','testDistance','testTime','currentWeekly','currentLongest','maxWeekly','peakLong'];
@@ -10739,31 +10798,32 @@ function applySettingsDraft(candidate,days){
  if(baselineChanged){state.programStartPrediction=initialProgrammePrediction(state.setup);state.predictionHistory=[]}
  if(trainingChanged){
   return withPlanLoader('Updating running plan…',()=>{
-   buildPlan();state.weekView=currentWeek();
+   if(!requirePlanBuild('These settings violate one or more hard plan constraints.'))return;
+   state.weekView=currentWeek();
    if(trainingChanged||shoeContextChanged)invalidateShoeDerivedPlanningCaches();
-   save();closeDialog();renderAll();
+   if(!save())return;closeDialog();renderAll();
    toast('Settings saved. Future workouts were rebuilt; Undo is available in Settings.');
   })
  }
  if(shoeContextChanged)invalidateShoeDerivedPlanningCaches()
  // Shoe-context-only changes do not rebuild the running plan. The shoe planner
  // will show its own loading overlay when the canonical lifecycle refresh runs.
- save();closeDialog();renderAll();
+ if(!save())return;closeDialog();renderAll();
  toast('Shoe context saved. Training plan unchanged; shoe recommendations were recalculated.');
 }
 $('saveSettings').onclick=()=>{const{candidate,days}=readSettingsDraft(),errors=refineTimeErrors([...CORE.validateSetup(candidate),...CORE.validateDays(days)],[{field:'targetTime',label:'Target time',value:document.querySelector('[data-setting="targetTime"]')?.value},{field:'testTime',label:'Recent test time',value:document.querySelector('[data-setting="testTime"]')?.value}]);if(errors.length){showFieldErrors(errors,{},$('settings'));return toast(CORE.firstErrorMessage(errors),true)}const setupLabels={planStart:'Plan start',raceDate:'Race date',raceName:'Race name',raceDistance:'Race distance',targetTime:'Target time',currentWeekly:'Current weekly distance',currentLongest:'Current longest run',testDistance:'Test distance',testTime:'Test time',thresholdHr:'Threshold HR',criticalPower:'Critical power',bodyWeight:'Body weight',footMechanics:'Foot mechanics / pronation',maxWeekly:'Maximum weekly distance',growth:'Weekly growth limit',peakLong:'Peak long run',taperDays:'Taper days'};const changes=Object.keys(setupLabels).filter(key=>String(candidate[key])!==String(state.setup[key])).map(key=>`<li><b>${esc(setupLabels[key])}</b>: ${esc(state.setup[key])} → ${esc(candidate[key])}</li>`);if(JSON.stringify(days)!==JSON.stringify(state.days))changes.push('<li><b>Training days</b>: availability or long-run day changed</li>');if(!changes.length)return toast('No settings changed.');const trainingKeys=['planStart','raceDate','raceName','raceDistance','targetTime','testDistance','testTime','currentWeekly','currentLongest','thresholdHr','criticalPower','bodyWeight','maxWeekly','growth','peakLong','taperDays'],trainingChanged=trainingKeys.some(key=>String(candidate[key])!==String(state.setup[key]))||JSON.stringify(days)!==JSON.stringify(state.days),title=trainingChanged?'Preview plan rebuild':'Preview shoe-context update',message=trainingChanged?'These changes will rebuild future workouts. Completed history is preserved.':'This changes only the Shoes recommendation/planning context. Your marathon training plan will not be rebuilt.',action=trainingChanged?'Apply and rebuild':'Save shoe context';showDialog(`<h2>${title}</h2><p>${message}</p><ul class="changePreview">${changes.join('')}</ul><div class="buttonRow"><button id="confirmSettings" class="primary" type="button">${action}</button><button id="cancelSettings" class="secondary" type="button">Cancel</button></div>`,title);$('confirmSettings').onclick=()=>applySettingsDraft(candidate,days);$('cancelSettings').onclick=closeDialog};
-$('undoSettingsBtn').onclick=()=>{try{const prior=JSON.parse(localStorage.getItem(UNDO_KEY)||'null');if(!prior)throw Error('No plan rebuild is available to undo.');const restored=normaliseState(prior),check=CORE.validateBackup(restored,{today:iso(today())});if(!check.valid)throw Error(CORE.firstErrorMessage(check.errors));state=restored;withPlanLoader('Restoring running plan…',()=>{buildPlan();save();localStorage.removeItem(UNDO_KEY);renderAll();toast('The previous settings and plan have been restored.')})}catch(err){toast(err.message||'Undo failed.',true)}};
+$('undoSettingsBtn').onclick=()=>{try{const prior=JSON.parse(localStorage.getItem(UNDO_KEY)||'null');if(!prior)throw Error('No plan rebuild is available to undo.');const restored=normaliseState(prior),check=CORE.validateBackup(restored,{today:iso(today())});if(!check.valid)throw Error(CORE.firstErrorMessage(check.errors));state=restored;withPlanLoader('Restoring running plan…',()=>{if(!requirePlanBuild('The saved Undo state no longer produces a valid plan.'))return;if(!save())return;localStorage.removeItem(UNDO_KEY);renderAll();toast('The previous settings and plan have been restored.')})}catch(err){toast(err.message||'Undo failed.',true)}};
 function download(n,t,m){let a=document.createElement('a');a.href=URL.createObjectURL(new Blob([t],{type:m}));a.download=n;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
 $('planHealthBtn').onclick=()=>{renderPlanHealth();const ok=validatePlan(state.plan).valid;toast(ok?'Plan validation passed.':'Plan validation found issues.',!ok)};
-$('backupBtn').onclick=()=>download('ai-running-coach-backup.json',JSON.stringify(state,null,2),'application/json');$('restoreFile').onchange=e=>e.target.files[0]?.text().then(t=>{let candidate=JSON.parse(t);if(!validateBackup(candidate))throw new Error('Backup structure is incomplete.');let errors=validateSetup(candidate.setup);if(errors.length)throw new Error(errors[0]);candidate.schemaVersion=SCHEMA;candidate.plan=Array.isArray(candidate.plan)?candidate.plan:[];state=candidate;buildPlan();save();renderAll();toast('Backup restored and migrated.')}).catch(err=>toast(err?.message||'Invalid backup.',true));$('exportBtn').onclick=()=>download('run-log.csv',['Date,Type,Distance km,Duration sec,HR,Power,RPE,Pain,Previous-night Garmin HRV,Match status,Plan ID,Day offset,Notes',...state.runs.map(r=>[r.date,r.type,r.distanceKm,r.durationSec,r.avgHr,r.avgPower,r.rpe,r.pain,r.hrv??'',r.matchStatus||'',r.planId||'',r.dayOffset??'',`"${String(r.notes||'').replaceAll('"','""')}"`].join(','))].join('\n'),'text/csv');$('resetBtn').onclick=()=>{if(confirm('Delete all app data?')){state=defaults();buildPlan();save();renderAll();initOnboarding();toast('App reset. Enter your own details to start again.')}};
-$('restoreFile').onchange=async event=>{const input=event.target,file=input.files?.[0];if(!file)return;try{if(file.size>5*1024*1024)throw Error('Backup files must be 5 MB or smaller.');const raw=JSON.parse(await file.text());const rawCheck=CORE.validateBackup(raw,{today:iso(today())});if(!rawCheck.valid)throw Error(`Backup rejected: ${CORE.firstErrorMessage(rawCheck.errors)}`);const candidate=normaliseState(raw),normalizedCheck=CORE.validateBackup(candidate,{today:iso(today())});if(!normalizedCheck.valid)throw Error(`Backup rejected after normalization: ${CORE.firstErrorMessage(normalizedCheck.errors)}`);showDialog(`<h2>Preview backup restore</h2><p>Review the validated data before replacing the current local data.</p><dl class="restorePreview"><div><dt>Runs</dt><dd>${candidate.runs.length}</dd></div><div><dt>Assessments</dt><dd>${candidate.assessments.length}</dd></div><div><dt>Injuries</dt><dd>${candidate.injuries.length}</dd></div><div><dt>Shoes</dt><dd>${candidate.shoes.length}</dd></div><div><dt>Race</dt><dd>${esc(candidate.setup.raceName)} · ${esc(candidate.setup.raceDate)}</dd></div></dl><p class="note">A rollback copy of the current data will be kept on this device until the next restore.</p><div class="buttonRow"><button id="confirmRestore" class="primary" type="button">Restore this backup</button><button id="cancelRestore" class="secondary" type="button">Cancel</button></div>`,'Preview backup restore');$('confirmRestore').onclick=()=>{try{localStorage.setItem(BACKUP_KEY,JSON.stringify(state));state=candidate;state.onboardingComplete=true;compactHistoricalActivityStreams();buildPlan();save();closeDialog();input.value='';renderAll();toast('Backup restored. Undo is available in Settings.')}catch(err){toast(err.message||'The backup could not be restored.',true)}};$('cancelRestore').onclick=()=>{input.value='';closeDialog()}}catch(err){input.value='';toast(err.message||'Invalid backup.',true)}};
-$('undoRestoreBtn').onclick=()=>{try{const prior=JSON.parse(localStorage.getItem(BACKUP_KEY)||'null');if(!prior)throw Error('No backup restore is available to undo.');const candidate=normaliseState(prior),check=CORE.validateBackup(candidate,{today:iso(today())});if(!check.valid)throw Error(CORE.firstErrorMessage(check.errors));state=candidate;compactHistoricalActivityStreams();buildPlan();save();localStorage.removeItem(BACKUP_KEY);renderAll();toast('The data from before the restore have been recovered.')}catch(err){toast(err.message||'Restore rollback failed.',true)}};
+$('backupBtn').onclick=()=>download('ai-running-coach-backup.json',JSON.stringify(state,null,2),'application/json');$('exportBtn').onclick=()=>download('run-log.csv',['Date,Type,Distance km,Duration sec,HR,Power,RPE,Pain,Previous-night Garmin HRV,Match status,Plan ID,Day offset,Notes',...state.runs.map(r=>[r.date,r.type,r.distanceKm,r.durationSec,r.avgHr,r.avgPower,r.rpe,r.pain,r.hrv??'',r.matchStatus||'',r.planId||'',r.dayOffset??'',`"${String(r.notes||'').replaceAll('"','""')}"`].join(','))].join('\n'),'text/csv');$('resetBtn').onclick=()=>{if(confirm('Delete all app data?')){state=defaults();if(!requirePlanBuild('The default plan could not be generated.'))return;if(!save())return;renderAll();initOnboarding();toast('App reset. Enter your own details to start again.')}};
+$('restoreFile').onchange=async event=>{const input=event.target,file=input.files?.[0];if(!file)return;try{if(file.size>5*1024*1024)throw Error('Backup files must be 5 MB or smaller.');const raw=JSON.parse(await file.text());const rawCheck=CORE.validateBackup(raw,{today:iso(today())});if(!rawCheck.valid)throw Error(`Backup rejected: ${CORE.firstErrorMessage(rawCheck.errors)}`);const candidate=normaliseState(raw),normalizedCheck=CORE.validateBackup(candidate,{today:iso(today())});if(!normalizedCheck.valid)throw Error(`Backup rejected after normalization: ${CORE.firstErrorMessage(normalizedCheck.errors)}`);showDialog(`<h2>Preview backup restore</h2><p>Review the validated data before replacing the current local data.</p><dl class="restorePreview"><div><dt>Runs</dt><dd>${candidate.runs.length}</dd></div><div><dt>Assessments</dt><dd>${candidate.assessments.length}</dd></div><div><dt>Injuries</dt><dd>${candidate.injuries.length}</dd></div><div><dt>Shoes</dt><dd>${candidate.shoes.length}</dd></div><div><dt>Race</dt><dd>${esc(candidate.setup.raceName)} · ${esc(candidate.setup.raceDate)}</dd></div></dl><p class="note">A rollback copy of the current data will be kept on this device until the next restore.</p><div class="buttonRow"><button id="confirmRestore" class="primary" type="button">Restore this backup</button><button id="cancelRestore" class="secondary" type="button">Cancel</button></div>`,'Preview backup restore');$('confirmRestore').onclick=()=>{try{localStorage.setItem(BACKUP_KEY,JSON.stringify(state));state=candidate;state.onboardingComplete=true;compactHistoricalActivityStreams();if(!requirePlanBuild('The backup cannot be reconciled with hard plan constraints.'))return;if(!save())return;closeDialog();input.value='';renderAll();toast('Backup restored. Undo is available in Settings.')}catch(err){toast(err.message||'The backup could not be restored.',true)}};$('cancelRestore').onclick=()=>{input.value='';closeDialog()}}catch(err){input.value='';toast(err.message||'Invalid backup.',true)}};
+$('undoRestoreBtn').onclick=()=>{try{const prior=JSON.parse(localStorage.getItem(BACKUP_KEY)||'null');if(!prior)throw Error('No backup restore is available to undo.');const candidate=normaliseState(prior),check=CORE.validateBackup(candidate,{today:iso(today())});if(!check.valid)throw Error(CORE.firstErrorMessage(check.errors));state=candidate;compactHistoricalActivityStreams();if(!requirePlanBuild('The rollback data cannot be reconciled with hard plan constraints.'))return;if(!save())return;localStorage.removeItem(BACKUP_KEY);renderAll();toast('The data from before the restore have been recovered.')}catch(err){toast(err.message||'Restore rollback failed.',true)}};
 let deferred;window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferred=e;$('installBtn').className='install'});$('installBtn').onclick=()=>deferred?.prompt();
 $('pillarCards')?.addEventListener('click',e=>{const card=e.target.closest('.pillarCard');if(!card||e.target.closest('summary'))return;const detail=card.querySelector('.pillarExplain');if(!detail)return;card.classList.toggle('open');detail.open=card.classList.contains('open');card.setAttribute('aria-expanded',String(detail.open))});
 $('pillarCards')?.addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&e.target.classList.contains('pillarCard')){e.preventDefault();e.target.click()}});
 function setOnboardingOpen(open){const overlay=$('onboarding');overlay.classList.toggle('hidden',!open);document.body.classList.toggle('onboardingOpen',open);$('mainContent').inert=open;$('nav').inert=open;$('moreNav').inert=open;if(open)requestAnimationFrame(()=>$('obRaceName').focus())}
 function onboardingDraft(){const profile=raceProfile(Number($('obRaceDistance').value));const setup={...state.setup,planStart:iso(today()),raceName:CORE.cleanText($('obRaceName').value,100).trim(),raceDate:$('obRaceDate').value,raceDistance:Number($('obRaceDistance').value),targetTime:parseTime($('obTargetTime').value),currentWeekly:Number($('obCurrentWeekly').value),currentLongest:Number($('obCurrentLongest').value),bodyWeight:Number($('obBodyWeight').value),testDistance:Number($('obTestDistance').value),testTime:parseTime($('obTestTime').value),thresholdHr:Number($('obThresholdHr').value),criticalPower:Number($('obCriticalPower').value),maxWeekly:Math.max(Number($('obCurrentWeekly').value),profile.maxWeekly),growth:profile.growth,peakLong:profile.peakLong,taperDays:profile.taperDays};return{setup,days:profile.days.map(day=>[...day])}}
-function initOnboarding(){if(state.onboardingComplete)return setOnboardingOpen(false);$('obRaceDate').value=state.setup.raceDate;const form=$('onboardingForm'),submit=form.querySelector('[type="submit"]'),summary=$('onboardingErrors');form.addEventListener('input',()=>{form.dataset.reviewed='';submit.textContent='Review and create my plan';summary.className='formErrors hidden';summary.textContent=''});form.onsubmit=event=>{event.preventDefault();const{setup,days}=onboardingDraft(),errors=refineTimeErrors([...CORE.validateSetup(setup),...CORE.validateDays(days)],[{field:'targetTime',label:'Target time',value:$('obTargetTime').value},{field:'testTime',label:'Recent test time',value:$('obTestTime').value}]);if(!$('obConfirm').checked)errors.push({field:'confirm',message:'Confirm that the values are yours before creating the plan.'});const mapping={raceName:'#obRaceName',raceDate:'#obRaceDate',raceDistance:'#obRaceDistance',targetTime:'#obTargetTime',currentWeekly:'#obCurrentWeekly',currentLongest:'#obCurrentLongest',bodyWeight:'#obBodyWeight',testDistance:'#obTestDistance',testTime:'#obTestTime',thresholdHr:'#obThresholdHr',criticalPower:'#obCriticalPower',confirm:'#obConfirm'};if(errors.length){showFieldErrors(errors,mapping,form);summary.className='formErrors';summary.setAttribute('role','alert');summary.textContent=CORE.firstErrorMessage(errors);return toast(CORE.firstErrorMessage(errors),true)}if(form.dataset.reviewed!=='true'){form.dataset.reviewed='true';summary.className='onboardingReview';summary.setAttribute('role','status');summary.innerHTML=`<b>Review your plan inputs</b><p>${esc(setup.raceName)} · ${esc(setup.raceDistance)} km on ${esc(fmtDate(setup.raceDate))}</p><p>Target ${esc(fmtTime(setup.targetTime))}; recent ${esc(setup.testDistance)} km in ${esc(fmtTime(setup.testTime))}; ${esc(setup.currentWeekly)} km/week.</p>`;submit.textContent='Create my plan';submit.focus();return}state.setup=setup;state.days=days;state.onboardingComplete=true;state.programStartPrediction=initialProgrammePrediction(setup);state.predictionHistory=[];withPlanLoader('Creating running plan…',()=>{buildPlan();save();setOnboardingOpen(false);renderAll();toast('Your personal plan is ready. Today is your starting view.')})};setOnboardingOpen(true)}
+function initOnboarding(){if(state.onboardingComplete)return setOnboardingOpen(false);$('obRaceDate').value=state.setup.raceDate;const form=$('onboardingForm'),submit=form.querySelector('[type="submit"]'),summary=$('onboardingErrors');form.addEventListener('input',()=>{form.dataset.reviewed='';submit.textContent='Review and create my plan';summary.className='formErrors hidden';summary.textContent=''});form.onsubmit=event=>{event.preventDefault();const{setup,days}=onboardingDraft(),errors=refineTimeErrors([...CORE.validateSetup(setup),...CORE.validateDays(days)],[{field:'targetTime',label:'Target time',value:$('obTargetTime').value},{field:'testTime',label:'Recent test time',value:$('obTestTime').value}]);if(!$('obConfirm').checked)errors.push({field:'confirm',message:'Confirm that the values are yours before creating the plan.'});const mapping={raceName:'#obRaceName',raceDate:'#obRaceDate',raceDistance:'#obRaceDistance',targetTime:'#obTargetTime',currentWeekly:'#obCurrentWeekly',currentLongest:'#obCurrentLongest',bodyWeight:'#obBodyWeight',testDistance:'#obTestDistance',testTime:'#obTestTime',thresholdHr:'#obThresholdHr',criticalPower:'#obCriticalPower',confirm:'#obConfirm'};if(errors.length){showFieldErrors(errors,mapping,form);summary.className='formErrors';summary.setAttribute('role','alert');summary.textContent=CORE.firstErrorMessage(errors);return toast(CORE.firstErrorMessage(errors),true)}if(form.dataset.reviewed!=='true'){form.dataset.reviewed='true';summary.className='onboardingReview';summary.setAttribute('role','status');summary.innerHTML=`<b>Review your plan inputs</b><p>${esc(setup.raceName)} · ${esc(setup.raceDistance)} km on ${esc(fmtDate(setup.raceDate))}</p><p>Target ${esc(fmtTime(setup.targetTime))}; recent ${esc(setup.testDistance)} km in ${esc(fmtTime(setup.testTime))}; ${esc(setup.currentWeekly)} km/week.</p>`;submit.textContent='Create my plan';submit.focus();return}state.setup=setup;state.days=days;state.onboardingComplete=true;state.programStartPrediction=initialProgrammePrediction(setup);state.predictionHistory=[];withPlanLoader('Creating running plan…',()=>{if(!requirePlanBuild('These setup values cannot produce a valid running plan.'))return;if(!save())return;setOnboardingOpen(false);renderAll();toast('Your personal plan is ready. Today is your starting view.')})};setOnboardingOpen(true)}
 $('onboarding').addEventListener('keydown',event=>{if($('onboarding').classList.contains('hidden'))return;if(event.key==='Escape'){event.preventDefault();toast('Complete first-time setup before using the coach.',true);$('onboardingTitle').focus?.();return}if(event.key!=='Tab')return;const focusable=[...$('onboarding').querySelectorAll('button,input,select,textarea,[tabindex]:not([tabindex="-1"])')].filter(el=>!el.disabled&&el.offsetParent!==null);if(!focusable.length)return;const first=focusable[0],last=focusable.at(-1);if(event.shiftKey&&document.activeElement===first){event.preventDefault();last.focus()}else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first.focus()}});
 
 
@@ -10888,10 +10948,13 @@ function initialiseApplication(){
 
   // Stored state has already been loaded and normalised above. Only regenerate
   // the programme if the persisted programme is genuinely absent.
-  if(!Array.isArray(state.plan)||!state.plan.length){
+  if(startupNeedsPlanMigration){
    startupLoaderStatus('Loading running plan…');
-   buildPlan();
+   if(!buildPlan())throw new Error('The saved programme could not be migrated to the current hard-invariant plan format.');
+   state.runs.forEach(r=>{if(r.planId){const p=state.plan.find(x=>x.id===r.planId)||state.plan.find(x=>x.date===(r.plannedDate||''));if(p){r.planId=p.id;r.plannedDate=p.date;r.dayOffset=civilDayDiff(r.date,p.date);r.matchStatus='matched';r.matchMethod=r.matchMethod||'stable-slot-migration'}}else if(!r.matchStatus)r.matchStatus='adHoc'});
+   if(!save())throw new Error('The migrated programme could not be verified in device storage.');
   }
+  reconcileExactDateMatches();
 
   // Resolve a terminal rehabilitation trajectory before the first render. This
   // upgrades older saved states that already met every Return-to-performance
