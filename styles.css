@@ -6210,3 +6210,13 @@ body:has(#dashboard.progressPage.active),#mainContent:has(#dashboard.progressPag
 /* v15.6.104 — Today training-status tile after rehabilitation */
 #today .todayStatusCard.training.good .statusCopy>strong{color:#9ae77d!important}
 #today .todayStatusCard.training.good .statusCopy>p{color:#d4e3e8!important}
+
+/* v15.6.106 — reliability + cross-tab GUI consistency */
+#today .todayStatusCard.bad .statusRing{border-color:#ff6842!important}
+#today .todayStatusCard.bad .statusCopy>strong{color:#ff8a72!important}
+#today .todayStatusCard.caution .statusRing{border-color:#f1c56a!important}
+#today .todayStatusCard.caution .statusCopy>strong{color:#ffd071!important}
+#today .todayStatusCard.neutral .statusRing{border-color:#7aa9b8!important}
+#settings #restoreFile,#runs #activityFile{position:fixed!important;left:0!important;top:0!important;width:1px!important;height:1px!important;min-width:1px!important;min-height:1px!important;padding:0!important;margin:0!important;border:0!important;opacity:0!important;overflow:hidden!important;clip-path:inset(50%)!important;pointer-events:none!important}
+#assessments .panel.clickable{background:var(--card)!important;border-color:var(--line)!important;box-shadow:none!important}
+#assessments .panel.clickable:hover,#assessments .panel.clickable:focus-within{border-color:rgba(61,214,198,.38)!important}
