@@ -1,22 +1,22 @@
-// AI Running Coach v15.6.106 · build 50706
+// AI Running Coach v15.6.107 · build 50707
 'use strict';
 
-const BUILD = 50706;
-const CACHE = 'arc-v156106-build-50706';
+const BUILD = 50707;
+const CACHE = 'arc-v156107-build-50707';
 const CACHE_PREFIX = 'arc-v';
 const APP_SHELL = './index.html';
 const ASSETS = [
   './index.html',
-  './styles.css?v=50706',
-  './app.js?v=50706',
-  './manifest.webmanifest?v=50706',
-  './icon-192.png?v=50706',
-  './icon-512.png?v=50706',
-  './apple-touch-icon.png?v=50706',
-  './favicon-32x32.png?v=50706',
-  './favicon-16x16.png?v=50706',
-  './favicon.ico?v=50706',
-  './startup-icon.png?v=50706'
+  './styles.css?v=50707',
+  './app.js?v=50707',
+  './manifest.webmanifest?v=50707',
+  './icon-192.png?v=50707',
+  './icon-512.png?v=50707',
+  './apple-touch-icon.png?v=50707',
+  './favicon-32x32.png?v=50707',
+  './favicon-16x16.png?v=50707',
+  './favicon.ico?v=50707',
+  './startup-icon.png?v=50707'
 ];
 
 function cacheRequest(value) {
