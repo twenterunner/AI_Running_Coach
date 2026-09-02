@@ -6220,3 +6220,15 @@ body:has(#dashboard.progressPage.active),#mainContent:has(#dashboard.progressPag
 #settings #restoreFile,#runs #activityFile{position:fixed!important;left:0!important;top:0!important;width:1px!important;height:1px!important;min-width:1px!important;min-height:1px!important;padding:0!important;margin:0!important;border:0!important;opacity:0!important;overflow:hidden!important;clip-path:inset(50%)!important;pointer-events:none!important}
 #assessments .panel.clickable{background:var(--card)!important;border-color:var(--line)!important;box-shadow:none!important}
 #assessments .panel.clickable:hover,#assessments .panel.clickable:focus-within{border-color:rgba(61,214,198,.38)!important}
+
+
+/* v15.6.108 — Log-owned fitness benchmark workflow (50706 visual baseline preserved) */
+.fitnessBenchmarkRunCard,.progressBenchmarkPanel{border:1px solid rgba(68,219,210,.30);border-radius:18px;background:rgba(8,43,53,.72);padding:16px;margin:12px 0}
+.fitnessBenchmarkRunCard .panelHead,.progressBenchmarkCurrent{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.fitnessBenchmarkRunCard h3,.progressBenchmarkCurrent h3{margin:3px 0 5px}.fitnessBenchmarkRunCard p,.progressBenchmarkCurrent p{margin:3px 0}
+.progressBenchmarkSection{margin-top:16px}.progressBenchmarkHistory{margin-top:14px}.progressBenchmarkHistory>summary{cursor:pointer;font-weight:800;color:var(--text,#edf9fb)}
+.progressBenchmarkRows{display:grid;gap:8px;margin-top:10px}.progressBenchmarkRow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px 12px;align-items:center;padding:11px 0;border-top:1px solid rgba(114,179,190,.16)}
+.progressBenchmarkRow:first-child{border-top:0}.progressBenchmarkRow div{min-width:0}.progressBenchmarkRow b,.progressBenchmarkRow span{display:block}.progressBenchmarkRow div>span{margin-top:3px;color:var(--muted,#a9c1c7);font-size:.88rem}.progressBenchmarkRow button{grid-column:1/-1;justify-self:start}
+.logBenchmarkChip{display:inline-flex!important;width:max-content;margin-top:6px;padding:4px 8px;border-radius:999px;font-size:.68rem!important;font-weight:900;letter-spacing:.04em;text-transform:uppercase;border:1px solid rgba(71,215,202,.25)}
+.logBenchmarkChip.good{color:#8beaac;background:rgba(53,172,96,.14)}.logBenchmarkChip.neutral{color:#adc1c7;background:rgba(121,147,154,.12)}
+@media(max-width:520px){.progressBenchmarkCurrent{display:grid}.progressBenchmarkCurrent .status{justify-self:start}.progressBenchmarkRow{grid-template-columns:minmax(0,1fr) auto}}
