@@ -5,9 +5,10 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '15.6.108';
-  const BUILD = 50708;
+  const VERSION = '15.6.109';
+  const BUILD = 50709;
   const SCHEMA = 10400;
+  const FITNESS_ASSESSMENT_ENGINE_VERSION = 1;
   const PRIMARY_STORAGE_KEY = 'arc_v10400_web';
   const MIRROR_STORAGE_KEY = 'arc_v10400_mirror';
   const LEGACY_STORAGE_KEYS = ['arc_v10330_web', 'arc_v10330_mirror', 'arc_v62_web', 'arc_v8500_web', 'arc_v84_web', 'arc_v83_web', 'arc_v8_web'];
@@ -396,6 +397,9 @@ function baseType(type){return TYPE_ALIASES[type]||type}
 function detailedPhase(w){const total=weeks(),tw=Number(state.setup.taperDays)>0?Math.ceil(Number(state.setup.taperDays)/7):0,pre=Math.max(1,total-tw),p=raceProfile();if(tw>0&&w>pre)return'Taper';const x=w/pre;if(x<=.20)return'Foundation';if(x<=.45)return'Aerobic';if(x<=.68)return p.key==='marathon'||['50k','75k','100k'].includes(p.key)?'Endurance':'Development';if(x<=.88)return'Specific';return'Peak'}
 function displayPhaseFromDetailed(dp){return dp==='Foundation'||dp==='Aerobic'?'Base':dp==='Development'||dp==='Endurance'||dp==='Specific'?'Build':dp}
 function phase(w){return displayPhaseFromDetailed(detailedPhase(w))}
+// Legacy fixed assessment windows are retained only as a migration/reference helper.
+// The active programme no longer inserts assessments by calendar fraction; it uses
+// fitnessCalibrationConfidence() + fitnessAssessmentProgrammeDecision() below.
 function assessmentWeeks(total=weeks(),profile=raceProfile()){const taper=Number(state.setup.taperDays)>0?Math.ceil(Number(state.setup.taperDays)/7):0,last=Math.max(2,total-taper-2),fractions=profile.key==='5k'||profile.key==='10k'?[.38,.72]:profile.key==='half'||profile.key==='marathon'?[.48]:[.42];return[...new Set(fractions.map(f=>clamp(Math.round(last*f),3,last)).filter(w=>w>1))]}
 const RACE_PHASE_MATRIX={
  '5k':{Foundation:['Hills','Easy','Easy + strides','Recovery','Long run'],Aerobic:['Threshold','Easy','Easy + strides','Recovery','Long run'],Development:['VO₂max intervals','Easy','Threshold','Recovery','Long run'],Specific:['Race-pace intervals','Easy','Repetition','Recovery','Long run'],Peak:['Race-pace intervals','Easy','Easy + strides','Recovery','Long run'],Taper:['Race-pace intervals','Easy','Shakeout','Recovery','Long run']},
@@ -404,7 +408,94 @@ const RACE_PHASE_MATRIX={
  'marathon':{Foundation:['Hills','Easy','Easy + strides','Recovery','Long run'],Aerobic:['Threshold','Easy','Medium-long','Recovery','Long run'],Endurance:['Threshold','Easy','Medium-long','Recovery','Progression'],Specific:['Marathon-specific','Easy','Medium-long','Recovery','Specific long run'],Peak:['Marathon-specific','Easy','Medium-long','Recovery','Race rehearsal'],Taper:['Marathon-specific','Easy','Shakeout','Recovery','Long run']},
  'ultra':{Foundation:['Hills','Easy','Easy','Recovery','Long run'],Aerobic:['Steady aerobic','Easy','Medium-long','Recovery','Long run'],Endurance:['Hills','Easy','Medium-long','Recovery','Specific long run'],Specific:['Steady aerobic','Easy','Medium-long','Recovery','Race rehearsal'],Peak:['Easy','Recovery','Medium-long','Recovery','Race rehearsal'],Taper:['Steady aerobic','Easy','Shakeout','Recovery','Long run']}};
 function profileMatrixKey(profile=raceProfile()){return['50k','75k','100k'].includes(profile.key)?'ultra':profile.key}
-function weekTypeAssignments(w,weekDates){const profile=raceProfile(),dp=detailedPhase(w),key=profileMatrixKey(profile),matrix=RACE_PHASE_MATRIX[key]||RACE_PHASE_MATRIX.marathon,types=matrix[dp]||matrix.Specific;const enabled=weekDates.filter(x=>x.cfg[1]&&x.date!==state.setup.raceDate),longCandidate=enabled.find(x=>x.cfg[2]==='Long run')||enabled.at(-1),nonLong=enabled.filter(x=>x!==longCandidate),assigned=new Map();nonLong.forEach((x,i)=>assigned.set(x.date,types[Math.min(i,3)]||'Easy'));if(longCandidate)assigned.set(longCandidate.date,types[4]||'Long run');if(assessmentWeeks().includes(w)&&nonLong.length&&dp!=='Taper')assigned.set(nonLong[0].date,'Fitness assessment');return assigned}
+function baseWeekTypeAssignments(w,weekDates){
+ const profile=raceProfile(),dp=detailedPhase(w),key=profileMatrixKey(profile),matrix=RACE_PHASE_MATRIX[key]||RACE_PHASE_MATRIX.marathon,types=matrix[dp]||matrix.Specific;
+ const enabled=weekDates.filter(x=>x.cfg[1]&&x.date!==state.setup.raceDate),longCandidate=enabled.find(x=>x.cfg[2]==='Long run')||enabled.at(-1),nonLong=enabled.filter(x=>x!==longCandidate),assigned=new Map();
+ nonLong.forEach((x,i)=>assigned.set(x.date,types[Math.min(i,3)]||'Easy'));if(longCandidate)assigned.set(longCandidate.date,types[4]||'Long run');return assigned;
+}
+function weekTypeAssignments(w,weekDates,assessmentDecision=null){
+ const assigned=baseWeekTypeAssignments(w,weekDates);
+ if(assessmentDecision?.scheduled&&assessmentDecision.week===w&&assessmentDecision.targetDate&&assigned.has(assessmentDecision.targetDate))assigned.set(assessmentDecision.targetDate,'Fitness assessment');
+ return assigned;
+}
+const FITNESS_CALIBRATION_QUALITY_TYPES=new Set(['Tempo','Threshold','Threshold intervals','Intervals','Hills','Fartlek','VO₂max intervals','Race-pace intervals','Half-marathon-specific','Marathon-specific','Fitness assessment','Race']);
+const FITNESS_ASSESSMENT_SUBSTITUTION_PRIORITY={Threshold:1,'Threshold intervals':1,Intervals:1,'VO₂max intervals':1,'Race-pace intervals':1,Tempo:2,Hills:2,Fartlek:2,'Half-marathon-specific':3,'Marathon-specific':4};
+function fitnessCalibrationConfidence(asOf=iso(today())){
+ const key=civilIso(asOf),benchmark=latestValidAssessment(key),anchorDate=benchmark?.date||state.setup.planStart,ageDays=Math.max(0,civilDayDiff(key,anchorDate));
+ let recency;
+ if(benchmark){
+  if(ageDays<=28)recency=100;else if(ageDays<=84)recency=100-(ageDays-28)*.72;else recency=Math.max(28,60-(ageDays-84)*.38);
+ }else{
+  if(ageDays<=21)recency=88;else if(ageDays<=56)recency=88-(ageDays-21)*.65;else recency=Math.max(32,65-(ageDays-56)*.48);
+ }
+ const recent=(state.runs||[]).filter(r=>r&&r.date<=key&&civilDayDiff(key,r.date)>=0&&civilDayDiff(key,r.date)<=56&&FITNESS_CALIBRATION_QUALITY_TYPES.has(r.type)&&Number(r.distanceKm)>0&&Number(r.durationSec)>0).sort((a,b)=>b.date.localeCompare(a.date));
+ let supportUnits=benchmark?.id?.25:.12,weightedShift=0,shiftWeight=0;
+ recent.forEach(r=>{
+  const days=civilDayDiff(key,r.date),decay=Math.max(.18,1-days/70),typeWeight=r.type==='Race'?.52:r.type==='Fitness assessment'?.48:/Threshold|Marathon-specific|Half-marathon-specific|Race-pace/.test(r.type)?.34:.27;
+  const completeness=.55+(Number.isFinite(Number(r.avgHr))?.13:0)+(Number.isFinite(Number(r.avgPower))?.20:0)+(Number.isFinite(Number(r.rpe))?.12:0);
+  supportUnits+=typeWeight*decay*completeness;
+  if(r.type!=='Fitness assessment'){
+   try{const plan=r.planId?(state.plan||[]).find(p=>p.id===r.planId):null,d=decisionSignalForRun(r,plan);if(d&&Number.isFinite(d.finalSignal)&&Number.isFinite(d.confidenceWeight)){const w=Math.max(.05,d.confidenceWeight)*decay;weightedShift+=Number(d.finalSignal)*w;shiftWeight+=w}}catch{}
+  }
+ });
+ const support=clamp(supportUnits/1.35*100,0,100),meanShift=shiftWeight>0?weightedShift/shiftWeight:0,agreement=shiftWeight>.15?clamp(100-Math.abs(meanShift)*58,38,100):72;
+ let score=.60*recency+.25*support+.15*agreement;
+ if(!benchmark)score=Math.min(score,72);
+ score=Math.round(clamp(score,0,100));
+ const label=score>=80?'High':score>=65?'Moderate':score>=50?'Low':'Very low';
+ const need=score>=80?'none':score>=65?'monitor':score>=50?'refresh':'priority';
+ const benchmarkLabel=benchmark?`${benchmark.distance.toFixed(1)} km · ${fmtTime(benchmark.time)} · ${fmtDate(benchmark.date)}`:`Setup benchmark · ${Number(state.setup.testDistance).toFixed(1)} km in ${fmtTime(Number(state.setup.testTime))}`;
+ const reasons=[];
+ if(benchmark)reasons.push(ageDays<=28?`Measured benchmark is recent (${ageDays} days old).`:`Measured benchmark is ${ageDays} days old.`);else reasons.push('No enabled measured fitness benchmark is available; the configured setup test remains the anchor.');
+ reasons.push(recent.length?`${recent.length} qualifying quality/race session${recent.length===1?'':'s'} in the last 56 days support calibration.`:'No qualifying quality/race evidence in the last 56 days.');
+ if(shiftWeight>.15&&Math.abs(meanShift)>=.18)reasons.push(`Recent programme-linked evidence is moving consistently ${meanShift>0?'above':'below'} the current calibration.`);else if(shiftWeight>.15)reasons.push('Recent programme-linked evidence broadly agrees with the current calibration.');
+ return{score,label,need,benchmark,benchmarkLabel,ageDays,recency:Math.round(recency),support:Math.round(support),agreement:Math.round(agreement),recentCount:recent.length,recent,meanShift,reasons};
+}
+function programmeWeekDates(w){
+ const rows=[];for(let offset=0;offset<7;offset++){const date=civilAddDays(iso(weekStart(w)),offset);if(date>state.setup.raceDate)continue;const dateObj=dte(date),dayName=dateObj.toLocaleDateString('en-US',{weekday:'long'}),cfg=state.days.find(x=>x[0]===dayName)||[dayName,false,'Easy'];rows.push({dateObj,date,dayName,cfg});}return rows;
+}
+function fitnessAssessmentProgrammeDecision(asOf=iso(today()),oldPlan=state.plan||[]){
+ const key=civilIso(asOf),confidence=fitnessCalibrationConfidence(key),raceDays=civilDayDiff(state.setup.raceDate,key),activeInjury=(state.injuries||[]).find(x=>x.id===state.activeInjuryPlanId&&x.rehabCompletionStatus!=='criteria_met');
+ const base={confidence,scheduled:false,targetDate:null,week:null,replacedType:null,status:confidence.score>=80?'not-needed':'monitoring',reason:confidence.score>=80?'Fitness calibration is strongly supported by current evidence.':'Fitness calibration is moderately supported; the programme will keep monitoring evidence without replacing a quality session yet.'};
+ if(confidence.score>=65)return base;
+ if(activeInjury)return{...base,status:'deferred-rehab',reason:'Assessment is deferred while rehabilitation is active; rehabilitation remains the higher-priority programme constraint.'};
+ if(raceDays<=14)return{...base,status:'deferred-race',reason:'Assessment is deferred because race day is within 14 days; freshness and race-specific preparation take priority.'};
+ const existing=(oldPlan||[]).filter(p=>p.type==='Fitness assessment'&&p.assessmentDecision?.dynamic===true&&p.date>=key&&p.date<state.setup.raceDate&&!['Taper','Peak'].includes(p.detailedPhase)).sort((a,b)=>a.date.localeCompare(b.date))[0];
+ if(existing){const replacement=existing.assessmentDecision?.replacedType||'quality session';return{...base,scheduled:true,targetDate:existing.date,week:existing.week,replacedType:replacement,status:'scheduled',reason:`Calibration confidence remains low (${confidence.score}%). The already-programmed Fitness assessment is retained in its existing ${replacement} slot; no training day is added.`};}
+ const startWeek=Math.max(1,trainingWeekForDate(key)),horizon=confidence.score<50?3:4,lastWeek=Math.min(weeks(),startWeek+horizon),minDate=civilAddDays(key,2),testTotal=Math.max(4.5,3.5+Math.max(1,Number(state.setup.testDistance)||5));
+ let candidates=[];
+ for(let w=startWeek;w<=lastWeek;w++){
+  const dp=detailedPhase(w);if(dp==='Taper'||dp==='Peak')continue;
+  const weekDates=programmeWeekDates(w),assign=baseWeekTypeAssignments(w,weekDates),oldWeek=(oldPlan||[]).filter(p=>p.week===w),oldPlannedKm=sum(oldWeek.filter(p=>!['Rest','Race Day'].includes(p.type)).map(p=>Number(p.distance)||0));
+  if(oldPlannedKm>0&&oldPlannedKm<testTotal*1.55)continue;
+  for(const row of weekDates){
+   if(row.date<minDate||row.date>=state.setup.raceDate)continue;const type=assign.get(row.date),rank=FITNESS_ASSESSMENT_SUBSTITUTION_PRIORITY[type];if(!rank)continue;
+   if((dp==='Specific'||dp==='Peak')&&['Marathon-specific','Half-marathon-specific','Race-pace intervals'].includes(type)&&confidence.score>=45)continue;
+   const old=(oldPlan||[]).find(p=>p.date===row.date),preserve=old?.type==='Fitness assessment'?-2:0;
+   candidates.push({week:w,date:row.date,type,dp,rank:rank+preserve});
+  }
+ }
+ candidates.sort((a,b)=>a.rank-b.rank||a.date.localeCompare(b.date));const chosen=candidates[0];
+ if(!chosen)return{...base,status:'deferred-no-slot',reason:'Calibration confidence is low, but no suitable quality-session slot can be replaced without weakening the current programme structure.'};
+ const urgency=confidence.score<50?'Calibration confidence is very low':'Calibration confidence is low';
+ return{...base,scheduled:true,targetDate:chosen.date,week:chosen.week,replacedType:chosen.type,status:'scheduled',reason:`${urgency} (${confidence.score}%). ${chosen.type} is replaced by a Fitness assessment in the existing quality-session slot; running days, long-run placement and programme constraints are unchanged.`};
+}
+function runAffectsFitnessCalibrationEvidence(...runs){
+ return runs.flat().filter(Boolean).some(r=>FITNESS_CALIBRATION_QUALITY_TYPES.has(r.type)||Boolean(r.assessmentId));
+}
+function fitnessAssessmentPlanNeedsReconciliation(asOf=iso(today())){
+ const key=civilIso(asOf),decision=fitnessAssessmentProgrammeDecision(key,state.plan||[]);
+ // Today's prescription is immutable once the day has begun. Reconciliation only
+ // changes future programme slots; a completed assessment can therefore remain in history.
+ if(decision.scheduled&&decision.targetDate<=key)return false;
+ const future=(state.plan||[]).filter(p=>p.type==='Fitness assessment'&&p.date>key&&p.date<state.setup.raceDate);
+ if(decision.scheduled){
+  if(future.length!==1)return true;
+  const planned=future[0];
+  return planned.date!==decision.targetDate||planned.assessmentDecision?.dynamic!==true||planned.assessmentDecision?.replacedType!==decision.replacedType;
+ }
+ return future.length>0;
+}
 function applyRaceProfileDays(profile){if(!profile?.days)return;state.days=profile.days.map(d=>[...d])}
 function trainingOpportunityModel(setup=state.setup,enabledDays=state.days.filter(d=>d[1]).length,currentPhase=phase(currentWeek())){
  const profile=raceProfile(setup.raceDistance);
@@ -454,8 +545,8 @@ function recommendedRaceDate(setup){
  let totalWeeks=Math.ceil(Math.max(minimumTotal,req.requiredBuildWeeks+taperWeeks+2));
  return{date:civilAddDays(setup.planStart,totalWeeks*7),totalWeeks,requiredBuildWeeks:req.requiredBuildWeeks,taperWeeks};
 }
-const BUILD=CORE.BUILD, SCHEMA=CORE.SCHEMA, STORAGE_KEY=CORE.PRIMARY_STORAGE_KEY, MIRROR_KEY=CORE.MIRROR_STORAGE_KEY, MIGRATION_MARKER='arc_v10400_migration_complete', BACKUP_KEY='arc_v10400_restore_rollback', UNDO_KEY='arc_v10400_settings_undo';
-const defaults=()=>{let start=iso(new Date()),setup={planStart:start,raceDate:start,raceName:'Goal Race',raceDistance:42.195,targetTime:15300,currentWeekly:35,currentLongest:18,testDistance:5,testTime:1515,thresholdHr:168,criticalPower:300,bodyWeight:70,maxWeekly:65,growth:.07,peakLong:32,taperDays:14,minFactor:.85,maxFactor:1.05,adaptive:true};setup.raceDate=recommendedRaceDate(setup).date;return({schemaVersion:SCHEMA,setup,days:FIVE_DAY_TEMPLATE.map(d=>[...d]),runs:[],assessments:[],injuries:[],activeInjuryPlanId:null,shoes:[],shoeUsage:[],plannedShoeAssignments:[],plannedShoePurchases:[],plan:[],predictionHistory:[],weekView:null,onboardingComplete:false,storageRevision:0,updatedAt:new Date().toISOString(),migration:{to:SCHEMA,status:'new',time:new Date().toISOString()}})};
+const BUILD=CORE.BUILD, SCHEMA=CORE.SCHEMA, FITNESS_ASSESSMENT_ENGINE_VERSION=1, STORAGE_KEY=CORE.PRIMARY_STORAGE_KEY, MIRROR_KEY=CORE.MIRROR_STORAGE_KEY, MIGRATION_MARKER='arc_v10400_migration_complete', BACKUP_KEY='arc_v10400_restore_rollback', UNDO_KEY='arc_v10400_settings_undo';
+const defaults=()=>{let start=iso(new Date()),setup={planStart:start,raceDate:start,raceName:'Goal Race',raceDistance:42.195,targetTime:15300,currentWeekly:35,currentLongest:18,testDistance:5,testTime:1515,thresholdHr:168,criticalPower:300,bodyWeight:70,maxWeekly:65,growth:.07,peakLong:32,taperDays:14,minFactor:.85,maxFactor:1.05,adaptive:true};setup.raceDate=recommendedRaceDate(setup).date;return({schemaVersion:SCHEMA,setup,days:FIVE_DAY_TEMPLATE.map(d=>[...d]),runs:[],assessments:[],injuries:[],activeInjuryPlanId:null,shoes:[],shoeUsage:[],plannedShoeAssignments:[],plannedShoePurchases:[],plan:[],predictionHistory:[],weekView:null,onboardingComplete:false,fitnessAssessmentEngineVersion:FITNESS_ASSESSMENT_ENGINE_VERSION,storageRevision:0,updatedAt:new Date().toISOString(),migration:{to:SCHEMA,status:'new',time:new Date().toISOString()}})};
 let migrationReport={from:null,to:SCHEMA,status:'new install',source:'defaults',runs:0,assessments:0,fieldsRecovered:0,warning:''};
 function parseStored(raw){if(!raw)return null;try{const x=JSON.parse(raw);return x&&typeof x==='object'?x:null}catch(err){recordDiagnostic('Storage parse',err);return null}}
 function storageCandidates(){const keys=[STORAGE_KEY,MIRROR_KEY,...CORE.LEGACY_STORAGE_KEYS];return keys.map(key=>({key,value:parseStored(localStorage.getItem(key))})).filter(x=>x.value)}
@@ -469,7 +560,7 @@ function normaliseState(input){
  ['planStart','raceDate'].forEach(k=>{if(!CORE.isIsoDate(setup[k])){setup[k]=base.setup[k];recovered++}});setup.raceName=CORE.cleanText(setup.raceName,100).trim()||base.setup.raceName;
  setup.adaptive=setup.adaptive!==false;
  const runs=Array.isArray(src.runs)?src.runs.filter(Boolean).map((r,index)=>({...r,id:CORE.safeId(r.id,`run-${index}`),assessmentId:r.assessmentId?CORE.safeId(r.assessmentId,''):null,planId:r.planId?CORE.safeId(r.planId,''):null,type:CORE.cleanText(r.type||'Easy',80),notes:CORE.cleanText(r.notes,5000),distanceKm:optionalBounded(r.distanceKm,.01,300)??0,durationSec:optionalBounded(r.durationSec,1,172800)??0,avgHr:optionalBounded(r.avgHr,30,250),avgPower:optionalBounded(r.avgPower,1,2000),rpe:optionalBounded(r.rpe,1,10),pain:optionalBounded(r.pain,0,10),recovery:null,hrv:optionalBounded(r.hrv,1,300),powerDrift:optionalBounded(r.powerDrift,-100,100)})):[];
- const assessments=Array.isArray(src.assessments)?src.assessments.filter(Boolean).map((a,index)=>({...a,id:CORE.safeId(a.id,`assessment-${index}`),distance:optionalBounded(a.distance,.1,200)??0,time:optionalBounded(a.time,30,172800)??0,thresholdHr:optionalBounded(a.thresholdHr,30,250),criticalPower:optionalBounded(a.criticalPower,1,2000),valid:Boolean(a.valid)})):[];
+ const assessments=Array.isArray(src.assessments)?src.assessments.filter(Boolean).map((a,index)=>({...a,id:CORE.safeId(a.id,`assessment-${index}`),distance:optionalBounded(a.distance,.1,200)??0,time:optionalBounded(a.time,30,172800)??0,thresholdHr:optionalBounded(a.thresholdHr,30,250),criticalPower:optionalBounded(a.criticalPower,1,2000),valid:a.valid===true})):[];
  const injuries=Array.isArray(src.injuries)?src.injuries.filter(Boolean).map((i,index)=>({...i,id:CORE.safeId(i.id,`injury-${index}`),location:CORE.cleanText(i.location,300),mechanism:CORE.cleanText(i.mechanism,1000),painTriggers:CORE.cleanText(i.painTriggers,1000),clinicalDiagnosis:CORE.cleanText(i.clinicalDiagnosis,500),rehabStartDate:i.rehabStartDate||i.date||base.setup.planStart,initialPain:optionalBounded(i.initialPain,0,10),initialWalkPain:optionalBounded(i.initialWalkPain,0,10),currentPain:optionalBounded(i.currentPain,0,10),currentWalkPain:optionalBounded(i.currentWalkPain,0,10),clinicianExpectedDays:optionalBounded(i.clinicianExpectedDays,1,730),checkIns:Array.isArray(i.checkIns)?i.checkIns.filter(Boolean).map(c=>({...c,pain:optionalBounded(c.pain,0,10),walkPain:optionalBounded(c.walkPain,0,10),morningStiffness:optionalBounded(c.morningStiffness,0,10),runPain:optionalBounded(c.runPain,0,10),confidence:optionalBounded(c.confidence,0,10),walkMinutes:optionalBounded(c.walkMinutes,0,1440),runMinutes:optionalBounded(c.runMinutes,0,1440),symptoms:CORE.cleanText(c.symptoms,2000)})):[]})):[];
  injuries.forEach((injury,index)=>{injury.checkIns.forEach((check,checkIndex)=>{const raw=src.injuries?.[index]?.checkIns?.[checkIndex]||{};check.morningStiffness=optionalBounded(raw.morningStiffness,0,1440);check.rehabShoeId=raw.rehabShoeId?CORE.safeId(raw.rehabShoeId,''):null;check.walkDistanceKm=optionalBounded(raw.walkDistanceKm,0,300);check.runDistanceKm=optionalBounded(raw.runDistanceKm,0,300)});injury.checkIns=injury.checkIns.filter(check=>CORE.validateInjury({...injury,checkIns:[check]},{today:iso(today())}).filter(error=>error.field.startsWith('checkIns.')).length===0)});
  runs.splice(0,runs.length,...runs.filter(run=>CORE.validateRun(run,{allowFuture:true,today:iso(today())}).length===0));
@@ -1416,7 +1507,7 @@ function remapPlanReferences(oldPlan,newPlan,runs,assignments=state.plannedShoeA
 function buildPlan(){
  const priorMemo=planCalculationMemo;planCalculationMemo={};
  const oldPlan=Array.isArray(state.plan)?state.plan.slice():[],oldRuns=Array.isArray(state.runs)?state.runs.slice():[],todayKey=iso(today()),oldByDate=new Map(oldPlan.map(p=>[p.date,p])),frozenDates=new Set(oldPlan.filter(p=>p.date<=todayKey).map(p=>p.date));
- let out=[],total=weeks(),taper=Math.ceil(state.setup.taperDays/7);
+ let out=[],total=weeks(),taper=Math.ceil(state.setup.taperDays/7),assessmentDecision=fitnessAssessmentProgrammeDecision(todayKey,oldPlan);
  try{
   const historicalOutside=oldPlan.filter(p=>p.date<todayKey&&(p.date<state.setup.planStart||p.date>state.setup.raceDate));
   if(historicalOutside.length){recordDiagnostic('Plan rebuild blocked',new Error('New settings would remove historical prescribed sessions.'));return false}
@@ -1440,7 +1531,7 @@ function buildPlan(){
     weekDates.push({dateObj,date,dayName,cfg});
    }
 
-   let isRaceWeek=weekDates.some(x=>x.date===state.setup.raceDate),assignments=weekTypeAssignments(w,weekDates);
+   let isRaceWeek=weekDates.some(x=>x.date===state.setup.raceDate),assignments=weekTypeAssignments(w,weekDates,assessmentDecision);
    let training=weekDates.filter(x=>x.cfg[1]&&x.date!==state.setup.raceDate),assignedTypes=training.map(x=>assignments.get(x.date)||'Easy');
    let hasLong=assignedTypes.some(x=>['Long run','Specific long run','Race rehearsal','Progression'].includes(x));
    let qualityTypes=['Intervals','Tempo','Fitness assessment','Hills','Fartlek','Threshold','Threshold intervals','VO₂max intervals','Race-pace intervals','Marathon-specific','Half-marathon-specific'];
@@ -1459,7 +1550,9 @@ function buildPlan(){
     if(type==='Progression'&&Number(state.setup.peakLong)<8)type='Long run';
     let dist=0;if(type==='Race Day')dist=state.setup.raceDistance;else if(['Long run','Specific long run','Race rehearsal','Progression'].includes(type))dist=longDistance;else if(qualityTypes.includes(type))dist=qualityShare;else if(type!=='Rest')dist=aerobicShare;
     let z=type==='Rest'?null:zone(type,date),id=stablePlanId(date),detail=prescription(type,dist,w,ph,z),prescribedDistance=Number.isFinite(detail.totalDistance)?detail.totalDistance:Math.round(dist*10)/10;
-    let item={id,week:w,date,day:dayName,type,distance:prescribedDistance,phase:ph,detailedPhase:dp,factor,zone:z,...detail},check=validateWorkout(item);
+    let item={id,week:w,date,day:dayName,type,distance:prescribedDistance,phase:ph,detailedPhase:dp,factor,zone:z,...detail};
+    if(type==='Fitness assessment'&&assessmentDecision?.scheduled&&assessmentDecision.targetDate===date)item.assessmentDecision={dynamic:true,confidence:assessmentDecision.confidence.score,confidenceLabel:assessmentDecision.confidence.label,replacedType:assessmentDecision.replacedType,reason:assessmentDecision.reason,createdFromProgramme:true};
+    let check=validateWorkout(item);
     if(!check.valid){recordDiagnostic(`Invalid generated workout ${id}`,new Error(check.errors.join(' ')));item=safeWorkoutFallback(item);item.id=id}
     weekItems.push(item);
    }
@@ -1468,7 +1561,7 @@ function buildPlan(){
   }
   const remapped=remapPlanReferences(oldPlan,out,oldRuns),migratedRuns=remapped.runs,health=validatePlan(out,migratedRuns);
   if(!health.valid){recordDiagnostic('Generated plan rejected by hard invariants',new Error(health.issues.filter(x=>x.severity==='error').slice(0,8).map(x=>x.message).join(' | ')));return false}
-  state.plan=out;state.runs=migratedRuns;state.plannedShoeAssignments=remapped.assignments;state.schemaVersion=SCHEMA;state.lastPlanHealth=health;return true;
+  state.plan=out;state.runs=migratedRuns;state.plannedShoeAssignments=remapped.assignments;state.schemaVersion=SCHEMA;state.fitnessAssessmentEngineVersion=FITNESS_ASSESSMENT_ENGINE_VERSION;state.lastPlanHealth=health;return true;
  }finally{planCalculationMemo=priorMemo}
 }
 function prescription(type,km,w,ph,z){
@@ -1534,7 +1627,8 @@ function prescription(type,km,w,ph,z){
  }
  return{totalDistance:km,warmup:'Pre-race mobility and easy jogging as needed (outside the official race distance)',main:`${fmt(km)} km race`,cooldown:'Walk and begin recovery nutrition after finishing (outside the official race distance)',purpose:'Execute the race plan.',coach:'The displayed distance is the official race distance. Pace, HR and power refer to the race itself; pre-race warm-up and post-race walking are additional.',fuel:'60–90 g carbohydrate/hour and 400–800 ml fluid/hour.',targetScope:'Race effort'};
 }
-const startupNeedsPlanMigration=!Array.isArray(state.plan)||!state.plan.length||(state.plan||[]).some(p=>p?.id!==stablePlanId(p?.date));
+const startupNeedsFitnessAssessmentMigration=Boolean(rawState)&&Number(rawState?.fitnessAssessmentEngineVersion||0)<FITNESS_ASSESSMENT_ENGINE_VERSION;
+const startupNeedsPlanMigration=!Array.isArray(state.plan)||!state.plan.length||(state.plan||[]).some(p=>p?.id!==stablePlanId(p?.date))||startupNeedsFitnessAssessmentMigration||fitnessAssessmentPlanNeedsReconciliation();
 state.runs.forEach(r=>{if(!r.matchStatus)r.matchStatus=r.planId?'matched':'adHoc'});
 function compatibleRunType(planType,runType){
  const groups={
@@ -2678,11 +2772,11 @@ function workoutHtml(p){
  const completedScore=linked?workoutScore(linked,p):null;
  const adaptedLoad=Math.abs(Number(p.factor||1)-1)>=.005,calibrated=Math.abs(Number(z.fitnessIndex||100)-100)>=.5;
  const statusLabel=st==='completed'?'Completed':st==='missed'?'Missed':st==='today'?'Today':st==='rest'?'Rest':'Upcoming';
- const chips=[];if(adaptedLoad)chips.push('<span class="planAdaptChip">Load adapted</span>');if(calibrated)chips.push('<span class="planAdaptChip">Pace/power calibrated</span>');
+ const chips=[];if(adaptedLoad)chips.push('<span class="planAdaptChip">Load adapted</span>');if(calibrated)chips.push('<span class="planAdaptChip">Pace/power calibrated</span>');if(p.assessmentDecision?.dynamic)chips.push('<span class="planAdaptChip assessment">Evidence-triggered assessment</span>');
  const quick=p.type==='Rest'?'' : `<div class="planWorkoutQuick"><span><b>${Number(p.distance).toFixed(1)}</b><small>km</small></span><span><b>${pace(z.pace)}</b><small>pace</small></span><span><b>${Number.isFinite(Number(z.power))?Math.round(z.power):'—'}</b><small>W</small></span></div>`;
  const completion=linked?`<div class="planCompletedEvidence"><span>${planTinyIcon('check')}</span><div><small>COMPLETED EVIDENCE</small><b>${Number(linked.distanceKm).toFixed(1)} km${Number.isFinite(completedScore)?` · ${Math.round(completedScore)}/100 execution`:''}</b></div></div>`:'';
  if(p.type==='Rest')return`<details class="workout planWorkout restWorkout" data-id="${esc(p.id)}"><summary class="planWorkoutSummary"><div class="planDateBox"><small>${day}</small><b>${dt.getDate()}</b><span>${month}</span></div><span class="planWorkoutIcon">${planWorkoutPictogram(p.type)}</span><div class="planWorkoutIdentity"><div class="planWorkoutName"><h3>Rest</h3><span class="planStatus ${st}">${statusLabel}</span></div><p>${esc(p.purpose)}</p></div></summary><div class="planWorkoutBody"><ul class="planBulletList"><li>${esc(p.coach)}</li><li>${esc(p.fuel)}</li></ul></div></details>`;
- return`<details class="workout planWorkout workout-${workoutTypeClass(p.type)}" data-id="${esc(p.id)}"><summary class="planWorkoutSummary"><div class="planDateBox"><small>${day}</small><b>${dt.getDate()}</b><span>${month}</span></div><span class="planWorkoutIcon">${planWorkoutPictogram(p.type)}</span><div class="planWorkoutIdentity"><div class="planWorkoutName"><h3>${esc(p.type)}</h3><span class="planStatus ${st}">${statusLabel}</span></div><p>${esc(p.purpose)}</p>${quick}${planShoeSummaryHtml(p)}${chips.length?`<div class="planAdaptChips">${chips.join('')}</div>`:''}</div></summary><div class="planWorkoutBody">${completion}<div class="planTargets"><div><small>PACE</small><strong>${pace(z.pace)}</strong><span>${esc(p.targetScope||'main set')}</span></div><div><small>POWER</small><strong>${Number.isFinite(Number(z.power))?Math.round(z.power)+' W':'—'}</strong><span>${esc(p.targetScope||'main set')}</span></div><div><small>HEART RATE</small><strong>${Number.isFinite(Number(z.hr))?Math.round(z.hr)+' bpm':'—'}</strong><span>${esc(z.guide||'intensity guide')}</span></div></div>${planWorkoutStructureHtml(p)}<div class="planPrescription"><div><small>WARM-UP</small><p>${esc(p.warmup||'—')}</p></div><div class="main"><small>MAIN SET / INTERVALS</small><p>${esc(p.main||'—')}</p></div><div><small>COOLDOWN</small><p>${esc(p.cooldown||'—')}</p></div></div><div class="planGuidanceGrid"><div><small>WHY THIS SESSION</small><p>${esc(p.whyThis||p.purpose)}</p></div><div><small>WHY THIS AMOUNT</small><p>${esc(p.whyAmount||'The amount follows the generated weekly structure and current adaptation.')}</p></div><div><small>EXECUTION</small><p>${esc(p.coach||'Follow the prescribed intensity and keep the session controlled.')}</p></div><div><small>FUEL / HYDRATION</small><p>${esc(p.fuel||'Normal daily hydration.')}</p></div></div>${planShoeRowHtml(p)}<details class="planWorkoutMore"><summary>Missed-session guidance</summary><p>${esc(p.skipImpact||'Do not stack missed training. Continue with the next appropriate session.')}</p></details>${linked?`<button class="viewPlanRun primary full" data-plan-run="${esc(linked.id)}">Open completed run intelligence</button>`:''}</div></details>`;
+ return`<details class="workout planWorkout workout-${workoutTypeClass(p.type)}" data-id="${esc(p.id)}"><summary class="planWorkoutSummary"><div class="planDateBox"><small>${day}</small><b>${dt.getDate()}</b><span>${month}</span></div><span class="planWorkoutIcon">${planWorkoutPictogram(p.type)}</span><div class="planWorkoutIdentity"><div class="planWorkoutName"><h3>${esc(p.type)}</h3><span class="planStatus ${st}">${statusLabel}</span></div><p>${esc(p.purpose)}</p>${quick}${planShoeSummaryHtml(p)}${chips.length?`<div class="planAdaptChips">${chips.join('')}</div>`:''}</div></summary><div class="planWorkoutBody">${completion}<div class="planTargets"><div><small>PACE</small><strong>${pace(z.pace)}</strong><span>${esc(p.targetScope||'main set')}</span></div><div><small>POWER</small><strong>${Number.isFinite(Number(z.power))?Math.round(z.power)+' W':'—'}</strong><span>${esc(p.targetScope||'main set')}</span></div><div><small>HEART RATE</small><strong>${Number.isFinite(Number(z.hr))?Math.round(z.hr)+' bpm':'—'}</strong><span>${esc(z.guide||'intensity guide')}</span></div></div>${planWorkoutStructureHtml(p)}${p.assessmentDecision?.dynamic?`<div class="planAssessmentDecision"><small>WHY THE PROGRAMME CHANGED THIS SLOT</small><b>Fitness calibration ${Math.round(Number(p.assessmentDecision.confidence)||0)}% · ${esc(p.assessmentDecision.confidenceLabel||'Low')}</b><p>${esc(p.assessmentDecision.reason||'This assessment replaces an existing quality session without adding a training day.')}</p><span>Replaces: ${esc(p.assessmentDecision.replacedType||'quality session')}</span></div>`:''}<div class="planPrescription"><div><small>WARM-UP</small><p>${esc(p.warmup||'—')}</p></div><div class="main"><small>MAIN SET / INTERVALS</small><p>${esc(p.main||'—')}</p></div><div><small>COOLDOWN</small><p>${esc(p.cooldown||'—')}</p></div></div><div class="planGuidanceGrid"><div><small>WHY THIS SESSION</small><p>${esc(p.whyThis||p.purpose)}</p></div><div><small>WHY THIS AMOUNT</small><p>${esc(p.whyAmount||'The amount follows the generated weekly structure and current adaptation.')}</p></div><div><small>EXECUTION</small><p>${esc(p.coach||'Follow the prescribed intensity and keep the session controlled.')}</p></div><div><small>FUEL / HYDRATION</small><p>${esc(p.fuel||'Normal daily hydration.')}</p></div></div>${planShoeRowHtml(p)}<details class="planWorkoutMore"><summary>Missed-session guidance</summary><p>${esc(p.skipImpact||'Do not stack missed training. Continue with the next appropriate session.')}</p></details>${linked?`<button class="viewPlanRun primary full" data-plan-run="${esc(linked.id)}">Open completed run intelligence</button>`:''}</div></details>`;
 }
 
 
@@ -2980,6 +3074,14 @@ function consolidatedTodayCoachBriefing(p){
      injuryDay.rule,
      p&&p.type!=='Rest'?`${p.type} should only be completed if rehabilitation criteria allow it.`:null
    ];
+ }else if(p?.type==='Fitness assessment'){
+   const fc=fitnessCalibrationConfidence(),replacement=p.assessmentDecision?.replacedType||'quality session';
+   priorityTitle='Complete the programme-integrated fitness assessment';
+   priorityBullets=[
+     `Fitness calibration confidence is ${fc.score}% (${fc.label.toLowerCase()}); this assessment replaces the planned ${replacement} rather than adding another run.`,
+     `${Number(p.assessmentDistance||state.setup.testDistance||5).toFixed(1)} km test within ${Number(p.distance).toFixed(1)} km total; follow the prescribed warm-up and cooldown.`,
+     ready.label!=='Normal'?`Readiness is ${ready.label.toLowerCase()}; postpone rather than force a maximal assessment if recovery is restricted.`:'The result will recalibrate future programme targets only after the completed run is logged.'
+   ];
  }else if(p&&p.type!=='Rest'){
    priorityTitle=`Execute ${p.type} as prescribed`;
    priorityBullets=[
@@ -3077,7 +3179,7 @@ function planAdaptationLabels(w=currentWeek()){
  return{review:r,paceState,loadState,readyState};
 }
 function planProgrammeHeaderHtml(){
- const engine=coachEngine(),report=evidenceBasedCoach(engine),remaining=raceTimeRemaining(),prob=engine.currentModel.provisional?null:Math.round(engine.currentModel.probability),gap=engine.pred-state.setup.targetTime;
+ const engine=coachEngine(),report=evidenceBasedCoach(engine),remaining=raceTimeRemaining(),prob=engine.currentModel.provisional?null:Math.round(engine.currentModel.probability),gap=engine.pred-state.setup.targetTime,fitnessConfidence=fitnessCalibrationConfidence(),assessmentDecision=fitnessAssessmentProgrammeDecision();
  const provisional=engine.currentModel.provisional,rangeLow=engine.currentModel.rangeLow,rangeHigh=engine.currentModel.rangeHigh;
  const timeRange=`${fmtEstimate(rangeLow,provisional)}–${fmtEstimate(rangeHigh,provisional)}`;
  const paceRange=`${paceEstimate(rangeLow,provisional)}–${paceEstimate(rangeHigh,provisional)}`;
@@ -3087,6 +3189,7 @@ function planProgrammeHeaderHtml(){
    <div class="planRaceMetrics"><span><small>TARGET</small><b>${fmtTime(state.setup.targetTime)}</b><em>${pace(state.setup.targetTime/state.setup.raceDistance)}</em></span><span><small>CURRENT ESTIMATE</small><b>${fmtEstimate(engine.pred,provisional)}</b><em>${paceEstimate(engine.pred,provisional)}</em></span><span><small>TARGET CHANCE</small><b>${prob===null?'Building':prob+'%'}</b><em>${provisional?'Provisional model':'Current model'}</em></span></div>
    <div class="planRaceRanges"><div><small>LIKELY TIME RANGE</small><b>${timeRange}</b></div><div><small>LIKELY PACE RANGE</small><b>${paceRange}</b></div></div>
    <p class="planRaceGap">${gap<=0?`${fmtTime(Math.abs(gap))} inside current target estimate`:`${fmtTime(gap)} outside current target estimate`}</p>
+   <div class="planFitnessConfidence ${fitnessConfidence.score>=80?'good':fitnessConfidence.score>=65?'neutral':fitnessConfidence.score>=50?'caution':'bad'}"><div><small>FITNESS CONFIDENCE</small><b>${fitnessConfidence.score}% · ${esc(fitnessConfidence.label)}</b></div><p>${assessmentDecision.scheduled?`Assessment ${fmtDate(assessmentDecision.targetDate)} · replaces ${esc(assessmentDecision.replacedType)} · no extra run`:(assessmentDecision.status==='deferred-rehab'?'Assessment deferred by active rehabilitation':assessmentDecision.status==='deferred-race'?'Assessment deferred near race day':assessmentDecision.status==='deferred-no-slot'?'Assessment need detected · waiting for a compatible quality slot':'No assessment substitution currently required')}</p></div>
  </section>`;
 }
 function planSelectedWeekHeaderHtml(w){
@@ -3135,20 +3238,28 @@ function planAdaptationAmountHtml(r){
    <div class="adaptRecoveryNote"><span>${uiIcon('recovery')}</span><p><b>Recovery overlay:</b> ${Number.isFinite(recoveryPct)&&recoveryPct>.05?`${recoveryPct.toFixed(1)}% temporary reduction currently applied`:'no meaningful temporary reduction'}. This is not carried forward as learned adaptation.</p></div>
  </div>`;
 }
+function planFitnessCalibrationNoteHtml(w=currentWeek()){
+ const fc=fitnessCalibrationConfidence(),decision=fitnessAssessmentProgrammeDecision(),planned=(state.plan||[]).find(p=>p.week===w&&p.type==='Fitness assessment');
+ if(!planned&&w!==currentWeek()&&decision.week!==w)return'';
+ const cls=fc.score>=80?'good':fc.score>=65?'neutral':fc.score>=50?'warn':'bad';
+ const title=planned?`Fitness assessment replaces ${planned.assessmentDecision?.replacedType||decision.replacedType||'a quality session'}`:decision.scheduled?`Assessment scheduled in Week ${decision.week}`:fc.score>=65?'Calibration sufficiently supported':'Assessment currently deferred';
+ const body=planned?`${fmtDate(planned.date)} · ${Number(planned.assessmentDistance||state.setup.testDistance||5).toFixed(1)} km assessment (${Number(planned.distance).toFixed(1)} km total). Running days and long-run structure are unchanged.`:decision.reason;
+ return`<div class="planFitnessReview ${cls}"><span>${uiIcon('trend')}</span><div><small>FITNESS CALIBRATION · ${fc.score}% ${esc(fc.label)}</small><b>${esc(title)}</b><p>${esc(body)}</p></div></div>`;
+}
 function weeklyReviewHtml(w=currentWeek()){
  const {review:r,paceState,loadState,readyState}=planAdaptationLabels(w),rows=planProjectedChangeRows(r),activeInjury=(state.injuries||[]).find(x=>x.id===state.activeInjuryPlanId);
  const status=r.closed?'Applied weekly review':w>currentWeek()?'Future prescription':'Provisional weekly review';
- return`<section class="planAdaptationCard"><div class="planAdaptationTop"><div><small>${status.toUpperCase()}</small><h3>Prescription consequences</h3><p>Plan shows what changes for the runner; numeric learned factors remain on Progress.</p></div><span class="planReviewState ${r.closed?'good':'neutral'}">${r.closed?'Applied':'Building'}</span></div><div class="planAdaptationGrid"><article class="${paceState.cls}"><span class="adaptVisual">${uiIcon('pace')}</span><small>PACE & POWER</small><strong>${paceState.label}</strong><p>${paceState.detail}</p></article><article class="${loadState.cls}"><span class="adaptVisual">${uiIcon('load')}</span><small>DISTANCE & LOAD</small><strong>${loadState.label}</strong><p>${loadState.detail}</p></article><article class="${readyState.cls}"><span class="adaptVisual">${uiIcon('recovery')}</span><small>RECOVERY CONTEXT</small><strong>${readyState.label}</strong><p>${readyState.detail}</p></article></div>${planAdaptationAmountHtml(r)}${activeInjury?`<div class="planConstraint"><span>${todayPictogram('rehab')}</span><div><small>ACTIVE REHAB CONSTRAINT</small><b>${esc(activeInjury.bodyRegion||activeInjury.location||'Active rehabilitation')}</b><p>Day-level running remains subject to the active return-to-run criteria. Rehab guidance can supersede a scheduled run.</p></div></div>`:''}<details class="planAdaptDetail"><summary>Evidence behind this review</summary>${r.reasons.length?`<ul>${r.reasons.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>`:'<p>No completed evidence is available yet for this review.</p>'}<p class="muted compact">Recovery context is temporary. Learned Pace & Power and Distance & Load calibration remains governed by the existing weekly commitment rules.</p></details><details class="planAdaptDetail"><summary>Projected workout changes</summary><div class="planProjectedChanges">${rows||'<p>No material prescription changes are currently projected.</p>'}</div><p class="muted compact">The app does not persist a separate pre-adaptation copy of every workout. This view therefore compares the applied prescription with the currently projected next-review consequence where available.</p></details></section>`;
+ return`<section class="planAdaptationCard"><div class="planAdaptationTop"><div><small>${status.toUpperCase()}</small><h3>Prescription consequences</h3><p>Plan shows what changes for the runner; numeric learned factors remain on Progress.</p></div><span class="planReviewState ${r.closed?'good':'neutral'}">${r.closed?'Applied':'Building'}</span></div><div class="planAdaptationGrid"><article class="${paceState.cls}"><span class="adaptVisual">${uiIcon('pace')}</span><small>PACE & POWER</small><strong>${paceState.label}</strong><p>${paceState.detail}</p></article><article class="${loadState.cls}"><span class="adaptVisual">${uiIcon('load')}</span><small>DISTANCE & LOAD</small><strong>${loadState.label}</strong><p>${loadState.detail}</p></article><article class="${readyState.cls}"><span class="adaptVisual">${uiIcon('recovery')}</span><small>RECOVERY CONTEXT</small><strong>${readyState.label}</strong><p>${readyState.detail}</p></article></div>${planAdaptationAmountHtml(r)}${planFitnessCalibrationNoteHtml(w)}${activeInjury?`<div class="planConstraint"><span>${todayPictogram('rehab')}</span><div><small>ACTIVE REHAB CONSTRAINT</small><b>${esc(activeInjury.bodyRegion||activeInjury.location||'Active rehabilitation')}</b><p>Day-level running remains subject to the active return-to-run criteria. Rehab guidance can supersede a scheduled run.</p></div></div>`:''}<details class="planAdaptDetail"><summary>Evidence behind this review</summary>${r.reasons.length?`<ul>${r.reasons.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>`:'<p>No completed evidence is available yet for this review.</p>'}<p class="muted compact">Recovery context is temporary. Learned Pace & Power and Distance & Load calibration remains governed by the existing weekly commitment rules.</p></details><details class="planAdaptDetail"><summary>Projected workout changes</summary><div class="planProjectedChanges">${rows||'<p>No material prescription changes are currently projected.</p>'}</div><p class="muted compact">The app does not persist a separate pre-adaptation copy of every workout. This view therefore compares the applied prescription with the currently projected next-review consequence where available.</p></details></section>`;
 }
 function planTimelineHtml(viewWeek=currentWeek()){
  const total=weeks(),groups=[];for(let w=1;w<=total;w++){const name=detailedPhase(w),last=groups.at(-1);if(!last||last.name!==name)groups.push({name,start:w,end:w});else last.end=w}
  const longTypes=['Long run','Specific long run','Race rehearsal','Progression'],qualityTypes=['Threshold','Threshold intervals','VO₂max intervals','Race-pace intervals','Hills','Fartlek','Half-marathon-specific','Marathon-specific','Specific long run','Race rehearsal'];
- const longRuns=state.plan.filter(p=>longTypes.includes(p.type)),futureLong=longRuns.filter(p=>p.date>=iso(today())).sort((a,b)=>a.date.localeCompare(b.date))[0],peakLong=longRuns.slice().sort((a,b)=>Number(b.distance)-Number(a.distance))[0],taperStart=state.plan.find(p=>p.detailedPhase==='Taper'),current=currentWeek();
+ const longRuns=state.plan.filter(p=>longTypes.includes(p.type)),futureLong=longRuns.filter(p=>p.date>=iso(today())).sort((a,b)=>a.date.localeCompare(b.date))[0],peakLong=longRuns.slice().sort((a,b)=>Number(b.distance)-Number(a.distance))[0],futureAssessment=state.plan.filter(p=>p.type==='Fitness assessment'&&p.date>=iso(today())).sort((a,b)=>a.date.localeCompare(b.date))[0],taperStart=state.plan.find(p=>p.detailedPhase==='Taper'),current=currentWeek();
  const programmePct=clamp((current-.5)/total*100,0,100),viewPct=clamp((viewWeek-.5)/total*100,0,100);
  const phaseStats=groups.map(g=>{const rows=state.plan.filter(p=>p.week>=g.start&&p.week<=g.end&&!['Rest','Race Day'].includes(p.type)),km=sum(rows.map(p=>Number(p.distance)||0)),duration=g.end-g.start+1,avgKm=km/Math.max(1,duration),qualityKm=sum(rows.filter(p=>qualityTypes.includes(p.type)).map(p=>Number(p.distance)||0)),qualityShare=km>0?qualityKm/km:0;return{...g,duration,avgKm,qualityShare}});
  const maxAvg=Math.max(1,...phaseStats.map(g=>g.avgKm));
  phaseStats.forEach(g=>{const demand=.68*(g.avgKm/maxAvg)+.32*Math.min(1,g.qualityShare/.30);g.demand=demand;g.tone=demand>=.82?'peak':demand>=.64?'high':demand>=.44?'moderate':'low'});
- const milestones=[futureLong?{label:'Next key long run',value:`${fmtDate(futureLong.date)} · ${futureLong.type} · ${Number(futureLong.distance).toFixed(1)} km`}:null,peakLong?{label:'Peak long run',value:`${fmtDate(peakLong.date)} · ${Number(peakLong.distance).toFixed(1)} km`}:null,taperStart?{label:'Taper begins',value:`Week ${taperStart.week} · ${fmtDate(taperStart.date)}`}:null,{label:'Race day',value:`${fmtDate(state.setup.raceDate)} · ${Number(state.setup.raceDistance).toFixed(1)} km`}].filter(Boolean);
+ const milestones=[futureAssessment?{label:'Fitness assessment',value:`${fmtDate(futureAssessment.date)} · ${Number(futureAssessment.assessmentDistance||state.setup.testDistance||5).toFixed(1)} km test · ${Number(futureAssessment.distance).toFixed(1)} km total`}:null,futureLong?{label:'Next key long run',value:`${fmtDate(futureLong.date)} · ${futureLong.type} · ${Number(futureLong.distance).toFixed(1)} km`}:null,peakLong?{label:'Peak long run',value:`${fmtDate(peakLong.date)} · ${Number(peakLong.distance).toFixed(1)} km`}:null,taperStart?{label:'Taper begins',value:`Week ${taperStart.week} · ${fmtDate(taperStart.date)}`}:null,{label:'Race day',value:`${fmtDate(state.setup.raceDate)} · ${Number(state.setup.raceDistance).toFixed(1)} km`}].filter(Boolean);
  return`<section class="planTimelineCard">
    <div class="phaseGraphWrap">
      <div class="phaseRail proportionalPhaseRail" role="img" aria-label="Programme phases sized by duration and coloured by planned training demand">
@@ -4377,11 +4488,14 @@ function fitnessBenchmarkRunHtml(run){
  return`<section class="fitnessBenchmarkRunCard"><div class="panelHead"><div><small>FITNESS BENCHMARK</small><h3>${esc(title)}</h3><p>${Number(run.distanceKm).toFixed(2)} km · ${fmtTime(run.durationSec)} · ${pace(Number(run.durationSec)/Number(run.distanceKm))}${Number.isFinite(Number(run.avgHr))?` · ${Math.round(run.avgHr)} bpm`:''}${Number.isFinite(Number(run.avgPower))?` · ${Math.round(run.avgPower)} W`:''}</p></div><span class="status ${statusClass}">${status}</span></div><p class="muted">${esc(detail)}</p><button type="button" class="${enabled?'secondary':'primary'} full" data-benchmark-toggle-run="${esc(run.id)}">${enabled?'Stop using as fitness benchmark':'Use as fitness benchmark'}</button></section>`;
 }
 function progressFitnessBenchmarkHtml(){
- const all=(state.assessments||[]).slice().sort((a,b)=>b.date.localeCompare(a.date)||String(b.updatedAt||'').localeCompare(String(a.updatedAt||''))),current=latestValidAssessment();
+ const all=(state.assessments||[]).slice().sort((a,b)=>b.date.localeCompare(a.date)||String(b.updatedAt||'').localeCompare(String(a.updatedAt||''))),current=latestValidAssessment(),fc=fitnessCalibrationConfidence(),decision=fitnessAssessmentProgrammeDecision();
  const currentRun=current?(state.runs||[]).find(r=>r.id===current.runId||r.assessmentId===current.id):null;
- const currentBody=current?`<div class="progressBenchmarkCurrent"><div><small>CURRENT FITNESS BENCHMARK</small><h3>${current.distance.toFixed(1)} km · ${fmtTime(current.time)}</h3><p>${fmtDate(current.date)} · ${pace(current.time/current.distance)}${Number.isFinite(Number(current.thresholdHr))?` · ${Math.round(current.thresholdHr)} bpm`:''}${Number.isFinite(Number(current.criticalPower))?` · ${Math.round(current.criticalPower)} W`:''}</p></div><span class="status completed">APPLIED</span></div><p class="muted">This benchmark anchors training zones, race prediction and Pace & Power learning. The activity itself remains in Log${currentRun?' and can be edited there':'.'}.</p>${currentRun?`<button type="button" class="secondary" data-benchmark-open-run="${esc(currentRun.id)}">Open benchmark run</button>`:''}`:`<div class="progressBenchmarkCurrent"><div><small>CURRENT FITNESS BENCHMARK</small><h3>Configured setup benchmark</h3><p>${Number(state.setup.testDistance).toFixed(1)} km · ${fmtTime(state.setup.testTime)} · ${pace(Number(state.setup.testTime)/Number(state.setup.testDistance))}</p></div><span class="status rest">SETUP</span></div><p class="muted">No logged Fitness assessment is currently enabled. Classify a run as Fitness assessment in Log to create a measured benchmark.</p>`;
+ const currentBody=current?`<div class="progressBenchmarkCurrent"><div><small>CURRENT FITNESS BENCHMARK</small><h3>${current.distance.toFixed(1)} km · ${fmtTime(current.time)}</h3><p>${fmtDate(current.date)} · ${pace(current.time/current.distance)}${Number.isFinite(Number(current.thresholdHr))?` · ${Math.round(current.thresholdHr)} bpm`:''}${Number.isFinite(Number(current.criticalPower))?` · ${Math.round(current.criticalPower)} W`:''}</p></div><span class="status completed">APPLIED</span></div><p class="muted">This benchmark anchors training zones, race prediction and Pace & Power learning. The activity itself remains in Log${currentRun?' and can be edited there':'.'}.</p>${currentRun?`<button type="button" class="secondary" data-benchmark-open-run="${esc(currentRun.id)}">Open benchmark run</button>`:''}`:`<div class="progressBenchmarkCurrent"><div><small>CURRENT FITNESS BENCHMARK</small><h3>Configured setup benchmark</h3><p>${Number(state.setup.testDistance).toFixed(1)} km · ${fmtTime(state.setup.testTime)} · ${pace(Number(state.setup.testTime)/Number(state.setup.testDistance))}</p></div><span class="status rest">SETUP</span></div><p class="muted">No logged Fitness assessment is currently enabled. The programme can schedule a Fitness assessment when calibration confidence becomes low enough and a suitable quality slot exists.</p>`;
+ const confClass=fc.score>=80?'good':fc.score>=65?'neutral':fc.score>=50?'caution':'bad';
+ const decisionText=decision.scheduled?`Fitness assessment scheduled ${fmtDate(decision.targetDate)} in Week ${decision.week}. It replaces ${decision.replacedType}; no run is added.`:decision.status==='deferred-rehab'?'Assessment deferred while rehabilitation is active.':decision.status==='deferred-race'?'Assessment deferred because race day is too close.':decision.status==='deferred-no-slot'?'Assessment need detected, but no safe quality-session substitution is currently available.':fc.score>=80?'No fitness assessment is currently needed.':'Calibration is being monitored; the programme will substitute a quality session only if confidence falls below the assessment threshold.';
+ const confidencePanel=`<div class="fitnessConfidencePanel ${confClass}"><div class="fitnessConfidenceScore"><small>FITNESS CONFIDENCE</small><strong>${fc.score}%</strong><span>${esc(fc.label)}</span></div><div class="fitnessConfidenceDecision"><b>${esc(decisionText)}</b><p>${esc(decision.reason)}</p></div><div class="fitnessConfidenceDrivers"><span><small>Benchmark recency</small><b>${fc.recency}%</b></span><span><small>Supporting evidence</small><b>${fc.support}%</b></span><span><small>Calibration agreement</small><b>${fc.agreement}%</b></span></div><details><summary>Why this confidence?</summary><ul>${fc.reasons.map(x=>`<li>${esc(x)}</li>`).join('')}</ul><p class="muted compact">This is calibration confidence, not race readiness. It only decides whether an existing programme quality slot should become a Fitness assessment.</p></details></div>`;
  const history=all.length?`<details class="progressBenchmarkHistory"><summary>Benchmark history · ${all.length}</summary><div class="progressBenchmarkRows">${all.map(a=>{const run=(state.runs||[]).find(r=>r.id===a.runId||r.assessmentId===a.id),isCurrent=current?.id===a.id;return`<div class="progressBenchmarkRow"><div><b>${fmtDate(a.date)} · ${a.distance.toFixed(1)} km in ${fmtTime(a.time)}</b><span>${pace(a.time/a.distance)}${Number.isFinite(Number(a.thresholdHr))?` · ${Math.round(a.thresholdHr)} bpm`:''}${Number.isFinite(Number(a.criticalPower))?` · ${Math.round(a.criticalPower)} W`:''}</span></div><span class="status ${a.valid===true?'completed':'rest'}">${isCurrent?'CURRENT':a.valid===true?'enabled':'off'}</span>${run?`<button type="button" class="secondary small" data-benchmark-open-run="${esc(run.id)}">Open run</button>`:''}</div>`}).join('')}</div></details>`:'';
- return`<section class="progressSection progressBenchmarkSection"><div class="progressSectionHead"><span>↳</span><div><small>FITNESS BENCHMARK</small><h3>What currently calibrates your fitness?</h3><p>Measured benchmark runs are managed in Log; Progress shows the active calibration and its history.</p></div></div><article class="panel progressBenchmarkPanel">${currentBody}${history}</article></section>`;
+ return`<section class="progressSection progressBenchmarkSection"><div class="progressSectionHead"><span>↳</span><div><small>FITNESS BENCHMARK & CONFIDENCE</small><h3>How certain is the programme about your current fitness calibration?</h3><p>Benchmark runs calibrate fitness; recent programme evidence determines whether another assessment is worth replacing a scheduled quality session.</p></div></div><article class="panel progressBenchmarkPanel">${confidencePanel}${currentBody}${history}</article></section>`;
 }
 function renderProgressFitnessBenchmark(){const el=$('progressFitnessBenchmark');if(el)el.innerHTML=progressFitnessBenchmarkHtml();}
 function renderRace(){
@@ -10754,12 +10868,12 @@ function openRunDetails(runId){
     let updated=updatedRunFromForm(r),i=state.runs.findIndex(x=>x.id===r.id);
     if(i<0)throw Error('Run not found.');
     const oldShoeId=selectedShoeIdForRun(r)||null,shoeId=updated.shoeId||null,shoeBefore=shoeId?shoeMileage((state.shoes||[]).find(s=>s.id===shoeId)||{}):null;
-    state.runs.splice(i,1);const before=postRunCoachSnapshot(updated.date);state.runs.splice(i,0,updated);const benchmarkChanged=runAffectsFitnessBenchmark(r,updated);syncRunAssessmentRecord(updated);if(benchmarkChanged&&!requirePlanBuild('The fitness benchmark change could not be integrated into a valid future plan.'))return;assignRunShoe(updated,shoeId,'run-edit');(state.injuries||[]).forEach(injury=>(injury.checkIns||[]).forEach(check=>{const matched=matchingLoggedRunForRehab(check);if(matched?.id===updated.id)check.rehabShoeId=shoeId||null}));recordPredictionSnapshot(updated.date,'Run update',updated.id);const after=postRunCoachSnapshot(updated.date);updated.coachUpdate=postRunCoachUpdate(updated,before,after);if(!save())return;refreshShoeActualsAfterActivity();const shoeNote=shoeReallocationConfirmation(oldShoeId,shoeId,updated.distanceKm,'run')||shoeMileageConfirmation(shoeId,shoeBefore,'run');renderAll();$('modalContent').innerHTML=runAnalysisStackHtml(updated,false)+`<button id="closeCoachUpdate" class="primary full" type="button">Done</button>`;$('modal').className='modal logDetailModal';$('closeCoachUpdate').onclick=closeDialog;toast(shoeNote||'Run updated and coaching update recalculated.');
+    state.runs.splice(i,1);const before=postRunCoachSnapshot(updated.date);state.runs.splice(i,0,updated);const benchmarkChanged=runAffectsFitnessBenchmark(r,updated),calibrationChanged=runAffectsFitnessCalibrationEvidence(r,updated);syncRunAssessmentRecord(updated);if((benchmarkChanged||calibrationChanged)&&!requirePlanBuild('The fitness evidence change could not be integrated into a valid future plan.'))return;assignRunShoe(updated,shoeId,'run-edit');(state.injuries||[]).forEach(injury=>(injury.checkIns||[]).forEach(check=>{const matched=matchingLoggedRunForRehab(check);if(matched?.id===updated.id)check.rehabShoeId=shoeId||null}));recordPredictionSnapshot(updated.date,'Run update',updated.id);const after=postRunCoachSnapshot(updated.date);updated.coachUpdate=postRunCoachUpdate(updated,before,after);if(!save())return;refreshShoeActualsAfterActivity();const shoeNote=shoeReallocationConfirmation(oldShoeId,shoeId,updated.distanceKm,'run')||shoeMileageConfirmation(shoeId,shoeBefore,'run');renderAll();$('modalContent').innerHTML=runAnalysisStackHtml(updated,false)+`<button id="closeCoachUpdate" class="primary full" type="button">Done</button>`;$('modal').className='modal logDetailModal';$('closeCoachUpdate').onclick=closeDialog;toast(shoeNote||'Run updated and coaching update recalculated.');
    }catch(err){toast(err.message,true)}
  };
  $('deleteEditedRun').onclick=()=>{
    if(!confirm('Delete this run?'))return;
-   if(r.assessmentId)state.assessments=state.assessments.filter(a=>a.id!==r.assessmentId&&a.runId!==r.id);state.runs=state.runs.filter(x=>x.id!==r.id);state.shoeUsage=(state.shoeUsage||[]).filter(u=>u.runId!==r.id);state.predictionHistory=(state.predictionHistory||[]).filter(x=>x.entityId!==r.id);if(!save())return;refreshShoeActualsAfterActivity();$('modal').className='modal hidden';renderAll();toast('Run deleted.');
+   const calibrationChanged=runAffectsFitnessCalibrationEvidence(r)||runAffectsFitnessBenchmark(r);if(r.assessmentId)state.assessments=state.assessments.filter(a=>a.id!==r.assessmentId&&a.runId!==r.id);state.runs=state.runs.filter(x=>x.id!==r.id);state.shoeUsage=(state.shoeUsage||[]).filter(u=>u.runId!==r.id);state.predictionHistory=(state.predictionHistory||[]).filter(x=>x.entityId!==r.id);if(calibrationChanged&&!requirePlanBuild('The deleted fitness evidence could not be reconciled with a valid future plan.'))return;if(!save())return;refreshShoeActualsAfterActivity();$('modal').className='modal hidden';renderAll();toast('Run deleted.');
  };
 }
 $('runList').onclick=e=>{const card=e.target.closest('[data-run]');if(card)openRunDetails(card.dataset.run)};
@@ -10770,7 +10884,7 @@ $('manualRunBtn').onclick=()=>{
  $('modal').className='modal logEditModal';
  bindEditorPlanRefresh(r);
  $('saveRunEdit').onclick=()=>{
-   try{let created=updatedRunFromForm(r),before=postRunCoachSnapshot(created.date),shoeId=created.shoeId||null,shoeBefore=shoeId?shoeMileage((state.shoes||[]).find(s=>s.id===shoeId)||{}):null;state.runs.push(created);syncRunAssessmentRecord(created);if(created.type==='Fitness assessment'&&!requirePlanBuild('The fitness assessment could not be integrated into a valid future plan.'))return;assignRunShoe(created,shoeId,'manual-run');recordPredictionSnapshot(created.date,'Run saved',created.id);let after=postRunCoachSnapshot(created.date);created.coachUpdate=postRunCoachUpdate(created,before,after);if(!save())return;refreshShoeActualsAfterActivity();const shoeNote=shoeMileageConfirmation(shoeId,shoeBefore,'run');renderAll();$('modalContent').innerHTML=runAnalysisStackHtml(created,false)+`<button id="closeCoachUpdate" class="primary full" type="button">Done</button>`;$('modal').className='modal logEditModal';$('closeCoachUpdate').onclick=closeDialog;toast(shoeNote||'Run saved and coaching update calculated.')}catch(err){toast(err.message,true)}
+   try{let created=updatedRunFromForm(r),before=postRunCoachSnapshot(created.date),shoeId=created.shoeId||null,shoeBefore=shoeId?shoeMileage((state.shoes||[]).find(s=>s.id===shoeId)||{}):null;state.runs.push(created);syncRunAssessmentRecord(created);if(runAffectsFitnessCalibrationEvidence(created)&&!requirePlanBuild('The fitness evidence could not be integrated into a valid future plan.'))return;assignRunShoe(created,shoeId,'manual-run');recordPredictionSnapshot(created.date,'Run saved',created.id);let after=postRunCoachSnapshot(created.date);created.coachUpdate=postRunCoachUpdate(created,before,after);if(!save())return;refreshShoeActualsAfterActivity();const shoeNote=shoeMileageConfirmation(shoeId,shoeBefore,'run');renderAll();$('modalContent').innerHTML=runAnalysisStackHtml(created,false)+`<button id="closeCoachUpdate" class="primary full" type="button">Done</button>`;$('modal').className='modal logEditModal';$('closeCoachUpdate').onclick=closeDialog;toast(shoeNote||'Run saved and coaching update calculated.')}catch(err){toast(err.message,true)}
  };
 };
 $('closeModal').onclick=closeDialog;
@@ -10833,7 +10947,7 @@ $('activityFile').onchange=async e=>{
       refreshIntervalAnalysis(preview,preview.planId?state.plan.find(p=>p.id===preview.planId):null);
       compactRunActivityStream(preview);
       let before=null;try{before=postRunCoachSnapshot(preview.date)}catch(e){console.warn('Coach pre-snapshot failed',e)}
-      const savedRun={...preview},shoeId=$('iShoe')?$('iShoe').value||null:null,shoeBefore=shoeId?shoeMileage((state.shoes||[]).find(s=>s.id===shoeId)||{}):null;state.runs.push(savedRun);syncRunAssessmentRecord(savedRun);if(savedRun.type==='Fitness assessment'&&!requirePlanBuild('The imported fitness assessment could not be integrated into a valid future plan.'))return;if($('iShoe'))assignRunShoe(savedRun,shoeId,'import');reconcileExactDateMatches();
+      const savedRun={...preview},shoeId=$('iShoe')?$('iShoe').value||null:null,shoeBefore=shoeId?shoeMileage((state.shoes||[]).find(s=>s.id===shoeId)||{}):null;state.runs.push(savedRun);syncRunAssessmentRecord(savedRun);if(runAffectsFitnessCalibrationEvidence(savedRun)&&!requirePlanBuild('The imported fitness evidence could not be integrated into a valid future plan.'))return;if($('iShoe'))assignRunShoe(savedRun,shoeId,'import');reconcileExactDateMatches();
       recordPredictionSnapshot(savedRun.date,savedRun.sourceFormat==='fit-activity'?'FIT import':'Stryd import',savedRun.id);
       let coachHtml='',coachWarning='';
       try{const after=postRunCoachSnapshot(savedRun.date);if(before){savedRun.coachUpdate=postRunCoachUpdate(savedRun,before,after);coachHtml=postRunCoachUpdateHtml(savedRun)}}catch(e){console.warn('Coach update failed',e);coachWarning=' Run saved; Coach Update unavailable for this import.'}

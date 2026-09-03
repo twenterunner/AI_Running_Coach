@@ -6232,3 +6232,20 @@ body:has(#dashboard.progressPage.active),#mainContent:has(#dashboard.progressPag
 .logBenchmarkChip{display:inline-flex!important;width:max-content;margin-top:6px;padding:4px 8px;border-radius:999px;font-size:.68rem!important;font-weight:900;letter-spacing:.04em;text-transform:uppercase;border:1px solid rgba(71,215,202,.25)}
 .logBenchmarkChip.good{color:#8beaac;background:rgba(53,172,96,.14)}.logBenchmarkChip.neutral{color:#adc1c7;background:rgba(121,147,154,.12)}
 @media(max-width:520px){.progressBenchmarkCurrent{display:grid}.progressBenchmarkCurrent .status{justify-self:start}.progressBenchmarkRow{grid-template-columns:minmax(0,1fr) auto}}
+
+/* v15.6.109 — programme-integrated fitness calibration confidence */
+.planAdaptChip.assessment{border-color:rgba(79,224,214,.55);background:rgba(43,177,171,.16);color:#9af4ed}
+.planAssessmentDecision{margin:14px 0;padding:13px 14px;border:1px solid rgba(79,224,214,.28);border-radius:12px;background:rgba(3,31,41,.34);display:grid;gap:5px}
+.planAssessmentDecision small,.planFitnessConfidence small,.planFitnessReview small,.fitnessConfidencePanel small{font-size:10px;letter-spacing:.08em;font-weight:900;color:#7ce7df}
+.planAssessmentDecision b{font-size:14px;color:#f3fbff}.planAssessmentDecision p{margin:0;color:#c7d8dd;line-height:1.42;font-size:13px}.planAssessmentDecision span{font-size:12px;color:#95adb5}
+.planFitnessConfidence{margin-top:12px;padding:11px 12px;border-radius:12px;border:1px solid rgba(69,194,194,.25);background:rgba(3,31,41,.26);display:grid;grid-template-columns:auto minmax(0,1fr);gap:10px 14px;align-items:center}
+.planFitnessConfidence>div{display:grid;gap:2px}.planFitnessConfidence b{font-size:14px}.planFitnessConfidence p{margin:0;color:#c3d5da;font-size:12px;line-height:1.35;text-align:right}
+.planFitnessConfidence.good{border-color:rgba(100,220,160,.28)}.planFitnessConfidence.caution,.planFitnessReview.warn{border-color:rgba(246,185,74,.42)}.planFitnessConfidence.bad,.planFitnessReview.bad{border-color:rgba(244,119,119,.42)}
+.planFitnessReview{margin-top:12px;padding:12px;border-radius:12px;border:1px solid rgba(79,224,214,.25);background:rgba(4,39,50,.28);display:grid;grid-template-columns:28px minmax(0,1fr);gap:10px;align-items:start}
+.planFitnessReview>span svg{width:24px;height:24px}.planFitnessReview div{display:grid;gap:3px}.planFitnessReview b{font-size:14px}.planFitnessReview p{margin:0;color:#bacdd3;font-size:12px;line-height:1.4}
+.fitnessConfidencePanel{display:grid;gap:12px;padding:14px;border:1px solid rgba(79,224,214,.30);border-radius:14px;background:rgba(2,30,40,.28);margin-bottom:14px}
+.fitnessConfidenceScore{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:end;column-gap:10px}.fitnessConfidenceScore small{grid-column:1/-1}.fitnessConfidenceScore strong{font-size:30px;line-height:1;color:#eefbfb}.fitnessConfidenceScore span{font-size:13px;font-weight:800;color:#a8c5cb;padding-bottom:2px}
+.fitnessConfidenceDecision{display:grid;gap:4px}.fitnessConfidenceDecision b{font-size:14px;line-height:1.35}.fitnessConfidenceDecision p{margin:0;color:#b8cdd3;font-size:12px;line-height:1.42}
+.fitnessConfidenceDrivers{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}.fitnessConfidenceDrivers span{display:grid;gap:4px;padding:9px;border:1px solid rgba(255,255,255,.08);border-radius:10px;background:rgba(4,29,38,.34);min-width:0}.fitnessConfidenceDrivers small{font-size:9px;color:#9db6bd;letter-spacing:.03em}.fitnessConfidenceDrivers b{font-size:15px;color:#eefbfb}
+.fitnessConfidencePanel details{border-top:1px solid rgba(255,255,255,.08);padding-top:9px}.fitnessConfidencePanel summary{cursor:pointer;font-size:12px;font-weight:800;color:#9cebe5}.fitnessConfidencePanel ul{margin:9px 0 6px;padding-left:18px;color:#c2d5da;font-size:12px;line-height:1.45}
+@media(max-width:520px){.planFitnessConfidence{grid-template-columns:1fr}.planFitnessConfidence p{text-align:left}.fitnessConfidenceDrivers{grid-template-columns:1fr 1fr 1fr}.fitnessConfidenceDrivers span{padding:8px 6px}.fitnessConfidenceDrivers small{font-size:8px}.fitnessConfidenceDrivers b{font-size:14px}}
