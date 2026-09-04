@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '15.7.0';
-  const BUILD = 51000;
+  const VERSION = '15.7.2';
+  const BUILD = 51002;
   const SCHEMA = 10400;
   const PRIMARY_STORAGE_KEY = 'arc_v10400_web';
   const MIRROR_STORAGE_KEY = 'arc_v10400_mirror';
@@ -2555,13 +2555,39 @@ function planWorkoutStructureHtml(p){
 function rehabProgrammeComplete(injury){
  try{const finalStage=INJURY_STAGES.length-1,criteria=criterionState(injury,{},finalStage);return criteria.length>0&&criteria.every(x=>x.status==='met')}catch{return false}
 }
+let rehabCrossoverBaseCache={key:null,value:null};
+function rehabCrossoverBaseKey(injury){
+ const checks=Array.isArray(injury?.checkIns)?injury.checkIns:[],last=checks.length?checks[checks.length-1]:null;
+ // Normal app mutations call save(), which advances storageRevision and the injury
+ // domain revision. The lightweight tail fields below also protect unsaved/test
+ // mutations without hashing the complete rehabilitation history on every workout.
+ return[
+  state.activeInjuryPlanId||'',Number(state.storageRevision)||0,runtimeDomainRevisions.injury,iso(today()),
+  injury?.id||'',rehabPlanStart(injury),checks.length,last?.date||'',last?.pain??'',last?.walkPain??'',
+  last?.runMinutes??'',last?.runStatus||'',last?.nextDayWorse??'',last?.alteredGait??'',last?.runQualityTolerated??'',
+  Array.isArray(injury?.rehabCalendar)?injury.rehabCalendar.length:0
+ ].join('|');
+}
+function activeRehabCrossoverBase(injury){
+ const key=rehabCrossoverBaseKey(injury);
+ if(rehabCrossoverBaseCache.key===key&&rehabCrossoverBaseCache.value)return rehabCrossoverBaseCache.value;
+ let complete=false;try{complete=rehabProgrammeComplete(injury)}catch{}
+ if(complete){const value={injury,complete:true,progress:null,safetyHold:false,dayByDate:new Map()};rehabCrossoverBaseCache={key,value};return value;}
+ let progress=null;try{progress=injuryPrediction(injury)}catch{const value={injury,complete:false,progress:null,safetyHold:true,dayByDate:new Map()};rehabCrossoverBaseCache={key,value};return value;}
+ const safetyHold=!progress||!!progress.safetyHold,calendar=safetyHold?[]:buildRehabCalendar(injury,progress),dayByDate=new Map(calendar.map(day=>[day.date,day]));
+ const value={injury,complete:false,progress,safetyHold,dayByDate};rehabCrossoverBaseCache={key,value};return value;
+}
 function activeRehabCrossoverContext(date){
  try{if(!Array.isArray(INJURY_STAGES))return null}catch{return null}
- const injury=(state.injuries||[]).find(x=>x.id===state.activeInjuryPlanId);if(!injury||!date||rehabProgrammeComplete(injury))return null;
- let progress=null;try{progress=injuryPrediction(injury)}catch{return null}
- if(!progress||progress.safetyHold)return{injury,progress,day:null,safetyHold:true};
- const calendar=buildRehabCalendar(injury,progress),day=calendar.find(d=>d.date===date)||rehabCalendarDay(injury,progress,date,rehabPlanDayIndex(injury,date));
- return{injury,progress,day,safetyHold:false};
+ const injury=(state.injuries||[]).find(x=>x.id===state.activeInjuryPlanId);if(!injury||!date)return null;
+ // A marathon session before the rehabilitation programme started can never be a
+ // crossover session, so avoid all injury-model work for historical plan rows.
+ if(String(date)<String(rehabPlanStart(injury)))return null;
+ const base=activeRehabCrossoverBase(injury);if(!base||base.complete)return null;
+ if(base.safetyHold)return{injury,progress:base.progress,day:null,safetyHold:true};
+ let day=base.dayByDate.get(date);
+ if(!day){day=rehabCalendarDay(injury,base.progress,date,rehabPlanDayIndex(injury,date));base.dayByDate.set(date,day);}
+ return{injury,progress:base.progress,day,safetyHold:false};
 }
 function rehabCrossoverRunningPlanned(day){
  if(!day)return false;
@@ -5292,7 +5318,7 @@ function completedPhaseCriterionState(i,stageIndex,diag){
  return criterionState(i,{},stageIndex);
 }
 
-function injuryPrediction(i){
+function computeInjuryPrediction(i){
  const checks=sortedChecks(i),latest=checks.at(-1)||{},diag=workingDiagnosis(i),initialPain=nullableNumber(i.initialPain),walkInitially=nullableNumber(i.initialWalkPain);let nominalTotal=Number(diag.nominalDays)||56;const severityKnown=Number.isFinite(initialPain)||Number.isFinite(walkInitially)||i.pop||i.bruising;const severityFactor=!severityKnown?1:(initialPain>=8||i.pop||walkInitially>=8?1.18:initialPain>=6||i.bruising||walkInitially>=5?1.08:initialPain<=2&&walkInitially<=1?.88:1);nominalTotal=Math.round(nominalTotal*severityFactor);const baselineMin=Math.max(7,Math.round((Number(diag.minDays)||nominalTotal*.7)*severityFactor)),baselineMax=Math.max(baselineMin+7,Math.round((Number(diag.maxDays)||nominalTotal*1.5)*severityFactor));
  const snap=longitudinalSnapshot(i,checks),currentPain=Number.isFinite(snap.currentPain)?snap.currentPain:initialPain,walkPain=Number.isFinite(snap.walkPain)?snap.walkPain:walkInitially,elapsed=Math.max(0,Math.floor((today()-dte(i.date))/DAY));
  const criteriaStage=injuryStageForChecks(i,checks,diag),stageHistory=injuryStageHistory(i,checks,diag),peakStage=Math.max(criteriaStage,stageHistory.peakStage),stage=peakStage,regressedBy=0,setback=false;
@@ -5303,6 +5329,26 @@ function injuryPrediction(i){
  if(Number.isFinite(delta))remaining+=Math.round(clamp(-delta*.20,-14,21));if(latestAdverse(checks,'nextDayWorse'))remaining+=7;if(latestAdverse(checks,'newSwelling'))remaining+=7;if(latestAdverse(checks,'alteredGait'))remaining+=4;if(snap.run.lastAttempt?.runStatus==='unable'||snap.run.lastAttempt?.runStatus==='stopped')remaining+=4;if(diag.urgent)remaining=Math.max(remaining,Math.max(14,baselineMin-elapsed));
  remaining=Math.max(7,Math.min(Math.max(14,Math.round(baselineMax*1.25)),remaining));const total=elapsed+remaining,central=new Date(today().getTime()+remaining*DAY),uncertainty=checks.length>=7?Math.max(7,Math.round(nominalTotal*.12)):checks.length>=3?Math.max(10,Math.round(nominalTotal*.18)):Math.max(14,Math.round(nominalTotal*.25)),rangeStartTotal=Math.max(elapsed+7,Math.max(baselineMin,total-uncertainty)),rangeEndTotal=Math.max(rangeStartTotal+7,Math.min(Math.round(baselineMax*1.25),total+uncertainty)),windowStart=iso(new Date(dte(i.date).getTime()+rangeStartTotal*DAY)),windowEnd=iso(new Date(dte(i.date).getTime()+rangeEndTotal*DAY)),confidence=checks.length>=7?'Moderate':checks.length>=3?'Developing':'Low';return{nominalTotal,baselineMin,baselineMax,total,elapsed,remaining,stage,peakStage,regressedBy,setback,peakStageDate:stageHistory.peakDate,fullDate:iso(central),windowStart,windowEnd,confidence,currentPain,walkPain,completion,nominal,delta,latest,checks,diag,safetyHold:diag.urgent,trendRate,snapshot:snap};
 }
+let injuryPredictionMemo={key:null,value:null};
+function injuryPredictionMemoKey(i){
+ const checks=Array.isArray(i?.checkIns)?i.checkIns:[],last=checks.length?checks[checks.length-1]:null;
+ return[
+  i?.id||'',Number(state.storageRevision)||0,runtimeDomainRevisions.injury,iso(today()),checks.length,
+  last?.date||'',last?.pain??'',last?.walkPain??'',last?.runMinutes??'',last?.runStatus||'',
+  last?.nextDayWorse??'',last?.alteredGait??'',last?.runQualityTolerated??'',i?.currentPain??'',i?.currentWalkPain??''
+ ].join('|');
+}
+function injuryPrediction(i){
+ // The production UI repeatedly asks for the same active-injury prediction from
+ // Today, Injury, crossover accounting and shoe planning. Recompute only when the
+ // stored injury revision changes; temporary/copied injury objects remain uncached.
+ const stored=!!i&&(state.injuries||[]).find(x=>x.id===i.id)===i;
+ if(!stored)return computeInjuryPrediction(i);
+ const key=injuryPredictionMemoKey(i);
+ if(injuryPredictionMemo.key===key&&injuryPredictionMemo.value)return injuryPredictionMemo.value;
+ const value=computeInjuryPrediction(i);injuryPredictionMemo={key,value};return value;
+}
+
 function injuryCompletionForChecks(i,checks,diag,initialPain,walkInitially){
  const observed=(checks||[]).filter(c=>CORE.isIsoDate(c.date)&&c.date<=iso(today()));
  if(!observed.length)return null;
@@ -10568,7 +10614,7 @@ function navIcon(page){
  };
  return icons[page]||icons.more;
 }
-function navButtonHtml(page,label,extra=''){return`<button ${extra} data-page="${page}"><span class="navIcon">${navIcon(page)}</span><span class="navLabel">${label}</span></button>`}
+function navButtonHtml(page,label,extra=''){return`<button type="button" ${extra} data-page="${page}"><span class="navIcon">${navIcon(page)}</span><span class="navLabel">${label}</span></button>`}
 const navigationButtonMap=new Map();
 function refreshNavigationNodeCache(){
  navigationButtonMap.clear();
@@ -10581,7 +10627,7 @@ function refreshNavigationNodeCache(){
 function renderNavigation(){
  const current=activePageId();
  $('nav').innerHTML=primaryPages.map(p=>navButtonHtml(p[0],p[1])).join('')+secondaryPages.map(p=>navButtonHtml(p[0],p[1],'class="desktopSecondary"')).join('')+`<button id="moreNavBtn" class="moreToggle" type="button" aria-expanded="false" aria-controls="moreNav"><span class="navIcon">${navIcon('more')}</span><span class="navLabel">More</span></button>`;
- $('moreNav').innerHTML=secondaryPages.map(p=>`<button data-page="${p[0]}"><span class="navIcon">${navIcon(p[0])}</span><span>${p[1]}</span></button>`).join('');
+ $('moreNav').innerHTML=secondaryPages.map(p=>`<button type="button" data-page="${p[0]}"><span class="navIcon">${navIcon(p[0])}</span><span>${p[1]}</span></button>`).join('');
  refreshNavigationNodeCache();setActiveNavigation(current);
 }
 function setActiveNavigation(page){
@@ -10593,45 +10639,99 @@ function setActiveNavigation(page){
  more?.classList.toggle('active',secondary);if(secondary)more?.setAttribute('aria-current','page');else more?.removeAttribute('aria-current');
 }
 let pendingPageRenderToken=0;
+let pendingPageRenderTimer=0;
+function navigationIsBlocked(){
+ const modal=$('modal'),onboarding=$('onboarding');
+ return Boolean((modal&&!modal.classList.contains('hidden'))||(onboarding&&!onboarding.classList.contains('hidden')));
+}
+function reconcileNavigationInteractivity(){
+ const nav=$('nav'),more=$('moreNav'),main=$('mainContent');
+ if(!nav)return;
+ const modalOpen=Boolean($('modal')&&!$('modal').classList.contains('hidden'));
+ const onboardingOpen=Boolean($('onboarding')&&!$('onboarding').classList.contains('hidden'));
+ document.body.classList.toggle('modalOpen',modalOpen);
+ document.body.classList.toggle('onboardingOpen',onboardingOpen);
+ const blocked=modalOpen||onboardingOpen;
+ nav.inert=blocked;
+ if(more)more.inert=blocked;
+ if(main)main.inert=blocked;
+ if(!blocked){
+  nav.removeAttribute('aria-hidden');
+  nav.style.removeProperty('pointer-events');
+ }
+}
+function setPagePending(page,pending){
+ const node=pageNodes.get(page);if(!node)return;
+ node.classList.toggle('pageRenderPending',Boolean(pending));
+ if(pending)node.setAttribute('aria-busy','true');else node.removeAttribute('aria-busy');
+}
+function scheduleDestinationRender(page,token,tapStarted){
+ clearTimeout(pendingPageRenderTimer);
+ // Yield through a paint before starting potentially expensive page calculations.
+ // This makes the navigation tap visibly respond even with a large run/rehab history.
+ requestAnimationFrame(()=>{
+  if(token!==pendingPageRenderToken||activePageId()!==page){setPagePending(page,false);return}
+  pendingPageRenderTimer=setTimeout(()=>{
+   if(token!==pendingPageRenderToken||activePageId()!==page){setPagePending(page,false);return}
+   try{renderPage(page)}finally{
+    setPagePending(page,false);
+    reconcileNavigationInteractivity();
+    navigationPerf.lastPage=page;
+    navigationPerf.lastMs=(globalThis.performance?.now?.()??Date.now())-tapStarted;
+    navigationPerf.maxMs=Math.max(navigationPerf.maxMs,navigationPerf.lastMs);
+   }
+  },0);
+ });
+}
 function activatePage(page,anchor=null){
  if(!pages.some(p=>p[0]===page))return;
+ reconcileNavigationInteractivity();
+ if(navigationIsBlocked())return;
  const current=activePageId();if(current===page&&!anchor)return;
  if(page==='plan'&&state.weekView==null)state.weekView=currentWeek();
  const tapStarted=(globalThis.performance?.now?.()??Date.now());
+ const token=++pendingPageRenderToken;
+ clearTimeout(pendingPageRenderTimer);
  pageNodes.get(current)?.classList.remove('active');pageNodes.get(page)?.classList.add('active');
+ setPagePending(current,false);
  setActiveNavigation(page);$('moreNav').className='moreNav hidden';$('moreNavBtn')?.setAttribute('aria-expanded','false');
  if(!anchor)scrollTo(0,0);
  $('mainContent')?.focus({preventScroll:true});
- ++pendingPageRenderToken;
- // Warm/cached page: pure show/hide navigation.
+ // Cached pages are immediately usable. Stale pages are switched first and rendered
+ // after the browser has painted the destination, so a tap can never look dead.
  if(!pageNeedsRender(page)){
+  setPagePending(page,false);
   navigationPerf.lastPage=page;navigationPerf.lastMs=(globalThis.performance?.now?.()??Date.now())-tapStarted;navigationPerf.maxMs=Math.max(navigationPerf.maxMs,navigationPerf.lastMs);navigationPerf.cacheHits++;
  }else{
-  // First visit/stale page: render deterministically now. This avoids a blank selected
-  // page while still eliminating all hidden-page background work.
-  renderPage(page);
-  navigationPerf.lastPage=page;navigationPerf.lastMs=(globalThis.performance?.now?.()??Date.now())-tapStarted;navigationPerf.maxMs=Math.max(navigationPerf.maxMs,navigationPerf.lastMs);
+  setPagePending(page,true);
+  scheduleDestinationRender(page,token,tapStarted);
  }
- if(anchor)requestAnimationFrame(()=>document.getElementById(anchor)?.scrollIntoView({behavior:'smooth',block:'start'}));
+ if(anchor)requestAnimationFrame(()=>requestAnimationFrame(()=>document.getElementById(anchor)?.scrollIntoView({behavior:'smooth',block:'start'})));
 }
 renderNavigation();
-requestAnimationFrame(positionMobileNavigation);
+requestAnimationFrame(()=>{positionMobileNavigation();reconcileNavigationInteractivity()});
 document.documentElement.style.removeProperty('--nav-visual-bottom');
 
-$('nav').onclick=event=>{
+$('nav').addEventListener('click',event=>{
  const button=event.target.closest('button');
  if(!button||!$('nav').contains(button))return;
+ event.preventDefault();
+ reconcileNavigationInteractivity();
+ if(navigationIsBlocked())return;
  if(button.id==='moreNavBtn'){
   const open=$('moreNav').classList.toggle('hidden')===false;
   button.setAttribute('aria-expanded',String(open));
   return;
  }
  if(button.dataset.page)activatePage(button.dataset.page);
-};
-$('moreNav').onclick=event=>{
+});
+$('moreNav').addEventListener('click',event=>{
  const button=event.target.closest('button[data-page]');
- if(button&&$('moreNav').contains(button))activatePage(button.dataset.page);
-};
+ if(!button||!$('moreNav').contains(button))return;
+ event.preventDefault();
+ reconcileNavigationInteractivity();
+ if(!navigationIsBlocked())activatePage(button.dataset.page);
+});
 $('prevWeek').onclick=()=>{state.weekView=clamp((state.weekView||currentWeek())-1,1,weeks());renderPlan()};$('nextWeek').onclick=()=>{state.weekView=clamp((state.weekView||currentWeek())+1,1,weeks());renderPlan()};$('thisWeek').onclick=()=>{state.weekView=currentWeek();renderPlan()};
 
 function runEditorHtml(r){
@@ -10990,7 +11090,7 @@ function initialiseApplication(){
   startupLoaderStatus('Finalizing…');
 
   appStartupInProgress=false;
-  requestAnimationFrame(()=>requestAnimationFrame(()=>finishStartupLoader()));
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{finishStartupLoader();reconcileNavigationInteractivity();}));
 
   // Nonessential migrations, history compaction, fingerprints and future shoe
   // re-optimisation remain post-startup maintenance.
