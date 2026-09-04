@@ -2,12 +2,12 @@
 <html lang="en">
 <head>
 <meta charset="utf-8"><meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"><meta http-equiv="Pragma" content="no-cache"><meta http-equiv="Expires" content="0"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,interactive-widget=resizes-content">
-<meta name="theme-color" content="#07111D"><meta name="app-build" content="50710"><title>AI Running Coach</title>
-<link rel="manifest" href="manifest.webmanifest?v=50710"><link rel="stylesheet" href="styles.css?v=50710">
-<link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png?v=50710">
-<link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png?v=50710">
-<link rel="icon" href="favicon.ico?v=50710">
-<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=50710">
+<meta name="theme-color" content="#07111D"><meta name="app-build" content="50701"><title>AI Running Coach</title>
+<link rel="manifest" href="manifest.webmanifest?v=51000"><link rel="stylesheet" href="styles.css?v=51000">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png?v=50701">
+<link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png?v=50701">
+<link rel="icon" href="favicon.ico?v=50701">
+<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=50701">
 <meta property="og:image" content="github-banner.png">
 
 
@@ -227,15 +227,15 @@
 </style>
 <div id="appStartupLoader" class="appStartupLoader" role="status" aria-live="polite" aria-label="Loading AI Running Coach">
   <div class="startupLoaderCard">
-    <div class="startupRunnerStage" aria-hidden="true"><img class="startupIconWhole" src="startup-icon.png?v=50710" alt=""></div>
+    <div class="startupRunnerStage" aria-hidden="true"><img class="startupIconWhole" src="startup-icon.png?v=50701" alt=""></div>
     <strong>Starting AI Running Coach…</strong>
   </div>
 </div>
 
 <a class="skipLink" href="#mainContent">Skip to main content</a>
 <header class="topbar">
-  <div class="brand"><img class="logo" src="icon-192.png?v=50710" alt="AI Running Coach logo"><div class="brand-copy"><h1>AI Running Coach</h1><p>Race-specific adaptive planning · v15.6.110 · build 50710</p></div></div>
-  <button type="button" id="installBtn" class="install hidden">Install</button>
+  <div class="brand"><img class="logo" src="icon-192.png?v=50701" alt="AI Running Coach logo"><div class="brand-copy"><h1>AI Running Coach</h1><p>Race-specific adaptive planning · v15.6.101 · build 50701</p></div></div>
+  <button id="installBtn" class="install hidden">Install</button>
 </header>
 <nav id="nav" aria-label="Primary navigation"></nav>
 <div id="moreNav" class="moreNav hidden" aria-label="More destinations"></div>
@@ -254,8 +254,7 @@
 
   <section class="progressReviewSlot" aria-label="Longitudinal training review"><article class="panel coachAssessmentPanel"><div id="assessmentText"></div></article></section>
 
-
-  <section class="progressSection"><div class="progressSectionHead"><span>02</span><div><small>FITNESS & CAPABILITY</small><h3>Can you produce more for the same physiological cost?</h3><p>Comparable physiological evidence, not raw pace across unrelated sessions.</p></div></div><div id="progressFitnessBenchmark"></div><article class="panel fitnessMetricGroup"><div id="metricKpis" class="kpis"></div></article><div id="progressRecords"></div><div class="grid2 metricCharts"><article class="panel"><div class="panelHead"><div><h3>Efficiency factor</h3><p class="muted compact">Joules of running power per heartbeat · compare similar sessions</p></div></div><canvas id="efficiencyChart" width="1000" height="380" role="img" aria-label="Efficiency factor trend chart">Efficiency factor trend.</canvas><div id="efficiencyChartMount" class="progressChartMount" aria-hidden="true"></div></article><article class="panel"><div class="panelHead"><div><h3>Aerobic durability</h3><p class="muted compact">Power-based cardiac drift on suitable continuous runs · lower is better</p></div></div><canvas id="driftChart" width="1000" height="380" role="img" aria-label="Power-based cardiac drift trend chart">Power-based cardiac drift trend.</canvas><div id="driftChartMount" class="progressChartMount" aria-hidden="true"></div></article></div><details class="panel modelDetails"><summary>Metrics by comparable run type</summary><div id="metricTypeSummary"></div></details></section>
+  <section class="progressSection"><div class="progressSectionHead"><span>02</span><div><small>FITNESS & CAPABILITY</small><h3>Can you produce more for the same physiological cost?</h3><p>Comparable physiological evidence, not raw pace across unrelated sessions.</p></div></div><article class="panel fitnessMetricGroup"><div id="metricKpis" class="kpis"></div></article><div id="progressRecords"></div><div class="grid2 metricCharts"><article class="panel"><div class="panelHead"><div><h3>Efficiency factor</h3><p class="muted compact">Joules of running power per heartbeat · compare similar sessions</p></div></div><canvas id="efficiencyChart" width="1000" height="380" role="img" aria-label="Efficiency factor trend chart">Efficiency factor trend.</canvas><div id="efficiencyChartMount" class="progressChartMount" aria-hidden="true"></div></article><article class="panel"><div class="panelHead"><div><h3>Aerobic durability</h3><p class="muted compact">Power-based cardiac drift on suitable continuous runs · lower is better</p></div></div><canvas id="driftChart" width="1000" height="380" role="img" aria-label="Power-based cardiac drift trend chart">Power-based cardiac drift trend.</canvas><div id="driftChartMount" class="progressChartMount" aria-hidden="true"></div></article></div><details class="panel modelDetails"><summary>Metrics by comparable run type</summary><div id="metricTypeSummary"></div></details></section>
 
   <section class="progressSection"><div class="progressSectionHead"><span>03</span><div><small>ENDURANCE & DURABILITY</small><h3>Can you sustain running better and for longer?</h3><p>Long-run progression and verified endurance exposure.</p></div></div><article class="panel progressChartPanel"><div class="panelHead progressChartHead"><div><h3>Long-run progression</h3><span class="muted">Planned versus completed</span></div><div id="longRunSummary" class="chartMetric"></div></div><canvas id="longRunChart" width="1000" height="340" role="img" aria-label="Planned and completed long-run progression chart">Planned and completed long-run distance.</canvas><div id="longRunChartMount" class="progressChartMount" aria-hidden="true"></div></article></section>
 
@@ -286,7 +285,7 @@
   </details>
 </section>
   <div class="planWeekNavWrap">
-    <div class="weekNav"><button type="button" id="prevWeek" aria-label="Previous week">‹</button><button type="button" id="thisWeek">Current week</button><button type="button" id="nextWeek" aria-label="Next week">›</button></div>
+    <div class="weekNav"><button id="prevWeek" aria-label="Previous week">‹</button><button id="thisWeek">Current week</button><button id="nextWeek" aria-label="Next week">›</button></div>
     <div id="weekHeader"></div>
   </div>
   <section class="planSection planWeekSection">
@@ -337,9 +336,22 @@
 
 <section id="shoes" class="page shoesPage"><div id="shoesContent"></div></section>
 
+<section id="assessments" class="page">
+  <div class="sectionTitle"><div><h2>Fitness assessments</h2><p>Valid assessments update future targets only.</p></div><button id="addAssessmentBtn" class="primary small">+ Add result</button></div>
+  <div id="assessmentForm" class="hidden"></div>
+  <div id="assessmentList"></div>
+</section>
+
+<section id="coach" class="page">
+  <div class="sectionTitle"><div><h2>Coach report</h2><p>Tailored conclusions, priorities and actions backed by verifiable plan and training data.</p></div></div>
+  <div id="coachTop" class="kpis"></div>
+  <article class="panel"><h3>Evidence-based coaching assessment</h3><div id="fullAssessment"></div></article>
+  <article class="panel"><h3>Verification standard</h3><p>The coach uses only configured goals, generated plan data, logged runs, valid assessments, Garmin HRV and pain entries. Missing information is treated as missing rather than guessed. Model-calibrated predictions are labelled separately from directly observed evidence.</p></article>
+</section>
+
 
 <section id="injury" class="page injuryRunnerPage">
-  <div class="sectionTitle injuryRunnerPageTitle"><div><span class="pageEyebrow">RETURN TO RUN</span><h2>Injury & rehab</h2><p>Criteria-based rehabilitation, functional progression and return to unrestricted running.</p></div><button type="button" id="addInjuryBtn" class="primary small">+ Add injury</button></div>
+  <div class="sectionTitle injuryRunnerPageTitle"><div><span class="pageEyebrow">RETURN TO RUN</span><h2>Injury & rehab</h2><p>Criteria-based rehabilitation, functional progression and return to unrestricted running.</p></div><button id="addInjuryBtn" class="primary small">+ Add injury</button></div>
   <div id="injuryIntro"></div>
   <div id="injuryList"></div>
 </section>
@@ -458,14 +470,14 @@
 
 <section id="settings" class="page">
   <div class="settingsPageTitle"><div class="settingsPictogram">⚙</div><div><span class="settingsEyebrow">PROGRAMME CONFIGURATION</span><h2>Settings</h2><p>Understand what drives your programme and change only the inputs you control.</p></div></div>
-  <article class="settingsSection"><div class="settingsSectionHead"><span>01</span><div><small>ATHLETE & RACE SETUP</small><h3>What is this programme built around?</h3><p>Your goal event and the athlete inputs used by the existing model.</p></div></div><div id="settingsGrid" class="settingsGroups"></div><button type="button" id="saveSettings" class="primary full">Preview and rebuild future plan</button><button id="undoSettingsBtn" type="button" class="secondary full hidden">Undo last plan rebuild</button></article>
+  <article class="settingsSection"><div class="settingsSectionHead"><span>01</span><div><small>ATHLETE & RACE SETUP</small><h3>What is this programme built around?</h3><p>Your goal event and the athlete inputs used by the existing model.</p></div></div><div id="settingsGrid" class="settingsGroups"></div><button id="saveSettings" class="primary full">Preview and rebuild future plan</button><button id="undoSettingsBtn" type="button" class="secondary full hidden">Undo last plan rebuild</button></article>
   <article class="settingsSection"><div class="settingsSectionHead"><span>02</span><div><small>TRAINING STRUCTURE</small><h3>When can you train?</h3><p>Availability and the long-run day used when the plan is rebuilt.</p></div></div><div id="daysGrid"></div></article>
-  <article class="settingsSection"><div class="settingsSectionHead"><span>03</span><div><small>ADAPTIVE MODEL</small><h3>Is the configured plan structurally sound?</h3><p>Plan Health validates the programme structure without duplicating Progress.</p></div></div><div class="settingsNested"><div class="panelHead"><div><h3>Plan Health</h3><p class="muted compact">Structure score, calculation and recommendations for the configured plan.</p></div><button type="button" id="planHealthBtn" class="secondary">Validate plan</button></div><div id="planHealthContent"></div></div></article>
-  <article class="settingsSection"><div class="settingsSectionHead"><span>04</span><div><small>DATA & IMPORTS</small><h3>Manage your local training data</h3><p>Back up, restore or export data. Destructive actions remain clearly separated.</p></div></div><div class="settingsNested"><div class="buttonRow settingsDataActions"><button type="button" id="backupBtn">Download backup</button><label for="restoreFile" class="buttonLike">Restore backup</label><input id="restoreFile" type="file" accept=".json"><button id="undoRestoreBtn" type="button" class="secondary hidden">Undo last restore</button><button type="button" id="exportBtn">Export runs CSV</button></div><div class="settingsDangerZone"><b>Reset local app data</b><p>Use only when you intend to remove the current local programme and history.</p><button type="button" id="resetBtn" class="danger">Reset app</button></div></div></article>
-  <article class="settingsSection"><div class="settingsSectionHead"><span>05</span><div><small>APP & MODEL INFORMATION</small><h3>Which version is running?</h3><p>Reference information for this local build.</p></div></div><div class="settingsNested settingsAppInfo"><div><small>APP VERSION</small><strong>v15.6.110</strong></div><div><small>BUILD</small><strong>50710</strong></div><div><small>DATA</small><strong>Stored locally</strong></div><div><small>ACTIVITY STORAGE</small><strong>Compact derived evidence</strong></div><div><small>EXPECTED CAPACITY</small><strong>≈250–350+ imported sessions</strong><span>Device dependent · a 150-session programme is comfortably within the expected range.</span></div></div><details id="modelDiagnostics" class="settingsNested modelDiagnostics"><summary><div><small>MODEL INTEGRITY</small><b>Checking…</b><span>Read-only consistency diagnostics</span></div></summary></details></article>
+  <article class="settingsSection"><div class="settingsSectionHead"><span>03</span><div><small>ADAPTIVE MODEL</small><h3>Is the configured plan structurally sound?</h3><p>Plan Health validates the programme structure without duplicating Progress.</p></div></div><div class="settingsNested"><div class="panelHead"><div><h3>Plan Health</h3><p class="muted compact">Structure score, calculation and recommendations for the configured plan.</p></div><button id="planHealthBtn" class="secondary">Validate plan</button></div><div id="planHealthContent"></div></div></article>
+  <article class="settingsSection"><div class="settingsSectionHead"><span>04</span><div><small>DATA & IMPORTS</small><h3>Manage your local training data</h3><p>Back up, restore or export data. Destructive actions remain clearly separated.</p></div></div><div class="settingsNested"><div class="buttonRow settingsDataActions"><button id="backupBtn">Download backup</button><label for="restoreFile" class="buttonLike">Restore backup</label><input id="restoreFile" type="file" accept=".json"><button id="undoRestoreBtn" type="button" class="secondary hidden">Undo last restore</button><button id="exportBtn">Export runs CSV</button></div><div class="settingsDangerZone"><b>Reset local app data</b><p>Use only when you intend to remove the current local programme and history.</p><button id="resetBtn" class="danger">Reset app</button></div></div></article>
+  <article class="settingsSection"><div class="settingsSectionHead"><span>05</span><div><small>APP & MODEL INFORMATION</small><h3>Which version is running?</h3><p>Reference information for this local build.</p></div></div><div class="settingsNested settingsAppInfo"><div><small>APP VERSION</small><strong>v15.7.0</strong></div><div><small>BUILD</small><strong>51000</strong></div><div><small>DATA</small><strong>Stored locally</strong></div><div><small>ACTIVITY STORAGE</small><strong>Compact derived evidence</strong></div><div><small>EXPECTED CAPACITY</small><strong>≈250–350+ imported sessions</strong><span>Device dependent · a 150-session programme is comfortably within the expected range.</span></div></div><details id="modelDiagnostics" class="settingsNested modelDiagnostics"><summary><div><small>MODEL INTEGRITY</small><b>Checking…</b><span>Read-only consistency diagnostics</span></div></summary></details></article>
 </section>
 </main>
-<footer class="appFooter"><span>AI Running Coach</span><small>v15.6.110 · build 50710</small></footer>
+<footer class="appFooter"><span>AI Running Coach</span><small>v15.6.101 · build 50701</small></footer>
 
 <div id="modal" class="modal hidden" role="dialog" aria-modal="true" aria-label="AI Running Coach dialog" tabindex="-1"><div class="modalCard"><button id="closeModal" class="close" type="button" aria-label="Close dialog">×</button><div id="modalContent"></div></div></div>
 
@@ -494,5 +506,5 @@
     <button class="primary full" type="submit">Review and create my plan</button>
   </form>
 </div>
-<script src="app.js?v=50710"></script>
+<script src="app.js?v=51000"></script>
 </body></html>
