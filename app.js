@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '15.7.5';
-  const BUILD = 51005;
+  const VERSION = '15.7.6';
+  const BUILD = 51006;
   const SCHEMA = 10400;
   const PRIMARY_STORAGE_KEY = 'arc_v10400_web';
   const MIRROR_STORAGE_KEY = 'arc_v10400_mirror';
@@ -897,10 +897,11 @@ function pathwayEvidenceTrace(run,pathway){
    const analysedRows=weekly.rows;
    const acceptedRows=analysedRows.filter(x=>Math.abs(x.contribution)>=.00005);
    const bucket=sum(acceptedRows.map(x=>x.contribution));
-   const applied=pacePowerCommittedFactor(run.date),rawProjected=clamp(applied+bucket,state.setup.minFactor,state.setup.maxFactor);
-   const roundedIndex=Math.round(rawProjected*100*2)/2,projected=Math.abs(roundedIndex-100)<.75?1:roundedIndex/100;
-   const thresholdBlocked=Math.abs(rawProjected-applied)>=.00005&&Math.abs(projected-applied)<.0005;
-   return{pathway:'pace',rawSignal:Number.isFinite(d.rawIntegratedSignal)?d.rawIntegratedSignal:d.finalSignal,acceptedSignal:d.finalSignal,confidenceWeight:d.confidenceWeight,learningRate:PATHWAY_LEARNING_RATE.pace,acceptedContribution:accepted,weeklyBucket:bucket,analysedCount:analysedRows.length,analysedCount:analysedRows.length,weeklyRows:acceptedRows.map(x=>({date:x.run.date,type:x.run.type,contribution:x.contribution})),applied,rawProjected,projected,thresholdBlocked,safeguard:d.safeguardNote||'No additional safeguard changed the integrated signal.',status:thresholdBlocked?'Accepted evidence is accumulating, but the Pace & Power stability threshold has not yet been crossed.':Math.abs(projected-applied)>=.0005?'Projected change pending weekly review.':'No accepted factor change from current evidence.'};
+   const applied=pacePowerCommittedFactor(run.date),paceEvidence=trainingEvidence(run.date);
+   const rawProjected=clamp(Number(paceEvidence.rawIndex)/100,state.setup.minFactor,state.setup.maxFactor),committedProjection=Number(paceEvidence.adjustment)||applied;
+   const projected=rawProjected;
+   const thresholdBlocked=Math.abs(projected-applied)>=.00005&&Math.abs(committedProjection-applied)<.0005;
+   return{pathway:'pace',rawSignal:Number.isFinite(d.rawIntegratedSignal)?d.rawIntegratedSignal:d.finalSignal,acceptedSignal:d.finalSignal,confidenceWeight:d.confidenceWeight,learningRate:PATHWAY_LEARNING_RATE.pace,acceptedContribution:accepted,weeklyBucket:bucket,analysedCount:analysedRows.length,analysedCount:analysedRows.length,weeklyRows:acceptedRows.map(x=>({date:x.run.date,type:x.run.type,contribution:x.contribution})),applied,rawProjected,projected,committedProjection,thresholdBlocked,safeguard:d.safeguardNote||'No additional safeguard changed the integrated signal.',status:thresholdBlocked?'Accepted evidence is accumulating; the projected next-review value shows the exact candidate before the Pace & Power stability threshold is applied.':Math.abs(projected-applied)>=.0005?'Projected change pending weekly review.':'No accepted factor change from current evidence.'};
  }
  const d=loadDecisionSignalForRun(run,plan),accepted=loadAcceptedContribution(d),weekly=weeklyLoadEvidence(w,false,run.date);
  const analysedRows=weekly.decisions;
@@ -1070,7 +1071,9 @@ function pacePowerCommittedFactor(date=iso(today())){
  return trainingEvidence(iso(priorWeekEnd)).adjustment;
 }
 function pacePowerProvisionalFactor(date=iso(today())){
- return trainingEvidence(date).adjustment;
+ const evidence=trainingEvidence(date);
+ const raw=Number(evidence?.rawIndex);
+ return Number.isFinite(raw)?raw/100:evidence.adjustment;
 }
 function pacePowerReviewState(date=iso(today())){
  const applied=pacePowerCommittedFactor(date),provisional=pacePowerProvisionalFactor(date);
@@ -2489,14 +2492,23 @@ function drawDashboardCharts(){
  const predictionCanvas=$('predictionChart');
  if(predictionCanvas){
    const stateEl=predictionCanvas.parentElement?.querySelector(':scope > .progressChartState');if(stateEl)stateEl.remove();predictionCanvas.classList.remove('progressChartHidden');
-   const todayEstimate=Number(currentPred);const currentDate=iso(today());
+   const todayEstimate=Number(currentPred),expectedEstimate=Number(coachEngine()?.projection?.predictedTime);const currentDate=iso(today());
    const chartValues=[startPrediction,...predSec];const chartLabels=['Start',...labels];const chartDetails=[`Programme start · ${fmtTime(startPrediction)}`,...pointDetails];
    if(Number.isFinite(todayEstimate)&&((history.at(-1)?.date||'')!==currentDate||Math.abs((chartValues.at(-1)??0)-todayEstimate)>.5)){chartValues.push(todayEstimate);chartLabels.push('Today');chartDetails.push(`Current model estimate · ${fmtTime(todayEstimate)}`)}
-   drawProgressLine(predictionCanvas,[
-     {label:'Race estimate',data:chartValues,color:'#4CC9F0'},
+   else if(chartLabels.length>1&&(history.at(-1)?.date||'')===currentDate){chartLabels[chartLabels.length-1]='Today';chartDetails[chartDetails.length-1]=`Current model estimate · ${fmtTime(todayEstimate)}`}
+   const currentIndex=Math.max(0,chartValues.length-1),raceLabel=`Race ${dte(state.setup.raceDate).toLocaleDateString(undefined,{day:'numeric',month:'short'})}`;
+   chartValues.push(null);chartLabels.push(raceLabel);chartDetails.push(Number.isFinite(expectedEstimate)?`Expected programme outcome · ${fmtTime(expectedEstimate)}`:'Race day');
+   const expectedValues=new Array(chartLabels.length).fill(null);
+   if(Number.isFinite(todayEstimate)&&Number.isFinite(expectedEstimate)){expectedValues[currentIndex]=todayEstimate;expectedValues[chartLabels.length-1]=expectedEstimate}
+   allSec=[...allSec,expectedEstimate].filter(Number.isFinite);low=Math.min(...allSec);high=Math.max(...allSec);
+   minSec=Math.max(2*3600,Math.floor((low-1800)/1800)*1800);maxSec=Math.min(7*3600,Math.ceil((high+1800)/1800)*1800);if(maxSec-minSec<3600)maxSec=minSec+3600;
+   const predictionSeries=[
+     {label:`Current ${fmtTime(todayEstimate)}`,data:chartValues,color:'#4CC9F0'},
+     {label:`Expected ${fmtTime(expectedEstimate)}`,data:expectedValues,color:'#79D69B',dashed:true},
      {label:`Target ${fmtTime(targetTime)}`,data:[targetTime],color:'#F47777',dashed:true,points:false,horizontal:true}
-   ],{min:minSec,max:maxSec,ticks:5,formatY:v=>fmtTime(v),labels:chartLabels,left:98,pointDetails:chartDetails,empty:'No race estimate available'});
-   renderProgressSvgChart(predictionCanvas,[{label:'Race estimate',data:chartValues,color:'#4CC9F0'},{label:`Target ${fmtTime(targetTime)}`,data:[targetTime],color:'#F47777',dashed:true,points:false,horizontal:true}],{min:minSec,max:maxSec,ticks:5,formatY:v=>fmtTime(v),labels:chartLabels});
+   ];
+   drawProgressLine(predictionCanvas,predictionSeries,{min:minSec,max:maxSec,ticks:5,formatY:v=>fmtTime(v),labels:chartLabels,left:98,pointDetails:chartDetails,empty:'No race estimate available'});
+   renderProgressSvgChart(predictionCanvas,predictionSeries,{min:minSec,max:maxSec,ticks:5,formatY:v=>fmtTime(v),labels:chartLabels});
  }
 
 }
@@ -3985,6 +3997,7 @@ function pathwayEvidenceCardHtml(title,d,t){
    <div class="logEvidenceHead"><div><small>${title}</small><h4 class="pathwayStatusText ${headlineStatus}">${esc(lang.q)}</h4></div><span class="pathwayStatusBadge ${status}">${accepted?'Evidence accepted':status==='warn'?'Caution signal':status==='bad'?'Negative signal held':'No learned change'}</span></div>
    <div class="logEvidenceGaugeRowV3"><div class="evidenceMiniGauge ${status}" style="--e:${weight}"><strong>${weight}%</strong><small>evidence weight</small></div><div class="pathMetricGridV3"><div><span>RUN SIGNAL</span><strong>${t.rawSignal>=0?'+':''}${t.rawSignal.toFixed(2)}</strong></div><div><span>ACCEPTED CONTRIBUTION</span><strong>${accepted?signedFactorDelta(t.acceptedContribution):'0.000'}</strong></div><div><span>THIS WEEK</span><strong>${signedFactorDelta(t.weeklyBucket)}</strong></div></div></div>
    <div class="factorGridV3"><div><span>APPLIED</span><strong>${t.applied.toFixed(3)}</strong><small>Current committed factor</small></div><i>→</i><div><span>PROJECTED NEXT REVIEW</span><strong>${t.projected.toFixed(3)}</strong><small>${signedFactorDelta(projectedChange)} vs applied</small></div></div>
+   ${t.thresholdBlocked?`<p class="muted compact">Projected next review shows the exact accumulated candidate. The applied Pace & Power factor still changes only when the weekly stability threshold is crossed.</p>`:''}
    <p class="logEvidenceMeaning">${esc(lang.runMeaning)} ${esc(lang.response)}</p>
    ${!accepted&&t.safeguard?`<div class="logEvidenceSafeguard">${esc(t.safeguard)}</div>`:''}
    <details class="logEvidenceCalc"><summary>How was this calculated?</summary><div class="logEvidenceDrivers"><h5>Evidence used</h5><div class="evidenceDriverList">${pathwayEvidenceSummaryHtml(d,t)}</div></div>${pathwayCalculationDetailsHtml(d,t)}</details>
@@ -6276,11 +6289,14 @@ function renderProgressChartsStandalone(){
   progressSvgIntoMount('longRunChartMount',[{label:'Planned long run',data:planned,color:'#67a7ff',dashed:true,points:false},{label:'Completed long run',data:completed,color:'#79d69b'}],{nonNegative:true,labels,aria:'Long-run progression',empty:'No planned or completed long-run data yet.'});
  }catch(err){recordDiagnostic('Progress long-run chart',err)}
  try{
-  const predNow=prediction(),history=(state.predictionHistory||[]).filter(x=>Number.isFinite(Number(x.seconds))&&x.date<=iso(today())).slice().sort((a,b)=>a.date.localeCompare(b.date));
-  const start=Number(state.programStartPrediction)||initialProgrammePrediction(state.setup)||predNow,target=Number(state.setup.targetTime),vals=[start,...history.map(x=>Number(x.seconds))],labels=['Start',...history.map(x=>dte(x.date).toLocaleDateString(undefined,{day:'numeric',month:'short'}))];
-  if(Number.isFinite(Number(predNow))&&Math.abs((vals.at(-1)??0)-Number(predNow))>.5){vals.push(Number(predNow));labels.push('Today')}
-  const all=[...vals,target].filter(Number.isFinite),lo=Math.min(...all),hi=Math.max(...all),min=Math.max(2*3600,Math.floor((lo-1800)/1800)*1800),max=Math.max(min+3600,Math.min(7*3600,Math.ceil((hi+1800)/1800)*1800));
-  progressSvgIntoMount('predictionChartMount',[{label:'Race estimate',data:vals,color:'#3dd6c6'},{label:`Target ${fmtTime(target)}`,data:[target],color:'#ff8585',dashed:true,points:false,horizontal:true}],{ticks:5,tickStep:15*60,formatY:v=>fmtTime(v),labels,aria:'Race readiness trajectory',empty:'No race estimate is available yet.'});
+  const predNow=prediction(),engine=coachEngine(),expected=Number(engine?.projection?.predictedTime),history=(state.predictionHistory||[]).filter(x=>Number.isFinite(Number(x.seconds))&&x.date<=iso(today())).slice().sort((a,b)=>a.date.localeCompare(b.date));
+  const start=Number(state.programStartPrediction)||initialProgrammePrediction(state.setup)||predNow,target=Number(state.setup.targetTime),vals=[start,...history.map(x=>Number(x.seconds))],labels=['Start',...history.map(x=>dte(x.date).toLocaleDateString(undefined,{day:'numeric',month:'short'}))],todayIso=iso(today());
+  if(Number.isFinite(Number(predNow))&&((history.at(-1)?.date||'')!==todayIso||Math.abs((vals.at(-1)??0)-Number(predNow))>.5)){vals.push(Number(predNow));labels.push('Today')}
+  else if(labels.length>1&&(history.at(-1)?.date||'')===todayIso)labels[labels.length-1]='Today';
+  const currentIndex=Math.max(0,vals.length-1);vals.push(null);labels.push(`Race ${dte(state.setup.raceDate).toLocaleDateString(undefined,{day:'numeric',month:'short'})}`);
+  const expectedVals=new Array(labels.length).fill(null);if(Number.isFinite(Number(predNow))&&Number.isFinite(expected)){expectedVals[currentIndex]=Number(predNow);expectedVals[labels.length-1]=expected}
+  const all=[...vals,target,expected].filter(Number.isFinite),lo=Math.min(...all),hi=Math.max(...all),min=Math.max(2*3600,Math.floor((lo-1800)/1800)*1800),max=Math.max(min+3600,Math.min(7*3600,Math.ceil((hi+1800)/1800)*1800));
+  progressSvgIntoMount('predictionChartMount',[{label:`Current ${fmtTime(Number(predNow))}`,data:vals,color:'#3dd6c6'},{label:`Expected ${fmtTime(expected)}`,data:expectedVals,color:'#79d69b',dashed:true},{label:`Target ${fmtTime(target)}`,data:[target],color:'#ff8585',dashed:true,points:false,horizontal:true}],{ticks:5,tickStep:15*60,formatY:v=>fmtTime(v),labels,aria:'Race readiness trajectory with current and expected finish times',empty:'No race estimate is available yet.'});
  }catch(err){recordDiagnostic('Progress prediction chart',err)}
  try{
   const rs=completedRuns().slice().sort((a,b)=>a.date.localeCompare(b.date)),runs=rs.filter(r=>Number.isFinite(metrics(r).efficiencyJ)),vals=runs.map(r=>metrics(r).efficiencyJ),labels=runs.map(r=>dte(r.date).toLocaleDateString(undefined,{day:'numeric',month:'short'}));
