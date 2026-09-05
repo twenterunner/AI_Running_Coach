@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '15.7.7';
-  const BUILD = 51007;
+  const VERSION = '15.7.8';
+  const BUILD = 51008;
   const SCHEMA = 10400;
   const PRIMARY_STORAGE_KEY = 'arc_v10400_web';
   const MIRROR_STORAGE_KEY = 'arc_v10400_mirror';
@@ -306,7 +306,9 @@ let preview=null;
 (()=>{'use strict';
 const CORE=window.ARC_CORE;if(!CORE)throw new Error('Core utilities failed to load.');
 const DAY=86400050, $=id=>document.getElementById(id), clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
-function today(){return dte(iso(new Date()))}
+let MODEL_DATE_OVERRIDE=null;
+function today(){return MODEL_DATE_OVERRIDE?dte(MODEL_DATE_OVERRIDE):dte(iso(new Date()))}
+function withModelDate(date,fn){const previous=MODEL_DATE_OVERRIDE;MODEL_DATE_OVERRIDE=iso(dte(date));try{return fn()}finally{MODEL_DATE_OVERRIDE=previous}}
 const iso=d=>{let x=new Date(d),y=x.getFullYear(),m=String(x.getMonth()+1).padStart(2,'0'),q=String(x.getDate()).padStart(2,'0');return `${y}-${m}-${q}`},
 dte=s=>{let [y,m,d]=String(s).split('-').map(Number);return new Date(y,m-1,d,12,0,0,0)},
 fmtDate=s=>dte(s).toLocaleDateString(undefined,{weekday:'short',day:'numeric',month:'short'});
@@ -2479,34 +2481,19 @@ function drawDashboardCharts(){
  ],{min:0,max:Math.max(state.setup.peakLong*1.12,10),empty:'Log a long run to show completed progression',labels:weekLabels});
  renderProgressSvgChart($('longRunChart'),[{label:'Planned long run',data:plannedLong,color:'#4CC9F0',dashed:true,points:false},{label:'Completed long run',data:completedLong,color:'#79D69B'}],{min:0,max:Math.max(state.setup.peakLong*1.12,10),labels:weekLabels});
 
- let history=(state.predictionHistory||[]).filter(x=>Number.isFinite(Number(x.seconds))&&x.date<=iso(today())).slice().sort((a,b)=>a.date.localeCompare(b.date));
- const startPrediction=Number(state.programStartPrediction)||initialProgrammePrediction(state.setup)||prediction();
- const targetTime=Number(state.setup.targetTime);
- const predSec=history.map(x=>Number(x.seconds));
- const labels=history.map(x=>dte(x.date).toLocaleDateString(undefined,{day:'numeric',month:'short'}));
- const pointDetails=history.map(x=>`${fmtDate(x.date)} · ${x.source||'Run update'} · ${fmtTime(Number(x.seconds))}`);
- let allSec=[...predSec,startPrediction,targetTime,Number(currentPred)].filter(Number.isFinite);
- let raceScale=tightTimeChartBounds(allSec),minSec=raceScale?.min??Math.min(...allSec),maxSec=raceScale?.max??Math.max(...allSec);
+ const targetTime=Number(state.setup.targetTime),raceDaily=raceReadinessDailySeries();
+ const allSec=[...raceDaily.current,...raceDaily.expected,targetTime].filter(Number.isFinite),raceScale=tightTimeChartBounds(allSec);
+ const minSec=raceScale?.min??Math.min(...allSec),maxSec=raceScale?.max??Math.max(...allSec),showDailyPoints=raceDaily.dates.length<=45;
  const predictionCanvas=$('predictionChart');
  if(predictionCanvas){
    const stateEl=predictionCanvas.parentElement?.querySelector(':scope > .progressChartState');if(stateEl)stateEl.remove();predictionCanvas.classList.remove('progressChartHidden');
-   const todayEstimate=Number(currentPred),expectedEstimate=Number(coachEngine()?.projection?.predictedTime);const currentDate=iso(today());
-   const chartValues=[startPrediction,...predSec];const chartLabels=['Start',...labels];const chartDetails=[`Programme start · ${fmtTime(startPrediction)}`,...pointDetails];
-   if(Number.isFinite(todayEstimate)&&((history.at(-1)?.date||'')!==currentDate||Math.abs((chartValues.at(-1)??0)-todayEstimate)>.5)){chartValues.push(todayEstimate);chartLabels.push('Today');chartDetails.push(`Current model estimate · ${fmtTime(todayEstimate)}`)}
-   else if(chartLabels.length>1&&(history.at(-1)?.date||'')===currentDate){chartLabels[chartLabels.length-1]='Today';chartDetails[chartDetails.length-1]=`Current model estimate · ${fmtTime(todayEstimate)}`}
-   const currentIndex=Math.max(0,chartValues.length-1),raceLabel=`Race ${dte(state.setup.raceDate).toLocaleDateString(undefined,{day:'numeric',month:'short'})}`;
-   chartValues.push(null);chartLabels.push(raceLabel);chartDetails.push(Number.isFinite(expectedEstimate)?`Expected programme outcome · ${fmtTime(expectedEstimate)}`:'Race day');
-   const expectedValues=new Array(chartLabels.length).fill(null);
-   if(Number.isFinite(todayEstimate)&&Number.isFinite(expectedEstimate)){expectedValues[currentIndex]=todayEstimate;expectedValues[chartLabels.length-1]=expectedEstimate}
-   allSec=[...allSec,expectedEstimate].filter(Number.isFinite);raceScale=tightTimeChartBounds(allSec);
-   minSec=raceScale?.min??Math.min(...allSec);maxSec=raceScale?.max??Math.max(...allSec);
    const predictionSeries=[
-     {label:`Current ${fmtTime(todayEstimate)}`,data:chartValues,color:'#4CC9F0'},
-     {label:`Expected ${fmtTime(expectedEstimate)}`,data:expectedValues,color:'#79D69B',dashed:true},
+     {label:`Current ${fmtTime(raceDaily.latestCurrent)}`,data:raceDaily.current,color:'#4CC9F0',points:showDailyPoints},
+     {label:`Expected ${fmtTime(raceDaily.latestExpected)}`,data:raceDaily.expected,color:'#79D69B',dashed:true,points:showDailyPoints},
      {label:`Target ${fmtTime(targetTime)}`,data:[targetTime],color:'#F47777',dashed:true,points:false,horizontal:true}
    ];
-   drawProgressLine(predictionCanvas,predictionSeries,{min:minSec,max:maxSec,ticks:5,formatY:v=>fmtTime(v),labels:chartLabels,left:98,pointDetails:chartDetails,empty:'No race estimate available'});
-   renderProgressSvgChart(predictionCanvas,predictionSeries,{min:minSec,max:maxSec,ticks:5,formatY:v=>fmtTime(v),labels:chartLabels});
+   drawProgressLine(predictionCanvas,predictionSeries,{min:minSec,max:maxSec,ticks:5,formatY:v=>fmtTime(v),labels:raceDaily.labels,left:98,pointDetails:raceDaily.details,empty:'No race estimate available'});
+   renderProgressSvgChart(predictionCanvas,predictionSeries,{min:minSec,max:maxSec,ticks:5,formatY:v=>fmtTime(v),labels:raceDaily.labels});
  }
 
 }
@@ -6229,6 +6216,28 @@ function tightTimeChartBounds(values,options={}){
  if(max<=min)max=min+round;
  return{min,max};
 }
+let raceReadinessDailyCache={key:null,value:null};
+function raceReadinessDailySeries(){
+ const realToday=iso(new Date()),raceDate=CORE.isIsoDate(state.setup?.raceDate)?state.setup.raceDate:realToday;
+ let start=CORE.isIsoDate(state.setup?.planStart)?state.setup.planStart:realToday,end=realToday<=raceDate?realToday:raceDate;
+ if(start>end)start=end;
+ const key=[Number(state.storageRevision)||0,start,end,raceDate,Number(state.setup?.targetTime)||0,Number(state.programStartPrediction)||0,(state.predictionHistory||[]).length].join('|');
+ if(raceReadinessDailyCache.key===key&&raceReadinessDailyCache.value)return raceReadinessDailyCache.value;
+ const dates=[],current=[],expected=[],details=[];
+ for(let d=dte(start),last=dte(end),guard=0;d<=last&&guard<1500;d=new Date(d.getTime()+DAY),guard++){
+  const date=iso(d);
+  const point=withModelDate(date,()=>{
+   const currentSec=Number(prediction()),c=confidence(),projectionSec=Number(programmeProjection(c,currentSec,projectedPreparationModel(c))?.predictedTime);
+   return{current:Number.isFinite(currentSec)?currentSec:null,expected:Number.isFinite(projectionSec)?projectionSec:null};
+  });
+  dates.push(date);current.push(point.current);expected.push(point.expected);
+  details.push(`${fmtDate(date)} · Current ${fmtTime(point.current)} · Expected ${fmtTime(point.expected)}`);
+ }
+ if(!dates.length){dates.push(end);const currentSec=Number(prediction()),c=confidence(),projectionSec=Number(programmeProjection(c,currentSec,projectedPreparationModel(c))?.predictedTime);current.push(Number.isFinite(currentSec)?currentSec:null);expected.push(Number.isFinite(projectionSec)?projectionSec:null);details.push(`${fmtDate(end)} · Current ${fmtTime(current.at(-1))} · Expected ${fmtTime(expected.at(-1))}`)}
+ const lastIndex=dates.length-1,labels=dates.map((date,i)=>lastIndex===0?(end===realToday?'Today':'Race'):i===0?'Start':i===lastIndex?(end===realToday?'Today':'Race'):dte(date).toLocaleDateString(undefined,{day:'numeric',month:'short'}));
+ const value={dates,labels,current,expected,details,latestCurrent:current.at(-1),latestExpected:expected.at(-1),start,end};
+ raceReadinessDailyCache={key,value};return value;
+}
 function progressAutoScale(series,options={}){
  const values=(Array.isArray(series)?series:[]).flatMap(sr=>(Array.isArray(sr.data)?sr.data:[]).filter(v=>v!==null&&v!==undefined&&v!=='').map(Number).filter(Number.isFinite));
  if(!values.length)return null;
@@ -6304,14 +6313,8 @@ function renderProgressChartsStandalone(){
   progressSvgIntoMount('longRunChartMount',[{label:'Planned long run',data:planned,color:'#67a7ff',dashed:true,points:false},{label:'Completed long run',data:completed,color:'#79d69b'}],{nonNegative:true,labels,aria:'Long-run progression',empty:'No planned or completed long-run data yet.'});
  }catch(err){recordDiagnostic('Progress long-run chart',err)}
  try{
-  const predNow=prediction(),engine=coachEngine(),expected=Number(engine?.projection?.predictedTime),history=(state.predictionHistory||[]).filter(x=>Number.isFinite(Number(x.seconds))&&x.date<=iso(today())).slice().sort((a,b)=>a.date.localeCompare(b.date));
-  const start=Number(state.programStartPrediction)||initialProgrammePrediction(state.setup)||predNow,target=Number(state.setup.targetTime),vals=[start,...history.map(x=>Number(x.seconds))],labels=['Start',...history.map(x=>dte(x.date).toLocaleDateString(undefined,{day:'numeric',month:'short'}))],todayIso=iso(today());
-  if(Number.isFinite(Number(predNow))&&((history.at(-1)?.date||'')!==todayIso||Math.abs((vals.at(-1)??0)-Number(predNow))>.5)){vals.push(Number(predNow));labels.push('Today')}
-  else if(labels.length>1&&(history.at(-1)?.date||'')===todayIso)labels[labels.length-1]='Today';
-  const currentIndex=Math.max(0,vals.length-1);vals.push(null);labels.push(`Race ${dte(state.setup.raceDate).toLocaleDateString(undefined,{day:'numeric',month:'short'})}`);
-  const expectedVals=new Array(labels.length).fill(null);if(Number.isFinite(Number(predNow))&&Number.isFinite(expected)){expectedVals[currentIndex]=Number(predNow);expectedVals[labels.length-1]=expected}
-  const all=[...vals,target,expected].filter(Number.isFinite),raceScale=tightTimeChartBounds(all);
-  progressSvgIntoMount('predictionChartMount',[{label:`Current ${fmtTime(Number(predNow))}`,data:vals,color:'#3dd6c6'},{label:`Expected ${fmtTime(expected)}`,data:expectedVals,color:'#79d69b',dashed:true},{label:`Target ${fmtTime(target)}`,data:[target],color:'#ff8585',dashed:true,points:false,horizontal:true}],{ticks:5,scaleMin:raceScale?.min,scaleMax:raceScale?.max,formatY:v=>fmtTime(v),labels,aria:'Race readiness trajectory with current and expected finish times',empty:'No race estimate is available yet.'});
+  const target=Number(state.setup.targetTime),daily=raceReadinessDailySeries(),all=[...daily.current,...daily.expected,target].filter(Number.isFinite),raceScale=tightTimeChartBounds(all),showDailyPoints=daily.dates.length<=45;
+  progressSvgIntoMount('predictionChartMount',[{label:`Current ${fmtTime(daily.latestCurrent)}`,data:daily.current,color:'#3dd6c6',points:showDailyPoints},{label:`Expected ${fmtTime(daily.latestExpected)}`,data:daily.expected,color:'#79d69b',dashed:true,points:showDailyPoints},{label:`Target ${fmtTime(target)}`,data:[target],color:'#ff8585',dashed:true,points:false,horizontal:true}],{ticks:5,scaleMin:raceScale?.min,scaleMax:raceScale?.max,formatY:v=>fmtTime(v),labels:daily.labels,aria:'Daily race readiness history with current and expected finish times',empty:'No race estimate is available yet.'});
  }catch(err){recordDiagnostic('Progress prediction chart',err)}
  try{
   const rs=completedRuns().slice().sort((a,b)=>a.date.localeCompare(b.date)),runs=rs.filter(r=>Number.isFinite(metrics(r).efficiencyJ)),vals=runs.map(r=>metrics(r).efficiencyJ),labels=runs.map(r=>dte(r.date).toLocaleDateString(undefined,{day:'numeric',month:'short'}));
