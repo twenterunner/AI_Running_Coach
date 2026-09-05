@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '15.7.6';
-  const BUILD = 51006;
+  const VERSION = '15.7.7';
+  const BUILD = 51007;
   const SCHEMA = 10400;
   const PRIMARY_STORAGE_KEY = 'arc_v10400_web';
   const MIRROR_STORAGE_KEY = 'arc_v10400_mirror';
@@ -2485,10 +2485,8 @@ function drawDashboardCharts(){
  const predSec=history.map(x=>Number(x.seconds));
  const labels=history.map(x=>dte(x.date).toLocaleDateString(undefined,{day:'numeric',month:'short'}));
  const pointDetails=history.map(x=>`${fmtDate(x.date)} · ${x.source||'Run update'} · ${fmtTime(Number(x.seconds))}`);
- let allSec=[...predSec,startPrediction,targetTime,Number(currentPred)].filter(Number.isFinite),low=Math.min(...allSec),high=Math.max(...allSec);
- let minSec=Math.max(2*3600,Math.floor((low-1800)/1800)*1800);
- let maxSec=Math.min(7*3600,Math.ceil((high+1800)/1800)*1800);
- if(maxSec-minSec<3600)maxSec=minSec+3600;
+ let allSec=[...predSec,startPrediction,targetTime,Number(currentPred)].filter(Number.isFinite);
+ let raceScale=tightTimeChartBounds(allSec),minSec=raceScale?.min??Math.min(...allSec),maxSec=raceScale?.max??Math.max(...allSec);
  const predictionCanvas=$('predictionChart');
  if(predictionCanvas){
    const stateEl=predictionCanvas.parentElement?.querySelector(':scope > .progressChartState');if(stateEl)stateEl.remove();predictionCanvas.classList.remove('progressChartHidden');
@@ -2500,8 +2498,8 @@ function drawDashboardCharts(){
    chartValues.push(null);chartLabels.push(raceLabel);chartDetails.push(Number.isFinite(expectedEstimate)?`Expected programme outcome · ${fmtTime(expectedEstimate)}`:'Race day');
    const expectedValues=new Array(chartLabels.length).fill(null);
    if(Number.isFinite(todayEstimate)&&Number.isFinite(expectedEstimate)){expectedValues[currentIndex]=todayEstimate;expectedValues[chartLabels.length-1]=expectedEstimate}
-   allSec=[...allSec,expectedEstimate].filter(Number.isFinite);low=Math.min(...allSec);high=Math.max(...allSec);
-   minSec=Math.max(2*3600,Math.floor((low-1800)/1800)*1800);maxSec=Math.min(7*3600,Math.ceil((high+1800)/1800)*1800);if(maxSec-minSec<3600)maxSec=minSec+3600;
+   allSec=[...allSec,expectedEstimate].filter(Number.isFinite);raceScale=tightTimeChartBounds(allSec);
+   minSec=raceScale?.min??Math.min(...allSec);maxSec=raceScale?.max??Math.max(...allSec);
    const predictionSeries=[
      {label:`Current ${fmtTime(todayEstimate)}`,data:chartValues,color:'#4CC9F0'},
      {label:`Expected ${fmtTime(expectedEstimate)}`,data:expectedValues,color:'#79D69B',dashed:true},
@@ -6219,18 +6217,35 @@ openInjuryCheck=function(injury,existing=null){
 };
 function renderUndoButtons(){try{$('undoSettingsBtn')?.classList.toggle('hidden',!localStorage.getItem(UNDO_KEY));$('undoRestoreBtn')?.classList.toggle('hidden',!localStorage.getItem(BACKUP_KEY))}catch{}}
 
+function tightTimeChartBounds(values,options={}){
+ const finite=(Array.isArray(values)?values:[]).filter(v=>v!==null&&v!==undefined&&v!=='').map(Number).filter(Number.isFinite);
+ if(!finite.length)return null;
+ const lo=Math.min(...finite),hi=Math.max(...finite),span=Math.max(0,hi-lo);
+ const pad=Math.max(Number(options.minPadSec)||60,span*(Number(options.padFraction)||0.05));
+ const minSpan=Math.max(60,Number(options.minSpanSec)||240),round=Math.max(1,Number(options.roundSec)||60);
+ let min=lo-pad,max=hi+pad;
+ if(max-min<minSpan){const mid=(lo+hi)/2;min=mid-minSpan/2;max=mid+minSpan/2}
+ min=Math.floor(min/round)*round;max=Math.ceil(max/round)*round;
+ if(max<=min)max=min+round;
+ return{min,max};
+}
 function progressAutoScale(series,options={}){
- const values=(Array.isArray(series)?series:[]).flatMap(sr=>(Array.isArray(sr.data)?sr.data:[]).map(Number).filter(Number.isFinite));
+ const values=(Array.isArray(series)?series:[]).flatMap(sr=>(Array.isArray(sr.data)?sr.data:[]).filter(v=>v!==null&&v!==undefined&&v!=='').map(Number).filter(Number.isFinite));
  if(!values.length)return null;
  let rawMin=Math.min(...values),rawMax=Math.max(...values);
  if(options.includeZero){rawMin=Math.min(rawMin,0);rawMax=Math.max(rawMax,0)}
  let span=rawMax-rawMin;
  let pad=span>0?span*.12:Math.max(Math.abs(rawMax)*.06,Number(options.singlePad)||1);
  let min=rawMin-pad,max=rawMax+pad;
+ if(Number.isFinite(Number(options.scaleMin)))min=Number(options.scaleMin);
+ if(Number.isFinite(Number(options.scaleMax)))max=Number(options.scaleMax);
  if(options.nonNegative&&rawMin>=0)min=Math.max(0,min);
  if(Number.isFinite(options.floor))min=Math.max(Number(options.floor),min);
  if(Number.isFinite(options.ceiling))max=Math.min(Number(options.ceiling),max);
  if(max<=min){const extra=Math.max(Math.abs(rawMax)*.05,1);min=rawMin-extra;max=rawMax+extra}
+ if(Number.isFinite(Number(options.scaleMin))&&Number.isFinite(Number(options.scaleMax))&&Number(options.scaleMax)>Number(options.scaleMin)){
+  return{min:Number(options.scaleMin),max:Number(options.scaleMax),step:(Number(options.scaleMax)-Number(options.scaleMin))/Math.max(1,(Number(options.ticks)||5)-1)};
+ }
  // Round bounds to runner-readable tick steps while keeping the scale data-driven.
  const targetTicks=Math.max(3,Number(options.ticks)||5),rawStep=(max-min)/(targetTicks-1);
  let step=Number(options.tickStep);
@@ -6295,8 +6310,8 @@ function renderProgressChartsStandalone(){
   else if(labels.length>1&&(history.at(-1)?.date||'')===todayIso)labels[labels.length-1]='Today';
   const currentIndex=Math.max(0,vals.length-1);vals.push(null);labels.push(`Race ${dte(state.setup.raceDate).toLocaleDateString(undefined,{day:'numeric',month:'short'})}`);
   const expectedVals=new Array(labels.length).fill(null);if(Number.isFinite(Number(predNow))&&Number.isFinite(expected)){expectedVals[currentIndex]=Number(predNow);expectedVals[labels.length-1]=expected}
-  const all=[...vals,target,expected].filter(Number.isFinite),lo=Math.min(...all),hi=Math.max(...all),min=Math.max(2*3600,Math.floor((lo-1800)/1800)*1800),max=Math.max(min+3600,Math.min(7*3600,Math.ceil((hi+1800)/1800)*1800));
-  progressSvgIntoMount('predictionChartMount',[{label:`Current ${fmtTime(Number(predNow))}`,data:vals,color:'#3dd6c6'},{label:`Expected ${fmtTime(expected)}`,data:expectedVals,color:'#79d69b',dashed:true},{label:`Target ${fmtTime(target)}`,data:[target],color:'#ff8585',dashed:true,points:false,horizontal:true}],{ticks:5,tickStep:15*60,formatY:v=>fmtTime(v),labels,aria:'Race readiness trajectory with current and expected finish times',empty:'No race estimate is available yet.'});
+  const all=[...vals,target,expected].filter(Number.isFinite),raceScale=tightTimeChartBounds(all);
+  progressSvgIntoMount('predictionChartMount',[{label:`Current ${fmtTime(Number(predNow))}`,data:vals,color:'#3dd6c6'},{label:`Expected ${fmtTime(expected)}`,data:expectedVals,color:'#79d69b',dashed:true},{label:`Target ${fmtTime(target)}`,data:[target],color:'#ff8585',dashed:true,points:false,horizontal:true}],{ticks:5,scaleMin:raceScale?.min,scaleMax:raceScale?.max,formatY:v=>fmtTime(v),labels,aria:'Race readiness trajectory with current and expected finish times',empty:'No race estimate is available yet.'});
  }catch(err){recordDiagnostic('Progress prediction chart',err)}
  try{
   const rs=completedRuns().slice().sort((a,b)=>a.date.localeCompare(b.date)),runs=rs.filter(r=>Number.isFinite(metrics(r).efficiencyJ)),vals=runs.map(r=>metrics(r).efficiencyJ),labels=runs.map(r=>dte(r.date).toLocaleDateString(undefined,{day:'numeric',month:'short'}));
