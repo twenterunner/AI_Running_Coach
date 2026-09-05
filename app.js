@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '15.7.4';
-  const BUILD = 51004;
+  const VERSION = '15.7.5';
+  const BUILD = 51005;
   const SCHEMA = 10400;
   const PRIMARY_STORAGE_KEY = 'arc_v10400_web';
   const MIRROR_STORAGE_KEY = 'arc_v10400_mirror';
@@ -2696,6 +2696,20 @@ function todayWorkoutCard(p,injuryDay){
    <div class="runnerSectionHead"><span class="runnerCardIcon">${todayPictogram('recovery')}</span><div><small>TODAY'S RUNNING PLAN</small><h3>Recovery day</h3></div><span class="runnerStatus">No run</span></div>
    ${todayBulletList(['No purposeful running session is scheduled.','Do not add catch-up mileage.','Use the day to absorb the previous training load.'])}
  </section>`;
+ const linked=matchingRun(p);
+ if(linked){
+   const score=workoutScore(linked,p),distance=Number(linked.distanceKm)||0,duration=Math.max(0,Number(linked.durationSec)||0);
+   const paceValue=distance>0&&duration>0?pace(duration/distance):'—';
+   const runType=linked.type||p.type,shoeId=selectedShoeIdForRun(linked),shoe=(state.shoes||[]).find(s=>s.id===shoeId),shoeName=shoe?shoeDisplayName(shoe):'';
+   return`<section class="todayRunnerCard todayWorkoutCard todayWorkoutCompleted">
+     <div class="runnerSectionHead completedHead"><span class="runnerCardIcon completedIcon">${todayPictogram('training')}</span><div><small>TODAY’S RUNNING PLAN</small><h3>${esc(p.type)}</h3><p>${esc(p.phase||phase(currentWeek()))} · ${Number(p.distance).toFixed(1)} km planned</p></div></div>
+     <button type="button" class="todayCompletedRunMini" data-plan-run="${esc(linked.id)}" aria-label="Open completed run data for ${esc(runType)}">
+       <span class="completedRunCheck">${planTinyIcon('check')}</span>
+       <span class="completedRunCopy"><small>COMPLETED RUN</small><strong>${esc(runType)}</strong><span>${distance.toFixed(1)} km${duration>0?` · ${esc(fmtTime(duration))}`:''}${paceValue!=='—'?` · ${esc(paceValue)}`:''}</span>${shoeName?`<em>${esc(shoeName)}</em>`:''}</span>
+       <span class="completedRunScore"><b>${Number.isFinite(score)?Math.round(score)+'/100':'Done'}</b><small>${Number.isFinite(score)?'Execution':'Completed'}</small><i>›</i></span>
+     </button>
+   </section>`;
+ }
  const z=p.zone||{},targetScope=esc(p.targetScope||'main set');
  const caution=injuryDay?['Active rehabilitation takes priority over this running prescription.','Only run if today’s rehabilitation criteria and safety rule allow it.']:null;
  return`<section class="todayRunnerCard todayWorkoutCard">
@@ -3577,7 +3591,7 @@ async function summariseFIT(file){
    id:'fit-'+startSeconds+'-'+Math.round(distanceM),date:iso(startDate),type:'Easy',distanceKm:distanceM/1000,durationSec:duration,
    avgHr:Number.isFinite(avgHr)?Math.round(avgHr):null,avgPower:Number.isFinite(avgPower)?Math.round(avgPower):null,
    cadence:Number.isFinite(avgCadence)?Math.round(avgCadence):null,gct:null,vo:null,rpe:null,pain:null,recovery:null,temperature:null,
-   notes:`Imported from ${sourceHint}`,
+   notes:'Imported from Stryd FIT',
    drift:null,powerDrift:null,paceDrift:null,candidateDrift:analysis?.drift??null,candidatePowerDrift:analysis?.powerDrift??null,candidatePaceDrift:analysis?.paceDrift??null,
    candidateStreamEvidence:analysis,streamEvidence:null,sourceFormat:'fit-activity',sourceDevice:sourceHint,powerDiagnostics:{recordCount:records.length,poweredRecords:records.filter(r=>Number(r.power)>0).length,coverage:records.length?records.filter(r=>Number(r.power)>0).length/records.length:0,mapping:rawMap.method||null,rawSource:rawStrydPower?.source||null,rawCount:rawStrydPower?.count||0},fitWarnings:[...(errors||[]).map(String).slice(0,5),...(rawStrydPower?[`Running power read from Stryd developer Power (${rawStrydPower.count} samples).${rawMap.method?' '+rawMap.method+'.':''}`]:[]),...(avgPower?[]:['No usable native or developer running-power field was found.'])],lapCount:laps.length,fitLaps,fitRecords:records.map(r=>({t:r.t,hr:r.hr,speed:r.speed,power:r.power,distance:r.distance}))
  };
