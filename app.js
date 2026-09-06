@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '15.7.10';
-  const BUILD = 51010;
+  const VERSION = '15.7.11';
+  const BUILD = 51011;
   const SCHEMA = 10400;
   const PRIMARY_STORAGE_KEY = 'arc_v10400_web';
   const MIRROR_STORAGE_KEY = 'arc_v10400_mirror';
@@ -564,7 +564,7 @@ function shoeDomainRevisionKey(){
 }
 // Runtime fingerprints are intentionally initialised after first usable render.
  // Hashing the full run/injury/shoe state here can block startup on a large history.
-let appStartupInProgress=true,startupStorageFailure=null,storageRedundancyDegraded=false;
+let appStartupInProgress=true,startupStorageFailure=null,storageRedundancyDegraded=false,storageRecoveryUsed=false;
 function isStorageQuotaError(err){
  return !!err&&(err.name==='QuotaExceededError'||err.name==='NS_ERROR_DOM_QUOTA_REACHED'||Number(err.code)===22||Number(err.code)===1014);
 }
@@ -581,14 +581,49 @@ function reclaimObsoleteStorage(){
  }catch(err){recordDiagnostic('Storage cleanup',err)}
  return removed;
 }
+function reclaimTransientRollbackStorage(){
+ // Undo/restore snapshots are convenience copies, never the authoritative athlete record.
+ // Under genuine quota pressure they are sacrificed before a run/check-in is allowed to fail.
+ let removed=0;
+ for(const key of [UNDO_KEY,BACKUP_KEY]){
+  try{if(localStorage.getItem(key)!=null){localStorage.removeItem(key);removed++}}
+  catch(err){recordDiagnostic('Transient storage cleanup',err)}
+ }
+ if(removed){storageRecoveryUsed=true;recordDiagnostic('Storage quota recovery',new Error(`Removed ${removed} temporary rollback snapshot${removed===1?'':'s'} so authoritative data could be saved.`))}
+ return removed;
+}
 function writePrimaryWithQuotaRecovery(text){
  try{localStorage.setItem(STORAGE_KEY,text);return true}catch(err){
   if(!isStorageQuotaError(err))throw err;
   recordDiagnostic('Primary save quota pressure',err);
-  reclaimObsoleteStorage();
-  localStorage.setItem(STORAGE_KEY,text);
-  return true;
  }
+ // 1) Reclaim obsolete migration copies and temporary undo/restore snapshots.
+ reclaimObsoleteStorage();
+ reclaimTransientRollbackStorage();
+ try{localStorage.setItem(STORAGE_KEY,text);return true}catch(err){
+  if(!isStorageQuotaError(err))throw err;
+  recordDiagnostic('Primary save quota pressure after cleanup',err);
+ }
+ // 2) If a readable primary already exists, the mirror is redundant. Removing it
+ // frees one full-state copy while the old primary remains atomically protected
+ // until setItem successfully replaces it.
+ try{
+  const primary=parseStored(localStorage.getItem(STORAGE_KEY));
+  if(primary){
+   if(localStorage.getItem(MIRROR_KEY)!=null){localStorage.removeItem(MIRROR_KEY);storageRedundancyDegraded=true;storageRecoveryUsed=true}
+   localStorage.setItem(STORAGE_KEY,text);
+   return true;
+  }
+ }catch(err){
+  if(!isStorageQuotaError(err))throw err;
+  recordDiagnostic('Primary single-copy quota recovery',err);
+  throw err;
+ }
+ // If primary is unreadable/missing we deliberately keep any mirror copy intact.
+ // A hard failure is safer than deleting the only known-good persisted state.
+ const finalErr=new Error('Authoritative browser storage is full or unavailable.');
+ finalErr.name='QuotaExceededError';
+ throw finalErr;
 }
 function writeMirrorBestEffort(text){
  try{localStorage.setItem(MIRROR_KEY,text);storageRedundancyDegraded=false;return true}catch(err){
@@ -604,20 +639,32 @@ function writeMirrorBestEffort(text){
 }
 function save(){
  reconcileShoeUsage();prunePlannedShoeAssignments();
+ // Persist derived FIT evidence, not second-by-second streams. This is safe to run
+ // repeatedly and keeps older imports from consuming browser storage indefinitely.
+ try{compactHistoricalActivityStreams()}catch(err){recordDiagnostic('Pre-save activity compaction',err)}
  const changedDomains=updateRuntimeDomainRevisions();
- state.storageRevision=Math.max(0,Number(state.storageRevision)||0)+1;state.updatedAt=new Date().toISOString();
- const text=JSON.stringify(state);
+ const previousRevision=Math.max(0,Number(state.storageRevision)||0),previousUpdatedAt=state.updatedAt;
+ state.storageRevision=previousRevision+1;state.updatedAt=new Date().toISOString();
+ let text;
+ try{text=JSON.stringify(state)}catch(err){
+  state.storageRevision=previousRevision;state.updatedAt=previousUpdatedAt;
+  recordDiagnostic('State serialization failure',err);
+  const message='Data could not be saved on this device. Your current data remain loaded, but this save attempt failed.';
+  if(appStartupInProgress)startupStorageFailure=message;else toast('Data could not be saved on this device.',true);
+  return false;
+ }
  // Only failure of the authoritative primary write is a data-save failure.
  try{
   writePrimaryWithQuotaRecovery(text);
  }catch(err){
+  state.storageRevision=previousRevision;state.updatedAt=previousUpdatedAt;
   recordDiagnostic('Primary save failure',err);
   const message='Data could not be saved on this device. Your current data remain loaded, but this save attempt failed.';
   if(appStartupInProgress)startupStorageFailure=message;else toast('Data could not be saved on this device.',true);
   return false;
  }
  // A successful later primary write supersedes any transient startup failure from an earlier maintenance save.
- if(appStartupInProgress)startupStorageFailure=null;
+ startupStorageFailure=null;
  // Redundancy, migration markers and cleanup are best-effort housekeeping and must never masquerade as primary data loss.
  writeMirrorBestEffort(text);
  try{localStorage.setItem(MIGRATION_MARKER,'true')}catch(err){recordDiagnostic('Migration marker save unavailable',err)}
@@ -1525,7 +1572,10 @@ function prescription(type,km,w,ph,z,context={}){
  return{totalDistance:km,warmup:'Pre-race mobility and easy jogging as needed (outside the official race distance)',main:`${fmt(km)} km race`,cooldown:'Walk and begin recovery nutrition after finishing (outside the official race distance)',purpose:'Execute the race plan.',coach:'The displayed distance is the official race distance. Pace, HR and power refer to the race itself; pre-race warm-up and post-race walking are additional.',fuel:'60–90 g carbohydrate/hour and 400–800 ml fluid/hour.',targetScope:'Race effort'};
 }
 if(state.schemaVersion!==SCHEMA){state.plan=[];buildPlan()}else if(!state.plan?.length)buildPlan();
-state.runs.forEach(r=>{if(r.planId&&!state.plan.some(p=>p.id===r.planId)){delete r.planId;delete r.plannedDate;delete r.dayOffset;r.matchStatus='adHoc';r.matchMethod='schema-remap'}if(r.planId){r.matchStatus='matched';r.matchMethod=r.matchMethod||'legacy';let p=state.plan.find(x=>x.id===r.planId);if(p){r.plannedDate=p.date;r.dayOffset=Math.round((dte(r.date)-dte(p.date))/DAY)}}else if(!r.matchStatus)r.matchStatus='adHoc'});save();
+const startupRunLinkState=JSON.stringify((state.runs||[]).map(r=>[r.id,r.planId,r.plannedDate,r.dayOffset,r.matchStatus,r.matchMethod]));
+state.runs.forEach(r=>{if(r.planId&&!state.plan.some(p=>p.id===r.planId)){delete r.planId;delete r.plannedDate;delete r.dayOffset;r.matchStatus='adHoc';r.matchMethod='schema-remap'}if(r.planId){r.matchStatus='matched';r.matchMethod=r.matchMethod||'legacy';let p=state.plan.find(x=>x.id===r.planId);if(p){r.plannedDate=p.date;r.dayOffset=Math.round((dte(r.date)-dte(p.date))/DAY)}}else if(!r.matchStatus)r.matchStatus='adHoc'});
+const startupRunLinkChanged=startupRunLinkState!==JSON.stringify((state.runs||[]).map(r=>[r.id,r.planId,r.plannedDate,r.dayOffset,r.matchStatus,r.matchMethod]));
+if(startupRunLinkChanged)save();
 reconcileExactDateMatches();
 function compatibleRunType(planType,runType){
  const groups={
@@ -10842,11 +10892,14 @@ $('activityFile').onchange=async e=>{
       refreshIntervalAnalysis(preview,preview.planId?state.plan.find(p=>p.id===preview.planId):null);
       compactRunActivityStream(preview);
       let before=null;try{before=postRunCoachSnapshot(preview.date)}catch(e){console.warn('Coach pre-snapshot failed',e)}
+      const stateBeforeImport=JSON.stringify(state);
       const savedRun={...preview},shoeId=$('iShoe')?$('iShoe').value||null:null,shoeBefore=shoeId?shoeMileage((state.shoes||[]).find(s=>s.id===shoeId)||{}):null;state.runs.push(savedRun);if($('iShoe'))assignRunShoe(savedRun,shoeId,'import');reconcileExactDateMatches();autoLinkRunToEligibleRehabCheckIns(savedRun);
       recordPredictionSnapshot(savedRun.date,savedRun.sourceFormat==='fit-activity'?'FIT import':'Stryd import',savedRun.id);
       let coachHtml='',coachWarning='';
       try{const after=postRunCoachSnapshot(savedRun.date);if(before){savedRun.coachUpdate=postRunCoachUpdate(savedRun,before,after);coachHtml=postRunCoachUpdateHtml(savedRun)}}catch(e){console.warn('Coach update failed',e);coachWarning=' Run saved; Coach Update unavailable for this import.'}
-      save();refreshShoeActualsAfterActivity();const shoeNote=shoeMileageConfirmation(shoeId,shoeBefore,'run');$('importPreview').className='hidden';preview=null;input.value='';renderAll();
+      const saveOk=save();
+      if(!saveOk){state=normaliseState(JSON.parse(stateBeforeImport));runtimeDomainFingerprints=null;throw Error('The run could not be committed to device storage. Nothing was added; the import preview is still open so you can retry.')}
+      refreshShoeActualsAfterActivity();const shoeNote=shoeMileageConfirmation(shoeId,shoeBefore,'run');$('importPreview').className='hidden';preview=null;input.value='';renderAll();
       if(coachHtml){$('modalContent').innerHTML=coachHtml+`<button id="closeCoachUpdate" class="primary full" type="button">Done</button>`;$('modal').className='modal logDetailModal';$('closeCoachUpdate').onclick=closeDialog}
       toast(shoeNote||`Activity analysed and run saved.${coachWarning}`,!!coachWarning);
     }catch(err){toast(err?.message||'The run could not be saved.',true)}
