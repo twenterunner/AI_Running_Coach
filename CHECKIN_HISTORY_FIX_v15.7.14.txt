@@ -1,0 +1,42 @@
+AI Running Coach v15.7.14 / build 51014
+Check-in persistence + daily race-readiness history hotfix
+
+FILES TO COMMIT
+- service-worker.js
+
+WHAT IS FIXED
+1. Daily rehabilitation check-in save responsiveness
+   - Saving… now paints before synchronous persistence/recalculation work begins.
+   - Ordinary saves refresh only today's race-readiness snapshot instead of
+     recalculating the full daily history inside the save path.
+
+2. All rehabilitation check-in entry flows
+   - Today tab -> today's existing/new check-in remains supported.
+   - Injury page -> today's check-in remains supported.
+   - Rehab timeline -> requested historical date is now preserved through the
+     validation wrapper instead of silently falling back to today.
+   - Existing check-in edit -> same authoritative save/persistence path.
+
+3. Race-readiness graph day history
+   - Historical first point no longer displays the ambiguous label "Start".
+   - Short histories display each daily date, so yesterday is visible explicitly.
+   - Backfill starts from the earliest available prediction-history evidence when
+     that precedes the configured programme start, so a preceding logged run is
+     retained where model evidence exists.
+   - Point detail text is preserved for date/current/expected inspection.
+
+WHY THIS PACKAGE CONTAINS ONLY service-worker.js
+The currently connected GitHub integration is read-only for repository writes.
+This hotfix is deliberately self-contained: once this service worker activates,
+it serves the existing v15.7.13 app.js with the narrow v15.7.14 fixes applied at
+runtime. No data schema migration is introduced and no other asset is cached.
+
+EXPECTED FIRST-RUN BEHAVIOUR AFTER COMMIT
+- Existing installed/PWA clients update the worker, claim the page, and reload once.
+- The app runtime reports v15.7.14 / build 51014.
+- Subsequent app.js loads are patched by the active worker.
+
+REGRESSION SAFETY
+- Patch applies only when app.js still identifies itself as v15.7.13/build 51013.
+- If a later full app.js is deployed, the worker leaves that source untouched.
+- Primary/mirror local data storage keys and schema are unchanged.
