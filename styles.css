@@ -6245,3 +6245,22 @@ body:not(.modalOpen):not(.onboardingOpen) #nav button{pointer-events:auto!import
  #today .completedRunScore{min-width:48px}
  #today .completedRunScore b{font-size:11px}
 }
+
+
+/* v15.7.12 — modal interaction reliability on mobile.
+   The mobile dock has historically used a very high z-index. A long rehab form can
+   place its final Save button at the same visual height as that dock. The dialog
+   must remain the topmost interactive layer even if the body.modalOpen class is
+   delayed or missed by a browser during a scroll/visual-viewport update. */
+.modal,.onboarding{z-index:2147483647!important}
+body.modalOpen #nav,body.modalOpen #moreNav,
+body.onboardingOpen #nav,body.onboardingOpen #moreNav,
+body:has(#modal:not(.hidden)) #nav,body:has(#modal:not(.hidden)) #moreNav,
+body:has(#onboarding:not(.hidden)) #nav,body:has(#onboarding:not(.hidden)) #moreNav{
+  visibility:hidden!important;
+  pointer-events:none!important;
+}
+@media(max-width:759px){
+  #modal .modalCard,#onboarding .onboardingCard{padding-bottom:calc(24px + env(safe-area-inset-bottom))!important}
+  .dailyCheckinRunner #saveCheck{position:relative;z-index:2;touch-action:manipulation!important}
+}

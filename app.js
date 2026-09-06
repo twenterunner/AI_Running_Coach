@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '15.7.11';
-  const BUILD = 51011;
+  const VERSION = '15.7.13';
+  const BUILD = 51013;
   const SCHEMA = 10400;
   const PRIMARY_STORAGE_KEY = 'arc_v10400_web';
   const MIRROR_STORAGE_KEY = 'arc_v10400_mirror';
@@ -487,7 +487,8 @@ function recommendedRaceDate(setup){
  return{date:iso(new Date(dte(setup.planStart).getTime()+totalWeeks*7*DAY)),totalWeeks,requiredBuildWeeks:req.requiredBuildWeeks,taperWeeks};
 }
 const BUILD=CORE.BUILD, SCHEMA=CORE.SCHEMA, STORAGE_KEY=CORE.PRIMARY_STORAGE_KEY, MIRROR_KEY=CORE.MIRROR_STORAGE_KEY, MIGRATION_MARKER='arc_v10400_migration_complete', BACKUP_KEY='arc_v10400_restore_rollback', UNDO_KEY='arc_v10400_settings_undo';
-const defaults=()=>{let start=iso(new Date()),setup={planStart:start,raceDate:start,raceName:'Goal Race',raceDistance:42.195,targetTime:15300,currentWeekly:35,currentLongest:18,testDistance:5,testTime:1515,thresholdHr:168,criticalPower:300,bodyWeight:70,maxWeekly:65,growth:.07,peakLong:32,taperDays:14,minFactor:.85,maxFactor:1.05,adaptive:true};setup.raceDate=recommendedRaceDate(setup).date;return({schemaVersion:SCHEMA,planEngineVersion:PLAN_ENGINE_VERSION,setup,days:FIVE_DAY_TEMPLATE.map(d=>[...d]),runs:[],assessments:[],injuries:[],activeInjuryPlanId:null,shoes:[],shoeUsage:[],plannedShoeAssignments:[],plannedShoePurchases:[],plan:[],predictionHistory:[],weekView:null,onboardingComplete:false,storageRevision:0,updatedAt:new Date().toISOString(),migration:{to:SCHEMA,status:'new',time:new Date().toISOString()}})};
+let raceReadinessHistoryDirty=false;
+const defaults=()=>{let start=iso(new Date()),setup={planStart:start,raceDate:start,raceName:'Goal Race',raceDistance:42.195,targetTime:15300,currentWeekly:35,currentLongest:18,testDistance:5,testTime:1515,thresholdHr:168,criticalPower:300,bodyWeight:70,maxWeekly:65,growth:.07,peakLong:32,taperDays:14,minFactor:.85,maxFactor:1.05,adaptive:true};setup.raceDate=recommendedRaceDate(setup).date;return({schemaVersion:SCHEMA,planEngineVersion:PLAN_ENGINE_VERSION,setup,days:FIVE_DAY_TEMPLATE.map(d=>[...d]),runs:[],assessments:[],injuries:[],activeInjuryPlanId:null,shoes:[],shoeUsage:[],plannedShoeAssignments:[],plannedShoePurchases:[],plan:[],predictionHistory:[],raceReadinessHistory:[],weekView:null,onboardingComplete:false,storageRevision:0,updatedAt:new Date().toISOString(),migration:{to:SCHEMA,status:'new',time:new Date().toISOString()}})};
 let migrationReport={from:null,to:SCHEMA,status:'new install',source:'defaults',runs:0,assessments:0,fieldsRecovered:0,warning:''};
 function parseStored(raw){if(!raw)return null;try{const x=JSON.parse(raw);return x&&typeof x==='object'?x:null}catch(err){recordDiagnostic('Storage parse',err);return null}}
 function storageCandidates(){const keys=[STORAGE_KEY,MIRROR_KEY,...CORE.LEGACY_STORAGE_KEYS];return keys.map(key=>({key,value:parseStored(localStorage.getItem(key))})).filter(x=>x.value)}
@@ -518,10 +519,18 @@ function normaliseState(input){
  let predictionHistory=Array.isArray(src.predictionHistory)?src.predictionHistory.filter(x=>x&&x.date&&Number.isFinite(Number(x.seconds))).map(x=>({...x,seconds:Number(x.seconds)})):[];
  const standaloneRuns=runs.filter(r=>r.source!=='assessment').length,maxTrendEvents=standaloneRuns+assessments.length;
  if(maxTrendEvents===0)predictionHistory=[];else if(predictionHistory.every(x=>!x.entityId)&&predictionHistory.length>maxTrendEvents)predictionHistory=predictionHistory.slice(-maxTrendEvents);
+ const raceHistoryMap=new Map();
+ (Array.isArray(src.raceReadinessHistory)?src.raceReadinessHistory:[]).forEach(x=>{
+  if(!x||!CORE.isIsoDate(x.date)||x.current===null||x.current===undefined||x.current===''||x.expected===null||x.expected===undefined||x.expected==='')return;
+  const current=Number(x.current),expected=Number(x.expected);
+  if(!Number.isFinite(current)||!Number.isFinite(expected))return;
+  raceHistoryMap.set(x.date,{date:x.date,current,expected,recordedAt:typeof x.recordedAt==='string'?x.recordedAt:null});
+ });
+ const raceReadinessHistory=[...raceHistoryMap.values()].sort((a,b)=>a.date.localeCompare(b.date)).slice(-500);
  const storedStart=Number(src.programStartPrediction);const programStartPrediction=Number.isFinite(storedStart)?storedStart:initialProgrammePrediction(setup);
  const candidateDays=Array.isArray(src.days)?src.days.map(d=>Array.isArray(d)?[CORE.cleanText(d[0],20),Boolean(d[1]),CORE.cleanText(d[2],40)]:d):base.days,days=CORE.validateDays(candidateDays).length?base.days:candidateDays;
  const onboardingComplete=src.onboardingComplete===true||Boolean(input?.setup&&Number(src.schemaVersion||0)<SCHEMA);
- return{...base,...src,schemaVersion:SCHEMA,setup,days,runs,assessments,injuries,shoes,shoeUsage,plannedShoeAssignments,plannedShoePurchases,plan,predictionHistory,programStartPrediction,weekView:Number(src.weekView)||null,onboardingComplete,storageRevision:Math.max(0,Number(src.storageRevision)||0),updatedAt:src.updatedAt||new Date().toISOString(),migration:{...migrationReport,time:new Date().toISOString()}};
+ return{...base,...src,schemaVersion:SCHEMA,setup,days,runs,assessments,injuries,shoes,shoeUsage,plannedShoeAssignments,plannedShoePurchases,plan,predictionHistory,raceReadinessHistory,programStartPrediction,weekView:Number(src.weekView)||null,onboardingComplete,storageRevision:Math.max(0,Number(src.storageRevision)||0),updatedAt:src.updatedAt||new Date().toISOString(),migration:{...migrationReport,time:new Date().toISOString()}};
 }
 (()=>{const l=document.getElementById('appStartupLoader'),s=l?.querySelector('strong');if(s)s.textContent='Reading saved data…';})();
 let rawState=loadStoredState();
@@ -642,6 +651,9 @@ function save(){
  // Persist derived FIT evidence, not second-by-second streams. This is safe to run
  // repeatedly and keeps older imports from consuming browser storage indefinitely.
  try{compactHistoricalActivityStreams()}catch(err){recordDiagnostic('Pre-save activity compaction',err)}
+ // Keep one durable race-readiness snapshot per calendar day. Past points are
+ // immutable; only today's point is refreshed as new evidence arrives.
+ try{syncRaceReadinessHistory()}catch(err){recordDiagnostic('Race-readiness daily snapshot',err)}
  const changedDomains=updateRuntimeDomainRevisions();
  const previousRevision=Math.max(0,Number(state.storageRevision)||0),previousUpdatedAt=state.updatedAt;
  state.storageRevision=previousRevision+1;state.updatedAt=new Date().toISOString();
@@ -656,6 +668,7 @@ function save(){
  // Only failure of the authoritative primary write is a data-save failure.
  try{
   writePrimaryWithQuotaRecovery(text);
+  raceReadinessHistoryDirty=false;
  }catch(err){
   state.storageRevision=previousRevision;state.updatedAt=previousUpdatedAt;
   recordDiagnostic('Primary save failure',err);
@@ -6205,7 +6218,7 @@ function openInjuryCheck(i,existing=null,options={}){
  const setConsistencyMessage=()=>{const rs=runStatusField.value,mins=durationFromFields(runMinutesField,runSecondsField),walkMins=durationFromFields(walkMinutesField,walkSecondsField),target=activeScheduled.walkingTargetMinutes,lo=locomotionField.value,ex=exerciseField.value,sg=stretchField.value;let parts=[];
   if(activeScheduled.exercisePlanned)parts.push(ex==='all'?'All scheduled exercises completed.':ex==='some'?'Some scheduled exercises completed.':ex==='stopped'?'Exercises were stopped because of symptoms.':ex==='none'?'Scheduled exercises were not started.':'Exercise completion still needs an answer.');
   if(activeScheduled.walkingPlanned)parts.push(lo==='completed'?`Walking target completed (${Number.isFinite(walkMins)?walkMins:0}/${target||'—'} min).`:lo==='partial'?`Part of the walking target completed (${Number.isFinite(walkMins)?walkMins:0}/${target||'—'} min), without symptoms forcing the stop.`:lo==='stopped'?`Walking stopped because of symptoms after ${Number.isFinite(walkMins)?walkMins:0} min.`:lo==='none'?'Walking target was not started.':'Walking completion still needs an answer.');
-  if(activeScheduled.runningPlanned)parts.push(rs==='completed'?`${Number.isFinite(mins)?mins:0} min run completed; tolerance is judged separately from pain and gait.`:rs==='stopped'?`Run stopped because of symptoms after ${Number.isFinite(mins)?mins:0} min.`:rs==='unable'?'Planned run could not be started because of symptoms.':'Running completion still needs an answer.');
+  if(activeScheduled.runningPlanned)parts.push(rs==='completed'?`${Number.isFinite(mins)?formatDurationMinutes(mins):'0:00'} run completed; tolerance is judged separately from pain and gait.`:rs==='stopped'?`Run stopped because of symptoms after ${Number.isFinite(mins)?mins:0} min.`:rs==='unable'?'Planned run could not be started because of symptoms.':'Running completion still needs an answer.');
   if(sg==='achieved')parts.push('Optional progression achieved.');
   consistencyBox.innerHTML=`<b>Current interpretation</b><p>${esc(parts.join(' '))}</p>`;
  };
@@ -6354,24 +6367,49 @@ function tightTimeChartBounds(values,options={}){
  return{min,max};
 }
 let raceReadinessDailyCache={key:null,value:null};
-function raceReadinessDailySeries(){
+function raceReadinessPointForDate(date){
+ return withModelDate(date,()=>{
+  const currentSec=Number(prediction()),c=confidence(),projectionSec=Number(programmeProjection(c,currentSec,projectedPreparationModel(c))?.predictedTime);
+  return{current:Number.isFinite(currentSec)?currentSec:null,expected:Number.isFinite(projectionSec)?projectionSec:null};
+ });
+}
+function syncRaceReadinessHistory(){
  const realToday=iso(new Date()),raceDate=CORE.isIsoDate(state.setup?.raceDate)?state.setup.raceDate:realToday;
- let start=CORE.isIsoDate(state.setup?.planStart)?state.setup.planStart:realToday,end=realToday<=raceDate?realToday:raceDate;
+ let history=Array.isArray(state.raceReadinessHistory)?state.raceReadinessHistory.filter(x=>x&&CORE.isIsoDate(x.date)&&x.current!==null&&x.current!==undefined&&x.current!==''&&x.expected!==null&&x.expected!==undefined&&x.expected!==''&&Number.isFinite(Number(x.current))&&Number.isFinite(Number(x.expected))).map(x=>({...x,current:Number(x.current),expected:Number(x.expected)})):[];
+ const existingEarliest=history.length?history.slice().sort((a,b)=>a.date.localeCompare(b.date))[0].date:null;
+ const configuredStart=CORE.isIsoDate(state.setup?.planStart)?state.setup.planStart:realToday;
+ let start=existingEarliest&&existingEarliest<configuredStart?existingEarliest:configuredStart,end=realToday<=raceDate?realToday:raceDate;
  if(start>end)start=end;
- const key=[Number(state.storageRevision)||0,start,end,raceDate,Number(state.setup?.targetTime)||0,Number(state.programStartPrediction)||0,(state.predictionHistory||[]).length].join('|');
- if(raceReadinessDailyCache.key===key&&raceReadinessDailyCache.value)return raceReadinessDailyCache.value;
- const dates=[],current=[],expected=[],details=[];
+ const byDate=new Map(history.map(x=>[x.date,x]));
+ let changed=false;
  for(let d=dte(start),last=dte(end),guard=0;d<=last&&guard<1500;d=new Date(d.getTime()+DAY),guard++){
-  const date=iso(d);
-  const point=withModelDate(date,()=>{
-   const currentSec=Number(prediction()),c=confidence(),projectionSec=Number(programmeProjection(c,currentSec,projectedPreparationModel(c))?.predictedTime);
-   return{current:Number.isFinite(currentSec)?currentSec:null,expected:Number.isFinite(projectionSec)?projectionSec:null};
-  });
-  dates.push(date);current.push(point.current);expected.push(point.expected);
-  details.push(`${fmtDate(date)} · Current ${fmtTime(point.current)} · Expected ${fmtTime(point.expected)}`);
+  const date=iso(d),existing=byDate.get(date),isToday=date===end&&end===realToday;
+  if(existing&&!isToday)continue;
+  const point=raceReadinessPointForDate(date);
+  if(!Number.isFinite(point.current)||!Number.isFinite(point.expected))continue;
+  if(!existing||Math.abs(Number(existing.current)-point.current)>.01||Math.abs(Number(existing.expected)-point.expected)>.01){
+   byDate.set(date,{date,current:point.current,expected:point.expected,recordedAt:new Date().toISOString()});
+   changed=true;
+  }
  }
- if(!dates.length){dates.push(end);const currentSec=Number(prediction()),c=confidence(),projectionSec=Number(programmeProjection(c,currentSec,projectedPreparationModel(c))?.predictedTime);current.push(Number.isFinite(currentSec)?currentSec:null);expected.push(Number.isFinite(projectionSec)?projectionSec:null);details.push(`${fmtDate(end)} · Current ${fmtTime(current.at(-1))} · Expected ${fmtTime(expected.at(-1))}`)}
+ const next=[...byDate.values()].filter(x=>x.date<=end&&Number.isFinite(Number(x.current))&&Number.isFinite(Number(x.expected))).sort((a,b)=>a.date.localeCompare(b.date)).slice(-500);
+ if(next.length!==history.length||next.some((x,i)=>x.date!==history[i]?.date||Math.abs(x.current-Number(history[i]?.current))>.01||Math.abs(x.expected-Number(history[i]?.expected))>.01))changed=true;
+ state.raceReadinessHistory=next;
+ if(changed){raceReadinessDailyCache={key:null,value:null};raceReadinessHistoryDirty=true;}
+ return changed;
+}
+function raceReadinessDailySeries(){
+ syncRaceReadinessHistory();
+ const realToday=iso(new Date()),raceDate=CORE.isIsoDate(state.setup?.raceDate)?state.setup.raceDate:realToday,end=realToday<=raceDate?realToday:raceDate;
+ const history=(Array.isArray(state.raceReadinessHistory)?state.raceReadinessHistory:[]).filter(x=>x&&CORE.isIsoDate(x.date)&&x.date<=end&&Number.isFinite(Number(x.current))&&Number.isFinite(Number(x.expected))).slice().sort((a,b)=>a.date.localeCompare(b.date));
+ let start=history[0]?.date||(CORE.isIsoDate(state.setup?.planStart)?state.setup.planStart:end);
+ if(start>end)start=end;
+ const key=[Number(state.storageRevision)||0,start,end,raceDate,Number(state.setup?.targetTime)||0,history.length,history.at(-1)?.date||'',Number(history.at(-1)?.current)||0,Number(history.at(-1)?.expected)||0].join('|');
+ if(raceReadinessDailyCache.key===key&&raceReadinessDailyCache.value)return raceReadinessDailyCache.value;
+ const entries=history.filter(x=>x.date>=start&&x.date<=end),dates=entries.map(x=>x.date),current=entries.map(x=>Number(x.current)),expected=entries.map(x=>Number(x.expected));
+ if(!dates.length){const point=raceReadinessPointForDate(end);dates.push(end);current.push(point.current);expected.push(point.expected)}
  const lastIndex=dates.length-1,labels=dates.map((date,i)=>lastIndex===0?(end===realToday?'Today':'Race'):i===0?'Start':i===lastIndex?(end===realToday?'Today':'Race'):dte(date).toLocaleDateString(undefined,{day:'numeric',month:'short'}));
+ const details=dates.map((date,i)=>`${fmtDate(date)} · Current ${fmtTime(current[i])} · Expected ${fmtTime(expected[i])}`);
  const value={dates,labels,current,expected,details,latestCurrent:current.at(-1),latestExpected:expected.at(-1),start,end};
  raceReadinessDailyCache={key,value};return value;
 }
@@ -10914,7 +10952,7 @@ $('addAssessmentBtn').onclick=()=>{
 
 function validateSetup(candidate){return CORE.validateSetup(candidate).map(error=>error.message)}
 function validateBackup(obj){return obj&&typeof obj==='object'&&obj.setup&&Array.isArray(obj.runs)&&Array.isArray(obj.assessments)&&Array.isArray(obj.days)}
-$('saveSettings').onclick=()=>{let candidate={...state.setup};document.querySelectorAll('[data-setting]').forEach(el=>{let k=el.dataset.setting,t=el.dataset.type,v=el.value;if(t==='number')v=Number(v);if(t==='time')v=parseTime(v);if(t==='percent')v=Number(v)/100;candidate[k]=v});let errors=validateSetup(candidate);if(errors.length)return toast(errors[0],true);let selectedDays=[...document.querySelectorAll('[data-day]')].filter(el=>el.checked).length;if(selectedDays<1)return toast('Select at least one training day.',true);const baselineKeys=['planStart','raceDistance','targetTime','testDistance','testTime','currentWeekly','currentLongest','maxWeekly','peakLong'];const baselineChanged=baselineKeys.some(k=>String(candidate[k])!==String(state.setup[k]));state.setup=candidate;if(baselineChanged){state.programStartPrediction=initialProgrammePrediction(candidate);state.predictionHistory=[];}document.querySelectorAll('[data-day]').forEach(el=>state.days[Number(el.dataset.day)][1]=el.checked);let longRadio=document.querySelector('[data-long-day]:checked'),longIdx=longRadio?Number(longRadio.dataset.longDay):null;if(longIdx==null||!state.days[longIdx]?.[1])return toast('Select one enabled running day as the long-run day.',true);state.days.forEach((d,i)=>d[2]=i===longIdx?'Long run':'Adaptive');buildPlan();state.weekView=currentWeek();save();renderAll();toast('Settings saved. Training frequency and race outlook and preparation model were recalculated; future workouts rebuilt.')};
+$('saveSettings').onclick=()=>{let candidate={...state.setup};document.querySelectorAll('[data-setting]').forEach(el=>{let k=el.dataset.setting,t=el.dataset.type,v=el.value;if(t==='number')v=Number(v);if(t==='time')v=parseTime(v);if(t==='percent')v=Number(v)/100;candidate[k]=v});let errors=validateSetup(candidate);if(errors.length)return toast(errors[0],true);let selectedDays=[...document.querySelectorAll('[data-day]')].filter(el=>el.checked).length;if(selectedDays<1)return toast('Select at least one training day.',true);const baselineKeys=['planStart','raceDistance','targetTime','testDistance','testTime','currentWeekly','currentLongest','maxWeekly','peakLong'];const baselineChanged=baselineKeys.some(k=>String(candidate[k])!==String(state.setup[k]));state.setup=candidate;if(baselineChanged){state.programStartPrediction=initialProgrammePrediction(candidate);state.predictionHistory=[];state.raceReadinessHistory=[];}document.querySelectorAll('[data-day]').forEach(el=>state.days[Number(el.dataset.day)][1]=el.checked);let longRadio=document.querySelector('[data-long-day]:checked'),longIdx=longRadio?Number(longRadio.dataset.longDay):null;if(longIdx==null||!state.days[longIdx]?.[1])return toast('Select one enabled running day as the long-run day.',true);state.days.forEach((d,i)=>d[2]=i===longIdx?'Long run':'Adaptive');buildPlan();state.weekView=currentWeek();save();renderAll();toast('Settings saved. Training frequency and race outlook and preparation model were recalculated; future workouts rebuilt.')};
 function readSettingsDraft(){const candidate={...state.setup};document.querySelectorAll('[data-setting]').forEach(el=>{let value=el.value;const type=el.dataset.type;if(type==='number')value=el.value.trim()===''?null:Number(value);if(type==='time')value=parseTime(value);if(type==='percent')value=el.value.trim()===''?null:Number(value)/100;candidate[el.dataset.setting]=value});const longRadio=document.querySelector('[data-long-day]:checked'),longIdx=longRadio?Number(longRadio.dataset.longDay):null;const days=state.days.map((day,index)=>[day[0],Boolean(document.querySelector(`[data-day="${index}"]`)?.checked),index===longIdx?'Long run':day[2]==='Long run'?'Adaptive':day[2]]);return{candidate,days}}
 function applySettingsDraft(candidate,days){
  const baselineKeys=['planStart','raceDistance','targetTime','testDistance','testTime','currentWeekly','currentLongest','maxWeekly','peakLong'];
@@ -10932,7 +10970,7 @@ function applySettingsDraft(candidate,days){
  }
  state.setup={...candidate,raceName:CORE.cleanText(candidate.raceName,100).trim()||'Goal race',footMechanics:candidate.footMechanics||'unknown'};
  state.days=days;
- if(baselineChanged){state.programStartPrediction=initialProgrammePrediction(state.setup);state.predictionHistory=[]}
+ if(baselineChanged){state.programStartPrediction=initialProgrammePrediction(state.setup);state.predictionHistory=[];state.raceReadinessHistory=[]}
  if(trainingChanged){
   return withPlanLoader('Updating running plan…',()=>{
    buildPlan();state.weekView=currentWeek();
@@ -10959,7 +10997,7 @@ $('pillarCards')?.addEventListener('click',e=>{const card=e.target.closest('.pil
 $('pillarCards')?.addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&e.target.classList.contains('pillarCard')){e.preventDefault();e.target.click()}});
 function setOnboardingOpen(open){const overlay=$('onboarding');overlay.classList.toggle('hidden',!open);document.body.classList.toggle('onboardingOpen',open);$('mainContent').inert=open;$('nav').inert=open;$('moreNav').inert=open;if(open)requestAnimationFrame(()=>$('obRaceName').focus())}
 function onboardingDraft(){const profile=raceProfile(Number($('obRaceDistance').value));const setup={...state.setup,planStart:iso(today()),raceName:CORE.cleanText($('obRaceName').value,100).trim(),raceDate:$('obRaceDate').value,raceDistance:Number($('obRaceDistance').value),targetTime:parseTime($('obTargetTime').value),currentWeekly:Number($('obCurrentWeekly').value),currentLongest:Number($('obCurrentLongest').value),bodyWeight:Number($('obBodyWeight').value),testDistance:Number($('obTestDistance').value),testTime:parseTime($('obTestTime').value),thresholdHr:Number($('obThresholdHr').value),criticalPower:Number($('obCriticalPower').value),maxWeekly:Math.max(Number($('obCurrentWeekly').value),profile.maxWeekly),growth:profile.growth,peakLong:profile.peakLong,taperDays:profile.taperDays};return{setup,days:profile.days.map(day=>[...day])}}
-function initOnboarding(){if(state.onboardingComplete)return setOnboardingOpen(false);$('obRaceDate').value=state.setup.raceDate;const form=$('onboardingForm'),submit=form.querySelector('[type="submit"]'),summary=$('onboardingErrors');form.addEventListener('input',()=>{form.dataset.reviewed='';submit.textContent='Review and create my plan';summary.className='formErrors hidden';summary.textContent=''});form.onsubmit=event=>{event.preventDefault();const{setup,days}=onboardingDraft(),errors=refineTimeErrors([...CORE.validateSetup(setup),...CORE.validateDays(days)],[{field:'targetTime',label:'Target time',value:$('obTargetTime').value},{field:'testTime',label:'Recent test time',value:$('obTestTime').value}]);if(!$('obConfirm').checked)errors.push({field:'confirm',message:'Confirm that the values are yours before creating the plan.'});const mapping={raceName:'#obRaceName',raceDate:'#obRaceDate',raceDistance:'#obRaceDistance',targetTime:'#obTargetTime',currentWeekly:'#obCurrentWeekly',currentLongest:'#obCurrentLongest',bodyWeight:'#obBodyWeight',testDistance:'#obTestDistance',testTime:'#obTestTime',thresholdHr:'#obThresholdHr',criticalPower:'#obCriticalPower',confirm:'#obConfirm'};if(errors.length){showFieldErrors(errors,mapping,form);summary.className='formErrors';summary.setAttribute('role','alert');summary.textContent=CORE.firstErrorMessage(errors);return toast(CORE.firstErrorMessage(errors),true)}if(form.dataset.reviewed!=='true'){form.dataset.reviewed='true';summary.className='onboardingReview';summary.setAttribute('role','status');summary.innerHTML=`<b>Review your plan inputs</b><p>${esc(setup.raceName)} · ${esc(setup.raceDistance)} km on ${esc(fmtDate(setup.raceDate))}</p><p>Target ${esc(fmtTime(setup.targetTime))}; recent ${esc(setup.testDistance)} km in ${esc(fmtTime(setup.testTime))}; ${esc(setup.currentWeekly)} km/week.</p>`;submit.textContent='Create my plan';submit.focus();return}state.setup=setup;state.days=days;state.onboardingComplete=true;state.programStartPrediction=initialProgrammePrediction(setup);state.predictionHistory=[];withPlanLoader('Creating running plan…',()=>{buildPlan();save();setOnboardingOpen(false);renderAll();toast('Your personal plan is ready. Today is your starting view.')})};setOnboardingOpen(true)}
+function initOnboarding(){if(state.onboardingComplete)return setOnboardingOpen(false);$('obRaceDate').value=state.setup.raceDate;const form=$('onboardingForm'),submit=form.querySelector('[type="submit"]'),summary=$('onboardingErrors');form.addEventListener('input',()=>{form.dataset.reviewed='';submit.textContent='Review and create my plan';summary.className='formErrors hidden';summary.textContent=''});form.onsubmit=event=>{event.preventDefault();const{setup,days}=onboardingDraft(),errors=refineTimeErrors([...CORE.validateSetup(setup),...CORE.validateDays(days)],[{field:'targetTime',label:'Target time',value:$('obTargetTime').value},{field:'testTime',label:'Recent test time',value:$('obTestTime').value}]);if(!$('obConfirm').checked)errors.push({field:'confirm',message:'Confirm that the values are yours before creating the plan.'});const mapping={raceName:'#obRaceName',raceDate:'#obRaceDate',raceDistance:'#obRaceDistance',targetTime:'#obTargetTime',currentWeekly:'#obCurrentWeekly',currentLongest:'#obCurrentLongest',bodyWeight:'#obBodyWeight',testDistance:'#obTestDistance',testTime:'#obTestTime',thresholdHr:'#obThresholdHr',criticalPower:'#obCriticalPower',confirm:'#obConfirm'};if(errors.length){showFieldErrors(errors,mapping,form);summary.className='formErrors';summary.setAttribute('role','alert');summary.textContent=CORE.firstErrorMessage(errors);return toast(CORE.firstErrorMessage(errors),true)}if(form.dataset.reviewed!=='true'){form.dataset.reviewed='true';summary.className='onboardingReview';summary.setAttribute('role','status');summary.innerHTML=`<b>Review your plan inputs</b><p>${esc(setup.raceName)} · ${esc(setup.raceDistance)} km on ${esc(fmtDate(setup.raceDate))}</p><p>Target ${esc(fmtTime(setup.targetTime))}; recent ${esc(setup.testDistance)} km in ${esc(fmtTime(setup.testTime))}; ${esc(setup.currentWeekly)} km/week.</p>`;submit.textContent='Create my plan';submit.focus();return}state.setup=setup;state.days=days;state.onboardingComplete=true;state.programStartPrediction=initialProgrammePrediction(setup);state.predictionHistory=[];state.raceReadinessHistory=[];withPlanLoader('Creating running plan…',()=>{buildPlan();save();setOnboardingOpen(false);renderAll();toast('Your personal plan is ready. Today is your starting view.')})};setOnboardingOpen(true)}
 $('onboarding').addEventListener('keydown',event=>{if($('onboarding').classList.contains('hidden'))return;if(event.key==='Escape'){event.preventDefault();toast('Complete first-time setup before using the coach.',true);$('onboardingTitle').focus?.();return}if(event.key!=='Tab')return;const focusable=[...$('onboarding').querySelectorAll('button,input,select,textarea,[tabindex]:not([tabindex="-1"])')].filter(el=>!el.disabled&&el.offsetParent!==null);if(!focusable.length)return;const first=focusable[0],last=focusable.at(-1);if(event.shiftKey&&document.activeElement===first){event.preventDefault();last.focus()}else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first.focus()}});
 
 
@@ -11111,7 +11149,8 @@ function initialiseApplication(){
     try{
      const compacted=compactHistoricalActivityStreams();
      const predictions=reconcilePredictionHistory();
-     if(compacted||predictions)save();
+     const raceHistory=syncRaceReadinessHistory()||raceReadinessHistoryDirty;
+     if(compacted||predictions||raceHistory)save();
     }catch(err){recordDiagnostic('Post-startup history maintenance',err)}
     setTimeout(()=>{
      try{updateRuntimeDomainRevisions()}catch(err){recordDiagnostic('Post-startup domain fingerprint',err)}
