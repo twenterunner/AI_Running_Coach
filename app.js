@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '15.7.9';
-  const BUILD = 51009;
+  const VERSION = '15.7.10';
+  const BUILD = 51010;
   const SCHEMA = 10400;
   const PRIMARY_STORAGE_KEY = 'arc_v10400_web';
   const MIRROR_STORAGE_KEY = 'arc_v10400_mirror';
@@ -339,7 +339,7 @@ const diagnostics=[];
 function recordDiagnostic(source,error){const message=error?.stack||error?.message||String(error);diagnostics.unshift({time:new Date().toLocaleString(),source,message});if(diagnostics.length>20)diagnostics.length=20;console.error(source,error);renderDiagnostics();}
 function renderDiagnostics(){const box=$('diagnosticsContent');if(!box)return;box.innerHTML=diagnostics.length?diagnostics.map(x=>`<div class="diagnosticItem"><b>${esc(x.time)} · ${esc(x.source)}</b><pre>${esc(x.message)}</pre></div>`).join(''):'<p class="muted">No JavaScript errors have been recorded in this session.</p>';}
 window.addEventListener('error',e=>recordDiagnostic('Window error',e.error||e.message));window.addEventListener('unhandledrejection',e=>recordDiagnostic('Unhandled promise rejection',e.reason));
-const PLAN_ENGINE_VERSION=2;
+const PLAN_ENGINE_VERSION=3;
 const FIVE_DAY_TEMPLATE=[['Monday',false,'Easy'],['Tuesday',true,'Intervals'],['Wednesday',true,'Easy'],['Thursday',true,'Tempo'],['Friday',false,'Easy'],['Saturday',true,'Easy'],['Sunday',true,'Long run']];
 const RACE_PROFILES=[
  {key:'5k',label:'5K',maxDistance:7.5,currentWeekly:18,peakLong:12,maxWeekly:32,growth:.07,taperDays:7,days:[['Monday',false,'Easy'],['Tuesday',true,'Intervals'],['Wednesday',true,'Easy'],['Thursday',false,'Easy'],['Friday',false,'Easy'],['Saturday',true,'Tempo'],['Sunday',true,'Long run']]},
@@ -1386,7 +1386,7 @@ function safeWorkoutFallback(item){
   warmup:`${warm.toFixed(1)} km very easy`,main:`${main.toFixed(1)} km conversational easy running`,cooldown:`${cool.toFixed(1)} km very easy`,distanceCheck:`${warm.toFixed(1)} + ${main.toFixed(1)} + ${cool.toFixed(1)} = ${(warm+main+cool).toFixed(1)} km`,purpose:'Preserve aerobic continuity with a safe fallback session.',coach:'The original workout failed internal validation and was replaced with an easy run. Review Plan Health for details.',fuel:'Water according to thirst.',targetScope:'Entire easy run',whyThis:'A safe aerobic session preserves consistency without relying on an invalid prescription.',whyAmount:'The distance is limited to the planned session allowance.',skipImpact:'Skipping one fallback easy run has little fitness impact; do not compensate later.'};
 }
 function buildPlan(){
- const nowIso=iso(today()),oldPlan=Array.isArray(state.plan)?state.plan:[],oldById=new Map(oldPlan.map(p=>[p.id,p])),oldByDate=new Map(oldPlan.map(p=>[p.date,p]));
+ const nowIso=iso(today()),oldPlan=Array.isArray(state.plan)?state.plan:[],oldByDate=new Map(oldPlan.map(p=>[p.date,p]));
  let out=[],total=weeks(),taper=Math.ceil(state.setup.taperDays/7),startCapacity=startingCapacityProfile(),longProgression=Math.max(1,startCapacity.longest);
  for(let w=1;w<=total;w++){
    let dp=detailedPhase(w),ph=phase(w),factor=adaptiveFactor(w),base=Math.min(state.setup.maxWeekly,startCapacity.weekly*Math.pow(1+state.setup.growth,w-1));
@@ -1449,7 +1449,11 @@ function buildPlan(){
      let prescribedDistance=Number.isFinite(detail.totalDistance)?detail.totalDistance:Math.round(capacity.km*10)/10;
      let item={id,week:w,date,day:dayName,type,distance:prescribedDistance,phase:ph,detailedPhase:dp,factor,zone:z,requestedType:capacity.typeChanged?capacity.originalType:null,capacityCeiling:capacity.capacityCeiling,capacityLimited:capacity.capacityLimited,onRampWeek:capacity.onRampWeek,onRampWeeks:capacity.onRampWeeks,capacityReason:capacity.capacityReason,...detail};
      const existing=oldByDate.get(date),hasLinkedEvidence=existing&&(state.runs||[]).some(r=>r.planId===existing.id||((r.date===date)&&r.matchStatus==='matched'));
-     let selected=(existing&&(date<nowIso||hasLinkedEvidence))?existing:(oldById.get(id)||item);
+     // Preserve only genuine history or a future/today prescription that already has linked run evidence.
+     // All other current/future days must take the freshly generated item. Keeping a same-id
+     // future workout here would silently defeat an engine migration when type/date stayed equal
+     // but the new engine changed its distance or structure (for example 8.1 km -> 6.2 km Hills).
+     let selected=(existing&&(date<nowIso||hasLinkedEvidence))?existing:item;
      let check=validateWorkout(selected);
      if(!check.valid){recordDiagnostic(`Invalid generated workout ${id}`,new Error(check.errors.join(' ')));selected=safeWorkoutFallback(item)}
      out.push(selected);
