@@ -6264,3 +6264,9 @@ body:has(#onboarding:not(.hidden)) #nav,body:has(#onboarding:not(.hidden)) #more
   #modal .modalCard,#onboarding .onboardingCard{padding-bottom:calc(24px + env(safe-area-inset-bottom))!important}
   .dailyCheckinRunner #saveCheck{position:relative;z-index:2;touch-action:manipulation!important}
 }
+
+/* v15.7.14 check-in transaction feedback */
+.checkinSaveFeedback{margin:10px 0 0;padding:10px 12px;border-radius:12px;font-size:13px;line-height:1.4;background:rgba(7,17,29,.72);border:1px solid rgba(95,220,210,.28)}
+.checkinSaveFeedback.hidden{display:none}
+.checkinSaveFeedback.bad{border-color:rgba(255,133,133,.55);color:#ffd0d0}
+.checkinSaveFeedback.good{border-color:rgba(121,214,155,.55);color:#bdf4cf}

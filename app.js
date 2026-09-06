@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '15.7.13';
-  const BUILD = 51013;
+  const VERSION = '15.7.14';
+  const BUILD = 51014;
   const SCHEMA = 10400;
   const PRIMARY_STORAGE_KEY = 'arc_v10400_web';
   const MIRROR_STORAGE_KEY = 'arc_v10400_mirror';
@@ -651,9 +651,10 @@ function save(){
  // Persist derived FIT evidence, not second-by-second streams. This is safe to run
  // repeatedly and keeps older imports from consuming browser storage indefinitely.
  try{compactHistoricalActivityStreams()}catch(err){recordDiagnostic('Pre-save activity compaction',err)}
- // Keep one durable race-readiness snapshot per calendar day. Past points are
- // immutable; only today's point is refreshed as new evidence arrives.
- try{syncRaceReadinessHistory()}catch(err){recordDiagnostic('Race-readiness daily snapshot',err)}
+ // Race-readiness history is intentionally NOT recalculated inside save().
+ // Save is a transactional persistence primitive and must remain fast enough for
+ // run imports and rehabilitation check-ins on mobile. Daily race snapshots are
+ // captured separately after the UI/model has produced them.
  const changedDomains=updateRuntimeDomainRevisions();
  const previousRevision=Math.max(0,Number(state.storageRevision)||0),previousUpdatedAt=state.updatedAt;
  state.storageRevision=previousRevision+1;state.updatedAt=new Date().toISOString();
@@ -6192,7 +6193,7 @@ function openInjuryCheck(i,existing=null,options={}){
  <section class="injuryCheckSection"><div class="checkinSectionHead"><span>03</span><div><small>REHABILITATION EXECUTION</small><h4>What rehabilitation did you complete?</h4></div></div><p class="muted compact">Only activities scheduled for this date are shown. Report completion separately from symptom tolerance.</p><div id="icExactExercises" class="checkinExactExercises"></div><div class="formGrid"><div id="icExerciseExecutionBlock">${selectField('icRehabExercises','Scheduled rehab exercises',prev.rehabExerciseStatus||'', [['','Not assessed'],['all','All scheduled rehab exercises completed'],['some','Some scheduled rehab exercises completed'],['stopped','Started but stopped because of symptoms'],['none','Scheduled rehab exercises not started']])}</div><div id="icWalkingExecutionBlock">${selectField('icLocomotion','Scheduled walking target',prev.locomotionStatus||'', [['','Not assessed'],['completed','Full walking target completed'],['partial','Part of walking target completed — not stopped by symptoms'],['stopped','Started but stopped because of symptoms'],['none','Walking target not started']])}</div><div id="icStretchExecutionBlock">${selectField('icStretchGoal','Optional progression',prev.stretchGoalStatus||'', [['','Not assessed / not attempted'],['achieved','Optional progression completed'],['not_achieved','Optional progression not completed']])}</div><div id="icStrengthToleranceBlock">${triSelect('icBridge','Scheduled strength work tolerated with control?',prev.bridge,'Tolerated','Not tolerated')}</div><div id="icImpactToleranceBlock">${triSelect('icHop','Scheduled impact assessment completed and tolerated?',prev.hop,'Tolerated','Not tolerated')}</div></div></section>
  <section id="icRunningSection" class="injuryCheckSection"><div class="checkinSectionHead"><span>04</span><div><small>RUNNING EXPOSURE</small><h4>What running could you complete?</h4></div></div><div class="formGrid">${selectField('icRunStatus','Scheduled run',prev.runStatus,[['not_assessed','Not assessed'],['completed','Run completed'],['stopped','Started but stopped due to symptoms'],['unable','Unable to start because of symptoms']])}<div class="field fieldWide rehabRunLinkField"><label>Link to logged run (optional)</label><select id="icLinkedRun">${rehabRunLinkOptions(selectedDate,prev)}</select><small class="muted">Choose the physical run that this check-in refers to. The linked Log run supplies the kilometres and shoe once. Whether you also link that run to a marathon-programme session remains your separate decision in Log.</small><div id="icRunLinkStatus" class="rehabRunLinkStatus"></div></div><div class="field"><label>Running completed</label><div class="durationInput"><label><span>Min</span><input id="icRun" type="number" min="0" step="1" value="${durationParts(prev.runMinutes).minutes}" placeholder="Min"></label><label><span>Sec</span><input id="icRunSeconds" type="number" min="0" max="59" step="1" value="${durationParts(prev.runMinutes).seconds}" placeholder="00"></label></div></div><div class="field"><label>Highest pain during run 0–10</label><input id="icRunPain" type="number" min="0" max="10" value="${prev.runPain??''}"></div>${triSelect('icGait','Was gait or running technique altered?',prev.alteredGait)}<div id="icQualityToleranceBlock">${triSelect('icRunQuality','Scheduled faster-running / hill exposure completed and tolerated?',prev.runQualityTolerated,'Tolerated','Not tolerated')}</div></div></section>
  <section class="injuryCheckSection"><div class="checkinSectionHead"><span>05</span><div><small>LOAD RESPONSE</small><h4>How did you respond?</h4></div></div><div class="formGrid">${triSelect('icWorse','Were symptoms worse later or the next morning?',existing?prev.nextDayWorse:newCheckDefaults.nextDayWorse)}${selectField('icResponse','Overall response to previous load',formValue('loadResponse'),[['','Not assessed'],['better','Better than before the previous load'],['stable','No meaningful worsening after the previous load'],['mild_flare','Temporary worsening, back to baseline within 24 hours'],['sustained_flare','Still worse more than 24 hours later']])}<div class="field fieldWide"><label>Symptoms / notes</label><textarea id="icSymptoms" placeholder="What changed, what activity caused it, and how long did the response last?">${esc(prev.symptoms||'')}</textarea></div></div></section>
- <div id="icConsistency" class="note"><b>Consistency check</b><p>The form will automatically align related answers.</p></div><button id="saveCheck" class="primary full" type="button">${editing?'Update check-in':'Save and recalculate timeline'}</button>${editing?'<button id="deleteCheck" class="danger full" type="button">Delete this check-in</button>':''}</div>`;
+ <div id="icConsistency" class="note"><b>Consistency check</b><p>The form will automatically align related answers.</p></div><button id="saveCheck" class="primary full" type="button">${editing?'Update check-in':'Save and recalculate timeline'}</button><div id="checkinSaveFeedback" class="checkinSaveFeedback hidden" role="status" aria-live="polite"></div>${editing?'<button id="deleteCheck" class="danger full" type="button">Delete this check-in</button>':''}</div>`;
  $('modal').className='modal';resetModalViewport();
  const shoeChoices=(state.shoes||[]).filter(s=>s.status!=='retired');
  let selectedRehabShoeId=defaultRehabCheckinShoeId(i,initialPlan,prev)||'',updateShoeEstimate=()=>{};
@@ -6345,12 +6346,32 @@ function openInjuryCheck(i,existing=null,options={}){
  if(locomotionStatus==='none'&&Number.isFinite(walkMinutes)&&walkMinutes>0)return toast('Walking minutes must be zero when the walking target was not started.',true);
  if(runStatus==='completed'&&(!Number.isFinite(runMinutes)||runMinutes<=0))return toast('A completed run requires positive running minutes.',true);
  if(runStatus==='stopped'&&(!Number.isFinite(runMinutes)||runMinutes<=0))return toast('Enter the minutes completed before the run was stopped.',true);
- let legacyRehabStatus=rehabExerciseStatus==='not_planned'&&locomotionStatus==='not_planned'?'not_planned':stretchGoalStatus==='achieved'&&rehabExerciseStatus==='all'&&locomotionStatus==='completed'?'stretch':rehabExerciseStatus==='all'&&locomotionStatus==='completed'?'completed':rehabExerciseStatus==='some'||locomotionStatus==='partial'?'reduced':rehabExerciseStatus==='none'&&locomotionStatus==='completed'?'walking_only':rehabExerciseStatus==='stopped'||locomotionStatus==='stopped'?'stopped':rehabExerciseStatus==='none'&&locomotionStatus==='none'?'not_completed':null;const linkedRun=selectedRehabRunId?(state.runs||[]).find(r=>r.id===selectedRehabRunId):null;if(selectedRehabRunId&&(!linkedRun||linkedRun.date!==$('icDate').value))return toast('The selected logged run is no longer available on this check-in date. Select the correct run or choose no linked logged run.',true);const linkedShoeId=linkedRun?selectedShoeIdForRun(linkedRun):null,linkedRunKm=linkedRun&&Number(linkedRun.distanceKm)>0?Number(linkedRun.distanceKm):null;let c={date:$('icDate').value,linkedRunId:linkedRun?.id||null,linkedRunChoiceMade:true,rehabShoeId:linkedRun?linkedShoeId:(selectedRehabShoeId||null),rehabShoeChoiceMade:true,walkDistanceKm:$('icWalkDistanceKm')&&$('icWalkDistanceKm').value!==''?Math.max(0,Number($('icWalkDistanceKm').value)):null,runDistanceKm:linkedRunKm??($('icRunDistanceKm')&&$('icRunDistanceKm').value!==''?Math.max(0,Number($('icRunDistanceKm').value)):null),pain:nullableNumber($('icPain').value),walkPain:nullableNumber($('icWalk').value),morningStiffness:nullableNumber($('icStiff').value),symptomTrend:$('icTrend').value||null,newSwelling:readTri('icSwelling'),walkMinutes,stairs:readTri('icStairs'),confidence:nullableNumber($('icConfidence').value),rehabExerciseStatus,locomotionStatus,stretchGoalStatus,rehabStatus:legacyRehabStatus,bridge:activeScheduled.strengthPlanned?(rehabExerciseStatus==='stopped'?false:['all','some'].includes(rehabExerciseStatus)?readTri('icBridge'):null):null,hop:activeScheduled.impactPlanned?(rehabExerciseStatus==='stopped'?false:['all','some'].includes(rehabExerciseStatus)?readTri('icHop'):null):null,runStatus,runMinutes,runPain:activeScheduled.runningPlanned?nullableNumber($('icRunPain').value):null,alteredGait:activeScheduled.runningPlanned?readTri('icGait'):null,runQualityTolerated:activeScheduled.qualityPlanned&&runStatus==='completed'?readTri('icRunQuality'):null,runIntensity:activeScheduled.qualityPlanned&&runStatus==='completed'?'quality':null,hillsTolerated:null,planSnapshot:{date:activePlan.date,type:activePlan.type,title:activePlan.title,items:[...(activePlan.items||[])],walkingTarget:activePlan.walkingTarget,stretchGoal:activePlan.stretchGoal,stretchGoalTitle:activePlan.stretchGoalTitle,stretchGoalWhy:activePlan.stretchGoalWhy,stretchGoalOffered:activePlan.stretchGoalOffered,bestOutcome:activePlan.bestOutcome,evidence:activePlan.evidence,running:activePlan.running,rationale:activePlan.rationale,rule:activePlan.rule,stage:activePlan.stage},nextDayWorse:readTri('icWorse'),loadResponse:$('icResponse').value||null,symptoms:$('icSymptoms').value.trim()};const executionCheck=rehabExecutionMeta(c);if((activeScheduled.exercisePlanned||activeScheduled.walkingPlanned||activeScheduled.runningPlanned)&&!executionCheck.assessed)return toast('Complete all scheduled execution questions so this check-in can be scored.',true);if(!c.date)return toast('Enter the check-in date.',true);if(dte(c.date)<dte(i.date))return toast('A check-in cannot be dated before the injury date.',true);const hasObs=Object.entries(c).some(([k,v])=>k!=='date'&&k!=='symptoms'&&v!==null&&v!==''&&v!==undefined);if(!hasObs&&!c.symptoms)return toast('Record at least one observation.',true);if(['stopped','unable'].includes(runStatus)&&Number.isFinite(runMinutes)&&runMinutes<0)return toast('Running minutes cannot be negative.',true);const oldRehabShoeId=existing?.rehabShoeId||null,rehabShoeId=c.rehabShoeId||null,rehabShoeBefore=rehabShoeId?shoeMileage((state.shoes||[]).find(s=>s.id===rehabShoeId)||{}):null;i.checkIns=i.checkIns||[];if(editing&&originalDate!==c.date&&i.checkIns.some(x=>x.date===c.date))return toast('A check-in already exists for that date.',true);let n=i.checkIns.findIndex(x=>x.date===(editing?originalDate:c.date));n>=0?i.checkIns[n]=c:i.checkIns.push(c);const savedCheck=i.checkIns.find(x=>x.date===c.date);if(savedCheck){savedCheck.rehabShoeId=rehabShoeId;savedCheck.rehabShoeChoiceMade=true;savedCheck.linkedRunId=c.linkedRunId||null;savedCheck.linkedRunChoiceMade=true;if(!savedCheck.linkedRunId)syncShoeAcrossMatchedRehabRun(savedCheck,rehabShoeId)}const saveOk=save();if(!saveOk)return toast('This check-in was not saved. Your edits are still open so you can retry.',true);if(!checkInPersistedToPrimary(i.id,savedCheck||c,editing?originalDate:null))return toast('The device did not confirm the saved check-in. Your edits are still open; retry before leaving this screen.',true);refreshShoeActualsAfterActivity();const rehabKm=rehabUsageFromCheckIn(i,savedCheck||c)?.distanceKm||Number(matchingLoggedRunForRehab(savedCheck||c)?.distanceKm)||0,shoeNote=shoeReallocationConfirmation(oldRehabShoeId,rehabShoeId,rehabKm,'rehab')||shoeMileageConfirmation(rehabShoeId,rehabShoeBefore,'rehab');const successMessage=shoeNote||(c.linkedRunId?(editing?'Check-in updated. The linked Log run remains the single mileage/load record.':'Check-in saved and linked to the existing Log run. No mileage was counted twice.'):(editing?'Check-in updated and saved.':'Check-in saved. The full history—not this day alone—was used.'));$('modal').className='modal hidden';toast(successMessage);scheduleVisibleCheckInRefresh();return true;};if(editing)$('deleteCheck').onclick=()=>{if(confirm('Delete this check-in?')){i.checkIns=i.checkIns.filter(x=>x.date!==originalDate);const saveOk=save();if(!saveOk)return toast('The check-in could not be deleted from storage. It remains open so you can retry.',true);if(primaryStoredCheckIn(i.id,originalDate))return toast('The device did not confirm deletion. Retry before leaving this screen.',true);refreshShoeActualsAfterActivity();$('modal').className='modal hidden';toast('Check-in deleted and saved.');scheduleVisibleCheckInRefresh();}};
+ let legacyRehabStatus=rehabExerciseStatus==='not_planned'&&locomotionStatus==='not_planned'?'not_planned':stretchGoalStatus==='achieved'&&rehabExerciseStatus==='all'&&locomotionStatus==='completed'?'stretch':rehabExerciseStatus==='all'&&locomotionStatus==='completed'?'completed':rehabExerciseStatus==='some'||locomotionStatus==='partial'?'reduced':rehabExerciseStatus==='none'&&locomotionStatus==='completed'?'walking_only':rehabExerciseStatus==='stopped'||locomotionStatus==='stopped'?'stopped':rehabExerciseStatus==='none'&&locomotionStatus==='none'?'not_completed':null;const linkedRun=selectedRehabRunId?(state.runs||[]).find(r=>r.id===selectedRehabRunId):null;if(selectedRehabRunId&&(!linkedRun||linkedRun.date!==$('icDate').value))return toast('The selected logged run is no longer available on this check-in date. Select the correct run or choose no linked logged run.',true);const linkedShoeId=linkedRun?selectedShoeIdForRun(linkedRun):null,linkedRunKm=linkedRun&&Number(linkedRun.distanceKm)>0?Number(linkedRun.distanceKm):null;let c={date:$('icDate').value,linkedRunId:linkedRun?.id||null,linkedRunChoiceMade:true,rehabShoeId:linkedRun?linkedShoeId:(selectedRehabShoeId||null),rehabShoeChoiceMade:true,walkDistanceKm:$('icWalkDistanceKm')&&$('icWalkDistanceKm').value!==''?Math.max(0,Number($('icWalkDistanceKm').value)):null,runDistanceKm:linkedRunKm??($('icRunDistanceKm')&&$('icRunDistanceKm').value!==''?Math.max(0,Number($('icRunDistanceKm').value)):null),pain:nullableNumber($('icPain').value),walkPain:nullableNumber($('icWalk').value),morningStiffness:nullableNumber($('icStiff').value),symptomTrend:$('icTrend').value||null,newSwelling:readTri('icSwelling'),walkMinutes,stairs:readTri('icStairs'),confidence:nullableNumber($('icConfidence').value),rehabExerciseStatus,locomotionStatus,stretchGoalStatus,rehabStatus:legacyRehabStatus,bridge:activeScheduled.strengthPlanned?(rehabExerciseStatus==='stopped'?false:['all','some'].includes(rehabExerciseStatus)?readTri('icBridge'):null):null,hop:activeScheduled.impactPlanned?(rehabExerciseStatus==='stopped'?false:['all','some'].includes(rehabExerciseStatus)?readTri('icHop'):null):null,runStatus,runMinutes,runPain:activeScheduled.runningPlanned?nullableNumber($('icRunPain').value):null,alteredGait:activeScheduled.runningPlanned?readTri('icGait'):null,runQualityTolerated:activeScheduled.qualityPlanned&&runStatus==='completed'?readTri('icRunQuality'):null,runIntensity:activeScheduled.qualityPlanned&&runStatus==='completed'?'quality':null,hillsTolerated:null,planSnapshot:{date:activePlan.date,type:activePlan.type,title:activePlan.title,items:[...(activePlan.items||[])],walkingTarget:activePlan.walkingTarget,stretchGoal:activePlan.stretchGoal,stretchGoalTitle:activePlan.stretchGoalTitle,stretchGoalWhy:activePlan.stretchGoalWhy,stretchGoalOffered:activePlan.stretchGoalOffered,bestOutcome:activePlan.bestOutcome,evidence:activePlan.evidence,running:activePlan.running,rationale:activePlan.rationale,rule:activePlan.rule,stage:activePlan.stage},nextDayWorse:readTri('icWorse'),loadResponse:$('icResponse').value||null,symptoms:$('icSymptoms').value.trim()};const executionCheck=rehabExecutionMeta(c);if((activeScheduled.exercisePlanned||activeScheduled.walkingPlanned||activeScheduled.runningPlanned)&&!executionCheck.assessed)return toast('Complete all scheduled execution questions so this check-in can be scored.',true);if(!c.date)return toast('Enter the check-in date.',true);if(dte(c.date)<dte(i.date))return toast('A check-in cannot be dated before the injury date.',true);const hasObs=Object.entries(c).some(([k,v])=>k!=='date'&&k!=='symptoms'&&v!==null&&v!==''&&v!==undefined);if(!hasObs&&!c.symptoms)return toast('Record at least one observation.',true);if(['stopped','unable'].includes(runStatus)&&Number.isFinite(runMinutes)&&runMinutes<0)return toast('Running minutes cannot be negative.',true);const oldRehabShoeId=existing?.rehabShoeId||null,rehabShoeId=c.rehabShoeId||null,rehabShoeBefore=rehabShoeId?shoeMileage((state.shoes||[]).find(s=>s.id===rehabShoeId)||{}):null;i.checkIns=i.checkIns||[];if(editing&&originalDate!==c.date&&i.checkIns.some(x=>x.date===c.date))return toast('A check-in already exists for that date.',true);let n=i.checkIns.findIndex(x=>x.date===(editing?originalDate:c.date));n>=0?i.checkIns[n]=c:i.checkIns.push(c);const savedCheck=i.checkIns.find(x=>x.date===c.date);if(savedCheck){savedCheck.rehabShoeId=rehabShoeId;savedCheck.rehabShoeChoiceMade=true;savedCheck.linkedRunId=c.linkedRunId||null;savedCheck.linkedRunChoiceMade=true;if(!savedCheck.linkedRunId)syncShoeAcrossMatchedRehabRun(savedCheck,rehabShoeId)}const saveOk=save();if(!saveOk)return toast('This check-in was not saved. Your edits are still open so you can retry.',true);if(!checkInPersistedToPrimary(i.id,savedCheck||c,editing?originalDate:null))return toast('The device did not confirm the saved check-in. Your edits are still open; retry before leaving this screen.',true);const successMessage=c.linkedRunId?(editing?'Check-in updated. The linked Log run remains the single mileage/load record.':'Check-in saved and linked to the existing Log run. No mileage was counted twice.'):(editing?'Check-in updated and saved.':'Check-in saved. The full history—not this day alone—was used.');$('modal').className='modal hidden';toast(successMessage);setTimeout(()=>{try{refreshShoeActualsAfterActivity()}catch(err){recordDiagnostic('Post check-in shoe refresh',err)}},0);scheduleVisibleCheckInRefresh();return true;};if(editing)$('deleteCheck').onclick=()=>{if(confirm('Delete this check-in?')){i.checkIns=i.checkIns.filter(x=>x.date!==originalDate);const saveOk=save();if(!saveOk)return toast('The check-in could not be deleted from storage. It remains open so you can retry.',true);if(primaryStoredCheckIn(i.id,originalDate))return toast('The device did not confirm deletion. Retry before leaving this screen.',true);refreshShoeActualsAfterActivity();$('modal').className='modal hidden';toast('Check-in deleted and saved.');scheduleVisibleCheckInRefresh();}};
 }
 const openInjuryCheckUnvalidated=openInjuryCheck;
 openInjuryCheck=function(injury,existing=null){
- openInjuryCheckUnvalidated(injury,existing);ensureAccessibleForms($('modalContent'));$('icDate').max=iso(today());const saveButton=$('saveCheck'),unsafeSave=saveButton.onclick,defaultLabel=saveButton.textContent;
- saveButton.onclick=()=>{if(saveButton.dataset.saving==='1')return;const check={date:$('icDate').value,pain:nullableNumber($('icPain').value),walkPain:nullableNumber($('icWalk').value),morningStiffness:nullableNumber($('icStiff').value),confidence:nullableNumber($('icConfidence').value),walkMinutes:durationFromFields($('icWalkMinutes'),$('icWalkSeconds')),runMinutes:durationFromFields($('icRun'),$('icRunSeconds')),runPain:nullableNumber($('icRunPain').value)};const errors=CORE.validateInjury({...injury,checkIns:[check]},{today:iso(today())}).filter(error=>error.field.startsWith('checkIns.'));if(errors.length){showFieldErrors(errors,{['checkIns.0.date']:'#icDate',['checkIns.0.pain']:'#icPain',['checkIns.0.walkPain']:'#icWalk',['checkIns.0.morningStiffness']:'#icStiff',['checkIns.0.confidence']:'#icConfidence',['checkIns.0.walkMinutes']:'#icWalkMinutes',['checkIns.0.runMinutes']:'#icRun',['checkIns.0.runPain']:'#icRunPain'},$('modalContent'));return toast(CORE.firstErrorMessage(errors),true)}saveButton.dataset.saving='1';saveButton.disabled=true;saveButton.textContent=existing?'Saving update…':'Saving…';requestAnimationFrame(()=>{let completed=false;try{completed=unsafeSave()===true}catch(err){recordDiagnostic('Check-in save',err);toast(err?.message||'The check-in could not be saved.',true)}finally{if(!$('modal').classList.contains('hidden')){saveButton.dataset.saving='0';saveButton.disabled=false;saveButton.textContent=defaultLabel}else if(!completed){saveButton.dataset.saving='0'}}})};
+ openInjuryCheckUnvalidated(injury,existing);ensureAccessibleForms($('modalContent'));$('icDate').max=iso(today());
+ const saveButton=$('saveCheck'),unsafeSave=saveButton?.onclick,defaultLabel=saveButton?.textContent||'Save and recalculate timeline',feedback=$('checkinSaveFeedback');
+ if(!saveButton||typeof unsafeSave!=='function')return;
+ const showSaveFeedback=(message,bad=true)=>{if(feedback){feedback.textContent=message;feedback.className='checkinSaveFeedback '+(bad?'bad':'good');feedback.scrollIntoView?.({block:'nearest'});}toast(message,bad)};
+ const clearSaveFeedback=()=>{if(feedback){feedback.textContent='';feedback.className='checkinSaveFeedback hidden'}};
+ saveButton.onclick=event=>{
+  event?.preventDefault?.();event?.stopPropagation?.();
+  if(saveButton.dataset.saving==='1')return false;
+  clearSaveFeedback();saveButton.dataset.saving='1';saveButton.disabled=true;saveButton.textContent=existing?'Saving update…':'Saving…';
+  let completed=false;
+  try{
+   // Invoke the one canonical save path synchronously. Do not defer the handler
+   // through requestAnimationFrame: on mobile that made a tap appear inert and
+   // allowed unrelated rendering work to run before the transaction.
+   completed=unsafeSave()===true;
+   if(!completed&&!$('modal').classList.contains('hidden'))showSaveFeedback('The check-in was not saved. Review the message above, then retry.',true);
+   return completed;
+  }catch(err){recordDiagnostic('Check-in save',err);showSaveFeedback(err?.message||'The check-in could not be saved.',true);return false}
+  finally{
+   if(!$('modal').classList.contains('hidden')){saveButton.dataset.saving='0';saveButton.disabled=false;saveButton.textContent=defaultLabel}else if(!completed){saveButton.dataset.saving='0'}
+  }
+ };
 };
 function renderUndoButtons(){try{$('undoSettingsBtn')?.classList.toggle('hidden',!localStorage.getItem(UNDO_KEY));$('undoRestoreBtn')?.classList.toggle('hidden',!localStorage.getItem(BACKUP_KEY))}catch{}}
 
@@ -6367,47 +6388,97 @@ function tightTimeChartBounds(values,options={}){
  return{min,max};
 }
 let raceReadinessDailyCache={key:null,value:null};
+let raceReadinessSnapshotTimer=null,raceReadinessBackfillRunning=false;
+function validRaceReadinessPoint(point){return !!point&&Number.isFinite(Number(point.current))&&Number.isFinite(Number(point.expected))}
 function raceReadinessPointForDate(date){
  return withModelDate(date,()=>{
   const currentSec=Number(prediction()),c=confidence(),projectionSec=Number(programmeProjection(c,currentSec,projectedPreparationModel(c))?.predictedTime);
   return{current:Number.isFinite(currentSec)?currentSec:null,expected:Number.isFinite(projectionSec)?projectionSec:null};
  });
 }
-function syncRaceReadinessHistory(){
- const realToday=iso(new Date()),raceDate=CORE.isIsoDate(state.setup?.raceDate)?state.setup.raceDate:realToday;
- let history=Array.isArray(state.raceReadinessHistory)?state.raceReadinessHistory.filter(x=>x&&CORE.isIsoDate(x.date)&&x.current!==null&&x.current!==undefined&&x.current!==''&&x.expected!==null&&x.expected!==undefined&&x.expected!==''&&Number.isFinite(Number(x.current))&&Number.isFinite(Number(x.expected))).map(x=>({...x,current:Number(x.current),expected:Number(x.expected)})):[];
- const existingEarliest=history.length?history.slice().sort((a,b)=>a.date.localeCompare(b.date))[0].date:null;
- const configuredStart=CORE.isIsoDate(state.setup?.planStart)?state.setup.planStart:realToday;
- let start=existingEarliest&&existingEarliest<configuredStart?existingEarliest:configuredStart,end=realToday<=raceDate?realToday:raceDate;
- if(start>end)start=end;
- const byDate=new Map(history.map(x=>[x.date,x]));
- let changed=false;
- for(let d=dte(start),last=dte(end),guard=0;d<=last&&guard<1500;d=new Date(d.getTime()+DAY),guard++){
-  const date=iso(d),existing=byDate.get(date),isToday=date===end&&end===realToday;
-  if(existing&&!isToday)continue;
-  const point=raceReadinessPointForDate(date);
-  if(!Number.isFinite(point.current)||!Number.isFinite(point.expected))continue;
-  if(!existing||Math.abs(Number(existing.current)-point.current)>.01||Math.abs(Number(existing.expected)-point.expected)>.01){
-   byDate.set(date,{date,current:point.current,expected:point.expected,recordedAt:new Date().toISOString()});
-   changed=true;
-  }
+function upsertRaceReadinessHistoryPoint(date,point,{overwrite=false}={}){
+ if(!CORE.isIsoDate(date)||!validRaceReadinessPoint(point))return false;
+ state.raceReadinessHistory=Array.isArray(state.raceReadinessHistory)?state.raceReadinessHistory:[];
+ const idx=state.raceReadinessHistory.findIndex(x=>x?.date===date);
+ if(idx>=0&&!overwrite)return false;
+ const next={date,current:Number(point.current),expected:Number(point.expected),recordedAt:new Date().toISOString()};
+ if(idx>=0){
+  const prev=state.raceReadinessHistory[idx];
+  if(Math.abs(Number(prev.current)-next.current)<=.01&&Math.abs(Number(prev.expected)-next.expected)<=.01)return false;
+  state.raceReadinessHistory[idx]=next;
+ }else state.raceReadinessHistory.push(next);
+ const map=new Map();for(const x of state.raceReadinessHistory){if(x&&CORE.isIsoDate(x.date)&&validRaceReadinessPoint(x))map.set(x.date,{...x,current:Number(x.current),expected:Number(x.expected)})}
+ state.raceReadinessHistory=[...map.values()].sort((a,b)=>a.date.localeCompare(b.date)).slice(-500);
+ raceReadinessDailyCache={key:null,value:null};raceReadinessHistoryDirty=true;return true;
+}
+function queueTodayRaceReadinessSnapshot(date,point){
+ const realToday=iso(new Date());if(date!==realToday||!validRaceReadinessPoint(point))return;
+ const existing=(state.raceReadinessHistory||[]).find(x=>x?.date===date);
+ if(existing&&Math.abs(Number(existing.current)-Number(point.current))<=.01&&Math.abs(Number(existing.expected)-Number(point.expected))<=.01)return;
+ clearTimeout(raceReadinessSnapshotTimer);
+ raceReadinessSnapshotTimer=setTimeout(()=>{
+  raceReadinessSnapshotTimer=null;
+  try{
+   if(upsertRaceReadinessHistoryPoint(date,point,{overwrite:true})){
+    const ok=save();
+    if(ok)raceReadinessHistoryDirty=false;
+   }
+  }catch(err){recordDiagnostic('Race-readiness snapshot persistence',err)}
+ },450);
+}
+function raceReadinessMissingPastDates(){
+ const realToday=iso(new Date()),raceDate=CORE.isIsoDate(state.setup?.raceDate)?state.setup.raceDate:realToday,end=realToday<=raceDate?realToday:raceDate;
+ const configuredStart=CORE.isIsoDate(state.setup?.planStart)?state.setup.planStart:end;
+ let start=configuredStart;if(start>end)start=end;
+ const existing=new Set((state.raceReadinessHistory||[]).filter(x=>x&&CORE.isIsoDate(x.date)&&x.date<end&&validRaceReadinessPoint(x)).map(x=>x.date));
+ const out=[];
+ for(let d=dte(start),last=dte(end),guard=0;d<last&&guard<500;d=new Date(d.getTime()+DAY),guard++){
+  const date=iso(d);if(!existing.has(date))out.push(date);
  }
- const next=[...byDate.values()].filter(x=>x.date<=end&&Number.isFinite(Number(x.current))&&Number.isFinite(Number(x.expected))).sort((a,b)=>a.date.localeCompare(b.date)).slice(-500);
- if(next.length!==history.length||next.some((x,i)=>x.date!==history[i]?.date||Math.abs(x.current-Number(history[i]?.current))>.01||Math.abs(x.expected-Number(history[i]?.expected))>.01))changed=true;
- state.raceReadinessHistory=next;
- if(changed){raceReadinessDailyCache={key:null,value:null};raceReadinessHistoryDirty=true;}
- return changed;
+ return out.reverse(); // newest missing day first so yesterday appears immediately
+}
+function scheduleRaceReadinessBackfill(){
+ if(raceReadinessBackfillRunning)return;
+ const dates=raceReadinessMissingPastDates();if(!dates.length)return;
+ raceReadinessBackfillRunning=true;let index=0,changed=false,firstVisibleRefreshDone=false;
+ const scheduleStep=fn=>{if(typeof requestIdleCallback==='function')requestIdleCallback(fn,{timeout:350});else setTimeout(fn,40)};
+ const step=()=>{
+  if(index>=dates.length){
+   raceReadinessBackfillRunning=false;
+   if(changed){
+    try{if(save())raceReadinessHistoryDirty=false}catch(err){recordDiagnostic('Race-readiness backfill persistence',err)}
+    invalidatePageRenderCache('dashboard');
+    if(activePageId()==='dashboard')setTimeout(()=>{try{renderPage('dashboard',{force:true})}catch(err){recordDiagnostic('Race-readiness backfill render',err)}},0);
+   }
+   return;
+  }
+  const date=dates[index++];
+  try{
+   const point=raceReadinessPointForDate(date),inserted=validRaceReadinessPoint(point)&&upsertRaceReadinessHistoryPoint(date,point,{overwrite:false});
+   changed=Boolean(inserted)||changed;
+   if(inserted&&!firstVisibleRefreshDone&&activePageId()==='dashboard'){firstVisibleRefreshDone=true;invalidatePageRenderCache('dashboard');setTimeout(()=>{try{renderPage('dashboard',{force:true})}catch(err){recordDiagnostic('Race-readiness first backfill render',err)}},0)}
+  }catch(err){recordDiagnostic('Race-readiness historical backfill '+date,err)}
+  // One historical day per idle slice keeps the mobile main thread responsive.
+  scheduleStep(step);
+ };
+ setTimeout(()=>scheduleStep(step),160);
 }
 function raceReadinessDailySeries(){
- syncRaceReadinessHistory();
  const realToday=iso(new Date()),raceDate=CORE.isIsoDate(state.setup?.raceDate)?state.setup.raceDate:realToday,end=realToday<=raceDate?realToday:raceDate;
- const history=(Array.isArray(state.raceReadinessHistory)?state.raceReadinessHistory:[]).filter(x=>x&&CORE.isIsoDate(x.date)&&x.date<=end&&Number.isFinite(Number(x.current))&&Number.isFinite(Number(x.expected))).slice().sort((a,b)=>a.date.localeCompare(b.date));
- let start=history[0]?.date||(CORE.isIsoDate(state.setup?.planStart)?state.setup.planStart:end);
- if(start>end)start=end;
- const key=[Number(state.storageRevision)||0,start,end,raceDate,Number(state.setup?.targetTime)||0,history.length,history.at(-1)?.date||'',Number(history.at(-1)?.current)||0,Number(history.at(-1)?.expected)||0].join('|');
+ const history=(Array.isArray(state.raceReadinessHistory)?state.raceReadinessHistory:[]).filter(x=>x&&CORE.isIsoDate(x.date)&&x.date<=end&&validRaceReadinessPoint(x)).map(x=>({...x,current:Number(x.current),expected:Number(x.expected)})).sort((a,b)=>a.date.localeCompare(b.date));
+ const byDate=new Map(history.map(x=>[x.date,x]));
+ // Today's value is live. Past dates come only from immutable persisted snapshots.
+ const live=raceReadinessPointForDate(end);
+ if(validRaceReadinessPoint(live)){
+  byDate.set(end,{date:end,current:Number(live.current),expected:Number(live.expected),recordedAt:new Date().toISOString(),live:true});
+  if(end===realToday)queueTodayRaceReadinessSnapshot(end,live);
+ }
+ const entries=[...byDate.values()].filter(x=>x.date<=end&&validRaceReadinessPoint(x)).sort((a,b)=>a.date.localeCompare(b.date));
+ let start=entries[0]?.date||(CORE.isIsoDate(state.setup?.planStart)?state.setup.planStart:end);if(start>end)start=end;
+ const visible=entries.filter(x=>x.date>=start&&x.date<=end),dates=visible.map(x=>x.date),current=visible.map(x=>Number(x.current)),expected=visible.map(x=>Number(x.expected));
+ if(!dates.length&&validRaceReadinessPoint(live)){dates.push(end);current.push(Number(live.current));expected.push(Number(live.expected))}
+ const key=[start,end,raceDate,Number(state.setup?.targetTime)||0,dates.join(','),current.map(v=>Math.round(v*100)/100).join(','),expected.map(v=>Math.round(v*100)/100).join(',')].join('|');
  if(raceReadinessDailyCache.key===key&&raceReadinessDailyCache.value)return raceReadinessDailyCache.value;
- const entries=history.filter(x=>x.date>=start&&x.date<=end),dates=entries.map(x=>x.date),current=entries.map(x=>Number(x.current)),expected=entries.map(x=>Number(x.expected));
- if(!dates.length){const point=raceReadinessPointForDate(end);dates.push(end);current.push(point.current);expected.push(point.expected)}
  const lastIndex=dates.length-1,labels=dates.map((date,i)=>lastIndex===0?(end===realToday?'Today':'Race'):i===0?'Start':i===lastIndex?(end===realToday?'Today':'Race'):dte(date).toLocaleDateString(undefined,{day:'numeric',month:'short'}));
  const details=dates.map((date,i)=>`${fmtDate(date)} · Current ${fmtTime(current[i])} · Expected ${fmtTime(expected[i])}`);
  const value={dates,labels,current,expected,details,latestCurrent:current.at(-1),latestExpected:expected.at(-1),start,end};
@@ -11149,8 +11220,8 @@ function initialiseApplication(){
     try{
      const compacted=compactHistoricalActivityStreams();
      const predictions=reconcilePredictionHistory();
-     const raceHistory=syncRaceReadinessHistory()||raceReadinessHistoryDirty;
-     if(compacted||predictions||raceHistory)save();
+     if(compacted||predictions)save();
+     scheduleRaceReadinessBackfill();
     }catch(err){recordDiagnostic('Post-startup history maintenance',err)}
     setTimeout(()=>{
      try{updateRuntimeDomainRevisions()}catch(err){recordDiagnostic('Post-startup domain fingerprint',err)}
