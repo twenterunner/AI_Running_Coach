@@ -6278,3 +6278,9 @@ body:has(#onboarding:not(.hidden)) #nav,body:has(#onboarding:not(.hidden)) #more
 .injuryArchivedCard .checkInHistoryRow.archived{cursor:default}
 
 .injuryArchivedPhases{display:grid;gap:8px;margin:14px 0}.injuryArchivedPhases span{display:grid;grid-template-columns:72px 1fr auto;gap:10px;align-items:center;padding:9px 10px;border:1px solid rgba(117,231,218,.14);border-radius:12px;background:rgba(6,31,42,.35)}.injuryArchivedPhases small{color:#bdd0d8}.injuryArchivedPhases em{font-style:normal;color:#82d99a;font-size:.76rem;font-weight:700}@media(max-width:520px){.injuryArchivedPhases span{grid-template-columns:64px 1fr}.injuryArchivedPhases em{grid-column:2}}
+
+/* v15.7.16 archived rehabilitation review: summarize retained check-ins as a recovery curve. */
+#injury .injuryArchivedRecovery{margin-top:16px}
+#injury .injuryArchivedRecovery .injuryRunnerCardHead{margin-bottom:8px}
+#injury .injuryArchivedRecovery .injuryTrajectoryWrap.archived{margin-top:6px}
+#injury .injuryArchivedTrajectory .currentDateLine{stroke:var(--teal-2);stroke-dasharray:4 4}

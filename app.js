@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '15.7.15';
-  const BUILD = 51015;
+  const VERSION = '15.7.16';
+  const BUILD = 51016;
   const SCHEMA = 10400;
   const PRIMARY_STORAGE_KEY = 'arc_v10400_web';
   const MIRROR_STORAGE_KEY = 'arc_v10400_mirror';
@@ -6014,13 +6014,38 @@ function scheduleInjuryProgressiveTasks(generation,tasks){
  });
 }
 function rehabPlanIsArchived(injury){return Boolean(injury?.rehabArchivedAt)}
+function archivedRehabRecoveryCurveSvg(injury,p){
+ const checks=(p?.checks||injury?.checkIns||[]).filter(c=>CORE.isIsoDate(c?.date)).slice().sort((a,b)=>a.date.localeCompare(b.date));
+ if(!p||!checks.length)return`<div class="injuryArchivedRecovery"><div class="injuryRunnerCardHead"><div><small>RECOVERY CURVE</small><h4>Observed recovery through closure</h4><p>No rehabilitation check-ins were available to build a recovery curve.</p></div></div></div>`;
+ const W=720,H=270,left=50,right=20,top=22,bottom=46,cw=W-left-right,ch=H-top-bottom;
+ const injuryDate=CORE.isIsoDate(injury.date)?injury.date:(CORE.isIsoDate(rehabPlanStart(injury))?rehabPlanStart(injury):checks[0].date);
+ const closedDate=CORE.isIsoDate(String(injury.rehabArchivedAt||'').slice(0,10))?String(injury.rehabArchivedAt).slice(0,10):checks.at(-1).date;
+ const dayFromStart=date=>Math.max(0,Math.round((dte(date)-dte(injuryDate))/DAY));
+ const closeDay=Math.max(1,dayFromStart(closedDate));
+ const nominalTotal=Math.max(7,Number(p.nominalTotal)||closeDay);
+ const horizon=Math.max(closeDay,nominalTotal,dayFromStart(checks.at(-1).date));
+ const x=d=>left+clamp(d/horizon,0,1)*cw,y=v=>top+(100-clamp(v,0,100))/100*ch;
+ const pts=checks.filter(c=>c.date<=closedDate).map((c,idx)=>{
+   const prefix=checks.slice(0,idx+1).filter(q=>q.date<=c.date);
+   const score=injuryCompletionForChecks(injury,prefix,p.diag,nullableNumber(injury.initialPain),nullableNumber(injury.initialWalkPain));
+   return{day:dayFromStart(c.date),score,date:c.date};
+ }).filter(q=>Number.isFinite(q.score));
+ if(!pts.length)return`<div class="injuryArchivedRecovery"><div class="injuryRunnerCardHead"><div><small>RECOVERY CURVE</small><h4>Observed recovery through closure</h4><p>Check-ins were retained, but there was not enough scored evidence to draw the recovery curve.</p></div></div></div>`;
+ const observed=[{day:0,score:0,date:injuryDate},...pts].map((q,n)=>`${n?'L':'M'} ${x(q.day)} ${y(q.score)}`).join(' ');
+ const nominalPath=`M ${x(0)} ${y(0)} L ${x(nominalTotal)} ${y(100)}`;
+ const yGrid=[0,25,50,75,100].map(v=>`<line class="grid" x1="${left}" x2="${W-right}" y1="${y(v)}" y2="${y(v)}"/><text class="axisText" x="${left-8}" y="${y(v)+4}" text-anchor="end">${v}%</text>`).join('');
+ const closureX=x(closeDay);
+ const last=pts.at(-1),latestScore=Math.round(last.score);
+ const circles=pts.length<=28?pts.map(q=>`<circle cx="${x(q.day)}" cy="${y(q.score)}" r="4"><title>${fmtDate(q.date)} · ${Math.round(q.score)}%</title></circle>`).join(''):'';
+ return`<div class="injuryArchivedRecovery"><div class="injuryRunnerCardHead"><div><small>RECOVERY CURVE</small><h4>Observed recovery through closure</h4><p>${checks.length} check-in${checks.length===1?'':'s'} condensed into the recovery trajectory · final observed score ${latestScore}%.</p></div></div><div class="injuryTrajectoryWrap archived"><svg class="injuryTrajectory injuryTrajectorySimple injuryArchivedTrajectory" viewBox="0 0 ${W} ${H}" role="img" aria-label="Archived rehabilitation observed recovery compared with the fixed nominal recovery pathway through plan closure">${yGrid}<line class="currentDateLine" x1="${closureX}" y1="${top}" x2="${closureX}" y2="${top+ch}"/><path class="nominalLine" d="${nominalPath}"/><path class="actualLine" d="${observed}"/>${circles}<text class="axisText xAxisText" x="${left}" y="${H-10}" text-anchor="start">Injury</text><text class="currentDateLabel" x="${closureX}" y="${H-10}" text-anchor="middle">Closed</text></svg><div class="injuryTrajectoryLegend"><span class="actual">Observed recovery</span><span class="nominal">Fixed nominal recovery</span></div></div></div>`;
+}
 function archivedRehabPlansHtml(archived=[]){
  if(!archived.length)return'';
  const rows=archived.slice().sort((a,b)=>String(b.rehabArchivedAt||'').localeCompare(String(a.rehabArchivedAt||''))).map(injury=>{
   let p=null;try{p=injuryPrediction(injury)}catch(_){p=null}
   const closedStage=Number(injury.rehabArchivedStage)||6,checks=(injury.checkIns||[]).slice().sort((a,b)=>b.date.localeCompare(a.date));
   const closedDate=String(injury.rehabArchivedAt||'').slice(0,10),stageName=INJURY_STAGES[Math.max(0,Math.min(INJURY_STAGES.length-1,closedStage-1))]?.name||'Return to performance';
-  return`<article class="injuryRunnerParallelCard injuryArchivedCard"><div><small>ARCHIVED REHABILITATION</small><h3>${esc(injury.location||injury.bodyRegion||'Injury')}</h3><p>${esc(injury.bodyRegion||'Injury')} · closed ${closedDate?fmtDate(closedDate):'—'}</p></div><div class="injuryRunnerParallelMetrics"><span><small>Closed in phase</small><b>Phase ${closedStage} · ${esc(stageName)}</b></span><span><small>Check-ins retained</small><b>${checks.length}</b></span></div><details class="injuryRunnerDisclosure"><summary>Review archived plan</summary><p><b>Reason:</b> ${esc(injury.rehabArchiveReason||'Closed after reaching Phase 6.')}</p>${p?.diag?`<p><b>Assessment:</b> ${esc(p.diag.name)} · injury ${fmtDate(injury.date)} · rehab started ${fmtDate(rehabPlanStart(injury))}</p>`:''}${injury.rehabArchiveSnapshot?`<div class="injuryRunnerTwoCol"><div><small>STATUS AT CLOSURE</small><b>${esc(injury.rehabArchiveSnapshot.status||stageName)}</b><p>${esc(injury.rehabArchiveSnapshot.summary||'Phase 6 rehabilitation status archived.')}</p></div><div><small>RECORDED AT CLOSURE</small><b>${injury.rehabArchiveSnapshot.completion!=null?`${Math.round(Number(injury.rehabArchiveSnapshot.completion))}% progress`:'—'}</b><p>${injury.rehabArchiveSnapshot.fullDate?`Expected unrestricted running ${fmtDate(injury.rehabArchiveSnapshot.fullDate)}`:'The complete historical check-in record is retained below.'}</p></div></div>`:''}<div class="injuryArchivedPhases">${INJURY_STAGES.map((phase,index)=>`<span><b>Phase ${index+1}</b><small>${esc(phase.name)}</small><em>${index+1<closedStage?'Completed':index+1===closedStage?'Closed here':'Not reached'}</em></span>`).join('')}</div><div class="checkInHistory">${checks.length?checks.map(c=>`<div class="checkInHistoryRow archived"><span><b>${fmtDate(c.date)}</b><small>${Number.isFinite(c.pain)?`Pain ${c.pain}/10`:''}${Number.isFinite(c.walkPain)?`${Number.isFinite(c.pain)?' · ':''}walking ${c.walkPain}/10`:''}${Number.isFinite(c.runMinutes)?` · run ${formatDurationMinutes(c.runMinutes)}`:''}<br>Rehab: ${esc(rehabExecutionMeta(c).short)}</small></span></div>`).join(''):'<p class="injuryRunnerNeutral">No check-ins were recorded.</p>'}</div></details></article>`;
+  return`<article class="injuryRunnerParallelCard injuryArchivedCard"><div><small>ARCHIVED REHABILITATION</small><h3>${esc(injury.location||injury.bodyRegion||'Injury')}</h3><p>${esc(injury.bodyRegion||'Injury')} · closed ${closedDate?fmtDate(closedDate):'—'}</p></div><div class="injuryRunnerParallelMetrics"><span><small>Closed in phase</small><b>Phase ${closedStage} · ${esc(stageName)}</b></span><span><small>Check-ins retained</small><b>${checks.length}</b></span></div><details class="injuryRunnerDisclosure"><summary>Review archived plan</summary><p><b>Reason:</b> ${esc(injury.rehabArchiveReason||'Closed after reaching Phase 6.')}</p>${p?.diag?`<p><b>Assessment:</b> ${esc(p.diag.name)} · injury ${fmtDate(injury.date)} · rehab started ${fmtDate(rehabPlanStart(injury))}</p>`:''}${injury.rehabArchiveSnapshot?`<div class="injuryRunnerTwoCol"><div><small>STATUS AT CLOSURE</small><b>${esc(injury.rehabArchiveSnapshot.status||stageName)}</b><p>${esc(injury.rehabArchiveSnapshot.summary||'Phase 6 rehabilitation status archived.')}</p></div><div><small>RECORDED AT CLOSURE</small><b>${injury.rehabArchiveSnapshot.completion!=null?`${Math.round(Number(injury.rehabArchiveSnapshot.completion))}% progress`:'—'}</b><p>${injury.rehabArchiveSnapshot.fullDate?`Expected unrestricted running ${fmtDate(injury.rehabArchiveSnapshot.fullDate)}`:'The retained check-in evidence is summarized in the recovery curve below.'}</p></div></div>`:''}<div class="injuryArchivedPhases">${INJURY_STAGES.map((phase,index)=>`<span><b>Phase ${index+1}</b><small>${esc(phase.name)}</small><em>${index+1<closedStage?'Completed':index+1===closedStage?'Closed here':'Not reached'}</em></span>`).join('')}</div>${archivedRehabRecoveryCurveSvg(injury,p)}</details></article>`;
  }).join('');
  return`<section class="injuryRunnerSection injuryRunnerArchivedSection">${injuryRunnerSectionHead(9,'ARCHIVED REHABILITATION','Closed recovery plans','Closed Phase 6 plans no longer influence today’s rehabilitation or training constraints, but their full evidence trail is retained for review.')}<div class="injuryRunnerParallelList">${rows}</div></section>`;
 }
