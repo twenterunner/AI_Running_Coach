@@ -6284,3 +6284,20 @@ body:has(#onboarding:not(.hidden)) #nav,body:has(#onboarding:not(.hidden)) #more
 #injury .injuryArchivedRecovery .injuryRunnerCardHead{margin-bottom:8px}
 #injury .injuryArchivedRecovery .injuryTrajectoryWrap.archived{margin-top:6px}
 #injury .injuryArchivedTrajectory .currentDateLine{stroke:var(--teal-2);stroke-dasharray:4 4}
+
+
+/* TODAY — adaptive pre/post-run Coach Briefing v15.7.17 */
+#today .briefingCoachInsights{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:12px}
+#today .briefingCoachInsight{min-width:0;padding:11px 10px;border-radius:11px;background:rgba(2,29,40,.27);border:1px solid rgba(111,213,221,.16);display:grid;align-content:start;gap:4px}
+#today .briefingCoachInsight>small{font-size:7px;line-height:1.15;font-weight:900;letter-spacing:.08em;color:#72dfe2}
+#today .briefingCoachInsight>strong{font-size:11px;line-height:1.25;color:#fff;overflow-wrap:anywhere}
+#today .briefingCoachInsight>p{font-size:8.5px;line-height:1.36;color:#c8dde3;margin:0;overflow-wrap:anywhere}
+#today .briefingCoachInsight.good{border-color:rgba(139,216,94,.34);background:rgba(69,127,64,.12)}
+#today .briefingCoachInsight.good>strong{color:#a7eb89}
+#today .briefingCoachInsight.warn{border-color:rgba(242,188,99,.38);background:rgba(146,102,44,.12)}
+#today .briefingCoachInsight.warn>strong{color:#ffd071}
+#today .briefingCoachInsight.bad{border-color:rgba(255,104,66,.42);background:rgba(145,62,45,.14)}
+#today .briefingCoachInsight.bad>strong{color:#ff9a84}
+#today .postRunBriefing{border-color:rgba(126,218,105,.48)!important}
+#today .postRunBriefing .briefingTitle>div>small{color:#9ae77d!important}
+@media(max-width:620px){#today .briefingCoachInsights{grid-template-columns:1fr}#today .briefingCoachInsight{padding:10px 11px}#today .briefingCoachInsight>strong{font-size:11px}#today .briefingCoachInsight>p{font-size:8.5px}}

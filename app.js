@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '15.7.16';
-  const BUILD = 51016;
+  const VERSION = '15.7.17';
+  const BUILD = 51017;
   const SCHEMA = 10400;
   const PRIMARY_STORAGE_KEY = 'arc_v10400_web';
   const MIRROR_STORAGE_KEY = 'arc_v10400_mirror';
@@ -3008,59 +3008,172 @@ function todayReadinessExplanation(ready){
  }
  return `No recovery restriction · load ×${ready.modifier.toFixed(3)}`;
 }
-function consolidatedTodayCoachBriefing(p){
- const engine=coachEngine(),report=evidenceBasedCoach(engine),ast=report.athleteState,ready=readinessModel(),active=todayActiveInjury(),injuryDay=active.day,rehabSummary=todayRehabStatusSummary(active);
- const evidence=Math.round(clamp(Number(report.evidenceCoverage)||0,0,100)),remaining=raceTimeRemaining(),hrv=ready.hrv,pain=ready.pain,todayPain=todayInjuryPainDisplay(active,pain);
- const readinessDetail=todayReadinessExplanation(ready);
- const painValue=Number.isFinite(Number(todayPain.value))?`${Number(todayPain.value).toFixed(0)}/10`:'—';
- const painText=todayPain.text;
- const modeTitle=injuryDay&&rehabSummary?rehabSummary.date:p&&p.type!=='Rest'?p.type:'Recovery';
- const modeText=injuryDay&&rehabSummary?`Normal running estimate · ${rehabSummary.detail}`:p&&p.type!=='Rest'?`${Number(p.distance).toFixed(1)} km · ${p.purpose||'Complete as prescribed'}`:'No run scheduled · recovery is today’s training';
- let priorityTitle,priorityBullets;
- if(injuryDay){
-   priorityTitle='Complete rehabilitation before considering the run plan';
-   priorityBullets=[
-     `${injuryDay.title} is today’s primary training task.`,
-     injuryDay.rule,
-     p&&p.type!=='Rest'?`${p.type} should only be completed if rehabilitation criteria allow it.`:null
-   ];
- }else if(p&&p.type!=='Rest'){
-   priorityTitle=`Execute ${p.type} as prescribed`;
-   priorityBullets=[
-     p.purpose||'Deliver the intended training stimulus without adding unplanned load.',
-     `Target ${Number(p.distance).toFixed(1)} km and stay inside the prescribed pace/power/HR guidance.`,
-     ready.label!=='Normal'?`Readiness is ${ready.label.toLowerCase()}; respect the temporary recovery modifier.`:null
-   ];
- }else{
-   priorityTitle='Recover deliberately';
-   priorityBullets=[
-     'No purposeful running session is scheduled today.',
-     'Do not add catch-up mileage.',
-     'Protect the next scheduled training exposure.'
-   ];
+function todayCoachRunForBriefing(p){
+ const key=iso(today()),rows=(state.runs||[]).filter(r=>r&&r.date===key&&r.source!=='assessment').slice().sort((a,b)=>String(b.updatedAt||b.createdAt||b.id||'').localeCompare(String(a.updatedAt||a.createdAt||a.id||'')));
+ if(p&&p.type!=='Rest'){
+  const matched=matchingRun(p,rows);if(matched)return matched;
+  const linked=rows.find(r=>r.planId===p.id);if(linked)return linked;
+  return null; // a same-day ad-hoc run must not make a still-uncompleted planned session look finished
  }
- return`<section class="todayBriefingCard seriousBriefing runnerFullWidth">
+ return rows[0]||null;
+}
+function todayCoachTrajectoryInsight(engine){
+ const key=iso(today()),target=Number(state.setup.targetTime),current=Number(engine.pred),expected=Number(engine.projection?.predictedTime),provisional=Boolean(engine.projectedModel?.provisional),evidencePct=Math.round(clamp(Number(engine.c?.evidenceCoverage||0)*100,0,100));
+ const history=(state.raceReadinessHistory||[]).filter(x=>x&&CORE.isIsoDate(x.date)&&x.date<key&&Number.isFinite(Number(x.current))&&Number.isFinite(Number(x.expected))).slice().sort((a,b)=>a.date.localeCompare(b.date));
+ const lookback=iso(new Date(today().getTime()-7*DAY));
+ const prior=history.slice().reverse().find(x=>x.date<=lookback)||history[0]||history.at(-1)||null;
+ const currentDelta=prior&&Number.isFinite(current)?current-Number(prior.current):null,expectedDelta=prior&&Number.isFinite(expected)?expected-Number(prior.expected):null;
+ const targetGap=Number.isFinite(expected)&&Number.isFinite(target)?expected-target:null;
+ let status='neutral',title=provisional?'Programme outcome is still provisional':'Programme trajectory is building';
+ if(Number.isFinite(expectedDelta)&&expectedDelta<=-30){status='good';title=`Expected race-day outcome improved ${fmtTime(Math.abs(expectedDelta))}`;}
+ else if(Number.isFinite(expectedDelta)&&expectedDelta>=30){status='warn';title=`Expected race-day outcome moved ${fmtTime(expectedDelta)} slower`;}
+ else if(Number.isFinite(currentDelta)&&currentDelta<=-30){status='good';title=`Current race estimate improved ${fmtTime(Math.abs(currentDelta))}`;}
+ else if(Number.isFinite(currentDelta)&&currentDelta>=30){status='warn';title=`Current race estimate moved ${fmtTime(currentDelta)} slower`;}
+ else if(Number.isFinite(expected)){title=provisional?`Provisional race-day outcome ${fmtEstimate(expected,true)}`:`Expected race-day outcome ${fmtTime(expected)}`;}
+ const pieces=[];
+ if(Number.isFinite(current)&&Number.isFinite(expected))pieces.push(`Current estimate ${fmtEstimate(current,Boolean(engine.currentModel?.provisional))}; programme scenario ${fmtEstimate(expected,provisional)}.`);
+ if(prior)pieces.push(`Trend measured since ${fmtDate(prior.date)}.`);
+ if(Number.isFinite(currentDelta)&&Math.abs(currentDelta)>=10)pieces.push(`Current estimate ${currentDelta<0?'improved':'slowed'} ${fmtTime(Math.abs(currentDelta))}.`);
+ if(Number.isFinite(targetGap))pieces.push(targetGap<=0?`${fmtTime(Math.abs(targetGap))} inside the ${fmtTime(target)} target.`:`${fmtTime(targetGap)} outside the ${fmtTime(target)} target.`);
+ if(!provisional&&Number.isFinite(Number(engine.projectedModel?.probability)))pieces.push(`Programme target probability ${Math.round(Number(engine.projectedModel.probability))}%.`);
+ if(provisional)pieces.push(`Evidence is ${evidencePct}%, so direction matters more than the exact projected time.`);
+ if(!prior)pieces.push('Daily history is still too short to judge a reliable trend.');
+ return{label:'PROGRAMME TRAJECTORY',title,detail:pieces.join(' '),status,currentDelta,expectedDelta,targetGap,provisional};
+}
+function todayCoachExecutionInsight(report){
+ const ex=report.execution||{};
+ if(ex.limited?.length){
+  const x=ex.limited[0],weak=x.details?.components?.filter(c=>c.score<80).sort((a,b)=>a.score-b.score)[0];
+  return{label:'COACH OBSERVATION',title:`Recent execution needs attention · ${Math.round(x.score)}/100`,detail:`${fmtDate(x.date)} ${x.type}${weak?` was most limited by ${weak.name.toLowerCase()}`:''}. Improve the intended stimulus before adding extra load or chasing faster targets.`,status:'warn'};
+ }
+ if(Number.isFinite(ex.trend)&&ex.trend>=5)return{label:'COACH OBSERVATION',title:`Execution is improving · about +${ex.trend.toFixed(0)} points`,detail:'Keep the same pacing and recovery discipline. Let the adaptive pathways move targets only when repeated evidence confirms the improvement.',status:'good'};
+ if(Number.isFinite(ex.trend)&&ex.trend<=-5)return{label:'COACH OBSERVATION',title:`Execution has softened · about ${ex.trend.toFixed(0)} points`,detail:'Protect workout quality before increasing distance or intensity. A short-term dip is more useful as a control signal than something to compensate for.',status:'warn'};
+ if(Number.isFinite(ex.average)&&ex.average>=90)return{label:'COACH OBSERVATION',title:`Recent scored-run execution is strong · ${Math.round(ex.average)}/100`,detail:'Execution quality is strong. The next gain should come from consistent progression rather than adding unplanned work.',status:'good'};
+ if(Number.isFinite(ex.average))return{label:'COACH OBSERVATION',title:`Recent execution is ${Math.round(ex.average)}/100`,detail:'There is enough execution evidence to coach from, but no strong directional trend is established yet.',status:'neutral'};
+ return{label:'COACH OBSERVATION',title:'Execution baseline is still building',detail:'Complete and link runs with HR, power, RPE and pain when available so the coach can distinguish fitness change from incomplete evidence.',status:'neutral'};
+}
+function todayCoachPreRunAdaptationInsight(){
+ let paceReview=null,loadApplied=null,loadPreview=null;
+ try{paceReview=pacePowerReviewState(iso(today()));loadApplied=adaptiveFactorDetails(currentWeek());loadPreview=provisionalWeeklyAdjustment(currentWeek());}catch{}
+ const paceDelta=paceReview?Number(paceReview.provisional)-Number(paceReview.applied):0,loadDelta=loadApplied&&loadPreview?Number(loadPreview.cumulativeFactor)-Number(loadApplied.cumulativeFactor):0;
+ if(Math.abs(paceDelta)>=.0005||Math.abs(loadDelta)>=.0005){
+  const direction=paceDelta>0||loadDelta>0?'positive':'conservative';
+  return{label:'ADAPTATION STATE',title:direction==='positive'?'Positive evidence is accumulating':'The model is currently being conservative',detail:`Pace & Power ${paceReview?paceReview.applied.toFixed(3):'—'} → ${paceReview?paceReview.provisional.toFixed(3):'—'} provisional; Distance & Load ${loadApplied?loadApplied.cumulativeFactor.toFixed(3):'—'} → ${loadPreview?loadPreview.cumulativeFactor.toFixed(3):'—'} provisional. Changes commit only through the normal review safeguards.`,status:direction==='positive'?'good':'warn'};
+ }
+ return{label:'ADAPTATION STATE',title:'Learned targets are currently stable',detail:'No meaningful Pace & Power or Distance & Load change is pending. Today should add evidence, not force a manual progression.',status:'neutral'};
+}
+function todayCoachPreRunSuccessInsight(p,ready,report){
+ if(!p||p.type==='Rest')return{label:'SUCCESS TODAY',title:'Finish the day fresher than you started',detail:'No purposeful run is scheduled. Do not add catch-up mileage; protect the next planned training exposure.',status:'neutral'};
+ const bits=[`${Number(p.distance).toFixed(1)} km ${p.type}`];
+ if(Number.isFinite(Number(p.zone?.pace)))bits.push(`${pace(Number(p.zone.pace))} guidance`);
+ if(Number.isFinite(Number(p.zone?.power)))bits.push(`${Math.round(Number(p.zone.power))} W`);
+ if(Number.isFinite(Number(p.zone?.hr)))bits.push(`${Math.round(Number(p.zone.hr))} bpm ceiling/guide`);
+ const recurring=report.execution?.recurringWeakness,labels={distance:'distance discipline',pace:'pace control',power:'power control',hr:'heart-rate control',drift:'aerobic durability',rpe:'effort selection'};
+ const extra=recurring?`Recent data says to pay particular attention to ${labels[recurring]||'execution quality'}.`:ready.label!=='Normal'?`Readiness is ${ready.label.toLowerCase()}, so the recovery modifier takes precedence over headline targets.`:'Do not make the session longer or harder simply because you feel good.';
+ return{label:'SUCCESS TODAY',title:bits.join(' · '),detail:`${p.purpose||'Deliver the intended training stimulus.'} ${extra}`,status:ready.label==='Normal'?'good':'warn'};
+}
+function todayCoachPostRunSessionInsight(run,p){
+ const plan=run.planId?state.plan.find(x=>x.id===run.planId):(p&&p.type!=='Rest'?p:null),details=workoutScoreDetails(run,plan),intel=workoutIntelligence(run),comp=comparableRunAnalysis(run),m=metrics(run);
+ const score=Number(details?.score),completion=plan&&Number(plan.distance)>0?Number(run.distanceKm)/Number(plan.distance):null;
+ let status=Number(run.pain)>=5?'bad':Number.isFinite(score)?(score>=85?'good':score>=70?'warn':'bad'):'neutral';
+ const title=Number.isFinite(score)?`${intel.verdict} · ${Math.round(score)}/100`:`${intel.verdict} · execution score building`;
+ const facts=[];
+ if(Number.isFinite(completion))facts.push(`${Number(run.distanceKm).toFixed(2)} km completed versus ${Number(plan.distance).toFixed(1)} km planned (${Math.round(completion*100)}%).`);
+ else facts.push(`${Number(run.distanceKm).toFixed(2)} km completed in ${fmtTime(Number(run.durationSec)||0)}.`);
+ if(comp&&comp.confidence!=='Low'&&Number.isFinite(comp.efficiencyDelta))facts.push(`Efficiency was ${Math.abs(comp.efficiencyDelta).toFixed(1)}% ${comp.efficiencyDelta>=0?'above':'below'} ${comp.count} comparable-run baseline${comp.confidence?` (${comp.confidence.toLowerCase()} confidence)`:''}.`);
+ else if(Number.isFinite(m.efficiencyJ))facts.push(`Efficiency was ${m.efficiencyJ.toFixed(1)} J/beat; the personal comparison baseline is still building.`);
+ if(Number.isFinite(Number(run.powerDrift))&&effectiveWorkoutFamily(run)!=='interval')facts.push(`Power-based cardiac drift was ${Number(run.powerDrift).toFixed(1)}%.`);
+ const standout=intel.cautions?.[0]||intel.positives?.[0]||intel.interpretation;
+ if(standout)facts.push(standout);
+ return{label:'SESSION RESPONSE',title,detail:facts.slice(0,3).join(' '),status,score,details,intel,comp};
+}
+function todayCoachPostRunLearningInsight(run){
+ const plan=run.planId?state.plan.find(p=>p.id===run.planId):null;
+ let two=null;try{two=twoPathwayDecisionForRun(run,plan)}catch{}
+ const paceSignal=Number(two?.pace?.finalSignal),loadSignal=Number(two?.load?.finalSignal),update=run.coachUpdate||{};
+ const paceText=Number.isFinite(paceSignal)?qualitativePathwaySignal(paceSignal):'Pace & Power evidence building',loadText=Number.isFinite(loadSignal)?qualitativePathwaySignal(loadSignal):'Distance & Load evidence building';
+ const caution=(Number.isFinite(paceSignal)&&paceSignal<-.18)||(Number.isFinite(loadSignal)&&loadSignal<-.18),positive=(Number.isFinite(paceSignal)&&paceSignal>.18)||(Number.isFinite(loadSignal)&&loadSignal>.18);
+ const facts=[`Pace & Power: ${paceText.toLowerCase()}. Distance & Load: ${loadText.toLowerCase()}.`];
+ if(Number.isFinite(Number(update.predictionDeltaSec))&&Math.abs(Number(update.predictionDeltaSec))>=1)facts.push(`Central race estimate ${Number(update.predictionDeltaSec)<0?'improved':'moved slower'} by ${fmtTime(Math.abs(Number(update.predictionDeltaSec)))} from this saved update.`);
+ if(run.rpe==null||run.pain==null)facts.push(`Tolerance confidence is still partial because ${run.rpe==null&&run.pain==null?'RPE and pain are':'one of RPE/pain is'} not entered.`);
+ else facts.push('RPE and pain are available, so the run can contribute to both capability and tolerance interpretation.');
+ let title=positive?'This run added positive adaptive evidence':caution?'This run added a caution signal':'This run mainly reinforced the current calibration';
+ return{label:'WHAT THE MODEL LEARNED',title,detail:facts.join(' '),status:caution?'warn':positive?'good':'neutral'};
+}
+function todayCoachPostRunNextInsight(run,trajectory){
+ const key=iso(today()),next=(state.plan||[]).filter(p=>p.date>key&&!['Rest','Race Day'].includes(p.type)).sort((a,b)=>a.date.localeCompare(b.date))[0]||null;
+ let title='Bank the session and let the plan absorb it',status=trajectory.status;
+ if(Number(run.pain)>=5){title='Recovery now takes priority';status='bad';}
+ else if(trajectory.status==='good')title='Trajectory is improving — keep the plan intact';
+ else if(trajectory.status==='warn')title='Trajectory has softened — do not compensate';
+ const bits=[];
+ if(trajectory.detail)bits.push(trajectory.detail);
+ if(next)bits.push(`Next purposeful session: ${fmtDate(next.date)} · ${next.type} · ${Number(next.distance).toFixed(1)} km.`);
+ bits.push('Do not add extra distance today to accelerate adaptation.');
+ return{label:'WHAT HAPPENS NEXT',title,detail:bits.join(' '),status};
+}
+function todayCoachInsightHtml(insight){
+ if(!insight)return'';
+ return`<article class="briefingCoachInsight ${esc(insight.status||'neutral')}"><small>${esc(insight.label||'COACH INSIGHT')}</small><strong>${esc(insight.title||'')}</strong><p>${esc(insight.detail||'')}</p></article>`;
+}
+
+function todayCoachOtherRunsToday(p){
+ const key=iso(today()),rows=(state.runs||[]).filter(r=>r&&r.date===key&&r.source!=='assessment').slice().sort((a,b)=>String(b.updatedAt||b.createdAt||b.id||'').localeCompare(String(a.updatedAt||a.createdAt||a.id||'')));
+ if(!p||p.type==='Rest')return[];
+ const matched=matchingRun(p,rows);
+ return rows.filter(r=>!matched||r.id!==matched.id);
+}
+function consolidatedTodayCoachBriefing(p){
+ const engine=coachEngine(),report=evidenceBasedCoach(engine),ast=report.athleteState,ready=readinessModel(),active=todayActiveInjury(),injuryDay=active.day,rehabSummary=todayRehabStatusSummary(active),todayRun=todayCoachRunForBriefing(p),postRun=Boolean(todayRun);
+ const evidence=Math.round(clamp(Number(report.evidenceCoverage)||0,0,100)),remaining=raceTimeRemaining(),pain=ready.pain,todayPain=todayInjuryPainDisplay(active,pain),trajectory=todayCoachTrajectoryInsight(engine);
+ const readinessDetail=todayReadinessExplanation(ready),painValue=Number.isFinite(Number(todayPain.value))?`${Number(todayPain.value).toFixed(0)}/10`:'—',painText=todayPain.text;
+ const modeTitle=injuryDay&&rehabSummary?rehabSummary.date:p&&p.type!=='Rest'?p.type:'Recovery',modeText=injuryDay&&rehabSummary?`Normal running estimate · ${rehabSummary.detail}`:p&&p.type!=='Rest'?`${Number(p.distance).toFixed(1)} km · ${p.purpose||'Complete as prescribed'}`:'No run scheduled · recovery is today’s training';
+ let priorityTitle,priorityBullets,insights=[];
+ if(postRun){
+  const plan=todayRun.planId?state.plan.find(x=>x.id===todayRun.planId):(p&&p.type!=='Rest'?p:null),details=workoutScoreDetails(todayRun,plan),score=Number(details?.score),painScore=Number(todayRun.pain);
+  if(Number.isFinite(painScore)&&painScore>=5)priorityTitle='Stop here and prioritise recovery';
+  else if(Number.isFinite(score)&&score>=90)priorityTitle='Bank a high-quality session — no extra work needed';
+  else if(Number.isFinite(score)&&score>=75)priorityTitle='Session complete — absorb the training';
+  else if(Number.isFinite(score))priorityTitle='Use today’s evidence; do not compensate';
+  else priorityTitle='Run logged — let the evidence settle';
+  priorityBullets=[
+   `${Number(todayRun.distanceKm).toFixed(2)} km logged${plan?` against ${Number(plan.distance).toFixed(1)} km planned`:''}${Number.isFinite(score)?` · execution ${Math.round(score)}/100`:''}.`,
+   details?.interpretation?`${details.interpretation} is now part of today’s coaching decision.`:'The saved run is now part of today’s coaching evidence.',
+   'Today is now a post-run decision: recover, review the response, and protect the next purposeful session.'
+  ];
+  insights=[todayCoachPostRunSessionInsight(todayRun,p),todayCoachPostRunLearningInsight(todayRun),todayCoachPostRunNextInsight(todayRun,trajectory)];
+ }else if(injuryDay){
+  priorityTitle='Complete rehabilitation before considering the run plan';
+  priorityBullets=[`${injuryDay.title} is today’s primary training task.`,injuryDay.rule,p&&p.type!=='Rest'?`${p.type} should only be completed if rehabilitation criteria allow it.`:null];
+  const rehabInsight={label:'COACH OBSERVATION',title:'Rehabilitation evidence overrides performance progression today',detail:`The active rehabilitation plan is in control of today’s decision. Running targets only matter after the phase-specific criteria are satisfied.`,status:'warn'};
+  insights=[rehabInsight,trajectory,todayCoachPreRunSuccessInsight(p,ready,report)];
+ }else if(p&&p.type!=='Rest'){
+  priorityTitle=`Execute ${p.type} as prescribed`;
+  priorityBullets=[p.purpose||'Deliver the intended training stimulus without adding unplanned load.',`Target ${Number(p.distance).toFixed(1)} km and stay inside the prescribed pace/power/HR guidance.`,ready.label!=='Normal'?`Readiness is ${ready.label.toLowerCase()}; respect the temporary recovery modifier.`:null];
+  const otherRuns=todayCoachOtherRunsToday(p),other=otherRuns[0];
+  let observation=other?{label:'COACH OBSERVATION',title:`${Number(other.distanceKm).toFixed(2)} km already logged today — the planned ${p.type} is still outstanding`,detail:`The logged ${other.type} was not matched to today’s planned session. Treat it as additional load rather than invisible mileage; do not automatically stack the full prescription if readiness, pain or total load would be compromised.`,status:'warn'}:ready.label!=='Normal'?{label:'COACH OBSERVATION',title:`Readiness is ${ready.label.toLowerCase()} today`,detail:`${readinessDetail}. The recovery signal takes precedence over proving fitness in this session.`,status:'warn'}:todayCoachExecutionInsight(report);
+  const adaptation=todayCoachPreRunAdaptationInsight();
+  if(observation.status==='neutral'&&adaptation.status!=='neutral')observation=adaptation;
+  insights=[observation,trajectory,todayCoachPreRunSuccessInsight(p,ready,report)];
+ }else{
+  priorityTitle='Recover deliberately';
+  priorityBullets=['No purposeful running session is scheduled today.','Do not add catch-up mileage.','Protect the next scheduled training exposure.'];
+  insights=[todayCoachExecutionInsight(report),trajectory,todayCoachPreRunSuccessInsight(p,ready,report)];
+ }
+ return`<section class="todayBriefingCard seriousBriefing runnerFullWidth ${postRun?'postRunBriefing':'preRunBriefing'}">
    <div class="briefingHeaderRow">
      <div class="briefingTitle">
        <span class="briefingIcon">${coachVisualIcon('briefing')}</span>
        <div>
-         <small>DAILY DECISION</small>
+         <small>${postRun?'POST-RUN REVIEW':'PRE-RUN COACHING'}</small>
          <h3>Coach Briefing</h3>
          <p class="briefingPhase"><b>${esc(report.race.phase)} phase · ${esc(report.race.priority)}</b><span>${remaining.label} to ${esc(state.setup.raceName)}</span></p>
        </div>
      </div>
-     <div class="briefingGauges">
-       <div class="evidenceCompleteness" style="--evidence:${evidence}">
-         <div class="evidenceRing"><strong>${evidence}</strong><span>%</span></div>
-         <small>Evidence completeness</small>
-       </div>
-     </div>
+     <div class="briefingGauges"><div class="evidenceCompleteness" style="--evidence:${evidence}"><div class="evidenceRing"><strong>${evidence}</strong><span>%</span></div><small>Evidence completeness</small></div></div>
    </div>
-   <div class="briefingDecision">
-     <small>TODAY'S PRIORITY</small>
-     <strong>${esc(priorityTitle)}</strong>
-     ${todayBulletList(priorityBullets,'runnerBullets priorityBullets')}
-   </div>
+   <div class="briefingDecision"><small>${postRun?'COACH’S DECISION NOW':'TODAY\'S PRIORITY'}</small><strong>${esc(priorityTitle)}</strong>${todayBulletList(priorityBullets,'runnerBullets priorityBullets')}</div>
+   <div class="briefingCoachInsights">${insights.filter(Boolean).map(todayCoachInsightHtml).join('')}</div>
  </section>
  <div class="todayStatusGrid seriousStatusGrid">
    <article class="todayStatusCard training"><h4>${injuryDay?'ACTIVE REHAB':'TODAY’S FOCUS'}</h4><div class="statusRing">${todayPictogram(injuryDay?'rehab':p&&p.type!=='Rest'?'training':'recovery')}</div><div class="statusCopy"><strong>${esc(modeTitle)}</strong><p>${esc(modeText)}</p></div></article>
