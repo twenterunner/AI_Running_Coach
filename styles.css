@@ -6302,7 +6302,7 @@ body:has(#onboarding:not(.hidden)) #nav,body:has(#onboarding:not(.hidden)) #more
 #today .postRunBriefing .briefingTitle>div>small{color:#9ae77d!important}
 @media(max-width:620px){#today .briefingCoachInsights{grid-template-columns:1fr}#today .briefingCoachInsight{padding:10px 11px}#today .briefingCoachInsight>strong{font-size:11px}#today .briefingCoachInsight>p{font-size:8.5px}}
 
-/* v15.7.18 — programme pause / continuity management */
+/* v15.7.19 — pause-aware progress plots + consistent Plan rhythm */
 #plan .programmePauseCard{margin:14px 0 0;padding:14px;border-radius:16px;border:1px solid rgba(82,220,221,.28);background:linear-gradient(145deg,rgba(5,65,82,.78),rgba(4,39,53,.86));box-shadow:none}
 #plan .programmePauseCard.active{border-color:rgba(244,184,88,.48);background:linear-gradient(145deg,rgba(94,67,27,.30),rgba(4,39,53,.90))}
 #plan .programmePauseCard.scheduled{border-color:rgba(113,190,239,.38)}
@@ -6375,3 +6375,15 @@ body:has(#onboarding:not(.hidden)) #nav,body:has(#onboarding:not(.hidden)) #more
 #plan .pauseOutcomeLine,#modal .pauseOutcomeLine{display:flex;flex-wrap:wrap;justify-content:space-between;gap:4px 10px;margin:9px 0 0!important;padding-top:8px;border-top:1px solid rgba(112,211,218,.12)}
 #plan .pauseOutcomeLine b,#modal .pauseOutcomeLine b{font-size:8px;color:#d8e9ed}
 #plan .pauseOutcomeLine span,#modal .pauseOutcomeLine span{font-size:8px;font-weight:800;color:#fff}
+
+
+/* v15.7.19 — pause-aware chart context and equal Plan spacing */
+.progressPauseBand{fill:rgba(244,184,88,.075);stroke:rgba(244,184,88,.18);stroke-width:1}
+.progressPauseLabel{fill:#e8bf76;font-size:7px;font-weight:900;letter-spacing:.08em}
+.progressChartNote{margin:5px 2px 0;font-size:8px;line-height:1.35;color:#a9c0c8}
+#planProgrammeHeader{display:grid;gap:var(--plan-gap);margin:0 0 var(--plan-gap)}
+#planProgrammeHeader>.planRaceContextCard,#planProgrammeHeader>.programmePauseCard{margin:0!important}
+#plan>.promotedTimelinePanel,#plan>.planWeekNavWrap,#plan>.planSection{margin-top:0!important;margin-bottom:var(--plan-gap)!important}
+#plan .weekNav{margin-bottom:var(--plan-gap)!important}
+#plan #planCards{gap:var(--plan-gap)!important}
+@media(max-width:390px){#planProgrammeHeader{gap:var(--plan-gap)}.progressChartNote{font-size:7.5px}}

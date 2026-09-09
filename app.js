@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '15.7.18';
-  const BUILD = 51018;
+  const VERSION = '15.7.19';
+  const BUILD = 51019;
   const SCHEMA = 10400;
   const PRIMARY_STORAGE_KEY = 'arc_v10400_web';
   const MIRROR_STORAGE_KEY = 'arc_v10400_mirror';
@@ -339,7 +339,7 @@ const diagnostics=[];
 function recordDiagnostic(source,error){const message=error?.stack||error?.message||String(error);diagnostics.unshift({time:new Date().toLocaleString(),source,message});if(diagnostics.length>20)diagnostics.length=20;console.error(source,error);renderDiagnostics();}
 function renderDiagnostics(){const box=$('diagnosticsContent');if(!box)return;box.innerHTML=diagnostics.length?diagnostics.map(x=>`<div class="diagnosticItem"><b>${esc(x.time)} · ${esc(x.source)}</b><pre>${esc(x.message)}</pre></div>`).join(''):'<p class="muted">No JavaScript errors have been recorded in this session.</p>';}
 window.addEventListener('error',e=>recordDiagnostic('Window error',e.error||e.message));window.addEventListener('unhandledrejection',e=>recordDiagnostic('Unhandled promise rejection',e.reason));
-const PLAN_ENGINE_VERSION=3;
+const PLAN_ENGINE_VERSION=4;
 const FIVE_DAY_TEMPLATE=[['Monday',false,'Easy'],['Tuesday',true,'Intervals'],['Wednesday',true,'Easy'],['Thursday',true,'Tempo'],['Friday',false,'Easy'],['Saturday',true,'Easy'],['Sunday',true,'Long run']];
 const RACE_PROFILES=[
  {key:'5k',label:'5K',maxDistance:7.5,currentWeekly:18,peakLong:12,maxWeekly:32,growth:.07,taperDays:7,days:[['Monday',false,'Easy'],['Tuesday',true,'Intervals'],['Wednesday',true,'Easy'],['Thursday',false,'Easy'],['Friday',false,'Easy'],['Saturday',true,'Tempo'],['Sunday',true,'Long run']]},
@@ -1512,7 +1512,7 @@ function programmePauseReentryItem(p,pause,index,total){
  let detail=prescription(type,km,p.week,p.phase,z,context),distance=Number.isFinite(Number(detail.totalDistance))?Number(detail.totalDistance):km;
  const reason=programmePauseReasonLabel(pause.reason),step=index+1;
  const purpose=hold?`Controlled return after ${reason.toLowerCase()}; rebuild routine before restoring ${originalType.toLowerCase()}.`:`Return from ${reason.toLowerCase()} with a deliberately reduced ${originalType.toLowerCase()} exposure.`;
- return{...p,id:`${p.date}-${type}`,type,distance,zone:z,...detail,pauseReentry:true,pauseReentryStep:step,pauseReentryTotal:total,pauseReentryFactor:factor,pauseReentryReason:pause.reason,pauseReentryFrom:originalType,capacityLimited:true,capacityCeiling:Math.max(distance,Number(p.capacityCeiling)||0),purpose,whyThis:`This is re-entry session ${step} of ${total} after a ${programmePauseDays(pause)}-day programme pause.`,whyAmount:`The original ${rawKm.toFixed(1)} km prescription is limited to about ${Math.round(factor*100)}% (${distance.toFixed(1)} km) so fitness can be rebuilt without compensatory overload.`,coach:`Do not make up the paused mileage. ${hold?`The original ${originalType} stimulus is intentionally deferred; keep this run easy.`:'Use the normal intensity guidance but stop if recovery is not as expected.'}`,skipImpact:'If this re-entry session is not tolerated, extend recovery rather than advancing the next session.'};
+ return{...p,id:`${p.date}-${type}`,type,distance,zone:z,...detail,pauseReentry:true,pauseReentryStep:step,pauseReentryTotal:total,pauseReentryFactor:factor,pauseReentryReason:pause.reason,pauseReentryFrom:originalType,pauseReentryOriginalDistance:rawKm,capacityLimited:true,capacityCeiling:Math.max(distance,Number(p.capacityCeiling)||0),purpose,whyThis:`This is re-entry session ${step} of ${total} after a ${programmePauseDays(pause)}-day programme pause.`,whyAmount:`The original ${rawKm.toFixed(1)} km prescription is limited to about ${Math.round(factor*100)}% (${distance.toFixed(1)} km) so fitness can be rebuilt without compensatory overload.`,coach:`Do not make up the paused mileage. ${hold?`The original ${originalType} stimulus is intentionally deferred; keep this run easy.`:'Use the normal intensity guidance but stop if recovery is not as expected.'}`,skipImpact:'If this re-entry session is not tolerated, extend recovery rather than advancing the next session.'};
 }
 function applyProgrammePausesToPlan(plan,pauses=(state.programPauses||[]),options={}){
  const nowIso=options.nowIso||iso(today()),rows=(plan||[]).map(p=>({...p,zone:p.zone?{...p.zone}:p.zone})),valid=(pauses||[]).filter(p=>p&&!p.cancelledAt&&!p.resumedAt&&CORE.isIsoDate(p.startDate)&&CORE.isIsoDate(p.endDate)).sort((a,b)=>a.startDate.localeCompare(b.startDate));
@@ -2722,12 +2722,45 @@ function renderProgressSvgChart(canvas,series,options={}){
 
 
 
+function programmePauseBaselineType(p){
+ if(!p)return null;
+ return p.programPauseOriginalType||p.pauseReentryFrom||p.type;
+}
+function programmePauseBaselineDistance(p){
+ if(!p)return 0;
+ const original=Number(p.programPauseOriginalDistance);
+ if(Number.isFinite(original))return Math.max(0,original);
+ const reentry=Number(p.pauseReentryOriginalDistance);
+ if(Number.isFinite(reentry))return Math.max(0,reentry);
+ return Math.max(0,Number(p.distance)||0);
+}
+function programmePauseChartBands(){
+ const active=(state.programPauses||[]).filter(p=>p&&!p.cancelledAt&&CORE.isIsoDate(p.startDate)&&CORE.isIsoDate(p.endDate));
+ return active.map(p=>{
+  const ps=dte(p.startDate),pe=new Date(dte(p.endDate).getTime()+DAY-1);let first=null,last=null;
+  for(let i=0;i<weeks();i++){
+   const ws=weekStart(i+1),we=new Date(ws.getTime()+7*DAY-1);
+   if(ws<=pe&&we>=ps){if(first===null)first=i;last=i}
+  }
+  return first===null?null:{start:first,end:last,label:'PAUSE',reason:programmePauseReasonLabel(p.reason)};
+ }).filter(Boolean);
+}
+function weekHasProgrammePause(w){return state.plan.some(p=>p.week===w&&(p.programPauseId||p.pauseReentry))}
 function completedWeekSeries(){
  return Array.from({length:weeks()},(_,i)=>{
   const w=i+1,data=weekData(w),start=weekStart(w),end=new Date(start.getTime()+7*DAY),raceDate=dte(state.setup.raceDate);
-  const race=state.plan.find(p=>p.week===w&&p.type==='Race Day'),isRaceWeek=Boolean(race)||(raceDate>=start&&raceDate<end);
+  const rows=state.plan.filter(p=>p.week===w),race=rows.find(p=>p.type==='Race Day'),isRaceWeek=Boolean(race)||(raceDate>=start&&raceDate<end);
+  const baselinePlanned=sum(rows.filter(p=>programmePauseBaselineType(p)!=='Rest').map(programmePauseBaselineDistance));
   const plannedForChart=data.planned>0?data.planned:(isRaceWeek?Number(state.setup.raceDistance)||0:0);
-  return{...data,plannedForChart,isRaceWeek};
+  const baselinePlannedForChart=baselinePlanned>0?baselinePlanned:(isRaceWeek?Number(state.setup.raceDistance)||0:plannedForChart);
+  return{...data,plannedForChart,baselinePlannedForChart,pauseAffected:weekHasProgrammePause(w),isRaceWeek};
+ });
+}
+function programmePauseLongRunSeries(){
+ const longTypes=new Set(['Long run','Specific long run','Race rehearsal','Progression']);
+ return Array.from({length:weeks()},(_,i)=>{
+  const rows=state.plan.filter(p=>p.week===i+1),baseline=rows.find(p=>longTypes.has(programmePauseBaselineType(p))),adapted=rows.find(p=>longTypes.has(p.type));
+  return{baseline:baseline?programmePauseBaselineDistance(baseline):null,adapted:adapted?Number(adapted.distance):null,pauseAffected:rows.some(p=>p.programPauseId||p.pauseReentry)};
  });
 }
 function drawDonut(canvas,segments,centerLabel='planned',emptyText='No training volume'){
@@ -2777,23 +2810,19 @@ function drawDashboardCharts(){
  const currentPred=prediction();
  let c=confidence(),arr=completedWeekSeries(),weekLabels=arr.map((x,i)=>x.isRaceWeek?'Race':('W'+(i+1)));
  const currentProgressWeek=currentWeek();
- const completedWeekDistance=arr.map((x,i)=>(i+1)<=currentProgressWeek?x.actual:null);
- drawProgressLine($('volumeChart'),[
-   {label:'Planned km',data:arr.map(x=>x.plannedForChart),color:'#4CC9F0',dashed:true,points:false},
-   {label:'Completed km',data:completedWeekDistance,color:'#79D69B'}
- ],{empty:'No weekly distance data yet',labels:weekLabels,area:false});
- renderProgressSvgChart($('volumeChart'),[{label:'Planned km',data:arr.map(x=>x.plannedForChart),color:'#4CC9F0',dashed:true,points:false},{label:'Completed km',data:completedWeekDistance,color:'#79D69B'}],{min:0,labels:weekLabels});
- let plannedLong=Array.from({length:weeks()},(_,i)=>state.plan.find(x=>x.week===i+1&&['Long run','Specific long run','Race rehearsal','Progression'].includes(x.type))?.distance??null);
+ const completedWeekDistance=arr.map((x,i)=>(i+1)<=currentProgressWeek?x.actual:null),hasPause=programmePauseChartBands().length>0,adaptedWeek=arr.map(x=>x.pauseAffected&&x.plannedForChart<=0?null:x.plannedForChart);
+ const volumeSeries=hasPause?[{label:'Baseline plan',data:arr.map(x=>x.baselinePlannedForChart),color:'#78909C',dashed:true,points:false},{label:'Pause-adapted plan',data:adaptedWeek,color:'#4CC9F0',dashed:true,points:false},{label:'Completed km',data:completedWeekDistance,color:'#79D69B'}]:[{label:'Planned km',data:arr.map(x=>x.plannedForChart),color:'#4CC9F0',dashed:true,points:false},{label:'Completed km',data:completedWeekDistance,color:'#79D69B'}];
+ drawProgressLine($('volumeChart'),volumeSeries,{empty:'No weekly distance data yet',labels:weekLabels,area:false});
+ renderProgressSvgChart($('volumeChart'),volumeSeries,{min:0,labels:weekLabels});
+ let longRows=programmePauseLongRunSeries(),plannedLong=longRows.map(x=>x.adapted),baselineLong=longRows.map(x=>x.baseline);
  let completedLong=Array.from({length:weeks()},(_,i)=>{
    let st=weekStart(i+1),en=new Date(st.getTime()+7*DAY);
    let r=completedRuns().filter(x=>['Long run','Specific long run','Race rehearsal'].includes(x.type)&&dte(x.date)>=st&&dte(x.date)<en);
    return r.length?Math.max(...r.map(x=>x.distanceKm)):null;
  });
- drawProgressLine($('longRunChart'),[
-   {label:'Planned long run',data:plannedLong,color:'#4CC9F0',dashed:true,points:false},
-   {label:'Completed long run',data:completedLong,color:'#4CC9F0'}
- ],{min:0,max:Math.max(state.setup.peakLong*1.12,10),empty:'Log a long run to show completed progression',labels:weekLabels});
- renderProgressSvgChart($('longRunChart'),[{label:'Planned long run',data:plannedLong,color:'#4CC9F0',dashed:true,points:false},{label:'Completed long run',data:completedLong,color:'#79D69B'}],{min:0,max:Math.max(state.setup.peakLong*1.12,10),labels:weekLabels});
+ const longSeries=hasPause?[{label:'Baseline long run',data:baselineLong,color:'#78909C',dashed:true,points:false},{label:'Pause-adapted long run',data:plannedLong,color:'#4CC9F0',dashed:true,points:false},{label:'Completed long run',data:completedLong,color:'#79D69B'}]:[{label:'Planned long run',data:plannedLong,color:'#4CC9F0',dashed:true,points:false},{label:'Completed long run',data:completedLong,color:'#79D69B'}];
+ drawProgressLine($('longRunChart'),longSeries,{min:0,max:Math.max(state.setup.peakLong*1.12,10),empty:'Log a long run to show completed progression',labels:weekLabels});
+ renderProgressSvgChart($('longRunChart'),longSeries,{min:0,max:Math.max(state.setup.peakLong*1.12,10),labels:weekLabels});
 
  const targetTime=Number(state.setup.targetTime),raceDaily=raceReadinessDailySeries();
  const allSec=[...raceDaily.current,...raceDaily.expected,targetTime].filter(Number.isFinite),raceScale=tightTimeChartBounds(allSec);
@@ -6872,6 +6901,8 @@ function progressSvgIntoMount(mountId,series,options={}){
   const x=i=>n<=1?L+CW/2:L+i*CW/(n-1),y=v=>T+(max-v)/(max-min)*CH;
   const xe=v=>String(v??'').replace(/[&<>\"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[c]||c));
   const ticks=Math.max(2,Number(options.ticks)||5),parts=[];
+  const bandRows=(Array.isArray(options.bands)?options.bands:[]).filter(b=>Number.isFinite(Number(b.start))&&Number.isFinite(Number(b.end)));
+  if(bandRows.length){const step=n>1?CW/(n-1):CW;bandRows.forEach(b=>{const a=clamp(Math.round(Number(b.start)),0,n-1),z=clamp(Math.round(Number(b.end)),a,n-1),rx=Math.max(L,x(a)-step*.46),rr=Math.min(W-R,x(z)+step*.46),rw=Math.max(1,rr-rx);parts.push(`<rect class="progressPauseBand" x="${rx}" y="${T}" width="${rw}" height="${CH}" rx="6"/><text class="progressPauseLabel" x="${rx+rw/2}" y="${T+12}" text-anchor="middle">${xe(b.label||'PAUSE')}</text>`)})}
   for(let i=0;i<ticks;i++){const f=i/(ticks-1),v=min+(max-min)*f,yy=T+CH-CH*f,label=options.formatY?options.formatY(v):(Math.abs(v)<10?v.toFixed(1):Math.round(v));parts.push(`<line class="grid ${i===0?'base':''}" x1="${L}" y1="${yy}" x2="${W-R}" y2="${yy}"/><text class="axis" x="${L-9}" y="${yy+4}" text-anchor="end">${xe(label)}</text>`)}
   cleanSeries.forEach(sr=>{
    const vals=(sr.data||[]).map((v,i)=>({v,i})).filter(o=>Number.isFinite(o.v));if(!vals.length)return;
@@ -6885,20 +6916,22 @@ function progressSvgIntoMount(mountId,series,options={}){
   const positions=options.allLabels?labels.map((_,i)=>i):[0,Math.floor((labels.length-1)/2),labels.length-1].filter((v,i,a)=>v>=0&&a.indexOf(v)===i);
   positions.forEach(i=>{if(labels[i]!=null)parts.push(`<text class="axis x" x="${x(i)}" y="${H-9}" text-anchor="middle">${xe(labels[i])}</text>`)});
   const legend=cleanSeries.filter(s=>s.label).map(s=>`<span><i style="--series:${s.color||'#3dd6c6'}"></i>${xe(s.label)}</span>`).join('');
-  mount.innerHTML=`${legend?`<div class="progressChartLegend">${legend}</div>`:''}<svg class="progressInlineChart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="${xe(options.aria||'Progress chart')}">${parts.join('')}</svg>`;
+  mount.innerHTML=`${legend?`<div class="progressChartLegend">${legend}</div>`:''}${options.notice?`<div class="progressChartNote">${xe(options.notice)}</div>`:''}<svg class="progressInlineChart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="${xe(options.aria||'Progress chart')}">${parts.join('')}</svg>`;
  }catch(err){recordDiagnostic('Progress chart '+mountId,err);mount.setAttribute('aria-hidden','false');mount.innerHTML=`<div class="progressChartState"><div><b>Chart unavailable</b><p>The underlying data are preserved. Reload after updating the app.</p></div></div>`;}
 }
 function renderProgressChartsStandalone(){
  // This renderer is intentionally independent from renderDashboard so an unrelated Progress card cannot suppress the charts.
  try{
-  const arr=completedWeekSeries(),weekLabels=arr.map((x,i)=>x.isRaceWeek?'Race':`W${i+1}`),cw=currentWeek();
-  progressSvgIntoMount('volumeChartMount',[{label:'Planned km',data:arr.map(x=>x.plannedForChart),color:'#67a7ff',dashed:true,points:false},{label:'Completed km',data:arr.map((x,i)=>i+1<=cw?x.actual:null),color:'#79d69b'}],{nonNegative:true,labels:weekLabels,aria:'Weekly planned and completed distance',empty:'No weekly distance data yet.'});
+  const arr=completedWeekSeries(),weekLabels=arr.map((x,i)=>x.isRaceWeek?'Race':`W${i+1}`),cw=currentWeek(),bands=programmePauseChartBands(),hasPause=bands.length>0;
+  const completed=arr.map((x,i)=>i+1<=cw?x.actual:null),adapted=arr.map(x=>x.pauseAffected&&x.plannedForChart<=0?null:x.plannedForChart);
+  const series=hasPause?[{label:'Baseline plan',data:arr.map(x=>x.baselinePlannedForChart),color:'#78909c',dashed:true,points:false},{label:'Pause-adapted plan',data:adapted,color:'#67a7ff',dashed:true,points:false},{label:'Completed km',data:completed,color:'#79d69b'}]:[{label:'Planned km',data:arr.map(x=>x.plannedForChart),color:'#67a7ff',dashed:true,points:false},{label:'Completed km',data:completed,color:'#79d69b'}];
+  progressSvgIntoMount('volumeChartMount',series,{nonNegative:true,labels:weekLabels,bands,notice:hasPause?'Shaded weeks are programme-pause windows. Baseline stays visible; the adapted line shows the protected reduction and re-entry.':'',aria:'Weekly planned and completed distance',empty:'No weekly distance data yet.'});
  }catch(err){recordDiagnostic('Progress weekly distance chart',err)}
  try{
-  const labels=Array.from({length:weeks()},(_,i)=>`W${i+1}`);
-  const planned=Array.from({length:weeks()},(_,i)=>state.plan.find(x=>x.week===i+1&&['Long run','Specific long run','Race rehearsal','Progression'].includes(x.type))?.distance??null);
+  const labels=Array.from({length:weeks()},(_,i)=>`W${i+1}`),bands=programmePauseChartBands(),hasPause=bands.length>0,longRows=programmePauseLongRunSeries();
   const completed=Array.from({length:weeks()},(_,i)=>{const st=weekStart(i+1),en=new Date(st.getTime()+7*DAY),runs=completedRuns().filter(x=>['Long run','Specific long run','Race rehearsal'].includes(x.type)&&dte(x.date)>=st&&dte(x.date)<en);return runs.length?Math.max(...runs.map(x=>Number(x.distanceKm)||0)):null});
-  progressSvgIntoMount('longRunChartMount',[{label:'Planned long run',data:planned,color:'#67a7ff',dashed:true,points:false},{label:'Completed long run',data:completed,color:'#79d69b'}],{nonNegative:true,labels,aria:'Long-run progression',empty:'No planned or completed long-run data yet.'});
+  const series=hasPause?[{label:'Baseline long run',data:longRows.map(x=>x.baseline),color:'#78909c',dashed:true,points:false},{label:'Pause-adapted long run',data:longRows.map(x=>x.adapted),color:'#67a7ff',dashed:true,points:false},{label:'Completed long run',data:completed,color:'#79d69b'}]:[{label:'Planned long run',data:longRows.map(x=>x.adapted),color:'#67a7ff',dashed:true,points:false},{label:'Completed long run',data:completed,color:'#79d69b'}];
+  progressSvgIntoMount('longRunChartMount',series,{nonNegative:true,labels,bands,notice:hasPause?'Pause weeks are shown as a gap rather than a false 0 km long run; baseline progression remains visible for context.':'',aria:'Long-run progression',empty:'No planned or completed long-run data yet.'});
  }catch(err){recordDiagnostic('Progress long-run chart',err)}
  try{
   const target=Number(state.setup.targetTime),daily=raceReadinessDailySeries(),all=[...daily.current,...daily.expected,target].filter(Number.isFinite),raceScale=tightTimeChartBounds(all),showDailyPoints=daily.dates.length<=45;
