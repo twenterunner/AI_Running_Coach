@@ -6301,3 +6301,77 @@ body:has(#onboarding:not(.hidden)) #nav,body:has(#onboarding:not(.hidden)) #more
 #today .postRunBriefing{border-color:rgba(126,218,105,.48)!important}
 #today .postRunBriefing .briefingTitle>div>small{color:#9ae77d!important}
 @media(max-width:620px){#today .briefingCoachInsights{grid-template-columns:1fr}#today .briefingCoachInsight{padding:10px 11px}#today .briefingCoachInsight>strong{font-size:11px}#today .briefingCoachInsight>p{font-size:8.5px}}
+
+/* v15.7.18 — programme pause / continuity management */
+#plan .programmePauseCard{margin:14px 0 0;padding:14px;border-radius:16px;border:1px solid rgba(82,220,221,.28);background:linear-gradient(145deg,rgba(5,65,82,.78),rgba(4,39,53,.86));box-shadow:none}
+#plan .programmePauseCard.active{border-color:rgba(244,184,88,.48);background:linear-gradient(145deg,rgba(94,67,27,.30),rgba(4,39,53,.90))}
+#plan .programmePauseCard.scheduled{border-color:rgba(113,190,239,.38)}
+#plan .pauseCardHead{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+#plan .pauseCardHead>div{min-width:0}
+#plan .pauseCardHead small{display:block;font-size:8px;font-weight:900;letter-spacing:.10em;color:#65e1e2}
+#plan .pauseCardHead h3{margin:3px 0 3px;font-size:18px;line-height:1.15;color:#fff}
+#plan .pauseCardHead p{margin:0;font-size:9.5px;line-height:1.4;color:#c5dbe1}
+#plan .pauseStartBtn{flex:0 0 auto;min-width:116px}
+#plan .pauseStatusBadge{flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;padding:5px 8px;border-radius:9px;font-size:8px;font-weight:900;letter-spacing:.05em;border:1px solid rgba(115,223,224,.24);color:#83e7e7;background:rgba(4,31,42,.34)}
+#plan .pauseStatusBadge.active{color:#ffd181;border-color:rgba(244,184,88,.34);background:rgba(107,71,23,.18)}
+#plan .pauseActions{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+#plan .pauseActions button{margin:0}
+#plan .pauseImpact{margin-top:12px;padding:11px;border-radius:13px;border:1px solid rgba(111,213,221,.18);background:rgba(3,28,39,.34)}
+#plan .pauseImpact.compact{padding:10px}
+#plan .pauseImpactTop{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:9px}
+#plan .pauseImpactTop>small{font-size:8px;color:#adc7cf}
+#plan .pauseImpactBadge{display:inline-flex;padding:5px 7px;border-radius:8px;font-size:8px;font-weight:900;border:1px solid rgba(111,213,221,.24);color:#9be9ea;background:rgba(38,140,150,.12)}
+#plan .pauseImpactBadge.impact-minimal,#plan .pauseImpactBadge.impact-low{color:#9ae77d;border-color:rgba(139,216,94,.30);background:rgba(76,132,62,.12)}
+#plan .pauseImpactBadge.impact-moderate{color:#ffd181;border-color:rgba(244,184,88,.34);background:rgba(139,95,30,.12)}
+#plan .pauseImpactBadge.impact-material{color:#ff9a84;border-color:rgba(255,118,84,.38);background:rgba(137,53,35,.14)}
+#plan .pauseMetricGrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px}
+#plan .pauseMetricGrid>span{min-width:0;padding:8px;border-radius:10px;background:rgba(2,24,34,.36);border:1px solid rgba(102,204,211,.10)}
+#plan .pauseMetricGrid small{display:block;font-size:6.5px;font-weight:900;letter-spacing:.06em;color:#65dfe2}
+#plan .pauseMetricGrid b{display:block;margin:4px 0 2px;font-size:12px;line-height:1.15;color:#fff;overflow-wrap:anywhere}
+#plan .pauseMetricGrid em{display:block;font-size:7px;line-height:1.3;font-style:normal;color:#a9c5ce}
+#plan .pauseImpact>p{margin:9px 0 0;font-size:9px;line-height:1.45;color:#d5e5e9}
+#plan .pauseHistory{margin-top:10px;border:1px solid rgba(101,205,211,.14);border-radius:12px;background:rgba(3,27,37,.28)}
+#plan .pauseHistory>summary{padding:10px 11px;font-size:9px;font-weight:800;color:#bcd2d8;cursor:pointer}
+#plan .pauseHistory>div{display:grid;gap:6px;padding:0 9px 9px}
+#plan .pauseHistory article{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 8px;padding:8px;border-radius:9px;background:rgba(2,24,34,.35)}
+#plan .pauseHistory article b{font-size:9px;color:#fff}.pauseHistory article span{font-size:8px;color:#c3d8de}.pauseHistory article small{grid-column:1/-1;font-size:7px;color:#91acb5}
+#plan .planStatus.paused{color:#ffd181;border-color:rgba(244,184,88,.34);background:rgba(135,91,27,.13)}
+#plan .planAdaptChip.pauseChip{color:#ffd181;border-color:rgba(244,184,88,.25);background:rgba(137,94,28,.12)}
+#plan .planAdaptChip.pauseReentryChip{color:#9ae77d;border-color:rgba(139,216,94,.28);background:rgba(76,132,62,.10)}
+#plan .programmePausedWorkout{border-color:rgba(244,184,88,.30)!important}
+#plan .programmePauseTimelineBand{position:absolute;top:9px;height:5px;z-index:5;border-radius:999px;background:rgba(245,182,81,.88);box-shadow:0 0 0 1px rgba(255,212,142,.18);pointer-events:none}
+
+#modal .pauseDialogGrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
+#modal .pauseDialogGrid label{margin:0}
+#modal .pauseDialogGrid .pauseNoteLabel{grid-column:1/-1}
+#modal .pauseGuardrails{margin:12px 0;padding:10px 12px;border-radius:12px;border:1px solid rgba(94,218,219,.18);background:rgba(4,38,50,.46)}
+#modal .pauseGuardrails b{display:block;font-size:10px;color:#fff}
+#modal .pauseGuardrails ul{margin:6px 0 0;padding-left:18px}
+#modal .pauseGuardrails li{margin:3px 0;font-size:9px;line-height:1.4;color:#bfd4da}
+#modal .pauseImpact{margin:12px 0;padding:11px;border-radius:13px;border:1px solid rgba(111,213,221,.18);background:rgba(3,28,39,.40)}
+#modal .pauseImpactTop{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:9px}
+#modal .pauseImpactBadge{display:inline-flex;padding:5px 7px;border-radius:8px;font-size:8px;font-weight:900;border:1px solid rgba(111,213,221,.24);color:#9be9ea}
+#modal .pauseImpactBadge.impact-minimal,#modal .pauseImpactBadge.impact-low{color:#9ae77d;border-color:rgba(139,216,94,.30)}
+#modal .pauseImpactBadge.impact-moderate{color:#ffd181;border-color:rgba(244,184,88,.34)}
+#modal .pauseImpactBadge.impact-material{color:#ff9a84;border-color:rgba(255,118,84,.38)}
+#modal .pauseMetricGrid{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+#modal .pauseMetricGrid>span{padding:9px;border-radius:10px;background:rgba(2,24,34,.42);border:1px solid rgba(102,204,211,.10)}
+#modal .pauseMetricGrid small{display:block;font-size:7px;font-weight:900;letter-spacing:.06em;color:#65dfe2}
+#modal .pauseMetricGrid b{display:block;margin:4px 0 2px;font-size:13px;color:#fff}
+#modal .pauseMetricGrid em{display:block;font-size:8px;line-height:1.3;font-style:normal;color:#a9c5ce}
+#modal .pauseImpact>p{margin:9px 0 0;font-size:9px;line-height:1.45;color:#d5e5e9}
+#modal .pauseInlineError{margin:10px 0;padding:10px 11px;border-radius:10px;border:1px solid rgba(255,118,84,.38);background:rgba(137,53,35,.14);color:#ffd0c6;font-size:9px;line-height:1.4}
+
+#today .programmePauseToday{border-color:rgba(244,184,88,.44)!important;background:linear-gradient(145deg,rgba(78,62,31,.48),rgba(6,52,65,.90))!important}
+#today .runnerStatus.pause{color:#ffd181;border-color:rgba(244,184,88,.30);background:rgba(137,94,28,.12)}
+
+@media(max-width:620px){
+ #plan .pauseCardHead{display:grid;grid-template-columns:minmax(0,1fr) auto}
+ #plan .pauseStartBtn{grid-column:1/-1;width:100%}
+ #plan .pauseMetricGrid{grid-template-columns:1fr 1fr}
+ #modal .pauseDialogGrid{grid-template-columns:1fr}
+ #modal .pauseDialogGrid .pauseNoteLabel{grid-column:auto}
+}
+#plan .pauseOutcomeLine,#modal .pauseOutcomeLine{display:flex;flex-wrap:wrap;justify-content:space-between;gap:4px 10px;margin:9px 0 0!important;padding-top:8px;border-top:1px solid rgba(112,211,218,.12)}
+#plan .pauseOutcomeLine b,#modal .pauseOutcomeLine b{font-size:8px;color:#d8e9ed}
+#plan .pauseOutcomeLine span,#modal .pauseOutcomeLine span{font-size:8px;font-weight:800;color:#fff}

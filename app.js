@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '15.7.17';
-  const BUILD = 51017;
+  const VERSION = '15.7.18';
+  const BUILD = 51018;
   const SCHEMA = 10400;
   const PRIMARY_STORAGE_KEY = 'arc_v10400_web';
   const MIRROR_STORAGE_KEY = 'arc_v10400_mirror';
@@ -488,7 +488,7 @@ function recommendedRaceDate(setup){
 }
 const BUILD=CORE.BUILD, SCHEMA=CORE.SCHEMA, STORAGE_KEY=CORE.PRIMARY_STORAGE_KEY, MIRROR_KEY=CORE.MIRROR_STORAGE_KEY, MIGRATION_MARKER='arc_v10400_migration_complete', BACKUP_KEY='arc_v10400_restore_rollback', UNDO_KEY='arc_v10400_settings_undo';
 let raceReadinessHistoryDirty=false;
-const defaults=()=>{let start=iso(new Date()),setup={planStart:start,raceDate:start,raceName:'Goal Race',raceDistance:42.195,targetTime:15300,currentWeekly:35,currentLongest:18,testDistance:5,testTime:1515,thresholdHr:168,criticalPower:300,bodyWeight:70,maxWeekly:65,growth:.07,peakLong:32,taperDays:14,minFactor:.85,maxFactor:1.05,adaptive:true};setup.raceDate=recommendedRaceDate(setup).date;return({schemaVersion:SCHEMA,planEngineVersion:PLAN_ENGINE_VERSION,setup,days:FIVE_DAY_TEMPLATE.map(d=>[...d]),runs:[],assessments:[],injuries:[],activeInjuryPlanId:null,shoes:[],shoeUsage:[],plannedShoeAssignments:[],plannedShoePurchases:[],plan:[],predictionHistory:[],raceReadinessHistory:[],weekView:null,onboardingComplete:false,storageRevision:0,updatedAt:new Date().toISOString(),migration:{to:SCHEMA,status:'new',time:new Date().toISOString()}})};
+const defaults=()=>{let start=iso(new Date()),setup={planStart:start,raceDate:start,raceName:'Goal Race',raceDistance:42.195,targetTime:15300,currentWeekly:35,currentLongest:18,testDistance:5,testTime:1515,thresholdHr:168,criticalPower:300,bodyWeight:70,maxWeekly:65,growth:.07,peakLong:32,taperDays:14,minFactor:.85,maxFactor:1.05,adaptive:true};setup.raceDate=recommendedRaceDate(setup).date;return({schemaVersion:SCHEMA,planEngineVersion:PLAN_ENGINE_VERSION,setup,days:FIVE_DAY_TEMPLATE.map(d=>[...d]),runs:[],assessments:[],injuries:[],activeInjuryPlanId:null,shoes:[],shoeUsage:[],plannedShoeAssignments:[],plannedShoePurchases:[],programPauses:[],plan:[],predictionHistory:[],raceReadinessHistory:[],weekView:null,onboardingComplete:false,storageRevision:0,updatedAt:new Date().toISOString(),migration:{to:SCHEMA,status:'new',time:new Date().toISOString()}})};
 let migrationReport={from:null,to:SCHEMA,status:'new install',source:'defaults',runs:0,assessments:0,fieldsRecovered:0,warning:''};
 function parseStored(raw){if(!raw)return null;try{const x=JSON.parse(raw);return x&&typeof x==='object'?x:null}catch(err){recordDiagnostic('Storage parse',err);return null}}
 function storageCandidates(){const keys=[STORAGE_KEY,MIRROR_KEY,...CORE.LEGACY_STORAGE_KEYS];return keys.map(key=>({key,value:parseStored(localStorage.getItem(key))})).filter(x=>x.value)}
@@ -515,6 +515,14 @@ function normaliseState(input){
  const canonicalPlanIds=new Set(plan.filter(p=>p.type!=='Rest').map(p=>p.id));
  const plannedShoeAssignments=Array.isArray(src.plannedShoeAssignments)?src.plannedShoeAssignments.filter(Boolean).map((a,index)=>({...a,id:CORE.safeId(a.id,`shoe-plan-${index}`),planId:CORE.safeId(a.planId,''),shoeId:CORE.safeId(a.shoeId,''),source:a.source==='user'?'user':'auto'})).filter(a=>shoeIds.has(a.shoeId)&&canonicalPlanIds.has(a.planId)):[];
  const plannedShoePurchases=Array.isArray(src.plannedShoePurchases)?src.plannedShoePurchases.filter(Boolean).map((x,index)=>({...x,id:CORE.safeId(x.id,`shoe-purchase-${index}`),brand:CORE.cleanText(x.brand||'ASICS',80),model:CORE.cleanText(x.model||'',100),version:CORE.cleanText(x.version||'',30),plannedPurchase:true,recommendedPurchaseStart:CORE.isIsoDate(x.recommendedPurchaseStart)?x.recommendedPurchaseStart:null,recommendedPurchaseEnd:CORE.isIsoDate(x.recommendedPurchaseEnd)?x.recommendedPurchaseEnd:null,targetFirstUseDate:CORE.isIsoDate(x.targetFirstUseDate)?x.targetFirstUseDate:null,targetRaceDayMileage:Math.max(0,Number(x.targetRaceDayMileage)||0),intendedRole:CORE.cleanText(x.intendedRole||'race',40),rationale:CORE.cleanText(x.rationale||'',1000),status:['planned','purchased','dismissed'].includes(x.status)?x.status:'planned'})):[];
+ const programPauses=(Array.isArray(src.programPauses)?src.programPauses:[]).filter(Boolean).map((x,index)=>{
+  const reason=['illness','travel','other'].includes(x.reason)?x.reason:'other';
+  const startDate=CORE.isIsoDate(x.startDate)?x.startDate:null,endDate=CORE.isIsoDate(x.endDate)?x.endDate:null;
+  if(!startDate||!endDate||endDate<startDate)return null;
+  const impact=x.impactSnapshot&&typeof x.impactSnapshot==='object'?{...x.impactSnapshot}:null;
+  return{id:CORE.safeId(x.id,`pause-${index}`),reason,startDate,endDate,originalEndDate:CORE.isIsoDate(x.originalEndDate)?x.originalEndDate:endDate,note:CORE.cleanText(x.note||'',500),createdAt:typeof x.createdAt==='string'?x.createdAt:new Date().toISOString(),cancelledAt:typeof x.cancelledAt==='string'?x.cancelledAt:null,resumedAt:typeof x.resumedAt==='string'?x.resumedAt:null,impactSnapshot:impact};
+ }).filter(Boolean).sort((a,b)=>a.startDate.localeCompare(b.startDate));
+
  migrationReport={...migrationReport,from:Number(src.schemaVersion)||'legacy',to:SCHEMA,status:'success',runs:runs.length,assessments:assessments.length,fieldsRecovered:recovered};
  let predictionHistory=Array.isArray(src.predictionHistory)?src.predictionHistory.filter(x=>x&&x.date&&Number.isFinite(Number(x.seconds))).map(x=>({...x,seconds:Number(x.seconds)})):[];
  const standaloneRuns=runs.filter(r=>r.source!=='assessment').length,maxTrendEvents=standaloneRuns+assessments.length;
@@ -531,7 +539,7 @@ function normaliseState(input){
  const candidateDays=Array.isArray(src.days)?src.days.map(d=>Array.isArray(d)?[CORE.cleanText(d[0],20),Boolean(d[1]),CORE.cleanText(d[2],40)]:d):base.days,days=CORE.validateDays(candidateDays).length?base.days:candidateDays;
  const onboardingComplete=src.onboardingComplete===true||Boolean(input?.setup&&Number(src.schemaVersion||0)<SCHEMA);
  const requestedActiveInjuryId=src.activeInjuryPlanId?CORE.safeId(src.activeInjuryPlanId,''):null,activeInjuryPlanId=requestedActiveInjuryId&&injuries.some(i=>i.id===requestedActiveInjuryId&&!i.rehabArchivedAt)?requestedActiveInjuryId:null;
- return{...base,...src,schemaVersion:SCHEMA,setup,days,runs,assessments,injuries,activeInjuryPlanId,shoes,shoeUsage,plannedShoeAssignments,plannedShoePurchases,plan,predictionHistory,raceReadinessHistory,programStartPrediction,weekView:Number(src.weekView)||null,onboardingComplete,storageRevision:Math.max(0,Number(src.storageRevision)||0),updatedAt:src.updatedAt||new Date().toISOString(),migration:{...migrationReport,time:new Date().toISOString()}};
+ return{...base,...src,schemaVersion:SCHEMA,setup,days,runs,assessments,injuries,activeInjuryPlanId,shoes,shoeUsage,plannedShoeAssignments,plannedShoePurchases,programPauses,plan,predictionHistory,raceReadinessHistory,programStartPrediction,weekView:Number(src.weekView)||null,onboardingComplete,storageRevision:Math.max(0,Number(src.storageRevision)||0),updatedAt:src.updatedAt||new Date().toISOString(),migration:{...migrationReport,time:new Date().toISOString()}};
 }
 (()=>{const l=document.getElementById('appStartupLoader'),s=l?.querySelector('strong');if(s)s.textContent='Reading saved data…';})();
 let rawState=loadStoredState();
@@ -1447,6 +1455,159 @@ function safeWorkoutFallback(item){
  return{...item,type:'Easy',distance:Math.round((warm+main+cool)*10)/10,warmDistance:Math.round(warm*10)/10,mainDistance:Math.round(main*10)/10,coolDistance:Math.round(cool*10)/10,
   warmup:`${warm.toFixed(1)} km very easy`,main:`${main.toFixed(1)} km conversational easy running`,cooldown:`${cool.toFixed(1)} km very easy`,distanceCheck:`${warm.toFixed(1)} + ${main.toFixed(1)} + ${cool.toFixed(1)} = ${(warm+main+cool).toFixed(1)} km`,purpose:'Preserve aerobic continuity with a safe fallback session.',coach:'The original workout failed internal validation and was replaced with an easy run. Review Plan Health for details.',fuel:'Water according to thirst.',targetScope:'Entire easy run',whyThis:'A safe aerobic session preserves consistency without relying on an invalid prescription.',whyAmount:'The distance is limited to the planned session allowance.',skipImpact:'Skipping one fallback easy run has little fitness impact; do not compensate later.'};
 }
+
+const PROGRAMME_PAUSE_REASON={illness:'Illness / sickness',travel:'Travel obligations',other:'Personal / other'};
+const PROGRAMME_PAUSE_KEY_TYPES=new Set(['Hills','Fartlek','Intervals','Threshold','Threshold intervals','VO₂max intervals','Race-pace intervals','Tempo','Fitness assessment','Marathon-specific','Half-marathon-specific','Specific long run','Race rehearsal','Long run','Progression']);
+function programmePauseReasonLabel(reason){return PROGRAMME_PAUSE_REASON[reason]||PROGRAMME_PAUSE_REASON.other}
+function programmePauseDays(p){if(!p||!CORE.isIsoDate(p.startDate)||!CORE.isIsoDate(p.endDate))return 0;return Math.max(0,Math.round((dte(p.endDate)-dte(p.startDate))/DAY)+1)}
+function programmePauseStatus(p,on=iso(today())){if(!p)return'none';if(p.cancelledAt)return'cancelled';if(p.resumedAt)return'completed';if(on<p.startDate)return'scheduled';if(on<=p.endDate)return'active';return'completed'}
+function programmePauseForDate(date){return(state.programPauses||[]).filter(p=>p&&!p.cancelledAt&&!p.resumedAt&&p.startDate<=date&&p.endDate>=date).sort((a,b)=>b.startDate.localeCompare(a.startDate))[0]||null}
+function currentProgrammePause(){return programmePauseForDate(iso(today()))}
+function upcomingProgrammePauses(){const key=iso(today());return(state.programPauses||[]).filter(p=>p&&!p.cancelledAt&&!p.resumedAt&&p.endDate>=key).sort((a,b)=>a.startDate.localeCompare(b.startDate))}
+function completedProgrammePauses(){const key=iso(today());return(state.programPauses||[]).filter(p=>p&&!p.cancelledAt&&(Boolean(p.resumedAt)||p.endDate<key)).sort((a,b)=>b.endDate.localeCompare(a.endDate))}
+function programmePauseOverlap(a,b){return a.startDate<=b.endDate&&a.endDate>=b.startDate}
+function validateProgrammePauseDraft(draft,ignoreId=null){
+ const errors=[],key=iso(today());
+ if(!draft||!['illness','travel','other'].includes(draft.reason))errors.push('Choose why the programme is being paused.');
+ if(!CORE.isIsoDate(draft?.startDate))errors.push('Choose a valid pause start date.');
+ if(!CORE.isIsoDate(draft?.endDate))errors.push('Choose a valid pause end date.');
+ if(errors.length)return errors;
+ if(draft.startDate<key)errors.push('A new pause cannot rewrite completed history. Start today or later.');
+ if(draft.endDate<draft.startDate)errors.push('Pause end must be on or after the start date.');
+ if(draft.startDate>=state.setup.raceDate||draft.endDate>=state.setup.raceDate)errors.push('The training pause must end before race day. Race participation is handled separately.');
+ const overlap=(state.programPauses||[]).find(p=>p.id!==ignoreId&&!p.cancelledAt&&!p.resumedAt&&programmePauseOverlap(draft,p));
+ if(overlap)errors.push(`This overlaps the existing ${programmePauseReasonLabel(overlap.reason).toLowerCase()} pause (${fmtDate(overlap.startDate)}–${fmtDate(overlap.endDate)}).`);
+ return errors;
+}
+function programmePauseReentryProfile(p){
+ const days=programmePauseDays(p),ill=p.reason==='illness',travel=p.reason==='travel';
+ let factors,holdQuality;
+ if(ill){
+  if(days<=3){factors=[.70,.85];holdQuality=2}
+  else if(days<=7){factors=[.60,.75,.88];holdQuality=3}
+  else if(days<=14){factors=[.55,.65,.75,.85,.93];holdQuality=4}
+  else{factors=[.50,.60,.68,.76,.84,.91,.96];holdQuality=5}
+ }else if(travel){
+  if(days<=3){factors=[.90];holdQuality=1}
+  else if(days<=7){factors=[.78,.90];holdQuality=1}
+  else if(days<=14){factors=[.68,.80,.90];holdQuality=2}
+  else{factors=[.62,.72,.82,.90,.96];holdQuality=3}
+ }else{
+  if(days<=3){factors=[.85];holdQuality=1}
+  else if(days<=7){factors=[.72,.86];holdQuality=2}
+  else if(days<=14){factors=[.62,.75,.86,.94];holdQuality=3}
+  else{factors=[.58,.68,.78,.87,.94];holdQuality=4}
+ }
+ return{factors,holdQuality,sessions:factors.length,days};
+}
+function programmePauseHasEvidence(p){return(state.runs||[]).some(r=>r&&(r.planId===p.id||(r.date===p.date&&r.matchStatus==='matched')))}
+function programmePauseRestItem(p,pause){
+ const label=programmePauseReasonLabel(pause.reason),days=programmePauseDays(pause),resume=iso(new Date(dte(pause.endDate).getTime()+DAY));
+ return{...p,id:`${p.date}-Rest`,type:'Rest',distance:0,warmDistance:0,mainDistance:0,coolDistance:0,zone:{pace:0,hr:0,power:0,guide:'Programme pause',fitnessIndex:Number(p.zone?.fitnessIndex)||100},programPauseId:pause.id,programPauseReason:pause.reason,programPauseOriginalType:p.type,programPauseOriginalDistance:Number(p.distance)||0,programPauseStart:pause.startDate,programPauseEnd:pause.endDate,purpose:`Programme paused · ${label}`,warmup:'—',main:'No prescribed running during this programme pause',cooldown:'—',coach:pause.reason==='illness'?`Recovery takes priority. Do not catch up missed training. Resume only when well enough; extend the pause if symptoms persist.`:`This planned interruption is being absorbed without stacking missed sessions. Resume through the controlled re-entry sequence.`,fuel:'Normal daily nutrition and hydration.',targetScope:'No running targets',whyThis:`A ${days}-day ${label.toLowerCase()} interruption is being treated as planned recovery rather than missed-session failure.`,whyAmount:`No running load is prescribed during the pause. The programme resumes from ${fmtDate(resume)} with a guarded re-entry instead of compressed catch-up training.`,skipImpact:'The pause impact is tracked explicitly in Programme Continuity.'};
+}
+function programmePauseReentryItem(p,pause,index,total){
+ const profile=programmePauseReentryProfile(pause),factor=profile.factors[index]??1,originalType=p.type,wasKey=PROGRAMME_PAUSE_KEY_TYPES.has(originalType),hold=wasKey&&index<profile.holdQuality;
+ let type=hold?'Easy':originalType;
+ const rawKm=Math.max(1,Number(p.distance)||1),km=Math.max(1,Math.round(rawKm*factor*10)/10),z=zone(type,p.date),context={capacityCeiling:Math.max(km,Number(p.capacityCeiling)||0),capacityLimited:true,originalType,onRampWeek:0,onRampWeeks:0,capacityReason:''};
+ let detail=prescription(type,km,p.week,p.phase,z,context),distance=Number.isFinite(Number(detail.totalDistance))?Number(detail.totalDistance):km;
+ const reason=programmePauseReasonLabel(pause.reason),step=index+1;
+ const purpose=hold?`Controlled return after ${reason.toLowerCase()}; rebuild routine before restoring ${originalType.toLowerCase()}.`:`Return from ${reason.toLowerCase()} with a deliberately reduced ${originalType.toLowerCase()} exposure.`;
+ return{...p,id:`${p.date}-${type}`,type,distance,zone:z,...detail,pauseReentry:true,pauseReentryStep:step,pauseReentryTotal:total,pauseReentryFactor:factor,pauseReentryReason:pause.reason,pauseReentryFrom:originalType,capacityLimited:true,capacityCeiling:Math.max(distance,Number(p.capacityCeiling)||0),purpose,whyThis:`This is re-entry session ${step} of ${total} after a ${programmePauseDays(pause)}-day programme pause.`,whyAmount:`The original ${rawKm.toFixed(1)} km prescription is limited to about ${Math.round(factor*100)}% (${distance.toFixed(1)} km) so fitness can be rebuilt without compensatory overload.`,coach:`Do not make up the paused mileage. ${hold?`The original ${originalType} stimulus is intentionally deferred; keep this run easy.`:'Use the normal intensity guidance but stop if recovery is not as expected.'}`,skipImpact:'If this re-entry session is not tolerated, extend recovery rather than advancing the next session.'};
+}
+function applyProgrammePausesToPlan(plan,pauses=(state.programPauses||[]),options={}){
+ const nowIso=options.nowIso||iso(today()),rows=(plan||[]).map(p=>({...p,zone:p.zone?{...p.zone}:p.zone})),valid=(pauses||[]).filter(p=>p&&!p.cancelledAt&&!p.resumedAt&&CORE.isIsoDate(p.startDate)&&CORE.isIsoDate(p.endDate)).sort((a,b)=>a.startDate.localeCompare(b.startDate));
+ for(const pause of valid){
+  for(let i=0;i<rows.length;i++){
+   const p=rows[i];if(p.date<nowIso||p.date<pause.startDate||p.date>pause.endDate||p.type==='Race Day'||programmePauseHasEvidence(p))continue;
+   if(p.type!=='Rest')rows[i]=programmePauseRestItem(p,pause);else rows[i]={...p,programPauseId:pause.id,programPauseReason:pause.reason,programPauseStart:pause.startDate,programPauseEnd:pause.endDate,purpose:`Programme paused · ${programmePauseReasonLabel(pause.reason)}`,coach:'No catch-up training is required on this scheduled rest day.'};
+  }
+  const profile=programmePauseReentryProfile(pause),eligible=rows.filter(p=>p.date>pause.endDate&&p.date>=nowIso&&!['Rest','Race Day'].includes(p.type)&&!p.programPauseId&&!programmePauseHasEvidence(p)).sort((a,b)=>a.date.localeCompare(b.date)).slice(0,profile.sessions);
+  eligible.forEach((p,index)=>{const pos=rows.findIndex(x=>x===p);if(pos>=0)rows[pos]=programmePauseReentryItem(p,pause,index,profile.sessions)});
+ }
+ return rows;
+}
+function programmePauseShortTermRisk(p){
+ const days=programmePauseDays(p),ill=p.reason==='illness';
+ if(days<=3)return{label:'Minimal',cls:'good',text:'A very short interruption is unlikely to materially change fitness; the main goal is to avoid unnecessary catch-up.'};
+ if(days<=7)return{label:ill?'Low–moderate':'Low',cls:'good',text:ill?'Short-term fitness loss is usually less important than fully recovering from illness.':'A short travel interruption should be largely absorbed by the guarded return.'};
+ if(days<=14)return{label:'Moderate',cls:'warn',text:'Some short-term detraining is plausible. The re-entry sequence protects against returning too aggressively.'};
+ if(days<=28)return{label:'Material',cls:'warn',text:'The interruption is long enough that fitness and load tolerance may fall meaningfully; rebuilding takes priority over catching up.'};
+ return{label:'High',cls:'bad',text:'A long interruption materially changes preparation. The remaining programme should be treated as a rebuild rather than a delayed copy of the old plan.'};
+}
+function programmePauseContinuityPenalty(p,expectedTime){
+ const days=programmePauseDays(p),grace=p.reason==='illness'?3:4,rate=p.reason==='illness'?.00070:p.reason==='travel'?.00045:.00055,cap=p.reason==='illness'?.035:.030;
+ const acutePct=clamp(Math.max(0,days-grace)*rate,0,cap),recoveryDays=Math.max(0,Math.round((dte(state.setup.raceDate)-dte(p.endDate))/DAY)),residualPct=acutePct*Math.exp(-.025*recoveryDays);
+ return{acutePct,residualPct,recoveryDays,recoveryWeeks:recoveryDays/7,seconds:Math.max(0,Number(expectedTime)||0)*residualPct};
+}
+function programmePauseImpactPreview(draft){
+ const baselinePlan=state.plan,baselineEngine=coachEngine(),baseTime=Number(baselineEngine.projection?.predictedTime)||Number(baselineEngine.pred)||Number(state.setup.targetTime),baseProb=Number(baselineEngine.projectedModel?.probability),simPlan=applyProgrammePausesToPlan(baselinePlan,[draft],{nowIso:iso(today())});
+ let simEngine;
+ try{state.plan=simPlan;simEngine=coachEngine()}finally{state.plan=baselinePlan}
+ let simTime=Number(simEngine?.projection?.predictedTime)||baseTime,continuity=programmePauseContinuityPenalty(draft,baseTime),adjustedTime=Math.max(baseTime,simTime+continuity.seconds),adjustedProb=Number(simEngine?.projectedModel?.probability);
+ try{state.plan=simPlan;const m=probabilityFromScenario(simEngine.c,adjustedTime,simEngine.projectedSupport,true);adjustedProb=Math.min(Number.isFinite(baseProb)?baseProb:100,Number(m.probability)||0)}finally{state.plan=baselinePlan}
+ const start=draft.startDate,end=draft.endDate,baseAffected=baselinePlan.filter(p=>p.date>=start&&p.date<=end&&!['Rest','Race Day'].includes(p.type)&&p.date>=iso(today())&&!programmePauseHasEvidence(p));
+ const pausedKm=sum(baseAffected.map(p=>Number(p.distance)||0)),baseFuture=sum(baselinePlan.filter(p=>p.date>=iso(today())&&!['Rest','Race Day'].includes(p.type)).map(p=>Number(p.distance)||0)),simFuture=sum(simPlan.filter(p=>p.date>=iso(today())&&!['Rest','Race Day'].includes(p.type)).map(p=>Number(p.distance)||0)),kmReduction=Math.max(0,baseFuture-simFuture),keySessions=baseAffected.filter(p=>PROGRAMME_PAUSE_KEY_TYPES.has(p.type));
+ const reentry=programmePauseReentryProfile(draft),deltaSec=Math.max(0,adjustedTime-baseTime),probDelta=Number.isFinite(baseProb)&&Number.isFinite(adjustedProb)?Math.min(0,adjustedProb-baseProb):null,risk=programmePauseShortTermRisk(draft),days=programmePauseDays(draft);
+ let impactLabel=deltaSec<20&&days<=4?'Minimal':deltaSec<75&&days<=7?'Low':deltaSec<240?'Moderate':'Material';
+ if(days>14&&impactLabel==='Minimal')impactLabel='Moderate';
+ return{pauseDays:days,pausedKm,kmReduction,affectedSessions:baseAffected.length,keySessions:keySessions.length,reentrySessions:reentry.sessions,qualityHoldSessions:reentry.holdQuality,baselineExpectedTime:baseTime,adjustedExpectedTime:adjustedTime,deltaSec,baselineProbability:Number.isFinite(baseProb)?baseProb:null,adjustedProbability:Number.isFinite(adjustedProb)?adjustedProb:null,probabilityDelta:probDelta,risk:risk.label,riskText:risk.text,impactLabel,recoveryDays:continuity.recoveryDays,recoveryWeeks:continuity.recoveryWeeks,modelNote:'Finish-time effect combines the existing programme projection with a conservative interruption/recovery allowance. It is an app planning estimate, not a validated physiological prediction.'};
+}
+function programmePauseImpactHtml(impact,{compact=false}={}){
+ if(!impact)return'';const delta=Number(impact.deltaSec)||0,probDelta=Number(impact.probabilityDelta),timeText=delta<5?'Likely absorbed':`+${fmtTime(delta)}`;
+ const probRounded=Number.isFinite(probDelta)?(Math.abs(probDelta)<.5?0:Math.round(probDelta)):null,probText=Number.isFinite(probRounded)?`${probRounded>0?'+':''}${probRounded} pp`:'Building';
+ const baseTime=Number(impact.baselineExpectedTime),pausedTime=Number(impact.adjustedExpectedTime),baseProb=Number(impact.baselineProbability),pausedProb=Number(impact.adjustedProbability);
+ const outcomeLine=Number.isFinite(baseTime)&&Number.isFinite(pausedTime)?`<p class="pauseOutcomeLine"><b>Expected programme outcome</b><span>${fmtTime(baseTime)} → ${fmtTime(pausedTime)}${Number.isFinite(baseProb)&&Number.isFinite(pausedProb)?` · target chance ${Math.round(baseProb)}% → ${Math.round(pausedProb)}%`:''}</span></p>`:'';
+ return`<div class="pauseImpact ${compact?'compact':''}"><div class="pauseImpactTop"><span class="pauseImpactBadge impact-${String(impact.impactLabel||'low').toLowerCase()}">${esc(impact.impactLabel||'Low')} projected impact</span><small>${impact.pauseDays} day${impact.pauseDays===1?'':'s'} paused</small></div><div class="pauseMetricGrid"><span><small>PAUSE LOAD REMOVED</small><b>${Number(impact.pausedKm||impact.kmReduction||0).toFixed(1)} km</b><em>${impact.affectedSessions||0} session${impact.affectedSessions===1?'':'s'}</em></span><span><small>KEY SESSIONS AFFECTED</small><b>${impact.keySessions||0}</b><em>No catch-up stacking</em></span><span><small>RE-ENTRY</small><b>${impact.reentrySessions||0} session${impact.reentrySessions===1?'':'s'}</b><em>${impact.qualityHoldSessions||0} protected from hard work</em></span><span><small>EXPECTED RACE EFFECT</small><b>${esc(timeText)}</b><em>${esc(probText)} target chance</em></span></div>${outcomeLine}<p><b>Short-term fitness risk: ${esc(impact.risk||'—')}.</b> ${esc(impact.riskText||'')}</p>${compact?'':`<p class="muted compact">${esc(impact.modelNote||'')}</p>`}</div>`;
+}
+function programmePausePanelHtml(){
+ const upcoming=upcomingProgrammePauses(),history=completedProgrammePauses(),active=currentProgrammePause(),next=upcoming[0]||null;
+ let main;
+ if(next){const status=programmePauseStatus(next),impact=next.impactSnapshot,label=programmePauseReasonLabel(next.reason),resume=iso(new Date(dte(next.endDate).getTime()+DAY));main=`<section class="programmePauseCard ${status}"><div class="pauseCardHead"><div><small>PROGRAMME CONTINUITY</small><h3>${status==='active'?'Programme paused':'Scheduled programme pause'}</h3><p>${esc(label)} · ${fmtDate(next.startDate)}–${fmtDate(next.endDate)} · resume plan ${fmtDate(resume)}</p></div><span class="pauseStatusBadge ${status}">${status==='active'?'PAUSED':'SCHEDULED'}</span></div>${impact?programmePauseImpactHtml(impact,{compact:true}):''}<div class="pauseActions">${status==='active'?'<button type="button" class="primary" data-pause-action="resume">Resume early</button>':''}<button type="button" class="secondary" data-pause-action="extend" data-pause-id="${esc(next.id)}">Extend pause</button>${status==='scheduled'?'<button type="button" class="secondary" data-pause-action="cancel" data-pause-id="'+esc(next.id)+'">Cancel scheduled pause</button>':''}</div></section>`}
+ else main=`<section class="programmePauseCard ready"><div class="pauseCardHead"><div><small>PROGRAMME CONTINUITY</small><h3>Need to pause training?</h3><p>Plan an illness, travel or personal interruption. The coach removes affected sessions, protects the return and previews likely race impact before you confirm.</p></div><button type="button" class="primary pauseStartBtn" data-pause-action="new">Pause programme</button></div></section>`;
+ const hist=history.length?`<details class="pauseHistory"><summary>Previous programme pauses (${history.length})</summary><div>${history.slice(0,8).map(p=>`<article><b>${esc(programmePauseReasonLabel(p.reason))}</b><span>${fmtDate(p.startDate)}–${fmtDate(p.endDate)} · ${programmePauseDays(p)} days</span><small>${p.impactSnapshot?`${esc(p.impactSnapshot.impactLabel||'')} projected impact · ${Number(p.impactSnapshot.kmReduction||0).toFixed(1)} km removed`:'Completed interruption'}</small></article>`).join('')}</div></details>`:'';
+ return main+hist;
+}
+function programmePauseTimelineBandsHtml(){
+ const all=(state.programPauses||[]).filter(p=>p&&!p.cancelledAt),start=dte(state.setup.planStart),end=dte(state.setup.raceDate),span=Math.max(DAY,end-start);
+ return all.map(p=>{const a=clamp((dte(p.startDate)-start)/span*100,0,100),b=clamp((dte(p.endDate)+DAY-start)/span*100,0,100),w=Math.max(.8,b-a);return`<span class="programmePauseTimelineBand" style="left:${a.toFixed(2)}%;width:${w.toFixed(2)}%" title="${esc(programmePauseReasonLabel(p.reason))}: ${fmtDate(p.startDate)}–${fmtDate(p.endDate)}"></span>`}).join('');
+}
+function openProgrammePauseDialog(){
+ const key=iso(today()),maxEnd=iso(new Date(dte(state.setup.raceDate).getTime()-DAY));
+ showDialog(`<h2>Pause training programme</h2><p class="modalLead">The race date stays fixed. Missed sessions are not stacked later: the plan removes the interruption, then uses a controlled re-entry to preserve fitness and reduce overload risk.</p><div class="pauseDialogGrid"><label>Reason<select id="pauseReason"><option value="illness">Illness / sickness</option><option value="travel">Travel obligations</option><option value="other">Personal / other</option></select></label><label>Pause starts<input id="pauseStart" type="date" min="${key}" max="${maxEnd}" value="${key}"></label><label>Pause ends<input id="pauseEnd" type="date" min="${key}" max="${maxEnd}" value="${key}"></label><label class="pauseNoteLabel">Note (optional)<textarea id="pauseNote" maxlength="500" placeholder="e.g. work trip, flu, family obligation"></textarea></label></div><div class="pauseGuardrails"><b>Guardrails</b><ul><li>No missed workout is caught up by stacking.</li><li>Illness gets a more conservative re-entry than travel.</li><li>Race day and completed history are never moved.</li><li>Before you confirm, the app previews removed kilometres, key sessions, re-entry and expected race impact.</li></ul></div><div id="pausePreview"></div><div class="buttonRow"><button id="previewPause" class="primary" type="button">Preview impact</button><button id="confirmPause" class="primary" type="button" disabled>Confirm pause</button><button id="cancelPauseDialog" class="secondary" type="button">Cancel</button></div>`,'Pause training programme');
+ let latestDraft=null,latestImpact=null;
+ const read=()=>({reason:$('pauseReason').value,startDate:$('pauseStart').value,endDate:$('pauseEnd').value,note:CORE.cleanText($('pauseNote').value,500)});
+ const invalidate=()=>{latestDraft=null;latestImpact=null;$('confirmPause').disabled=true;$('pausePreview').innerHTML=''};
+ ['pauseReason','pauseStart','pauseEnd','pauseNote'].forEach(id=>$(id).addEventListener('input',invalidate));
+ $('previewPause').onclick=()=>{const draft=read(),errors=validateProgrammePauseDraft(draft);if(errors.length){$('pausePreview').innerHTML=`<div class="pauseInlineError">${esc(errors[0])}</div>`;return}const btn=$('previewPause'),old=btn.textContent;btn.disabled=true;btn.textContent='Calculating impact…';try{latestImpact=programmePauseImpactPreview(draft);latestDraft=draft;$('pausePreview').innerHTML=programmePauseImpactHtml(latestImpact);$('confirmPause').disabled=false}catch(err){recordDiagnostic('Pause preview',err);$('pausePreview').innerHTML='<div class="pauseInlineError">The pause impact could not be calculated. No plan changes were made.</div>'}finally{btn.disabled=false;btn.textContent=old}};
+ $('confirmPause').onclick=()=>{if(!latestDraft||!latestImpact)return;commitProgrammePause(latestDraft,latestImpact)};
+ $('cancelPauseDialog').onclick=closeDialog;
+}
+function commitProgrammePause(draft,impact){
+ const errors=validateProgrammePauseDraft(draft);if(errors.length)return toast(errors[0],true);const before=JSON.parse(JSON.stringify(state)),record={id:`pause-${Date.now()}`,reason:draft.reason,startDate:draft.startDate,endDate:draft.endDate,originalEndDate:draft.endDate,note:draft.note||'',createdAt:new Date().toISOString(),cancelledAt:null,resumedAt:null,impactSnapshot:impact};
+ state.programPauses=[...(state.programPauses||[]),record].sort((a,b)=>a.startDate.localeCompare(b.startDate));
+ const ok=buildPlan();if(!ok){state=before;renderAll();return toast('The programme pause could not be saved. Your previous plan is still loaded.',true)}
+ closeDialog();state.weekView=currentWeek();renderAll();toast(`Programme paused ${fmtDate(record.startDate)}–${fmtDate(record.endDate)}. The return-to-training sequence has been built into the plan.`);
+}
+function resumeProgrammeEarly(){
+ const p=currentProgrammePause();if(!p)return toast('There is no active programme pause.',true);const key=iso(today()),newEnd=iso(new Date(today().getTime()-DAY)),before=JSON.parse(JSON.stringify(state));
+ showDialog(`<h2>Resume programme today?</h2><p>The pause will end before today. Today and future workouts will be rebuilt with the pause re-entry guardrails. Missed training will not be caught up.</p><div class="buttonRow"><button id="confirmResumePause" class="primary" type="button">Resume today</button><button id="cancelResumePause" class="secondary" type="button">Keep pause</button></div>`,'Resume programme');
+ $('confirmResumePause').onclick=()=>{p.resumedAt=new Date().toISOString();p.endDate=newEnd<p.startDate?p.startDate:newEnd;const ok=buildPlan();if(!ok){state=before;renderAll();return toast('Resume could not be saved; the pause remains active.',true)}closeDialog();renderAll();toast('Programme resumed. The plan now uses a controlled re-entry instead of catch-up training.')};$('cancelResumePause').onclick=closeDialog;
+}
+function cancelScheduledProgrammePause(id){
+ const p=(state.programPauses||[]).find(x=>x.id===id&&programmePauseStatus(x)==='scheduled');if(!p)return toast('Scheduled pause was not found.',true);const before=JSON.parse(JSON.stringify(state));
+ showDialog(`<h2>Cancel scheduled pause?</h2><p>${esc(programmePauseReasonLabel(p.reason))} · ${fmtDate(p.startDate)}–${fmtDate(p.endDate)}</p><p>The original future training structure will be rebuilt. Completed history is unaffected.</p><div class="buttonRow"><button id="confirmCancelPause" class="primary" type="button">Cancel pause</button><button id="keepScheduledPause" class="secondary" type="button">Keep it</button></div>`,'Cancel scheduled pause');
+ $('confirmCancelPause').onclick=()=>{p.cancelledAt=new Date().toISOString();const ok=buildPlan();if(!ok){state=before;renderAll();return toast('The cancellation could not be saved.',true)}closeDialog();renderAll();toast('Scheduled programme pause cancelled.')};$('keepScheduledPause').onclick=closeDialog;
+}
+function extendProgrammePause(id){
+ const p=(state.programPauses||[]).find(x=>x.id===id&&!x.cancelledAt);if(!p)return toast('Programme pause was not found.',true);const min=iso(new Date(dte(p.endDate).getTime()+DAY)),max=iso(new Date(dte(state.setup.raceDate).getTime()-DAY));
+ if(min>max)return toast('The pause cannot be extended beyond race day.',true);
+ showDialog(`<h2>Extend programme pause</h2><p>Current pause ends ${fmtDate(p.endDate)}. Extending it will remove additional running and rebuild the re-entry sequence.</p><label>New end date<input id="pauseExtendEnd" type="date" min="${min}" max="${max}" value="${min}"></label><div id="pauseExtendPreview"></div><div class="buttonRow"><button id="previewPauseExtension" class="primary" type="button">Preview extra impact</button><button id="confirmPauseExtension" class="primary" type="button" disabled>Extend pause</button><button id="cancelPauseExtension" class="secondary" type="button">Cancel</button></div>`,'Extend programme pause');
+ let impact=null,newEnd=null;$('pauseExtendEnd').oninput=()=>{$('confirmPauseExtension').disabled=true;$('pauseExtendPreview').innerHTML='';impact=null};
+ $('previewPauseExtension').onclick=()=>{newEnd=$('pauseExtendEnd').value;const extra={reason:p.reason,startDate:min,endDate:newEnd,note:p.note||''},errors=validateProgrammePauseDraft(extra,p.id).filter(e=>!e.startsWith('This overlaps'));if(errors.length){$('pauseExtendPreview').innerHTML=`<div class="pauseInlineError">${esc(errors[0])}</div>`;return}impact=programmePauseImpactPreview(extra);$('pauseExtendPreview').innerHTML=`<p class="muted compact"><b>Additional interruption beyond the current pause</b></p>${programmePauseImpactHtml(impact)}`;$('confirmPauseExtension').disabled=false};
+ $('confirmPauseExtension').onclick=()=>{if(!impact||!newEnd)return;const before=JSON.parse(JSON.stringify(state)),oldBase=Number(p.impactSnapshot?.baselineExpectedTime);p.endDate=newEnd;p.originalEndDate=p.originalEndDate||p.endDate;const totalDraft={reason:p.reason,startDate:p.startDate,endDate:newEnd,note:p.note||''};let totalImpact;try{totalImpact=programmePauseImpactPreview(totalDraft)}catch{totalImpact=impact}if(Number.isFinite(oldBase)&&totalImpact)totalImpact.baselineExpectedTime=oldBase;p.impactSnapshot=totalImpact;const ok=buildPlan();if(!ok){state=before;renderAll();return toast('The pause extension could not be saved.',true)}closeDialog();renderAll();toast(`Programme pause extended to ${fmtDate(newEnd)}.`)};$('cancelPauseExtension').onclick=closeDialog;
+}
+function bindProgrammePauseControls(){document.querySelectorAll('#plan [data-pause-action]').forEach(btn=>btn.onclick=()=>{const a=btn.dataset.pauseAction;if(a==='new')openProgrammePauseDialog();else if(a==='resume')resumeProgrammeEarly();else if(a==='extend')extendProgrammePause(btn.dataset.pauseId);else if(a==='cancel')cancelScheduledProgrammePause(btn.dataset.pauseId)})}
+
 function buildPlan(){
  const nowIso=iso(today()),oldPlan=Array.isArray(state.plan)?state.plan:[],oldByDate=new Map(oldPlan.map(p=>[p.date,p]));
  let out=[],total=weeks(),taper=Math.ceil(state.setup.taperDays/7),startCapacity=startingCapacityProfile(),longProgression=Math.max(1,startCapacity.longest);
@@ -1521,7 +1682,8 @@ function buildPlan(){
      out.push(selected);
    });
  }
- state.plan=out;state.planEngineVersion=PLAN_ENGINE_VERSION;state.schemaVersion=SCHEMA;state.lastPlanHealth=validatePlan(out);save()
+ out=applyProgrammePausesToPlan(out,state.programPauses||[],{nowIso});
+ state.plan=out;state.planEngineVersion=PLAN_ENGINE_VERSION;state.schemaVersion=SCHEMA;state.lastPlanHealth=validatePlan(out);return save()
 }
 
 function prescription(type,km,w,ph,z,context={}){
@@ -2725,10 +2887,10 @@ function workoutHtml(p){
  const completedScore=linked?workoutScore(linked,p):null;
  const adaptedLoad=Math.abs(Number(p.factor||1)-1)>=.005,calibrated=Math.abs(Number(z.fitnessIndex||100)-100)>=.5;
  const statusLabel=st==='completed'?'Completed':st==='missed'?'Missed':st==='today'?'Today':st==='rest'?'Rest':'Upcoming';
- const chips=[];if(p.onRampWeek)chips.push(`<span class="planAdaptChip">On-ramp ${p.onRampWeek}/${p.onRampWeeks}</span>`);if(p.capacityLimited)chips.push('<span class="planAdaptChip">Capacity-capped</span>');if(adaptedLoad)chips.push('<span class="planAdaptChip">Load adapted</span>');if(calibrated)chips.push('<span class="planAdaptChip">Pace/power calibrated</span>');
+ const chips=[];if(p.pauseReentry)chips.push(`<span class="planAdaptChip pauseReentryChip">Re-entry ${p.pauseReentryStep}/${p.pauseReentryTotal}</span>`);if(p.onRampWeek)chips.push(`<span class="planAdaptChip">On-ramp ${p.onRampWeek}/${p.onRampWeeks}</span>`);if(p.capacityLimited)chips.push('<span class="planAdaptChip">Capacity-capped</span>');if(adaptedLoad)chips.push('<span class="planAdaptChip">Load adapted</span>');if(calibrated)chips.push('<span class="planAdaptChip">Pace/power calibrated</span>');
  const quick=p.type==='Rest'?'' : `<div class="planWorkoutQuick"><span><b>${Number(p.distance).toFixed(1)}</b><small>km</small></span><span><b>${pace(z.pace)}</b><small>pace</small></span><span><b>${Number.isFinite(Number(z.power))?Math.round(z.power):'—'}</b><small>W</small></span></div>`;
  const completion=linked?`<div class="planCompletedEvidence"><span>${planTinyIcon('check')}</span><div><small>COMPLETED EVIDENCE</small><b>${Number(linked.distanceKm).toFixed(1)} km${Number.isFinite(completedScore)?` · ${Math.round(completedScore)}/100 execution`:''}</b></div></div>`:'';
- if(p.type==='Rest')return`<details class="workout planWorkout restWorkout" data-id="${esc(p.id)}"><summary class="planWorkoutSummary"><div class="planDateBox"><small>${day}</small><b>${dt.getDate()}</b><span>${month}</span></div><span class="planWorkoutIcon">${planWorkoutPictogram(p.type)}</span><div class="planWorkoutIdentity"><div class="planWorkoutName"><h3>Rest</h3><span class="planStatus ${st}">${statusLabel}</span></div><p>${esc(p.purpose)}</p></div></summary><div class="planWorkoutBody"><ul class="planBulletList"><li>${esc(p.coach)}</li><li>${esc(p.fuel)}</li></ul></div></details>`;
+ if(p.type==='Rest'){const paused=Boolean(p.programPauseId),pauseLabel=paused?programmePauseReasonLabel(p.programPauseReason):null;return`<details class="workout planWorkout restWorkout ${paused?'programmePausedWorkout':''}" data-id="${esc(p.id)}"><summary class="planWorkoutSummary"><div class="planDateBox"><small>${day}</small><b>${dt.getDate()}</b><span>${month}</span></div><span class="planWorkoutIcon">${planWorkoutPictogram(p.type)}</span><div class="planWorkoutIdentity"><div class="planWorkoutName"><h3>${paused?'Programme paused':'Rest'}</h3><span class="planStatus ${paused?'paused':st}">${paused?'Paused':statusLabel}</span></div><p>${esc(paused?`${pauseLabel}${p.programPauseOriginalType?` · ${p.programPauseOriginalType} removed`:''}`:p.purpose)}</p>${paused?'<div class="planAdaptChips"><span class="planAdaptChip pauseChip">No catch-up</span></div>':''}</div></summary><div class="planWorkoutBody"><ul class="planBulletList"><li>${esc(p.coach)}</li><li>${esc(paused?`Pause window ${fmtDate(p.programPauseStart)}–${fmtDate(p.programPauseEnd)}.`:p.fuel)}</li></ul></div></details>`}
  return`<details class="workout planWorkout workout-${workoutTypeClass(p.type)}" data-id="${esc(p.id)}"><summary class="planWorkoutSummary"><div class="planDateBox"><small>${day}</small><b>${dt.getDate()}</b><span>${month}</span></div><span class="planWorkoutIcon">${planWorkoutPictogram(p.type)}</span><div class="planWorkoutIdentity"><div class="planWorkoutName"><h3>${esc(p.type)}</h3><span class="planStatus ${st}">${statusLabel}</span></div><p>${esc(p.purpose)}</p>${quick}${planShoeSummaryHtml(p)}${chips.length?`<div class="planAdaptChips">${chips.join('')}</div>`:''}</div></summary><div class="planWorkoutBody">${completion}<div class="planTargets"><div><small>PACE</small><strong>${pace(z.pace)}</strong><span>${esc(p.targetScope||'main set')}</span></div><div><small>POWER</small><strong>${Number.isFinite(Number(z.power))?Math.round(z.power)+' W':'—'}</strong><span>${esc(p.targetScope||'main set')}</span></div><div><small>HEART RATE</small><strong>${Number.isFinite(Number(z.hr))?Math.round(z.hr)+' bpm':'—'}</strong><span>${esc(z.guide||'intensity guide')}</span></div></div>${planWorkoutStructureHtml(p)}<div class="planPrescription"><div><small>WARM-UP</small><p>${esc(p.warmup||'—')}</p></div><div class="main"><small>MAIN SET / INTERVALS</small><p>${esc(p.main||'—')}</p></div><div><small>COOLDOWN</small><p>${esc(p.cooldown||'—')}</p></div></div><div class="planGuidanceGrid"><div><small>WHY THIS SESSION</small><p>${esc(p.whyThis||p.purpose)}</p></div><div><small>WHY THIS AMOUNT</small><p>${esc(p.whyAmount||'The amount follows the generated weekly structure and current adaptation.')}</p></div><div><small>EXECUTION</small><p>${esc(p.coach||'Follow the prescribed intensity and keep the session controlled.')}</p></div><div><small>FUEL / HYDRATION</small><p>${esc(p.fuel||'Normal daily hydration.')}</p></div></div>${planShoeRowHtml(p)}<details class="planWorkoutMore"><summary>Missed-session guidance</summary><p>${esc(p.skipImpact||'Do not stack missed training. Continue with the next appropriate session.')}</p></details>${linked?`<button class="viewPlanRun primary full" data-plan-run="${esc(linked.id)}">Open completed run intelligence</button>`:''}</div></details>`;
 }
 
@@ -2841,6 +3003,7 @@ function todayBulletList(items,className='runnerBullets'){
  return rows.length?`<ul class="${className}">${rows.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>`:'';
 }
 function todayWorkoutCard(p,injuryDay){
+ if(p?.programPauseId){const pauseRec=(state.programPauses||[]).find(x=>x.id===p.programPauseId)||programmePauseForDate(p.date),label=programmePauseReasonLabel(p.programPauseReason||pauseRec?.reason),resume=pauseRec?iso(new Date(dte(pauseRec.endDate).getTime()+DAY)):null;return`<section class="todayRunnerCard todayWorkoutCard programmePauseToday"><div class="runnerSectionHead"><span class="runnerCardIcon">${todayPictogram('recovery')}</span><div><small>TODAY'S RUNNING PLAN</small><h3>Programme paused</h3><p>${esc(label)}</p></div><span class="runnerStatus pause">Paused</span></div>${todayBulletList([p.programPauseOriginalType?`${p.programPauseOriginalType} was removed from today rather than moved elsewhere.`:'No running is prescribed today.','Missed training will not be stacked later.',resume?`Controlled re-entry begins from ${fmtDate(resume)}.`:null])}<button type="button" class="secondary full" data-go="plan">Review pause & impact</button></section>`}
  if(!p||p.type==='Rest')return`<section class="todayRunnerCard todayWorkoutCard recoveryDay">
    <div class="runnerSectionHead"><span class="runnerCardIcon">${todayPictogram('recovery')}</span><div><small>TODAY'S RUNNING PLAN</small><h3>Recovery day</h3></div><span class="runnerStatus">No run</span></div>
    ${todayBulletList(['No purposeful running session is scheduled.','Do not add catch-up mileage.','Use the day to absorb the previous training load.'])}
@@ -3124,12 +3287,24 @@ function todayCoachOtherRunsToday(p){
  return rows.filter(r=>!matched||r.id!==matched.id);
 }
 function consolidatedTodayCoachBriefing(p){
- const engine=coachEngine(),report=evidenceBasedCoach(engine),ast=report.athleteState,ready=readinessModel(),active=todayActiveInjury(),injuryDay=active.day,rehabSummary=todayRehabStatusSummary(active),todayRun=todayCoachRunForBriefing(p),postRun=Boolean(todayRun);
+ const engine=coachEngine(),report=evidenceBasedCoach(engine),ast=report.athleteState,ready=readinessModel(),active=todayActiveInjury(),injuryDay=active.day,rehabSummary=todayRehabStatusSummary(active),todayRun=todayCoachRunForBriefing(p),postRun=Boolean(todayRun),programmePause=currentProgrammePause(),scheduledPause=upcomingProgrammePauses().find(x=>programmePauseStatus(x)==='scheduled')||null;
  const evidence=Math.round(clamp(Number(report.evidenceCoverage)||0,0,100)),remaining=raceTimeRemaining(),pain=ready.pain,todayPain=todayInjuryPainDisplay(active,pain),trajectory=todayCoachTrajectoryInsight(engine);
  const readinessDetail=todayReadinessExplanation(ready),painValue=Number.isFinite(Number(todayPain.value))?`${Number(todayPain.value).toFixed(0)}/10`:'—',painText=todayPain.text;
- const modeTitle=injuryDay&&rehabSummary?rehabSummary.date:p&&p.type!=='Rest'?p.type:'Recovery',modeText=injuryDay&&rehabSummary?`Normal running estimate · ${rehabSummary.detail}`:p&&p.type!=='Rest'?`${Number(p.distance).toFixed(1)} km · ${p.purpose||'Complete as prescribed'}`:'No run scheduled · recovery is today’s training';
+ const modeTitle=programmePause?'Programme paused':injuryDay&&rehabSummary?rehabSummary.date:p&&p.type!=='Rest'?p.type:'Recovery',modeText=programmePause?`${programmePauseReasonLabel(programmePause.reason)} · ${fmtDate(programmePause.startDate)}–${fmtDate(programmePause.endDate)}`:injuryDay&&rehabSummary?`Normal running estimate · ${rehabSummary.detail}`:p&&p.type!=='Rest'?`${Number(p.distance).toFixed(1)} km · ${p.purpose||'Complete as prescribed'}`:'No run scheduled · recovery is today’s training';
  let priorityTitle,priorityBullets,insights=[];
- if(postRun){
+ if(programmePause){
+  const impact=programmePause.impactSnapshot,risk=programmePauseShortTermRisk(programmePause),resume=iso(new Date(dte(programmePause.endDate).getTime()+DAY)),remainingPause=Math.max(1,Math.round((dte(programmePause.endDate)-today())/DAY)+1),profile=programmePauseReentryProfile(programmePause);
+  if(postRun){
+   const painScore=Number(todayRun.pain),ill=programmePause.reason==='illness';
+   priorityTitle=Number.isFinite(painScore)&&painScore>=5?'Stop running and protect recovery':'Activity logged during the pause — do not add more';
+   priorityBullets=[`${Number(todayRun.distanceKm).toFixed(2)} km ${todayRun.type||'run'} was logged while the programme pause is active.`,`The pause remains active; this activity is treated as extra load and does not trigger catch-up training.`,ill?'If illness symptoms were worsened by the run, extend recovery rather than forcing the planned return date.':'Resume the programme early first if you want future running to become prescribed training again.'];
+   insights=[{label:'PAUSE LOAD DEVIATION',title:`${Number(todayRun.distanceKm).toFixed(2)} km added inside a no-training window`,detail:'The activity is retained as real training evidence, but the coach does not pretend the paused prescription was completed. The return sequence remains conservative.',status:'warn'},{label:'PAUSE IMPACT',title:impact?`${impact.impactLabel} projected race impact`:`${risk.label} short-term fitness risk`,detail:impact?`${Number(impact.deltaSec||0)<5?'Most of the planned interruption is still expected to be absorbed by remaining preparation time.':`The stored planning estimate is about +${fmtTime(Number(impact.deltaSec)||0)} to expected finish time.`} This is a planning heuristic, not a medical or physiological guarantee.`:risk.text,status:risk.cls},{label:'WHAT HAPPENS NEXT',title:`Pause remains active through ${fmtDate(programmePause.endDate)}`,detail:`Controlled re-entry still uses ${profile.sessions} guarded session${profile.sessions===1?'':'s'}. End or extend the pause explicitly rather than using an ad-hoc run to change the plan.`,status:'neutral'}];
+  }else{
+   priorityTitle=programmePause.reason==='illness'?'Recover fully — the programme is deliberately paused':'Protect continuity — the programme is deliberately paused';
+   priorityBullets=[`${programmePauseReasonLabel(programmePause.reason)} pause · ${remainingPause} day${remainingPause===1?'':'s'} remaining.`,`No missed workout will be stacked or chased later.`,`Controlled re-entry begins from ${fmtDate(resume)}${programmePause.reason==='illness'?'; extend the pause if you are not recovered.':'.'}`];
+   insights=[{label:'PAUSE IMPACT',title:impact?`${impact.impactLabel} projected race impact · ${Number(impact.pausedKm||impact.kmReduction||0).toFixed(1)} km in the pause window`:`${risk.label} short-term fitness risk`,detail:impact?`${Number(impact.deltaSec||0)<5?'The race-day effect is currently expected to be largely absorbed by the remaining preparation time.':`Expected programme finish-time effect is about +${fmtTime(Number(impact.deltaSec)||0)}.`} ${risk.text}`:risk.text,status:risk.cls},{label:'HOW THE PLAN IS PROTECTING YOU',title:`${profile.sessions} guarded re-entry session${profile.sessions===1?'':'s'} after the pause`,detail:'The app removes the unavailable sessions, does not move them into adjacent days, and temporarily reduces volume / hard running on return before restoring the normal phase structure.',status:'good'},{label:'WHAT TO DO NOW',title:programmePause.reason==='illness'?'Recovery is the training objective':'Do not compensate with hidden training',detail:programmePause.reason==='illness'?'Resume only when you are actually ready. If illness lasts longer than planned, extend the pause rather than forcing the re-entry date.':'If travel unexpectedly allows a run, keep it optional and easy unless you first end the pause and let the plan rebuild.',status:'neutral'}];
+  }
+ }else if(postRun){
   const plan=todayRun.planId?state.plan.find(x=>x.id===todayRun.planId):(p&&p.type!=='Rest'?p:null),details=workoutScoreDetails(todayRun,plan),score=Number(details?.score),painScore=Number(todayRun.pain);
   if(Number.isFinite(painScore)&&painScore>=5)priorityTitle='Stop here and prioritise recovery';
   else if(Number.isFinite(score)&&score>=90)priorityTitle='Bank a high-quality session — no extra work needed';
@@ -3160,6 +3335,10 @@ function consolidatedTodayCoachBriefing(p){
   priorityBullets=['No purposeful running session is scheduled today.','Do not add catch-up mileage.','Protect the next scheduled training exposure.'];
   insights=[todayCoachExecutionInsight(report),trajectory,todayCoachPreRunSuccessInsight(p,ready,report)];
  }
+ if(!programmePause&&scheduledPause){
+  const daysUntil=Math.max(0,Math.round((dte(scheduledPause.startDate)-today())/DAY)),impact=scheduledPause.impactSnapshot;
+  if(daysUntil<=3)insights.push({label:'UPCOMING INTERRUPTION',title:`${programmePauseReasonLabel(scheduledPause.reason)} pause ${daysUntil===0?'starts today':daysUntil===1?'starts tomorrow':`starts in ${daysUntil} days`}`,detail:`${fmtDate(scheduledPause.startDate)}–${fmtDate(scheduledPause.endDate)}. ${impact?`${Number(impact.pausedKm||0).toFixed(1)} km across ${impact.affectedSessions||0} planned session${impact.affectedSessions===1?'':'s'} is inside the pause window. `:''}Do not bank extra mileage beforehand; the plan already contains the protected return sequence.`,status:'neutral'});
+ }
  return`<section class="todayBriefingCard seriousBriefing runnerFullWidth ${postRun?'postRunBriefing':'preRunBriefing'}">
    <div class="briefingHeaderRow">
      <div class="briefingTitle">
@@ -3176,7 +3355,7 @@ function consolidatedTodayCoachBriefing(p){
    <div class="briefingCoachInsights">${insights.filter(Boolean).map(todayCoachInsightHtml).join('')}</div>
  </section>
  <div class="todayStatusGrid seriousStatusGrid">
-   <article class="todayStatusCard training"><h4>${injuryDay?'ACTIVE REHAB':'TODAY’S FOCUS'}</h4><div class="statusRing">${todayPictogram(injuryDay?'rehab':p&&p.type!=='Rest'?'training':'recovery')}</div><div class="statusCopy"><strong>${esc(modeTitle)}</strong><p>${esc(modeText)}</p></div></article>
+   <article class="todayStatusCard ${programmePause?'neutral':'training'}"><h4>${programmePause?'PROGRAMME STATUS':injuryDay?'ACTIVE REHAB':'TODAY’S FOCUS'}</h4><div class="statusRing">${todayPictogram(programmePause?'recovery':injuryDay?'rehab':p&&p.type!=='Rest'?'training':'recovery')}</div><div class="statusCopy"><strong>${esc(modeTitle)}</strong><p>${esc(modeText)}</p></div></article>
    <article class="todayStatusCard ${ready.label==='Normal'?'good':ready.label==='Restricted'?'caution':'neutral'}"><h4>READINESS</h4><div class="statusRing">${todayPictogram('readiness')}</div><div class="statusCopy"><strong>${esc(ready.label)}</strong><p>${esc(readinessDetail)}</p></div></article>
    <article class="todayStatusCard ${Number(todayPain.value)>=3?'caution':'good'}"><h4>PAIN / INJURY</h4><div class="statusRing">${todayPictogram('pain')}</div><div class="statusCopy"><strong>${painValue}</strong><p>${esc(painText)}</p></div></article>
  </div>
@@ -3305,12 +3484,14 @@ function planTimelineHtml(viewWeek=currentWeek()){
  const phaseStats=groups.map(g=>{const rows=state.plan.filter(p=>p.week>=g.start&&p.week<=g.end&&!['Rest','Race Day'].includes(p.type)),km=sum(rows.map(p=>Number(p.distance)||0)),duration=g.end-g.start+1,avgKm=km/Math.max(1,duration),qualityKm=sum(rows.filter(p=>qualityTypes.includes(p.type)).map(p=>Number(p.distance)||0)),qualityShare=km>0?qualityKm/km:0;return{...g,duration,avgKm,qualityShare}});
  const maxAvg=Math.max(1,...phaseStats.map(g=>g.avgKm));
  phaseStats.forEach(g=>{const demand=.68*(g.avgKm/maxAvg)+.32*Math.min(1,g.qualityShare/.30);g.demand=demand;g.tone=demand>=.82?'peak':demand>=.64?'high':demand>=.44?'moderate':'low'});
- const milestones=[futureLong?{label:'Next key long run',value:`${fmtDate(futureLong.date)} · ${futureLong.type} · ${Number(futureLong.distance).toFixed(1)} km`}:null,peakLong?{label:'Peak long run',value:`${fmtDate(peakLong.date)} · ${Number(peakLong.distance).toFixed(1)} km`}:null,taperStart?{label:'Taper begins',value:`Week ${taperStart.week} · ${fmtDate(taperStart.date)}`}:null,{label:'Race day',value:`${fmtDate(state.setup.raceDate)} · ${Number(state.setup.raceDistance).toFixed(1)} km`}].filter(Boolean);
+ const pauseMilestones=(state.programPauses||[]).filter(p=>p&&!p.cancelledAt&&!p.resumedAt&&p.endDate>=iso(today())).slice(0,3).map(p=>({label:programmePauseStatus(p)==='active'?'Active programme pause':'Scheduled pause',value:`${fmtDate(p.startDate)}–${fmtDate(p.endDate)} · ${programmePauseReasonLabel(p.reason)}`}));
+ const milestones=[...pauseMilestones,futureLong?{label:'Next key long run',value:`${fmtDate(futureLong.date)} · ${futureLong.type} · ${Number(futureLong.distance).toFixed(1)} km`}:null,peakLong?{label:'Peak long run',value:`${fmtDate(peakLong.date)} · ${Number(peakLong.distance).toFixed(1)} km`}:null,taperStart?{label:'Taper begins',value:`Week ${taperStart.week} · ${fmtDate(taperStart.date)}`}:null,{label:'Race day',value:`${fmtDate(state.setup.raceDate)} · ${Number(state.setup.raceDistance).toFixed(1)} km`}].filter(Boolean);
  return`<section class="planTimelineCard">
    <div class="phaseGraphWrap">
      <div class="phaseRail proportionalPhaseRail" role="img" aria-label="Programme phases sized by duration and coloured by planned training demand">
        ${phaseStats.map(g=>`<div class="phaseSegment demand-${g.tone} ${current>=g.start&&current<=g.end?'active':''} ${viewWeek>=g.start&&viewWeek<=g.end&&viewWeek!==current?'viewed':''}" style="flex:${g.duration} 1 0" title="${esc(g.name)} · ${g.duration} week${g.duration===1?'':'s'} · ${g.avgKm.toFixed(1)} km/week average"><div class="phaseVerticalLabel"><b>${esc(g.name)}</b><small>W${g.start}${g.end!==g.start?`–${g.end}`:''}</small></div></div>`).join('')}
      </div>
+     ${programmePauseTimelineBandsHtml()}
      <div class="currentWeekMarker" style="left:${programmePct}%" aria-label="Current programme position, week ${current}"><span>W${current}</span></div>
    </div>
    <div class="phaseDemandLegend"><span><i class="low"></i>Lower</span><span><i class="moderate"></i>Moderate</span><span><i class="high"></i>High</span><span><i class="peak"></i>Peak demand</span></div>
@@ -3327,7 +3508,7 @@ function planIntensityDistributionHtml(w){
 
 function renderPlan(){
  if(!state.weekView)state.weekView=currentWeek();state.weekView=clamp(state.weekView,1,weeks());const w=state.weekView,arr=state.plan.filter(p=>p.week===w);
- $('planProgrammeHeader').innerHTML=planProgrammeHeaderHtml();
+ $('planProgrammeHeader').innerHTML=planProgrammeHeaderHtml()+programmePausePanelHtml();bindProgrammePauseControls();
  $('weekHeader').innerHTML=planSelectedWeekHeaderHtml(w);
  const title=$('planWeekTitle');if(title)title.textContent=`Week ${w} schedule`;
  $('planCards').innerHTML=arr.map(workoutHtml).join('')||'<div class="planEmpty"><b>No workouts generated</b><p>This week has no plan entries.</p></div>';
