@@ -1,3 +1,16 @@
+AI Running Coach v15.7.23 · build 51023
+
+Weekly review consistency
+- Completed Plan reviews use the exact final factor carried into the following week, including missed-session adherence.
+- Historical and future reviews name the selected and destination weeks explicitly. Closed reviews show saved prescriptions without applying the change twice.
+- Plan and Progress expose the reviewed week, distance completion, linked sessions, accepted run contributions, missed sessions, limits and resulting learned factor.
+- Weekly mileage percentages can exceed 100%; progress bars remain bounded visually.
+- Training weeks use local calendar dates across daylight-saving changes. Pre-programme and future records cannot enter weekly learning buckets.
+- Plan engine revision 5 rebuilds future uncompleted prescriptions on update. Storage schema and historical completed runs are preserved.
+- Saved return-from-pause progress is preserved during rebuilding; completed re-entry sequences do not restart and partially completed sequences continue from their next step.
+- Per-run evidence names its training week and run-date cutoff, with the final weekly review shown separately in Plan. Disabled adaptation also holds the run-evidence factor.
+- Run-level weights, learning rates and missed-session thresholds are unchanged.
+
 AI Running Coach v14.4.7 · build 40407
 
 Targeted shoe-purchase spacing

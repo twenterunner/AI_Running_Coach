@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '15.7.22';
-  const BUILD = 51022;
+  const VERSION = '15.7.23';
+  const BUILD = 51023;
   const SCHEMA = 10400;
   const PRIMARY_STORAGE_KEY = 'arc_v10400_web';
   const MIRROR_STORAGE_KEY = 'arc_v10400_mirror';
@@ -305,13 +305,16 @@
 let preview=null;
 (()=>{'use strict';
 const CORE=window.ARC_CORE;if(!CORE)throw new Error('Core utilities failed to load.');
-const DAY=86400050, $=id=>document.getElementById(id), clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const DAY=86400000, $=id=>document.getElementById(id), clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 let MODEL_DATE_OVERRIDE=null;
 function today(){return MODEL_DATE_OVERRIDE?dte(MODEL_DATE_OVERRIDE):dte(iso(new Date()))}
 function withModelDate(date,fn){const previous=MODEL_DATE_OVERRIDE;MODEL_DATE_OVERRIDE=iso(dte(date));try{return fn()}finally{MODEL_DATE_OVERRIDE=previous}}
 const iso=d=>{let x=new Date(d),y=x.getFullYear(),m=String(x.getMonth()+1).padStart(2,'0'),q=String(x.getDate()).padStart(2,'0');return `${y}-${m}-${q}`},
 dte=s=>{let [y,m,d]=String(s).split('-').map(Number);return new Date(y,m-1,d,12,0,0,0)},
 fmtDate=s=>dte(s).toLocaleDateString(undefined,{weekday:'short',day:'numeric',month:'short'});
+// Training weeks follow local calendar dates, including weeks crossing a DST change.
+function calendarDayNumber(value){const d=value instanceof Date?value:dte(value);return Date.UTC(d.getFullYear(),d.getMonth(),d.getDate())/DAY}
+function addCalendarDays(value,days){const d=value instanceof Date?new Date(value):dte(value);d.setDate(d.getDate()+days);return d}
 const sum=a=>a.reduce((x,y)=>x+(Number.isFinite(y)?y:0),0), avg=a=>{let v=a.filter(Number.isFinite);return v.length?sum(v)/v.length:null};
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const dec=(v,n=2)=>Number.isFinite(v)?v.toFixed(n):'—';
@@ -339,7 +342,7 @@ const diagnostics=[];
 function recordDiagnostic(source,error){const message=error?.stack||error?.message||String(error);diagnostics.unshift({time:new Date().toLocaleString(),source,message});if(diagnostics.length>20)diagnostics.length=20;console.error(source,error);renderDiagnostics();}
 function renderDiagnostics(){const box=$('diagnosticsContent');if(!box)return;box.innerHTML=diagnostics.length?diagnostics.map(x=>`<div class="diagnosticItem"><b>${esc(x.time)} · ${esc(x.source)}</b><pre>${esc(x.message)}</pre></div>`).join(''):'<p class="muted">No JavaScript errors have been recorded in this session.</p>';}
 window.addEventListener('error',e=>recordDiagnostic('Window error',e.error||e.message));window.addEventListener('unhandledrejection',e=>recordDiagnostic('Unhandled promise rejection',e.reason));
-const PLAN_ENGINE_VERSION=4;
+const PLAN_ENGINE_VERSION=5;
 const FIVE_DAY_TEMPLATE=[['Monday',false,'Easy'],['Tuesday',true,'Intervals'],['Wednesday',true,'Easy'],['Thursday',true,'Tempo'],['Friday',false,'Easy'],['Saturday',true,'Easy'],['Sunday',true,'Long run']];
 const RACE_PROFILES=[
  {key:'5k',label:'5K',maxDistance:7.5,currentWeekly:18,peakLong:12,maxWeekly:32,growth:.07,taperDays:7,days:[['Monday',false,'Easy'],['Tuesday',true,'Intervals'],['Wednesday',true,'Easy'],['Thursday',false,'Easy'],['Friday',false,'Easy'],['Saturday',true,'Tempo'],['Sunday',true,'Long run']]},
@@ -1029,7 +1032,7 @@ function loadAcceptedContribution(decision){
  return decision.finalSignal*decision.confidenceWeight*rate;
 }
 function weeklyPaceEvidence(w=trainingWeekForDate(iso(today())),asOf=iso(today())){
- const runs=(state.runs||[]).filter(r=>trainingWeekForDate(r.date)===w&&r.date<=asOf&&r.source!=='assessment').sort((a,b)=>a.date.localeCompare(b.date));
+ const runs=trainingWeekRuns(w,asOf,false);
  const rows=runs.map(r=>{const p=r.planId?state.plan.find(x=>x.id===r.planId):null,d=decisionSignalForRun(r,p),contribution=paceAcceptedContribution(d);return{run:r,decision:d,contribution}});
  const bucket=sum(rows.map(x=>x.contribution));
  return{week:w,rows,bucket,positive:rows.filter(x=>x.contribution>.00005).length,negative:rows.filter(x=>x.contribution<-.00005).length};
@@ -1045,14 +1048,14 @@ function pathwayEvidenceTrace(run,pathway){
    const rawProjected=clamp(Number(paceEvidence.rawIndex)/100,state.setup.minFactor,state.setup.maxFactor),committedProjection=Number(paceEvidence.adjustment)||applied;
    const projected=rawProjected;
    const thresholdBlocked=Math.abs(projected-applied)>=.00005&&Math.abs(committedProjection-applied)<.0005;
-   return{pathway:'pace',rawSignal:Number.isFinite(d.rawIntegratedSignal)?d.rawIntegratedSignal:d.finalSignal,acceptedSignal:d.finalSignal,confidenceWeight:d.confidenceWeight,learningRate:PATHWAY_LEARNING_RATE.pace,acceptedContribution:accepted,weeklyBucket:bucket,analysedCount:analysedRows.length,analysedCount:analysedRows.length,weeklyRows:acceptedRows.map(x=>({date:x.run.date,type:x.run.type,contribution:x.contribution})),applied,rawProjected,projected,committedProjection,thresholdBlocked,safeguard:d.safeguardNote||'No additional safeguard changed the integrated signal.',status:thresholdBlocked?'Accepted evidence is accumulating; the projected next-review value shows the exact candidate before the Pace & Power stability threshold is applied.':Math.abs(projected-applied)>=.0005?'Projected change pending weekly review.':'No accepted factor change from current evidence.'};
+   return{pathway:'pace',week:w,asOf:run.date,rawSignal:Number.isFinite(d.rawIntegratedSignal)?d.rawIntegratedSignal:d.finalSignal,acceptedSignal:d.finalSignal,confidenceWeight:d.confidenceWeight,learningRate:PATHWAY_LEARNING_RATE.pace,acceptedContribution:accepted,weeklyBucket:bucket,analysedCount:analysedRows.length,analysedCount:analysedRows.length,weeklyRows:acceptedRows.map(x=>({date:x.run.date,type:x.run.type,contribution:x.contribution})),applied,rawProjected,projected,committedProjection,thresholdBlocked,safeguard:d.safeguardNote||'No additional safeguard changed the integrated signal.',status:thresholdBlocked?'Accepted evidence is accumulating; the projected next-review value shows the exact candidate before the Pace & Power stability threshold is applied.':Math.abs(projected-applied)>=.0005?'Projected change pending weekly review.':'No accepted factor change from current evidence.'};
  }
  const d=loadDecisionSignalForRun(run,plan),accepted=loadAcceptedContribution(d),weekly=weeklyLoadEvidence(w,false,run.date);
  const analysedRows=weekly.decisions;
  const acceptedRows=analysedRows.filter(x=>Math.abs(x.contribution)>=.00005);
  const bucket=sum(acceptedRows.map(x=>x.contribution));
- const applied=adaptiveFactorDetails(w).cumulativeFactor,rawProjected=clamp(applied+bucket,state.setup.minFactor,state.setup.maxFactor);
- return{pathway:'load',rawSignal:Number.isFinite(d.rawIntegratedSignal)?d.rawIntegratedSignal:d.finalSignal,acceptedSignal:d.finalSignal,confidenceWeight:d.confidenceWeight,learningRate:d.finalSignal>=0?PATHWAY_LEARNING_RATE.loadPositive:PATHWAY_LEARNING_RATE.loadNegative,acceptedContribution:accepted,weeklyBucket:bucket,weeklyRows:acceptedRows.map(x=>({date:x.run.date,type:x.run.type,contribution:x.contribution})),applied,rawProjected,projected:rawProjected,thresholdBlocked:false,safeguard:d.safeguardNote||'No additional safeguard changed the integrated signal.',status:Math.abs(rawProjected-applied)>=.0005?'Projected change pending weekly review.':'No accepted factor change from current evidence.'};
+ const applied=adaptiveFactorDetails(w).cumulativeFactor,weeklyDelta=state.setup.adaptive?weekly.runDelta:0,rawProjected=clamp(applied*(1+weeklyDelta),state.setup.minFactor,state.setup.maxFactor);
+ return{pathway:'load',week:w,asOf:run.date,rawSignal:Number.isFinite(d.rawIntegratedSignal)?d.rawIntegratedSignal:d.finalSignal,acceptedSignal:d.finalSignal,confidenceWeight:d.confidenceWeight,learningRate:d.finalSignal>=0?PATHWAY_LEARNING_RATE.loadPositive:PATHWAY_LEARNING_RATE.loadNegative,acceptedContribution:accepted,weeklyBucket:bucket,weeklyRows:acceptedRows.map(x=>({date:x.run.date,type:x.run.type,contribution:x.contribution})),applied,rawProjected,projected:rawProjected,thresholdBlocked:false,safeguard:d.safeguardNote||'No additional safeguard changed the integrated signal.',status:Math.abs(rawProjected-applied)>=.0005?'Projected change pending weekly review.':'No accepted factor change from current evidence.'};
 }
 function decisionSignalForRun(run,plan=run?.planId?state.plan.find(p=>p.id===run.planId):null){
  const details=workoutScoreDetails(run,plan),score=details?.score??null,family=workoutFamily(plan?.type||run.type),type=plan?.type||run.type;
@@ -1202,17 +1205,17 @@ function trainingEvidence(asOf=iso(today())){
 function trainingWeekForDate(date=iso(today())){
  const d=dte(date);
  if(!(d instanceof Date)||Number.isNaN(d.getTime()))return currentWeek();
- return clamp(Math.floor((d-dte(state.setup.planStart))/(7*DAY))+1,1,weeks());
+ return clamp(Math.floor((calendarDayNumber(d)-calendarDayNumber(state.setup.planStart))/7)+1,1,weeks());
 }
 function reviewWeekForDate(date=iso(today())){
  const w=Math.max(1,Math.min(weeks(),trainingWeekForDate(date)));
  return w;
 }
 function pacePowerCommittedFactor(date=iso(today())){
- const w=reviewWeekForDate(date);
+ const w=Math.min(reviewWeekForDate(date),currentWeek());
  if(w<=1)return 1;
- const priorWeekEnd=new Date(weekStart(w).getTime()-DAY);
- return trainingEvidence(iso(priorWeekEnd)).adjustment;
+ const priorWeekEnd=addCalendarDays(weekStart(w),-1),cutoff=iso(priorWeekEnd),now=iso(today());
+ return trainingEvidence(cutoff<now?cutoff:now).adjustment;
 }
 function pacePowerProvisionalFactor(date=iso(today())){
  const evidence=trainingEvidence(date);
@@ -1226,8 +1229,17 @@ function pacePowerReviewState(date=iso(today())){
 function baselineOn(date){let valid=state.assessments.filter(a=>a.valid&&a.date<=date).sort((a,b)=>a.date.localeCompare(b.date)),a=valid.at(-1),base=a?{pace:a.time/a.distance,hr:a.thresholdHr||state.setup.thresholdHr,cp:a.criticalPower||state.setup.criticalPower}:{pace:state.setup.testTime/state.setup.testDistance,hr:state.setup.thresholdHr,cp:state.setup.criticalPower},ev=trainingEvidence(date),applied=pacePowerCommittedFactor(date);return{pace:base.pace/applied,hr:base.hr,cp:base.cp*applied,evidence:{...ev,appliedAdjustment:applied,provisionalAdjustment:ev.adjustment}}}
 const zoneDef={Recovery:[1.42,.78,.72,'RPE 2–3 · relaxed and restorative'],Easy:[1.30,.84,.78,'RPE 3–4 · conversational aerobic running'],Steady:[1.20,.89,.84,'RPE 5 · controlled moderate work'],Marathon:[1.15,.92,.88,'RPE 5–6 · race-specific control'],Tempo:[1.08,1,.95,'RPE 7–8 · strong but sustainable'],Intervals:[.98,1.04,1.05,'RPE 8–9 · quality repetitions'],Repetition:[.92,1.08,1.15,'RPE 9 · short fast work'],['Fitness assessment']:[1,1,1,'Even maximal benchmark'],['Race Day']:[1.15,.92,.88,'Controlled race execution']};
 function zone(type,date){let b=baselineOn(date),z=zoneDef[baseType(type)]||zoneDef.Easy;return{pace:b.pace*z[0],hr:Math.round(b.hr*z[1]),power:Math.round(b.cp*z[2]),guide:z[3],fitnessIndex:b.evidence?.index||100}}
-function weeks(){return Math.max(1,Math.floor((dte(state.setup.raceDate)-dte(state.setup.planStart))/(7*DAY))+1)}function weekStart(w){return new Date(dte(state.setup.planStart).getTime()+(w-1)*7*DAY)}
-function currentWeek(){return clamp(Math.floor((today()-dte(state.setup.planStart))/(7*DAY))+1,1,weeks())}
+function weeks(){return Math.max(1,Math.floor((calendarDayNumber(state.setup.raceDate)-calendarDayNumber(state.setup.planStart))/7)+1)}
+function weekStart(w){return addCalendarDays(state.setup.planStart,(w-1)*7)}
+function weekEnd(w){return addCalendarDays(weekStart(w),7)}
+function currentWeek(){return clamp(Math.floor((calendarDayNumber(today())-calendarDayNumber(state.setup.planStart))/7)+1,1,weeks())}
+function trainingWeekRuns(w,asOf=iso(today()),includeAssessments=true){
+ const week=Number(w),now=iso(today()),requested=asOf==null?now:String(asOf);
+ if(!Number.isInteger(week)||week<1||week>weeks()||!CORE.isIsoDate(requested))return[];
+ const cutoff=requested<now?requested:now,start=iso(weekStart(week)),end=iso(weekEnd(week));
+ // Do not use the clamped UI week mapping for evidence: earlier/later runs are outside this week.
+ return completedRuns(cutoff).filter(r=>r.date>=start&&r.date<end&&(includeAssessments||r.source!=='assessment')).slice().sort((a,b)=>a.date.localeCompare(b.date));
+}
 function raceTimeRemaining(){const days=Math.max(0,Math.ceil((dte(state.setup.raceDate)-today())/DAY));return{days,weeks:Math.ceil(days/7),label:days<14?`${days} ${days===1?'day':'days'}`:`${Math.ceil(days/7)} weeks`}}
 let completedRunsCache={revision:null,values:new Map()};
 function completedRuns(asOf=iso(today())){
@@ -1253,7 +1265,7 @@ function typeMetricSummary(runs){return metricRunTypes.map(type=>{
  let group=runs.filter(r=>r.type===type),eff=group.map(r=>metrics(r).efficiencyJ).filter(Number.isFinite),drift=group.map(r=>r.powerDrift).filter(Number.isFinite);
  return{type,count:group.length,effAvg:avg(eff),effBest:eff.length?Math.max(...eff):null,driftAvg:avg(drift),driftBest:drift.length?Math.min(...drift):null};
 }).filter(x=>x.effAvg!==null||x.driftAvg!==null)}
-function weekData(w){let st=weekStart(w),en=new Date(st.getTime()+7*DAY),p=state.plan.filter(x=>x.week===w&&x.type!=='Rest'),r=completedRuns().filter(x=>dte(x.date)>=st&&dte(x.date)<en);return{planned:sum(p.map(x=>x.distance)),actual:sum(r.map(x=>x.distanceKm)),runs:r,plan:p}}
+function weekData(w,asOf=iso(today())){let p=state.plan.filter(x=>x.week===w&&x.type!=='Rest'),r=trainingWeekRuns(w,asOf);return{planned:sum(p.map(x=>x.distance)),actual:sum(r.map(x=>x.distanceKm)),runs:r,plan:p}}
 
 let hrvHistoryCache={revision:null,day:null,value:null};
 function hrvHistory(excludeRunId=null){
@@ -1321,12 +1333,12 @@ function painAdjustment(pain=recoveryPainState()){
  return{adjustment:0,detail:`Recent maximum pain ${max}/10 adds no load reduction.`};
 }
 function weeklyLoadEvidence(w,finalised=true,asOf=null){
- const allRuns=(state.runs||[]).filter(r=>trainingWeekForDate(r.date)===w&&r.source!=='assessment'&&(!asOf||r.date<=asOf)).sort((a,b)=>a.date.localeCompare(b.date));
- const wd=weekData(w),decisions=allRuns.map(r=>{const decision=loadDecisionSignalForRun(r,r.planId?state.plan.find(p=>p.id===r.planId):null);return{run:r,decision,contribution:loadAcceptedContribution(decision)}});
+ const allRuns=trainingWeekRuns(w,asOf,false),now=iso(today()),cutoff=asOf&&asOf<now?asOf:now;
+ const wd=weekData(w,asOf),decisions=allRuns.map(r=>{const decision=loadDecisionSignalForRun(r,r.planId?state.plan.find(p=>p.id===r.planId):null);return{run:r,decision,contribution:loadAcceptedContribution(decision)}});
  const usable=decisions.filter(x=>Number.isFinite(x.decision.finalSignal)&&x.decision.confidenceWeight>0);
  const plannedSessions=(state.plan||[]).filter(p=>p.week===w&&!['Rest','Race Day'].includes(p.type));
  const linkedIds=new Set(allRuns.map(r=>r.planId).filter(Boolean));
- const missedSessions=plannedSessions.filter(p=>!linkedIds.has(p.id)&&(!asOf||p.date<=asOf));
+ const missedSessions=plannedSessions.filter(p=>!linkedIds.has(p.id)&&p.date<=cutoff);
  const missedKm=sum(missedSessions.map(p=>Number(p.distance)||0)),plannedKm=sum(plannedSessions.map(p=>Number(p.distance)||0)),missedRatio=plannedKm>0?missedKm/plannedKm:0;
  let completionDelta=0,completionDetail='Week-level adherence is evaluated only when the week closes. Shortened completed runs are already handled by their run-level completion signal and are not penalised twice.';
  if(finalised&&plannedKm>0){
@@ -1339,7 +1351,7 @@ function weeklyLoadEvidence(w,finalised=true,asOf=null){
 }
 function adaptiveFactorDetails(w){
  if(!state.setup.adaptive||w<=1)return{factor:1,rawFactor:1,baseFactor:1,cumulativeFactor:1,weeklyLearningDelta:0,temporaryAdjustment:0,items:[{name:'Baseline',adjustment:0,detail:w<=1?'No previous training week is available.':'Adaptive planning is disabled.'}],previousWeek:w-1,plannedKm:null,completedKm:null,status:w<=1?'baseline':'disabled'};
- const previousWeek=w-1,previousEnd=new Date(weekStart(previousWeek).getTime()+7*DAY);
+ const previousWeek=w-1,previousEnd=weekEnd(previousWeek);
  if(previousEnd>today()){const prior=w>1?adaptiveFactorDetails(w-1).cumulativeFactor:1;return{factor:prior,rawFactor:prior,baseFactor:prior,cumulativeFactor:prior,weeklyLearningDelta:0,temporaryAdjustment:0,items:[{name:'Pending evidence',adjustment:0,detail:`Week ${previousWeek} is not complete. Distance & Load remains ${prior.toFixed(3)} until the weekly review.`}],previousWeek,plannedKm:null,completedKm:null,status:'pending'};}
  const review=weeklyLoadEvidence(previousWeek,true),previousCumulative=w>1?adaptiveFactorDetails(w-1).cumulativeFactor:1,weeklyLearningDelta=review.learningDelta;
  const cumulativeFactor=clamp(previousCumulative*(1+weeklyLearningDelta),state.setup.minFactor,state.setup.maxFactor);
@@ -1354,8 +1366,8 @@ function pathwayFactorHistory(asOfWeek=currentWeek()){
  const endWeek=Math.max(1,Math.min(weeks(),Number(asOfWeek)||1));
  const rows=[];
  for(let w=1;w<=endWeek;w++){
-  const endDate=new Date(Math.min(today().getTime(),new Date(weekStart(w).getTime()+7*DAY-1).getTime()));
-  const pace=trainingEvidence(iso(endDate)).adjustment;
+  const endDate=new Date(Math.min(today().getTime(),addCalendarDays(weekEnd(w),-1).getTime()));
+  const pace=pacePowerCommittedFactor(iso(weekStart(w)));
   const load=adaptiveFactorDetails(w).cumulativeFactor;
   rows.push({week:w,date:iso(endDate),pace,load});
  }
@@ -1392,16 +1404,17 @@ function pathwayHistorySvg(history){
 
 function provisionalWeeklyAdjustment(w=currentWeek()){
  const current=Math.max(1,Math.min(weeks(),w)),review=weeklyLoadEvidence(current,false),baseFactor=adaptiveFactorDetails(current).cumulativeFactor;
- const cumulativeFactor=clamp(baseFactor*(1+review.runDelta),state.setup.minFactor,state.setup.maxFactor);
+ const weeklyLearningDelta=state.setup.adaptive?review.runDelta:0;
+ const cumulativeFactor=clamp(baseFactor*(1+weeklyLearningDelta),state.setup.minFactor,state.setup.maxFactor);
  const hrv=hrvModel(),painAdj=painAdjustment(),temporaryAdjustment=(hrv.ready?hrv.factor-1:0)+painAdj.adjustment,rawFactor=cumulativeFactor*(1+temporaryAdjustment),factor=clamp(rawFactor,state.setup.minFactor,state.setup.maxFactor);
  const items=[...review.items,{name:'Readiness overlay',adjustment:temporaryAdjustment,detail:`Temporary only and not learned: ${hrv.detail} ${painAdj.detail}`}];
- return{factor,rawFactor,baseFactor,cumulativeFactor,weeklyLearningDelta:review.runDelta,temporaryAdjustment,items,status:'provisional',week:current,loadReview:review};
+ return{factor,rawFactor,baseFactor,cumulativeFactor,weeklyLearningDelta,temporaryAdjustment,items,status:state.setup.adaptive?'provisional':'disabled',week:current,loadReview:review};
 }
 function athleteState(w=currentWeek()){
  const current=Math.max(1,Math.min(weeks(),w)),next=Math.min(weeks(),current+1),ev=trainingEvidence(),applied=adaptiveFactorDetails(current),nextAfd=adaptiveFactorDetails(next),preview=provisionalWeeklyAdjustment(current),pain=recoveryPainState(),hrv=hrvModel(),pathways=pathwayFactorSummary(current);
  const fitnessDelta=ev.index-100,fitnessTrend=fitnessDelta>.5?'Improving':fitnessDelta<-.5?'Declining':'Stable';
  const wd=weekData(current),completion=wd.planned>0?wd.actual/wd.planned:null;
- const currentWeekEnd=new Date(weekStart(current).getTime()+7*DAY),weekComplete=currentWeekEnd<=today();
+ const currentWeekEnd=weekEnd(current),weekComplete=currentWeekEnd<=today();
  let readiness='Normal';
  if((pain.max??0)>=5||hrv.factor<=.94)readiness='Restricted';else if((pain.max??0)>=3||hrv.factor<1)readiness='Reduced';
  let tolerance=weekComplete?'Normal':'In progress';
@@ -1409,7 +1422,7 @@ function athleteState(w=currentWeek()){
  const adjustment=applied.cumulativeFactor,isPending=nextAfd.status==='pending',direction=adjustment<.995?'Reduce':adjustment>1.005?'Increase':'Maintain',pct=Math.round(Math.abs(adjustment-1)*100),reasons=[];
  (applied.items||[]).forEach(i=>{if(Math.abs(Number(i.adjustment)||0)>.0001)reasons.push(`${i.name.toLowerCase()} ${i.adjustment>0?'+':''}${Math.round(i.adjustment*100)}%`)});
  if(!reasons.length)reasons.push(current<=1?'baseline factor for the opening week':'all finalised inputs were neutral');
- const nextStart=weekStart(next),reviewDate=iso(new Date(nextStart.getTime()-DAY));
+ const nextStart=weekStart(next),reviewDate=iso(addCalendarDays(nextStart,-1));
  return{currentWeek:current,nextWeek:next,pathways,fitnessTrend,fitnessIndex:ev.index,fitnessDelta,evidenceConfidence:ev.confidence,fitnessEvidence:ev,readiness,tolerance,completion,weekComplete,adjustment,direction,pct,reasons,applied,nextAfd,preview,isPending,pain,hrv,reviewDate,nextStart:iso(nextStart)};
 }
 function validateWorkout(workout){
@@ -1514,15 +1527,32 @@ function programmePauseReentryItem(p,pause,index,total){
  const purpose=hold?`Controlled return after ${reason.toLowerCase()}; rebuild routine before restoring ${originalType.toLowerCase()}.`:`Return from ${reason.toLowerCase()} with a deliberately reduced ${originalType.toLowerCase()} exposure.`;
  return{...p,id:`${p.date}-${type}`,type,distance,zone:z,...detail,pauseReentry:true,pauseReentryStep:step,pauseReentryTotal:total,pauseReentryFactor:factor,pauseReentryReason:pause.reason,pauseReentryFrom:originalType,pauseReentryOriginalDistance:rawKm,capacityLimited:true,capacityCeiling:Math.max(distance,Number(p.capacityCeiling)||0),purpose,whyThis:`This is re-entry session ${step} of ${total} after a ${programmePauseDays(pause)}-day programme pause.`,whyAmount:`The original ${rawKm.toFixed(1)} km prescription is limited to about ${Math.round(factor*100)}% (${distance.toFixed(1)} km) so fitness can be rebuilt without compensatory overload.`,coach:`Do not make up the paused mileage. ${hold?`The original ${originalType} stimulus is intentionally deferred; keep this run easy.`:'Use the normal intensity guidance but stop if recovery is not as expected.'}`,skipImpact:'If this re-entry session is not tolerated, extend recovery rather than advancing the next session.'};
 }
+function programmePauseReentryBelongsTo(p,pause,nextPauseStart=null){
+ if(!p?.pauseReentry||p.date<=pause.endDate||(nextPauseStart&&p.date>=nextPauseStart))return false;
+ if(p.pauseReentryPauseId)return p.pauseReentryPauseId===pause.id;
+ // Older saved plans identify re-entry by reason; the pause's date window disambiguates that history.
+ return p.pauseReentryReason===pause.reason;
+}
 function applyProgrammePausesToPlan(plan,pauses=(state.programPauses||[]),options={}){
  const nowIso=options.nowIso||iso(today()),rows=(plan||[]).map(p=>({...p,zone:p.zone?{...p.zone}:p.zone})),valid=(pauses||[]).filter(p=>p&&!p.cancelledAt&&!p.resumedAt&&CORE.isIsoDate(p.startDate)&&CORE.isIsoDate(p.endDate)).sort((a,b)=>a.startDate.localeCompare(b.startDate));
- for(const pause of valid){
+ for(let pauseIndex=0;pauseIndex<valid.length;pauseIndex++){
+  const pause=valid[pauseIndex],nextPauseStart=valid[pauseIndex+1]?.startDate||null;
   for(let i=0;i<rows.length;i++){
    const p=rows[i];if(p.date<nowIso||p.date<pause.startDate||p.date>pause.endDate||p.type==='Race Day'||programmePauseHasEvidence(p))continue;
    if(p.type!=='Rest')rows[i]=programmePauseRestItem(p,pause);else rows[i]={...p,programPauseId:pause.id,programPauseReason:pause.reason,programPauseStart:pause.startDate,programPauseEnd:pause.endDate,purpose:`Programme paused · ${programmePauseReasonLabel(pause.reason)}`,coach:'No catch-up training is required on this scheduled rest day.'};
   }
-  const profile=programmePauseReentryProfile(pause),eligible=rows.filter(p=>p.date>pause.endDate&&p.date>=nowIso&&!['Rest','Race Day'].includes(p.type)&&!p.programPauseId&&!programmePauseHasEvidence(p)).sort((a,b)=>a.date.localeCompare(b.date)).slice(0,profile.sessions);
-  eligible.forEach((p,index)=>{const pos=rows.findIndex(x=>x===p);if(pos>=0)rows[pos]=programmePauseReentryItem(p,pause,index,profile.sessions)});
+  const profile=programmePauseReentryProfile(pause),completedSteps=rows.reduce((latest,p)=>{
+   if(!(p.date<nowIso||programmePauseHasEvidence(p))||!programmePauseReentryBelongsTo(p,pause,nextPauseStart))return latest;
+   const step=Number(p.pauseReentryStep);
+   return Number.isInteger(step)&&step>0?Math.max(latest,Math.min(step,profile.sessions)):latest;
+  },0);
+  const eligible=rows.filter(p=>p.date>pause.endDate&&(!nextPauseStart||p.date<nextPauseStart)&&p.date>=nowIso&&!['Rest','Race Day'].includes(p.type)&&!p.programPauseId&&!programmePauseHasEvidence(p)).sort((a,b)=>a.date.localeCompare(b.date)).slice(0,profile.sessions-completedSteps);
+  eligible.forEach((p,index)=>{
+   const pos=rows.findIndex(x=>x===p);if(pos<0)return;
+   // Regeneration may receive an already adapted future row: always scale its original prescription once.
+   const original=p.pauseReentry?{...p,type:p.pauseReentryFrom||p.type,distance:Number(p.pauseReentryOriginalDistance)>0?Number(p.pauseReentryOriginalDistance):p.distance}:p;
+   rows[pos]={...programmePauseReentryItem(original,pause,completedSteps+index,profile.sessions),pauseReentryPauseId:pause.id};
+  });
  }
  return rows;
 }
@@ -1627,7 +1657,7 @@ function buildPlan(){
 
    let weekDates=[];
    for(let offset=0;offset<7;offset++){
-     let dateObj=new Date(weekStart(w).getTime()+offset*DAY),date=iso(dateObj);
+     let dateObj=addCalendarDays(weekStart(w),offset),date=iso(dateObj);
      if(dte(date)>dte(state.setup.raceDate))continue;
      let dayName=dateObj.toLocaleDateString('en-US',{weekday:'long'});
      let cfg=state.days.find(x=>x[0]===dayName)||[dayName,false,'Easy'];
@@ -2502,8 +2532,10 @@ function progressAdaptationHomeHtml(){
  const status=(delta)=>delta>.0005?{label:'Improving',arrow:'↑',cls:'up'}:delta<-.0005?{label:'More conservative',arrow:'↓',cls:'down'}:{label:'Holding',arrow:'→',cls:'flat'};
  const ps=status(paceProjected-paceReview.applied),ls=status(loadProjected-Number(loadApplied.cumulativeFactor||1));
  const hist=ast.pathways.history||[],paceHist=hist.map(x=>Number(x.paceFactor??x.pace)).filter(Number.isFinite),loadHist=hist.map(x=>Number(x.loadFactor??x.load)).filter(Number.isFinite);
- const card=(kind,title,stateObj,applied,weekDelta,projected,sinceStart,spark,rows,desc)=>`<article class="adaptationVisualCard ${stateObj.cls} uiLevel2"><div class="canonicalPathHead"><div class="pathTitle">${uiIcon(kind)}<div><small>${title}</small><h4>${stateObj.arrow} ${stateObj.label}</h4></div></div><strong>${applied.toFixed(3)}</strong></div><div class="pathSpark">${miniSparkline(spark)}</div><div class="canonicalPathMetrics compact"><div><small>This week</small><b>${signedFactorDelta(weekDelta)}</b></div><div><small>Projected</small><b>${projected.toFixed(3)}</b></div><div><small>Since start</small><b>${signedFactorDelta(sinceStart)}</b></div></div><details><summary>Evidence</summary><p class="muted compact">${desc}</p>${rows||'<p class="muted compact">No non-zero accepted contribution this week.</p>'}</details></article>`;
- return`<section class="canonicalAdaptationHome uiLevel1"><div class="canonicalAdaptationHead"><div><small>ADAPTATION</small><h3>Learned training calibration</h3></div><span>Week ${w}</span></div><div class="canonicalPathwayGrid">${card('pace','PACE & POWER',ps,paceReview.applied,paceProjected-paceReview.applied,paceProjected,ast.pathways.pace.sinceStart,paceHist,paceRows,'Capability evidence from target execution, comparable physiology and personal response.')}${card('load','DISTANCE & LOAD',ls,Number(loadApplied.cumulativeFactor||1),loadProjected-Number(loadApplied.cumulativeFactor||1),loadProjected,ast.pathways.load.sinceStart,loadHist,loadRows,'Tolerance evidence from completed exposure, load response, pain and personal history.')}</div><details class="canonicalHistory"><summary>Full pathway history</summary>${pathwayHistorySvg(ast.pathways.history)}<p class="muted compact">Readiness is temporary recovery context and does not alter learned capability.</p></details></section>`;
+ const appliedEvidence=`<h5>Factor applied in Week ${w}</h5>${loadReviewBreakdownHtml(w-1,Number(loadApplied.baseFactor||1),Number(loadApplied.cumulativeFactor||1),loadApplied.loadReview,true)}`;
+ const projectedLabel=w<weeks()?`Projected Week ${w+1}`:'Projected final result';
+ const card=(kind,title,stateObj,applied,weekDelta,projected,sinceStart,spark,rows,desc,priorEvidence='')=>`<article class="adaptationVisualCard ${stateObj.cls} uiLevel2"><div class="canonicalPathHead"><div class="pathTitle">${uiIcon(kind)}<div><small>${title}</small><h4>${stateObj.arrow} ${stateObj.label}</h4></div></div><strong>${applied.toFixed(3)}</strong></div><p class="muted compact">Applied in Week ${w}</p><div class="pathSpark">${miniSparkline(spark)}</div><div class="canonicalPathMetrics compact"><div><small>Week ${w} change</small><b>${signedFactorDelta(weekDelta)}</b></div><div><small>${projectedLabel}</small><b>${projected.toFixed(3)}</b></div><div><small>Since start</small><b>${signedFactorDelta(sinceStart)}</b></div></div><details><summary>Evidence</summary><p class="muted compact">${desc}</p>${priorEvidence}<h5>Week ${w} provisional contributions</h5>${rows||`<p class="muted compact">No non-zero accepted contribution in Week ${w}.</p>`}${kind==='load'?'<p class="muted compact">The projection includes recorded-run evidence. Missed-session adherence is added only when the week closes.</p>':''}</details></article>`;
+ return`<section class="canonicalAdaptationHome uiLevel1"><div class="canonicalAdaptationHead"><div><small>ADAPTATION</small><h3>Learned training calibration</h3></div><span>Week ${w}</span></div><div class="canonicalPathwayGrid">${card('pace','PACE & POWER',ps,paceReview.applied,paceProjected-paceReview.applied,paceProjected,ast.pathways.pace.sinceStart,paceHist,paceRows,'Capability evidence from target execution, comparable physiology and personal response.')}${card('load','DISTANCE & LOAD',ls,Number(loadApplied.cumulativeFactor||1),loadProjected-Number(loadApplied.cumulativeFactor||1),loadProjected,ast.pathways.load.sinceStart,loadHist,loadRows,'Tolerance evidence from completed exposure, load response, pain and personal history.',appliedEvidence)}</div><details class="canonicalHistory"><summary>Full pathway history</summary>${pathwayHistorySvg(ast.pathways.history)}<p class="muted compact">Readiness is temporary recovery context and does not alter learned capability.</p></details></section>`;
 }
 
 function renderDashboard(){
@@ -2737,10 +2769,10 @@ function programmePauseBaselineDistance(p){
 function programmePauseChartBands(){
  const active=(state.programPauses||[]).filter(p=>p&&!p.cancelledAt&&CORE.isIsoDate(p.startDate)&&CORE.isIsoDate(p.endDate));
  return active.map(p=>{
-  const ps=dte(p.startDate),pe=new Date(dte(p.endDate).getTime()+DAY-1);let first=null,last=null;
+  const ps=dte(p.startDate),pe=addCalendarDays(p.endDate,1);let first=null,last=null;
   for(let i=0;i<weeks();i++){
-   const ws=weekStart(i+1),we=new Date(ws.getTime()+7*DAY-1);
-   if(ws<=pe&&we>=ps){if(first===null)first=i;last=i}
+   const ws=weekStart(i+1),we=weekEnd(i+1);
+   if(ws<pe&&we>ps){if(first===null)first=i;last=i}
   }
   return first===null?null:{start:first,end:last,label:'PAUSE',reason:programmePauseReasonLabel(p.reason)};
  }).filter(Boolean);
@@ -2748,7 +2780,7 @@ function programmePauseChartBands(){
 function weekHasProgrammePause(w){return state.plan.some(p=>p.week===w&&(p.programPauseId||p.pauseReentry))}
 function completedWeekSeries(){
  return Array.from({length:weeks()},(_,i)=>{
-  const w=i+1,data=weekData(w),start=weekStart(w),end=new Date(start.getTime()+7*DAY),raceDate=dte(state.setup.raceDate);
+  const w=i+1,data=weekData(w),start=weekStart(w),end=weekEnd(w),raceDate=dte(state.setup.raceDate);
   const rows=state.plan.filter(p=>p.week===w),race=rows.find(p=>p.type==='Race Day'),isRaceWeek=Boolean(race)||(raceDate>=start&&raceDate<end);
   const baselinePlanned=sum(rows.filter(p=>programmePauseBaselineType(p)!=='Rest').map(programmePauseBaselineDistance));
   const plannedForChart=data.planned>0?data.planned:(isRaceWeek?Number(state.setup.raceDistance)||0:0);
@@ -2816,8 +2848,7 @@ function drawDashboardCharts(){
  renderProgressSvgChart($('volumeChart'),volumeSeries,{min:0,labels:weekLabels});
  let longRows=programmePauseLongRunSeries(),plannedLong=longRows.map(x=>x.adapted),baselineLong=longRows.map(x=>x.baseline);
  let completedLong=Array.from({length:weeks()},(_,i)=>{
-   let st=weekStart(i+1),en=new Date(st.getTime()+7*DAY);
-   let r=completedRuns().filter(x=>['Long run','Specific long run','Race rehearsal'].includes(x.type)&&dte(x.date)>=st&&dte(x.date)<en);
+   let r=trainingWeekRuns(i+1).filter(x=>['Long run','Specific long run','Race rehearsal'].includes(x.type));
    return r.length?Math.max(...r.map(x=>x.distanceKm)):null;
  });
  const longSeries=hasPause?[{label:'Baseline long run',data:baselineLong,color:'#78909C',dashed:true,points:false},{label:'Pause-adapted long run',data:plannedLong,color:'#4CC9F0',dashed:true,points:false},{label:'Completed long run',data:completedLong,color:'#79D69B'}]:[{label:'Planned long run',data:plannedLong,color:'#4CC9F0',dashed:true,points:false},{label:'Completed long run',data:completedLong,color:'#79D69B'}];
@@ -3100,10 +3131,10 @@ function todayMiniValueClass(kind,value,context={}){
  return'neutral';
 }
 function todayWeekCard(ast){
- const w=currentWeek(),wd=weekData(w),planned=Number(wd.planned)||0,actual=Number(wd.actual)||0,pct=planned>0?clamp(actual/planned*100,0,130):0;
+ const w=currentWeek(),wd=weekData(w),planned=Number(wd.planned)||0,actual=Number(wd.actual)||0,pct=planned>0?Math.max(0,actual/planned*100):0;
  const sessions=wd.plan.filter(p=>p.type!=='Rest').length,completed=wd.plan.filter(p=>p.type!=='Rest'&&matchingRun(p)).length;
  const pathways=ast.pathways||pathwayFactorSummary(w);
- const elapsedDays=clamp(Math.floor((today()-weekStart(w))/DAY)+1,1,7),expectedPct=elapsedDays/7*100,weekClass=todayMiniValueClass('week',pct,{expected:expectedPct});
+ const elapsedDays=clamp(calendarDayNumber(today())-calendarDayNumber(weekStart(w))+1,1,7),expectedPct=elapsedDays/7*100,weekClass=todayMiniValueClass('week',pct,{expected:expectedPct});
  return`<section class="todayRunnerCard todayWeekCard">
    <div class="runnerSectionHead"><span class="runnerCardIcon">${todayPictogram('week')}</span><div><small>THIS TRAINING WEEK</small><h3>Week ${w} · ${esc(detailedPhase(w))}</h3></div><span class="runnerStatus miniValue ${weekClass}">${Math.round(pct)}%</span></div>
    <div class="weekDistanceLine"><strong>${actual.toFixed(1)} km</strong><span>of ${planned.toFixed(1)} km planned</span></div>
@@ -3409,20 +3440,28 @@ function renderToday(){
 
 function weeklyReviewData(w=currentWeek()){
  w=clamp(Number(w)||currentWeek(),1,weeks());
- const start=weekStart(w),end=new Date(start.getTime()+7*DAY-1),closed=end<today(),wd=weekData(w);
- const appliedPace=pacePowerCommittedFactor(iso(start)),provisionalPace=trainingEvidence(iso(Math.min(end,today()))).adjustment;
- const appliedLoad=adaptiveFactorDetails(w),previewLoad=provisionalWeeklyAdjustment(w);
+ const start=weekStart(w),end=addCalendarDays(weekEnd(w),-1),closed=weekEnd(w)<=today(),future=start>today(),wd=weekData(w);
+ const through=iso(end)<iso(today())?iso(end):iso(today());
+ const appliedPace=pacePowerCommittedFactor(iso(start));
+ const provisionalPace=future?appliedPace:closed?trainingEvidence(through).adjustment:pacePowerProvisionalFactor(through);
+ const appliedLoad=adaptiveFactorDetails(w);
+ // A completed review must show the exact factor carried into the following week.
+ // The provisional path intentionally excludes adherence until the week closes.
+ const reviewedLoad=future?appliedLoad:closed?adaptiveFactorDetails(w+1):provisionalWeeklyAdjustment(w);
+ const loadReview=reviewedLoad.loadReview&&reviewedLoad.loadReview.week===w?reviewedLoad.loadReview:weeklyLoadEvidence(w,closed,through);
  const scores=wd.runs.map(r=>workoutScore(r)).filter(Number.isFinite),avgScore=avg(scores),drift=avg(wd.runs.map(r=>Number(r.powerDrift)).filter(Number.isFinite));
  const painVals=wd.runs.map(r=>Number(r.pain)).filter(Number.isFinite),maxPain=painVals.length?Math.max(...painVals):null,completion=wd.planned>0?wd.actual/wd.planned:null;
- const nextWeek=Math.min(weeks(),w+1),nextPlan=state.plan.filter(p=>p.week===nextWeek&&!['Rest','Race Day'].includes(p.type)).slice(0,6);
- const paceRatio=appliedPace>0?provisionalPace/appliedPace:1,loadApplied=Number(appliedLoad.cumulativeFactor||1),loadProjected=Number(previewLoad.cumulativeFactor||loadApplied),loadRatio=loadApplied>0?loadProjected/loadApplied:1;
- const changes=nextPlan.map(p=>{const z=zone(p.type,p.date);return{date:p.date,type:p.type,distance:Number(p.distance),nextDistance:Number(p.distance)*loadRatio,pace:z.pace,nextPace:z.pace/Math.max(.8,paceRatio),power:z.power,nextPower:z.power*paceRatio}});
+ const nextWeek=w<weeks()?w+1:null,nextPlan=nextWeek?state.plan.filter(p=>p.week===nextWeek&&!['Rest','Race Day'].includes(p.type)).slice(0,6):[];
+ const paceRatio=appliedPace>0?provisionalPace/appliedPace:1,loadApplied=Number(appliedLoad.cumulativeFactor||1),loadProjected=Number(reviewedLoad.cumulativeFactor||loadApplied),loadRatio=loadApplied>0?loadProjected/loadApplied:1;
+ // Closed/future weeks already use the saved prescription. Do not apply the same
+ // reviewed change again to a plan which was generated with that factor.
+ const changes=closed||future?[]:nextPlan.map(p=>{const z=zone(p.type,p.date);return{date:p.date,type:p.type,distance:Number(p.distance),nextDistance:Number(p.distance)*loadRatio,pace:z.pace,nextPace:z.pace/Math.max(.8,paceRatio),power:z.power,nextPower:z.power*paceRatio}});
  const reasons=[];
  if(Number.isFinite(completion))reasons.push(`${Math.round(completion*100)}% of planned weekly distance completed.`);
  if(Number.isFinite(avgScore))reasons.push(`Workout execution averaged ${Math.round(avgScore)}/100 across ${scores.length} scored session${scores.length===1?'':'s'}.`);
  if(Number.isFinite(drift))reasons.push(`Average power-based cardiac drift was ${drift.toFixed(1)}%.`);
  if(Number.isFinite(maxPain))reasons.push(`Highest recorded run pain was ${maxPain}/10.`);
- return{week:w,closed,completion,avgScore,drift,maxPain,reasons,changes,paceChange:paceRatio-1,loadChange:loadRatio-1,readiness:readinessModel().modifier,appliedPace,provisionalPace,loadApplied,loadProjected,nextWeek};
+ return{week:w,closed,future,startDate:iso(start),endDate:iso(end),completion,avgScore,drift,maxPain,reasons,changes,followingPlan:nextPlan,paceChange:paceRatio-1,loadChange:loadRatio-1,readiness:readinessModel().modifier,appliedPace,provisionalPace,loadApplied,loadProjected,loadReview,nextWeek};
 }
 function planPhasePriority(w=currentWeek()){
  const p=raceProfile(),dp=detailedPhase(w),map={
@@ -3436,8 +3475,11 @@ function planPhasePriority(w=currentWeek()){
 }
 function planAdaptationLabels(w=currentWeek()){
  const r=weeklyReviewData(w);
- const paceState=Math.abs(r.paceChange)<.001?{label:'Targets held',cls:'neutral',detail:'No meaningful pace/power change is currently projected.'}:r.paceChange>0?{label:'Progressing',cls:'good',detail:'Future quality targets are trending faster / higher power.'}:{label:'More conservative',cls:'warn',detail:'Future quality targets are being moderated.'};
- const loadState=Math.abs(r.loadChange)<.001?{label:'Volume held',cls:'neutral',detail:'No meaningful distance/load change is currently projected.'}:r.loadChange>0?{label:'Load progressing',cls:'good',detail:'Upcoming session distance is trending upward.'}:{label:'Load reduced',cls:'warn',detail:'Upcoming distance is being moderated.'};
+ const destination=r.nextWeek?`Week ${r.nextWeek}`:'the final programme review';
+ const timing=r.closed?`The completed Week ${r.week} review applied this result to ${destination}.`:`Projected for ${destination}; missed-session adherence is evaluated when Week ${r.week} closes.`;
+ const waiting={label:'Awaiting evidence',cls:'neutral',detail:`Week ${r.week} has not started. The latest applied factor is carried forward.`};
+ const paceState=r.future?waiting:Math.abs(r.paceChange)<.001?{label:'Targets held',cls:'neutral',detail:timing}:r.paceChange>0?{label:r.closed?'Targets increased':'Progressing',cls:'good',detail:timing}:{label:'More conservative',cls:'warn',detail:timing};
+ const loadState=r.future?waiting:Math.abs(r.loadChange)<.001?{label:'Volume held',cls:'neutral',detail:timing}:r.loadChange>0?{label:r.closed?'Load increased':'Load progressing',cls:'good',detail:timing}:{label:'Load reduced',cls:'warn',detail:timing};
  const readyState=r.readiness>=.995?{label:'Normal',cls:'good',detail:'No temporary recovery reduction is affecting the prescription.'}:r.readiness>=.96?{label:'Slightly reduced',cls:'warn',detail:'Recovery context is temporarily moderating exposure.'}:{label:'Restricted',cls:'bad',detail:'Recovery context is materially reducing exposure.'};
  return{review:r,paceState,loadState,readyState};
 }
@@ -3455,7 +3497,7 @@ function planProgrammeHeaderHtml(){
  </section>`;
 }
 function planSelectedWeekHeaderHtml(w){
- const wd=weekData(w),current=currentWeek(),focus=planPhasePriority(w),pct=wd.planned>0?clamp(wd.actual/wd.planned*100,0,100):0,weekStartDate=iso(weekStart(w)),weekEndDate=iso(new Date(weekStart(w).getTime()+6*DAY));
+ const wd=weekData(w),current=currentWeek(),focus=planPhasePriority(w),pct=wd.planned>0?Math.max(0,wd.actual/wd.planned*100):0,weekStartDate=iso(weekStart(w)),weekEndDate=iso(addCalendarDays(weekEnd(w),-1));
  const viewLabel=w===current?'Current week':w<current?'Past week':'Future week';
  const sessions=wd.plan.filter(p=>p.type!=='Rest'),qualitySet=['Intervals','Tempo','Fitness assessment','Hills','Fartlek','Threshold','Threshold intervals','VO₂max intervals','Race-pace intervals','Marathon-specific','Half-marathon-specific','Specific long run','Race rehearsal'],quality=sessions.filter(p=>qualitySet.includes(p.type)),long=sessions.filter(p=>['Long run','Specific long run','Race rehearsal','Progression'].includes(p.type));
  const longKm=sum(long.map(p=>Number(p.distance)||0)),longest=sessions.length?Math.max(...sessions.map(p=>Number(p.distance)||0)):0;
@@ -3481,20 +3523,48 @@ function planAdaptAmountClass(factor){
  if(!Number.isFinite(n)||Math.abs(n-1)<.0005)return'neutral';
  return n>1?'good':'warn';
 }
+function loadReviewBreakdownHtml(week,baseFactor,resultFactor,review,finalised=false){
+ if(!review)return'<p class="muted compact">The opening week starts from factor 1.000. No earlier programme week has been reviewed.</p>';
+ const adjustment=v=>{const n=Number(v)||0;return `${n>0?'+':''}${(n*100).toFixed(3)}%`};
+ const sessionPlans=(state.plan||[]).filter(p=>p.week===week&&!['Rest','Race Day'].includes(p.type));
+ const linkedIds=new Set((review.decisions||[]).map(x=>x.run.planId).filter(Boolean));
+ const linked=sessionPlans.filter(p=>linkedIds.has(p.id)).length;
+ const completion=review.planned>0?Math.round(review.actual/review.planned*100):null;
+ const row=(label,value)=>`<div class="loadReviewRow"><span>${label}</span><b>${value}</b></div>`;
+ const runRows=(review.decisions||[]).map(x=>row(`${fmtDate(x.run.date)} · ${esc(effectiveRunType(x.run))}`,adjustment(x.contribution))).join('');
+ const missedRows=(review.missedSessions||[]).map(p=>row(`${fmtDate(p.date)} · ${esc(p.type)}`,`${Number(p.distance).toFixed(1)} km`)).join('');
+ const bounded=Number(review.learningDelta)-Number(review.runDelta)-Number(review.completionDelta);
+ const expected=baseFactor*(1+Number(review.learningDelta||0)),limited=state.setup.adaptive&&Math.abs(resultFactor-expected)>.0000001;
+ return`<div class="loadReviewBreakdown"><p class="loadReviewPeriod"><b>Week ${week} · ${fmtDate(iso(weekStart(week)))}–${fmtDate(iso(addCalendarDays(weekEnd(week),-1)))}</b><br>${finalised?'Completed weekly review':'Provisional evidence; adherence is pending week close'}</p>
+ ${row('Weekly distance',`${Number(review.actual||0).toFixed(1)} / ${Number(review.planned||0).toFixed(1)} km${completion===null?'':` · ${completion}%`}`)}
+ ${row('Linked sessions',`${linked} / ${sessionPlans.length}`)}
+ ${row('Factor entering this week',Number(baseFactor).toFixed(3))}
+ ${row('Accepted run evidence',adjustment(review.runDelta))}
+ ${row('Missed-session adjustment',finalised?adjustment(review.completionDelta):'Pending week close')}
+ ${Math.abs(bounded)>.0000001?row('Weekly adjustment limit',adjustment(bounded)):''}
+ ${row('Combined weekly adjustment',state.setup.adaptive?adjustment(review.learningDelta):'Not applied; adaptation disabled')}
+ ${limited?row('Configured factor limit',`${Number(resultFactor).toFixed(3)} after limit`):''}
+ ${row(finalised?'Final learned factor':'Provisional learned factor',`${Number(resultFactor).toFixed(3)} · ${planAdaptPercent(resultFactor)} from baseline`)}
+ <p class="muted compact">Weekly distance and session completion are separate inputs. Extra distance on a recorded run does not cancel an unrecorded planned session. Recovery is shown separately from this learned factor.</p>
+ <details><summary>Recorded run contributions</summary>${runRows||'<p class="muted compact">No eligible recorded runs in this week.</p>'}${Math.abs(Number(review.rawRunBucket)-Number(review.runDelta))>.0000001?`<p class="muted compact">Raw run evidence ${adjustment(review.rawRunBucket)}; weekly run-evidence limit ${adjustment(review.runDelta)}.</p>`:''}</details>
+ <details><summary>${finalised?'Missed planned sessions':'Unrecorded sessions so far'}</summary>${missedRows||'<p class="muted compact">No unrecorded planned sessions in the evaluated period.</p>'}<p class="muted compact">Only a run linked to the planned session counts as its completion. ${finalised?`${Number(review.missedKm||0).toFixed(1)} km, ${Math.round(Number(review.missedRatio||0)*100)}% of planned training distance, entered the adherence rule.`:'No missed-session adjustment is applied before the week closes.'}</p></details></div>`;
+}
 function planAdaptationAmountHtml(r){
+ const resultLabel=r.future?'Carried forward':r.nextWeek?`${r.closed?'Applied in':'Projected for'} Week ${r.nextWeek}`:`${r.closed?'Final':'Projected final'} result`;
+ const heading=r.future?`Week ${r.week} · awaiting evidence`:r.nextWeek?`Week ${r.week} → Week ${r.nextWeek}`:`Week ${r.week} · final programme review`;
  const row=(icon,title,applied,projected)=>`
    <article class="planAdaptAmountRow">
-     <div class="adaptAmountLabel"><span>${uiIcon(icon)}</span><div><small>${title}</small><b>${planAdaptPercent(applied)} applied</b></div></div>
+     <div class="adaptAmountLabel"><span>${uiIcon(icon)}</span><div><small>${title}</small><b>${planAdaptPercent(applied)} in Week ${r.week}</b></div></div>
      <div class="adaptAmountCompare">
-       <div class="${planAdaptAmountClass(applied)}"><small>THIS WEEK</small><strong>${planAdaptPercent(applied)}</strong><span>factor ${planAdaptFactor(applied)}</span></div>
+       <div class="${planAdaptAmountClass(applied)}"><small>WEEK ${r.week} APPLIED</small><strong>${planAdaptPercent(applied)}</strong><span>factor ${planAdaptFactor(applied)}</span></div>
        <i aria-hidden="true">→</i>
-       <div class="${planAdaptAmountClass(projected)}"><small>NEXT REVIEW</small><strong>${planAdaptPercent(projected)}</strong><span>factor ${planAdaptFactor(projected)}</span></div>
+       <div class="${planAdaptAmountClass(projected)}"><small>${resultLabel}</small><strong>${planAdaptPercent(projected)}</strong><span>factor ${planAdaptFactor(projected)}</span></div>
      </div>
    </article>`;
  const readiness=Number(r.readiness);
  const recoveryPct=Number.isFinite(readiness)?(1-readiness)*100:null;
  return`<div class="planAdaptAmount">
-   <div class="planAdaptAmountHead"><div><small>ADAPTATION AMOUNT</small><h4>This week → projected next week</h4></div><span>Baseline = 1.000</span></div>
+   <div class="planAdaptAmountHead"><div><small>${r.closed?'FINAL REVIEW':r.future?'FUTURE WEEK':'PROVISIONAL REVIEW'}</small><h4>${heading}</h4><p class="muted compact">${fmtDate(r.startDate)}–${fmtDate(r.endDate)}</p></div><span>Baseline = 1.000</span></div>
    ${row('pace','PACE & POWER',r.appliedPace,r.provisionalPace)}
    ${row('load','DISTANCE & LOAD',r.loadApplied,r.loadProjected)}
    <div class="adaptRecoveryNote"><span>${uiIcon('recovery')}</span><p><b>Recovery overlay:</b> ${Number.isFinite(recoveryPct)&&recoveryPct>.05?`${recoveryPct.toFixed(1)}% temporary reduction currently applied`:'no meaningful temporary reduction'}. This is not carried forward as learned adaptation.</p></div>
@@ -3502,8 +3572,17 @@ function planAdaptationAmountHtml(r){
 }
 function weeklyReviewHtml(w=currentWeek()){
  const {review:r,paceState,loadState,readyState}=planAdaptationLabels(w),rows=planProjectedChangeRows(r),activeInjury=(state.injuries||[]).find(x=>x.id===state.activeInjuryPlanId);
- const status=r.closed?'Applied weekly review':w>currentWeek()?'Future prescription':'Provisional weekly review';
- return`<section class="planAdaptationCard"><div class="planAdaptationTop"><div><small>${status.toUpperCase()}</small><h3>Prescription consequences</h3><p>Plan shows what changes for the runner; numeric learned factors remain on Progress.</p></div><span class="planReviewState ${r.closed?'good':'neutral'}">${r.closed?'Applied':'Building'}</span></div><div class="planAdaptationGrid"><article class="${paceState.cls}"><span class="adaptVisual">${uiIcon('pace')}</span><small>PACE & POWER</small><strong>${paceState.label}</strong><p>${paceState.detail}</p></article><article class="${loadState.cls}"><span class="adaptVisual">${uiIcon('load')}</span><small>DISTANCE & LOAD</small><strong>${loadState.label}</strong><p>${loadState.detail}</p></article><article class="${readyState.cls}"><span class="adaptVisual">${uiIcon('recovery')}</span><small>RECOVERY CONTEXT</small><strong>${readyState.label}</strong><p>${readyState.detail}</p></article></div>${planAdaptationAmountHtml(r)}${activeInjury?`<div class="planConstraint"><span>${todayPictogram('rehab')}</span><div><small>ACTIVE REHAB CONSTRAINT</small><b>${esc(activeInjury.bodyRegion||activeInjury.location||'Active rehabilitation')}</b><p>Day-level running remains subject to the active return-to-run criteria. Rehab guidance can supersede a scheduled run.</p></div></div>`:''}<details class="planAdaptDetail"><summary>Evidence behind this review</summary>${r.reasons.length?`<ul>${r.reasons.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>`:'<p>No completed evidence is available yet for this review.</p>'}<p class="muted compact">Recovery context is temporary. Learned Pace & Power and Distance & Load calibration remains governed by the existing weekly commitment rules.</p></details><details class="planAdaptDetail"><summary>Projected workout changes</summary><div class="planProjectedChanges">${rows||'<p>No material prescription changes are currently projected.</p>'}</div><p class="muted compact">The app does not persist a separate pre-adaptation copy of every workout. This view therefore compares the applied prescription with the currently projected next-review consequence where available.</p></details></section>`;
+ const status=r.closed?'Completed weekly review':r.future?'Future prescription':'Provisional weekly review';
+ const savedRows=(r.followingPlan||[]).map(p=>{const z=p.zone||zone(p.type,p.date);return`<div class="planProjectedRow"><div><b>${fmtDate(p.date)} · ${esc(p.type)}</b><small>Saved Week ${r.nextWeek} workout</small></div><span>${Number(p.distance).toFixed(1)} km</span><span>${pace(z.pace)}</span><span>${Math.round(z.power)} W</span></div>`}).join('');
+ const workoutHeading=r.closed?'Following-week prescription':r.future?'Following-week plan':'Projected workout changes';
+ const workoutRows=r.closed||r.future?savedRows:rows;
+ const empty=r.nextWeek?'No material prescription changes are currently projected.':'This is the final programme week; no following-week workouts are scheduled.';
+ return`<section class="planAdaptationCard"><div class="planAdaptationTop"><div><small>${status.toUpperCase()} · WEEK ${w}</small><h3>Prescription consequences</h3><p>${fmtDate(r.startDate)}–${fmtDate(r.endDate)} · ${r.closed?'Final factors include the completed-week adherence review.':r.future?'Applied factors are carried forward until new evidence is available.':'Run evidence is provisional until this week closes.'}</p></div><span class="planReviewState ${r.closed?'good':'neutral'}">${r.closed?'Final':r.future?'Pending':'Building'}</span></div>
+ <div class="planAdaptationGrid"><article class="${paceState.cls}"><span class="adaptVisual">${uiIcon('pace')}</span><small>PACE & POWER</small><strong>${paceState.label}</strong><p>${paceState.detail}</p></article><article class="${loadState.cls}"><span class="adaptVisual">${uiIcon('load')}</span><small>DISTANCE & LOAD</small><strong>${loadState.label}</strong><p>${loadState.detail}</p></article><article class="${readyState.cls}"><span class="adaptVisual">${uiIcon('recovery')}</span><small>CURRENT RECOVERY CONTEXT</small><strong>${readyState.label}</strong><p>${readyState.detail}</p></article></div>
+ ${planAdaptationAmountHtml(r)}
+ ${activeInjury?`<div class="planConstraint"><span>${todayPictogram('rehab')}</span><div><small>ACTIVE REHAB CONSTRAINT</small><b>${esc(activeInjury.bodyRegion||activeInjury.location||'Active rehabilitation')}</b><p>Day-level running remains subject to the active return-to-run criteria. Rehab guidance can supersede a scheduled run.</p></div></div>`:''}
+ <details class="planAdaptDetail"><summary>Evidence behind Week ${w} review</summary>${loadReviewBreakdownHtml(w,r.loadApplied,r.loadProjected,r.loadReview,r.closed)}${r.reasons.length?`<ul>${r.reasons.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>`:''}</details>
+ <details class="planAdaptDetail"><summary>${workoutHeading}</summary><div class="planProjectedChanges">${workoutRows||`<p>${empty}</p>`}</div><p class="muted compact">${r.closed?'These are the saved prescriptions after the review; the reviewed adjustment is not applied a second time.':r.future?'Further changes depend on completed training evidence.':'Projections indicate the next review; final workouts also reflect programme progression and recovery.'}</p></details></section>`;
 }
 function planTimelineHtml(viewWeek=currentWeek()){
  const total=weeks(),groups=[];for(let w=1;w<=total;w++){const name=detailedPhase(w),last=groups.at(-1);if(!last||last.name!==name)groups.push({name,start:w,end:w});else last.end=w}
@@ -4455,9 +4534,10 @@ function pathwayEvidenceCardHtml(title,d,t){
  const projectedChange=t.projected-t.applied;
  return`<article class="logEvidencePath ${status}">
    <div class="logEvidenceHead"><div><small>${title}</small><h4 class="pathwayStatusText ${headlineStatus}">${esc(lang.q)}</h4></div><span class="pathwayStatusBadge ${status}">${accepted?'Evidence accepted':status==='warn'?'Caution signal':status==='bad'?'Negative signal held':'No learned change'}</span></div>
-   <div class="logEvidenceGaugeRowV3"><div class="evidenceMiniGauge ${status}" style="--e:${weight}"><strong>${weight}%</strong><small>evidence weight</small></div><div class="pathMetricGridV3"><div><span>RUN SIGNAL</span><strong>${t.rawSignal>=0?'+':''}${t.rawSignal.toFixed(2)}</strong></div><div><span>ACCEPTED CONTRIBUTION</span><strong>${accepted?signedFactorDelta(t.acceptedContribution):'0.000'}</strong></div><div><span>THIS WEEK</span><strong>${signedFactorDelta(t.weeklyBucket)}</strong></div></div></div>
-   <div class="factorGridV3"><div><span>APPLIED</span><strong>${t.applied.toFixed(3)}</strong><small>Current committed factor</small></div><i>→</i><div><span>PROJECTED NEXT REVIEW</span><strong>${t.projected.toFixed(3)}</strong><small>${signedFactorDelta(projectedChange)} vs applied</small></div></div>
-   ${t.thresholdBlocked?`<p class="muted compact">Projected next review shows the exact accumulated candidate. The applied Pace & Power factor still changes only when the weekly stability threshold is crossed.</p>`:''}
+   <div class="logEvidenceGaugeRowV3"><div class="evidenceMiniGauge ${status}" style="--e:${weight}"><strong>${weight}%</strong><small>evidence weight</small></div><div class="pathMetricGridV3"><div><span>RUN SIGNAL</span><strong>${t.rawSignal>=0?'+':''}${t.rawSignal.toFixed(2)}</strong></div><div><span>ACCEPTED CONTRIBUTION</span><strong>${accepted?signedFactorDelta(t.acceptedContribution):'0.000'}</strong></div><div><span>WEEK ${t.week} RUN EVIDENCE</span><strong>${signedFactorDelta(t.weeklyBucket)}</strong></div></div></div>
+   <div class="factorGridV3"><div><span>WEEK ${t.week} APPLIED</span><strong>${t.applied.toFixed(3)}</strong><small>Factor entering this week</small></div><i>→</i><div><span>RUN-DATE PROJECTION</span><strong>${t.projected.toFixed(3)}</strong><small>${signedFactorDelta(projectedChange)} vs applied</small></div></div>
+   <p class="muted compact">Evidence through ${fmtDate(t.asOf)} in Week ${t.week}. ${t.pathway==='load'?'This run-evidence projection excludes the missed-session review. ':''}See Plan for the completed weekly review.</p>
+   ${t.thresholdBlocked?`<p class="muted compact">The run-date projection shows the exact accumulated candidate. The applied Pace & Power factor still changes only when the weekly stability threshold is crossed.</p>`:''}
    <p class="logEvidenceMeaning">${esc(lang.runMeaning)} ${esc(lang.response)}</p>
    ${!accepted&&t.safeguard?`<div class="logEvidenceSafeguard">${esc(t.safeguard)}</div>`:''}
    <details class="logEvidenceCalc"><summary>How was this calculated?</summary><div class="logEvidenceDrivers"><h5>Evidence used</h5><div class="evidenceDriverList">${pathwayEvidenceSummaryHtml(d,t)}</div></div>${pathwayCalculationDetailsHtml(d,t)}</details>
@@ -4950,8 +5030,7 @@ function renderSettings(){
 }
 function weeklyCompletedLongs(){
  return Array.from({length:weeks()},(_,i)=>{
-   let st=weekStart(i+1),en=new Date(st.getTime()+7*DAY);
-   let r=completedRuns().filter(x=>dte(x.date)>=st&&dte(x.date)<en);
+   let r=trainingWeekRuns(i+1);
    return r.length?Math.max(...r.map(x=>Number(x.distanceKm)||0)):null;
  });
 }
@@ -5082,7 +5161,7 @@ function recoveryLoadRows(){
  const cw=currentWeek(),from=Math.max(1,cw-3),history=readinessHistoryData(35);
  const rows=[];
  for(let w=from;w<=cw;w++){
-   const data=weekData(w),start=weekStart(w),end=new Date(start.getTime()+7*DAY),mod=history.filter(r=>{const d=dte(r.date);return d>=start&&d<end}).map(r=>Number(r.modifier)).filter(Number.isFinite);
+   const data=weekData(w),start=weekStart(w),end=weekEnd(w),mod=history.filter(r=>{const d=dte(r.date);return d>=start&&d<end}).map(r=>Number(r.modifier)).filter(Number.isFinite);
    rows.push({week:w,distance:data.actual,planned:data.planned,readiness:avg(mod)});
  }
  return rows;
@@ -6929,7 +7008,7 @@ function renderProgressChartsStandalone(){
  }catch(err){recordDiagnostic('Progress weekly distance chart',err)}
  try{
   const labels=Array.from({length:weeks()},(_,i)=>`W${i+1}`),bands=programmePauseChartBands(),hasPause=bands.length>0,longRows=programmePauseLongRunSeries();
-  const completed=Array.from({length:weeks()},(_,i)=>{const st=weekStart(i+1),en=new Date(st.getTime()+7*DAY),runs=completedRuns().filter(x=>['Long run','Specific long run','Race rehearsal'].includes(x.type)&&dte(x.date)>=st&&dte(x.date)<en);return runs.length?Math.max(...runs.map(x=>Number(x.distanceKm)||0)):null});
+  const completed=Array.from({length:weeks()},(_,i)=>{const runs=trainingWeekRuns(i+1).filter(x=>['Long run','Specific long run','Race rehearsal'].includes(x.type));return runs.length?Math.max(...runs.map(x=>Number(x.distanceKm)||0)):null});
   const series=hasPause?[{label:'Baseline long run',data:longRows.map(x=>x.baseline),color:'#78909c',dashed:true,points:false},{label:'Pause-adapted long run',data:longRows.map(x=>x.adapted),color:'#67a7ff',dashed:true,points:false},{label:'Completed long run',data:completed,color:'#79d69b'}]:[{label:'Planned long run',data:longRows.map(x=>x.adapted),color:'#67a7ff',dashed:true,points:false},{label:'Completed long run',data:completed,color:'#79d69b'}];
   progressSvgIntoMount('longRunChartMount',series,{nonNegative:true,labels,bands,notice:hasPause?'Pause weeks are shown as a gap rather than a false 0 km long run; baseline progression remains visible for context.':'',aria:'Long-run progression',empty:'No planned or completed long-run data yet.'});
  }catch(err){recordDiagnostic('Progress long-run chart',err)}

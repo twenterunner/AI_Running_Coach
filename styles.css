@@ -6387,3 +6387,13 @@ body:has(#onboarding:not(.hidden)) #nav,body:has(#onboarding:not(.hidden)) #more
 #plan .weekNav{margin-bottom:var(--plan-gap)!important}
 #plan #planCards{gap:var(--plan-gap)!important}
 @media(max-width:390px){#planProgrammeHeader{gap:var(--plan-gap)}.progressChartNote{font-size:7.5px}}
+
+/* v15.7.23: inspectable weekly review, including narrow phone layouts. */
+.loadReviewBreakdown{display:grid;gap:10px;margin-top:12px;min-width:0;}
+.loadReviewPeriod{line-height:1.5;margin:0 0 4px;}
+.loadReviewRow{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;align-items:start;padding:9px 0;border-bottom:1px solid rgba(115,211,213,.12);line-height:1.4;}
+.loadReviewRow span,.loadReviewRow b{min-width:0;overflow-wrap:anywhere;}
+.loadReviewRow b{text-align:right;}
+.loadReviewBreakdown>details{padding:12px;border:1px solid rgba(115,211,213,.15);border-radius:12px;min-width:0;}
+.loadReviewBreakdown summary{white-space:normal;line-height:1.4;}
+.planAdaptAmountHead h4,.adaptAmountCompare small{white-space:normal;overflow-wrap:anywhere;}
