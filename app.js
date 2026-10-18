@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '15.7.24';
-  const BUILD = 51024;
+  const VERSION = '15.7.28';
+  const BUILD = 51028;
   const SCHEMA = 10400;
   const PRIMARY_STORAGE_KEY = 'arc_v10400_web';
   const MIRROR_STORAGE_KEY = 'arc_v10400_mirror';
@@ -344,7 +344,7 @@ const diagnostics=[];
 function recordDiagnostic(source,error){const message=error?.stack||error?.message||String(error);diagnostics.unshift({time:new Date().toLocaleString(),source,message});if(diagnostics.length>20)diagnostics.length=20;console.error(source,error);renderDiagnostics();}
 function renderDiagnostics(){const box=$('diagnosticsContent');if(!box)return;box.innerHTML=diagnostics.length?diagnostics.map(x=>`<div class="diagnosticItem"><b>${esc(x.time)} · ${esc(x.source)}</b><pre>${esc(x.message)}</pre></div>`).join(''):'<p class="muted">No JavaScript errors have been recorded in this session.</p>';}
 window.addEventListener('error',e=>recordDiagnostic('Window error',e.error||e.message));window.addEventListener('unhandledrejection',e=>recordDiagnostic('Unhandled promise rejection',e.reason));
-const PLAN_ENGINE_VERSION=6;
+const PLAN_ENGINE_VERSION=7;
 const FIVE_DAY_TEMPLATE=[['Monday',false,'Easy'],['Tuesday',true,'Intervals'],['Wednesday',true,'Easy'],['Thursday',true,'Tempo'],['Friday',false,'Easy'],['Saturday',true,'Easy'],['Sunday',true,'Long run']];
 const RACE_PROFILES=[
  {key:'5k',label:'5K',maxDistance:7.5,currentWeekly:18,peakLong:12,maxWeekly:32,growth:.07,taperDays:7,days:[['Monday',false,'Easy'],['Tuesday',true,'Intervals'],['Wednesday',true,'Easy'],['Thursday',false,'Easy'],['Friday',false,'Easy'],['Saturday',true,'Tempo'],['Sunday',true,'Long run']]},
@@ -362,7 +362,14 @@ function baseType(type){return TYPE_ALIASES[type]||type}
 function detailedPhase(w){const total=weeks(),tw=Math.max(1,Math.ceil(state.setup.taperDays/7)),pre=Math.max(1,total-tw),p=raceProfile();if(w>pre)return'Taper';const x=w/pre;if(x<=.20)return'Foundation';if(x<=.45)return'Aerobic';if(x<=.68)return p.key==='marathon'||['50k','75k','100k'].includes(p.key)?'Endurance':'Development';if(x<=.88)return'Specific';return'Peak'}
 function displayPhaseFromDetailed(dp){return dp==='Foundation'||dp==='Aerobic'?'Base':dp==='Development'||dp==='Endurance'||dp==='Specific'?'Build':dp}
 function phase(w){return displayPhaseFromDetailed(detailedPhase(w))}
-function assessmentWeeks(total=weeks(),profile=raceProfile()){const taper=Math.max(1,Math.ceil(state.setup.taperDays/7)),last=Math.max(2,total-taper-2),fractions=profile.key==='5k'||profile.key==='10k'?[.38,.72]:profile.key==='half'||profile.key==='marathon'?[.48]:[.42];return[...new Set(fractions.map(f=>clamp(Math.round(last*f),3,last)).filter(w=>w>1))]}
+function assessmentWeeks(total=weeks(),profile=raceProfile()){
+ // Default 7-week spacing provides checks near weeks 1, 8, 15, 22 in a 27-week programme.
+ // These are opportunities, not compulsory maximal efforts: the capacity, pause and
+ // recovery safeguards below can defer or replace each session.
+ const taper=Math.max(1,Math.ceil(state.setup.taperDays/7)),last=Math.max(1,total-taper-2),result=[];
+ for(let week=1;week<=last;week+=7)result.push(week);
+ return result;
+}
 const RACE_PHASE_MATRIX={
  '5k':{Foundation:['Hills','Easy','Easy + strides','Recovery','Long run'],Aerobic:['Threshold','Easy','Easy + strides','Recovery','Long run'],Development:['VO₂max intervals','Easy','Threshold','Recovery','Long run'],Specific:['Race-pace intervals','Easy','Repetition','Recovery','Long run'],Peak:['Race-pace intervals','Easy','Easy + strides','Recovery','Long run'],Taper:['Race-pace intervals','Easy','Shakeout','Recovery','Long run']},
  '10k':{Foundation:['Fartlek','Easy','Easy + strides','Recovery','Long run'],Aerobic:['Threshold','Easy','Steady aerobic','Recovery','Long run'],Development:['Threshold intervals','Easy','VO₂max intervals','Recovery','Long run'],Specific:['Race-pace intervals','Easy','Threshold','Easy + strides','Long run'],Peak:['Race-pace intervals','Easy','Easy + strides','Recovery','Long run'],Taper:['Race-pace intervals','Easy','Shakeout','Recovery','Long run']},
@@ -410,7 +417,7 @@ function structuralSessionCeiling(type,ph,envelope){
  const bt=baseType(type);
  if(bt==='Intervals')return ph==='Build'||ph==='Peak'?10.8:ph==='Taper'?7.0:8.6;
  if(bt==='Tempo')return ph==='Peak'?12:ph==='Build'?10:8;
- if(bt==='Fitness assessment')return (Number(state.setup.testDistance)||5)+3.5;
+ if(bt==='Fitness assessment')return 5+3.5;
  if(bt==='Marathon')return Math.max(7,Math.min(envelope.qualityCap,envelope.longCap*.68));
  return Infinity;
 }
@@ -430,7 +437,7 @@ function capacityAwareSession(type,requestedKm,w,envelope){
  if(limited)km=ceiling;
  // A maximal assessment needs the test itself plus at least 1.5 km of easy preparation/recovery.
  if(type==='Fitness assessment'){
-  const required=(Number(state.setup.testDistance)||5)+1.5;
+  const required=5+1.5;
   if(Number.isFinite(ceiling)&&ceiling<required-.05){type='Easy + strides';ceiling=Math.min(sessionDistanceCeiling(type,envelope),structuralSessionCeiling(type,phase(w),envelope));km=Math.min(km,ceiling);limited=true;}
  }
  km=Math.max(1,Math.round(km*10)/10);
@@ -493,7 +500,7 @@ function recommendedRaceDate(setup){
 }
 const BUILD=CORE.BUILD, SCHEMA=CORE.SCHEMA, STORAGE_KEY=CORE.PRIMARY_STORAGE_KEY, MIRROR_KEY=CORE.MIRROR_STORAGE_KEY, MIGRATION_MARKER='arc_v10400_migration_complete', BACKUP_KEY='arc_v10400_restore_rollback', UNDO_KEY='arc_v10400_settings_undo';
 let raceReadinessHistoryDirty=false;
-const defaults=()=>{let start=iso(new Date()),setup={planStart:start,raceDate:start,raceName:'Goal Race',raceDistance:42.195,targetTime:15300,currentWeekly:35,currentLongest:18,testDistance:5,testTime:1515,thresholdHr:168,criticalPower:300,bodyWeight:70,maxWeekly:65,growth:.07,peakLong:32,taperDays:14,minFactor:.85,maxFactor:1.05,adaptive:true};setup.raceDate=recommendedRaceDate(setup).date;return({schemaVersion:SCHEMA,planEngineVersion:PLAN_ENGINE_VERSION,setup,days:FIVE_DAY_TEMPLATE.map(d=>[...d]),runs:[],assessments:[],injuries:[],activeInjuryPlanId:null,shoes:[],shoeUsage:[],plannedShoeAssignments:[],plannedShoePurchases:[],programPauses:[],plan:[],predictionHistory:[],raceReadinessHistory:[],weekView:null,onboardingComplete:false,storageRevision:0,updatedAt:new Date().toISOString(),migration:{to:SCHEMA,status:'new',time:new Date().toISOString()}})};
+const defaults=()=>{let start=iso(new Date()),setup={planStart:start,raceDate:start,raceName:'Goal Race',raceDistance:42.195,targetTime:15300,currentWeekly:35,currentLongest:18,testDistance:5,testTime:1515,thresholdHr:168,criticalPower:300,bodyWeight:70,maxWeekly:65,growth:.07,peakLong:32,taperDays:14,minFactor:.85,maxFactor:1.05,adaptive:true};setup.raceDate=recommendedRaceDate(setup).date;return({schemaVersion:SCHEMA,planEngineVersion:PLAN_ENGINE_VERSION,setup,days:FIVE_DAY_TEMPLATE.map(d=>[...d]),runs:[],assessments:[],injuries:[],activeInjuryPlanId:null,shoes:[],shoeUsage:[],plannedShoeAssignments:[],plannedShoePurchases:[],programPauses:[],plan:[],predictionHistory:[],raceReadinessHistory:[],fitnessProfile:{birthYear:null,referenceGroup:null},weekView:null,onboardingComplete:false,storageRevision:0,updatedAt:new Date().toISOString(),migration:{to:SCHEMA,status:'new',time:new Date().toISOString()}})};
 let migrationReport={from:null,to:SCHEMA,status:'new install',source:'defaults',runs:0,assessments:0,fieldsRecovered:0,warning:''};
 function parseStored(raw){if(!raw)return null;try{const x=JSON.parse(raw);return x&&typeof x==='object'?x:null}catch(err){recordDiagnostic('Storage parse',err);return null}}
 function storageCandidates(){const keys=[STORAGE_KEY,MIRROR_KEY,...CORE.LEGACY_STORAGE_KEYS];return keys.map(key=>({key,value:parseStored(localStorage.getItem(key))})).filter(x=>x.value)}
@@ -542,9 +549,12 @@ function normaliseState(input){
  const raceReadinessHistory=[...raceHistoryMap.values()].sort((a,b)=>a.date.localeCompare(b.date)).slice(-500);
  const storedStart=Number(src.programStartPrediction);const programStartPrediction=Number.isFinite(storedStart)?storedStart:initialProgrammePrediction(setup);
  const candidateDays=Array.isArray(src.days)?src.days.map(d=>Array.isArray(d)?[CORE.cleanText(d[0],20),Boolean(d[1]),CORE.cleanText(d[2],40)]:d):base.days,days=CORE.validateDays(candidateDays).length?base.days:candidateDays;
+ const rawFitnessProfile=src.fitnessProfile&&typeof src.fitnessProfile==='object'?src.fitnessProfile:{};
+ const birth=Number(rawFitnessProfile.birthYear),currentYear=today().getFullYear();
+ const fitnessProfile={birthYear:Number.isInteger(birth)&&birth>=1900&&birth<=currentYear-18?birth:null,referenceGroup:['men','women'].includes(rawFitnessProfile.referenceGroup)?rawFitnessProfile.referenceGroup:null};
  const onboardingComplete=src.onboardingComplete===true||Boolean(input?.setup&&Number(src.schemaVersion||0)<SCHEMA);
  const requestedActiveInjuryId=src.activeInjuryPlanId?CORE.safeId(src.activeInjuryPlanId,''):null,activeInjuryPlanId=requestedActiveInjuryId&&injuries.some(i=>i.id===requestedActiveInjuryId&&!i.rehabArchivedAt)?requestedActiveInjuryId:null;
- return{...base,...src,schemaVersion:SCHEMA,setup,days,runs,assessments,injuries,activeInjuryPlanId,shoes,shoeUsage,plannedShoeAssignments,plannedShoePurchases,programPauses,plan,predictionHistory,raceReadinessHistory,programStartPrediction,weekView:Number(src.weekView)||null,onboardingComplete,storageRevision:Math.max(0,Number(src.storageRevision)||0),updatedAt:src.updatedAt||new Date().toISOString(),migration:{...migrationReport,time:new Date().toISOString()}};
+ return{...base,...src,schemaVersion:SCHEMA,setup,days,runs,assessments,injuries,activeInjuryPlanId,shoes,shoeUsage,plannedShoeAssignments,plannedShoePurchases,programPauses,plan,predictionHistory,raceReadinessHistory,fitnessProfile,programStartPrediction,weekView:Number(src.weekView)||null,onboardingComplete,storageRevision:Math.max(0,Number(src.storageRevision)||0),updatedAt:src.updatedAt||new Date().toISOString(),migration:{...migrationReport,time:new Date().toISOString()}};
 }
 (()=>{const l=document.getElementById('appStartupLoader'),s=l?.querySelector('strong');if(s)s.textContent='Reading saved data…';})();
 let rawState=loadStoredState();
@@ -566,7 +576,7 @@ function runtimeDomainState(){
   runs:(state.runs||[]).map(r=>({
    id:r.id,date:r.date,type:r.type,distanceKm:r.distanceKm,durationSec:r.durationSec,avgHr:r.avgHr,avgPower:r.avgPower,
    rpe:r.rpe,pain:r.pain,hrv:r.hrv,powerDrift:r.powerDrift,planId:r.planId,shoeId:r.shoeId,notes:r.notes,
-   intervalAnalysis:r.intervalAnalysis,coachUpdate:r.coachUpdate,sourceFormat:r.sourceFormat
+   intervalAnalysis:r.intervalAnalysis,coachUpdate:r.coachUpdate,sourceFormat:r.sourceFormat,fitnessPowerCurve:r.fitnessPowerCurve,aerobicFitnessEvidence:r.aerobicFitnessEvidence,recordSegments:r.recordSegments,deviceCriticalPower:r.deviceCriticalPower,deviceThresholdHr:r.deviceThresholdHr
   })),
   assessments:state.assessments,
   injury:{activeInjuryPlanId:state.activeInjuryPlanId,injuries:state.injuries},
@@ -1316,7 +1326,7 @@ function pacePowerReviewState(date=iso(today())){
 /* Dated calibration records. No initialization: call after the application state exists. */
 function calibrationKinds(){return['pace','power','hr','weight']}
 function calibrationSetupValue(kind,setup=state.setup){
- if(kind==='pace'){const t=Number(setup?.testTime),d=Number(setup?.testDistance);return t>0&&d>0?t/d:null}
+ if(kind==='pace'){const eq=fiveKmEquivalentSeconds(setup?.testTime,setup?.testDistance);return eq?eq/5:null}
  const key={power:'criticalPower',hr:'thresholdHr',weight:'bodyWeight'}[kind],n=Number(setup?.[key]);
  return key&&Number.isFinite(n)&&n>0?n:null;
 }
@@ -1336,7 +1346,7 @@ function calibrationAppendRecord(calibration,record){
 }
 function calibrationAssessmentValues(a){
  const out=[],t=Number(a?.time),d=Number(a?.distance);
- if(t>0&&d>0)out.push({kind:'pace',value:t/d,testTime:t,testDistance:d});
+ if(t>0&&d>0){const equivalent=fiveKmEquivalentSeconds(t,d);if(equivalent)out.push({kind:'pace',value:equivalent/5,testTime:t,testDistance:d,estimated5kSeconds:equivalent});}
  if(Number(a?.criticalPower)>0)out.push({kind:'power',value:Number(a.criticalPower)});
  if(Number(a?.thresholdHr)>0)out.push({kind:'hr',value:Number(a.thresholdHr)});
  return out;
@@ -1383,7 +1393,14 @@ function calibrationFor(kind,date=iso(today())){
  const cutoff=requested<now?requested:now;
  const priority=r=>r.assessmentId?1:r.legacy?0:2;
  const eligible=calibration.records.filter(r=>r.kind===kind&&calibrationRecordIsCurrent(r,cutoff)),dated=eligible.filter(r=>!r.legacy),pool=dated.length?dated:eligible;
- return pool.sort((a,b)=>b.effectiveOn.localeCompare(a.effectiveOn)||priority(b)-priority(a)||(Number(b.sequence)||0)-(Number(a.sequence)||0)||String(b.id||'').localeCompare(String(a.id||'')))[0]||null;
+ const saved=pool.sort((a,b)=>b.effectiveOn.localeCompare(a.effectiveOn)||priority(b)-priority(a)||(Number(b.sequence)||0)-(Number(a.sequence)||0)||String(b.id||'').localeCompare(String(a.id||'')))[0]||null;
+ const automatic=automaticFitnessRecord(kind,cutoff);
+ if(automatic&&(!saved||saved.legacy||automatic.effectiveOn>saved.effectiveOn||(automatic.effectiveOn===saved.effectiveOn&&saved.automatic)))return automatic;
+ if(kind==='pace'&&saved&&Number(saved.testDistance)>0&&Number(saved.testTime)>0){
+  const normalized=fiveKmEquivalentSeconds(saved.testTime,saved.testDistance);
+  if(normalized)return{...saved,value:normalized/5,estimated5kSeconds:normalized};
+ }
+ return saved;
 }
 function calibrationLegacyFactor(date=iso(today())){
  const n=typeof pacePowerCommittedFactor==='function'?Number(pacePowerCommittedFactor(date)):1;
@@ -1400,6 +1417,9 @@ function calibrationFactorEpoch(date=iso(today())){
 }
 function calibrationAdjustedFactor(kind,date=iso(today())){
  const record=calibrationFor(kind,date);if(!record||!['pace','power'].includes(kind))return 1;
+ // Peak-performance estimates already incorporate actual training; overlaying the
+ // older workout-execution adjustment would reward the same evidence twice.
+ if(record.automatic)return 1;
  const raw=calibrationLegacyFactor(date),anchor=Number(record.anchorFactor);
  if(!(anchor>0))return raw;
  // A new legacy assessment starts its own adjustment epoch; never divide a reset factor by an old epoch's anchor.
@@ -1491,15 +1511,482 @@ function applyCalibrationReview(candidateSetup,options={}){
  return result;
 }
 
+/* BEGIN offline automatic fitness model (v15.7.26) */
+// This is a transparent, conservative approximation: it is not Stryd's proprietary Auto CP
+// or Garmin's VO2max/lactate threshold algorithm. Estimates refresh after saved FIT/CSV imports; no cloud sync.
+const AUTO_FITNESS_WINDOW_DAYS=90;
+const AUTO_EFFORT_DURATIONS=[180,300,720,1200,1800,2400];
+let autoFitnessCache=new Map();
+function invalidateAutomaticFitnessCache(){autoFitnessCache.clear()}
+function fiveKmEquivalentSeconds(seconds,distanceKm){
+ const t=Number(seconds),d=Number(distanceKm);
+ return t>=30&&d>=1&&d<=100?t*Math.pow(5/d,1.06):null;
+}
+function autoFitnessEffortClass(run){
+ const type=String(run?.type||'').toLowerCase(),rpe=Number(run?.rpe);
+ if(run?.source==='assessment'&&!run.assessmentId)return'none';
+ if(type==='race'||type==='fitness assessment')return'maximal';
+ if(rpe>=9&&/threshold|tempo|interval|vo₂|fartlek|rehearsal|progression|marathon|long/i.test(type))return'hard';
+ if(rpe>=8&&/threshold|tempo|interval|vo₂|race-pace/i.test(type))return'hard';
+ // Imported structured quality sessions do not always include subjective RPE.
+ // They are only provisional CP evidence; at least three independent dates will
+ // be required before they can automatically establish a new CP.
+ if((run?.rpe==null||!Number.isFinite(rpe))&&/threshold|tempo|interval|vo₂|race-pace/i.test(type)&&Array.isArray(run?.fitnessPowerCurve?.durations))return'structured';
+ return'ordinary';
+}
+function autoFitnessEffortEvidence(run){
+ // Only real races or explicitly high-effort runs can establish peak performance.
+ if(['ordinary','none','structured'].includes(autoFitnessEffortClass(run))||Number(run?.pain)>=5)return null;
+ const km=Number(run.distanceKm),seconds=Number(run.durationSec),whole=fiveKmEquivalentSeconds(seconds,km);
+ const valid=Number.isFinite(whole)&&seconds/km>=140&&seconds/km<=1000;
+ const segments=(run.recordSegments||[]).filter(x=>Number(x.km)>=3&&Number(x.km)<=21.2&&Number(x.durationSec)>0&&x.source==='stream');
+ const best=segments.map(x=>({time:fiveKmEquivalentSeconds(x.durationSec,x.km),distance:x.km,timeRaw:x.durationSec,source:'fastest timed segment'})).filter(x=>Number.isFinite(x.time)&&x.time>500&&x.time<6000).sort((a,b)=>a.time-b.time)[0];
+ const race=autoFitnessEffortClass(run)==='maximal';
+ // A high-RPE training interval, even if continuous, is not a verified maximal race.
+ const measured=valid?{time:whole,distance:km,timeRaw:seconds,source:'timed activity'}:null;
+ const chosen=[measured,best].filter(Boolean).sort((a,b)=>a.time-b.time)[0];
+ if(!chosen||chosen.time<600||chosen.time>7000)return null;
+ return{...chosen,runId:run.id,date:run.date,confidence:race?0.9:0.65,qualification:race?'race / assessment':'RPE-qualified hard effort',label:run.type};
+}
+function autoFitnessPowerCurve(records){
+ // Create small summaries BEFORE imported FIT/CSV time-series data are discarded.
+ // Time-weighted windows reject paused data, gaps, excessive missing samples, and invalid power.
+ const rows=(records||[]).map(r=>({t:Number(r.t),p:Number(r.power),hr:Number(r.hr),d:Number(r.distance)})).filter(r=>Number.isFinite(r.t)).sort((a,b)=>a.t-b.t);
+ if(rows.length<70)return null;
+ const chunks=[];let start=0;
+ for(let i=1;i<=rows.length;i++){
+  if(i===rows.length||rows[i].t<=rows[i-1].t||rows[i].t-rows[i-1].t>10){if(i-start>=50)chunks.push(rows.slice(start,i));start=i}
+ }
+ const best=[];
+ for(const durationSec of AUTO_EFFORT_DURATIONS){
+  let winner=null;
+  for(const chunk of chunks){
+   const n=chunk.length;if(chunk[n-1].t-chunk[0].t<durationSec)continue;
+   const ps=[0],p2=[0],pcs=[0],hs=[0],hcs=[0];
+   for(let i=0;i<n-1;i++){
+    const dt=chunk[i+1].t-chunk[i].t,p=chunk[i].p,hr=chunk[i].hr;
+    const pw=p>=60&&p<=1000?p:null,h=hr>=75&&hr<=210?hr:null;
+    ps.push(ps.at(-1)+(pw==null?0:pw*dt));p2.push(p2.at(-1)+(pw==null?0:pw*pw*dt));pcs.push(pcs.at(-1)+(pw==null?0:dt));
+    hs.push(hs.at(-1)+(h==null?0:h*dt));hcs.push(hcs.at(-1)+(h==null?0:dt));
+   }
+   // Two-pointer trailing time-window integrals; O(n) for each duration.
+   let s=0;
+   for(let e=1;e<n;e++){
+    const lo=chunk[e].t-durationSec;if(lo<chunk[0].t)continue;
+    while(s+1<e&&chunk[s+1].t<=lo)s++;
+    const trim=lo-chunk[s].t,dt=chunk[s+1].t-chunk[s].t;
+    if(!(dt>0))continue;
+    const piece=(arr,weight)=>arr[e]-arr[s]-trim*weight;
+    const pvalid=chunk[s].p>=60&&chunk[s].p<=1000,pw=pvalid?chunk[s].p:0;
+    const pCoverage=piece(pcs,pvalid?1:0)/durationSec;
+    if(pCoverage<.92)continue;
+    const watts=piece(ps,pw)/durationSec,powerSq=piece(p2,pw*pw)/durationSec;
+    if(!(watts>=100&&watts<=600))continue;
+    const hvalid=chunk[s].hr>=75&&chunk[s].hr<=210,hr0=hvalid?chunk[s].hr:0;
+    const hrCoverage=piece(hcs,hvalid?1:0)/durationSec;
+    const hr=hrCoverage>=.9?piece(hs,hr0)/Math.max(1,piece(hcs,hvalid?1:0)):null;
+    const cv=Math.sqrt(Math.max(0,powerSq-watts*watts))/watts;
+    const startDistance=Number(chunk[s].d),endDistance=Number(chunk[e].d);
+    const paceSecPerKm=Number.isFinite(startDistance)&&Number.isFinite(endDistance)&&endDistance>startDistance+50?durationSec/((endDistance-startDistance)/1000):null;
+    let tailHr=null;
+    if(durationSec>=1800&&hrCoverage>=.9){
+     let k=e;const tailStart=chunk[e].t-1200;
+     while(k>0&&chunk[k].t>tailStart)k--;
+     if(chunk[k].t<=tailStart&&chunk[k+1]){
+      const hrK=chunk[k].hr>=75&&chunk[k].hr<=210?chunk[k].hr:0;
+      const trimTail=Math.max(0,tailStart-chunk[k].t);
+      const tailValid=(hcs[e]-hcs[k]-(hrK?trimTail:0))/1200;
+      if(tailValid>=.92)tailHr=(hs[e]-hs[k]-hrK*trimTail)/(hcs[e]-hcs[k]-(hrK?trimTail:0));
+     }
+    }
+    if(!winner||watts>winner.avgPower)winner={durationSec,avgPower:Number(watts.toFixed(2)),avgHr:Number.isFinite(hr)?Number(hr.toFixed(1)):null,tailHr:Number.isFinite(tailHr)?Number(tailHr.toFixed(1)):null,cvPower:Number(cv.toFixed(3)),powerCoverage:Number(pCoverage.toFixed(3)),hrCoverage:Number(hrCoverage.toFixed(3)),paceSecPerKm,source:'timestamped FIT/CSV running power'};
+   }
+  }
+  if(winner)best.push(winner);
+ }
+ return best.length?{version:1,durations:best}:null;
+}
+function autoFitnessRunEvidence(run){
+ const rows=run?.fitnessPowerCurve?.durations;
+ return Array.isArray(rows)?rows:[];
+}
+function autoFitnessModel(date=iso(today())){
+ const requested=calibrationDate(date)||iso(today()),end=requested<iso(today())?requested:iso(today());
+ const cacheKey=`${end}|${state.storageRevision}|${state.runs.length}|${state.assessments.length}|${state.autoFitness?.enabled===false?'off':'on'}`;
+ if(autoFitnessCache.has(cacheKey))return autoFitnessCache.get(cacheKey);
+ const start=iso(addCalendarDays(end,-AUTO_FITNESS_WINDOW_DAYS)),eligible=(state.runs||[]).filter(r=>CORE.isIsoDate(r.date)&&r.date>=start&&r.date<=end&&r.source!=='assessment'&&(r.pain==null||Number(r.pain)<5));
+ // Do not infer effort from planned paces, which themselves depend on these estimates.
+ const efforts=[];
+ for(const a of state.assessments||[]){
+  if(!a.valid||!CORE.isIsoDate(a.date)||a.date<start||a.date>end)continue;
+  const t=fiveKmEquivalentSeconds(a.time,a.distance);
+  if(t>600&&t<7000)efforts.push({time:t,date:a.date,runId:a.id,confidence:.95,distance:Number(a.distance),timeRaw:Number(a.time),source:'valid timed assessment',label:'Fitness assessment'});
+ }
+ for(const r of eligible){if(r.assessmentId)continue;const e=autoFitnessEffortEvidence(r);if(e)efforts.push(e)}
+ efforts.sort((a,b)=>a.time-b.time||b.date.localeCompare(a.date));
+ const best=efforts[0]||null;
+ const nowAge=best?calendarDayNumber(end)-calendarDayNumber(best.date):null;
+ const pace=best?{kind:'pace',value:best.time/5,estimated5kSeconds:best.time,date:best.date,runId:best.runId,confidence:best.confidence*(nowAge>60?.85:1),status:best.confidence>=.85?'Strong evidence':'Moderate evidence',source:best.source,rawDistance:best.distance,rawTime:best.timeRaw,used:efforts.length}:null;
+ const highQualityRuns=eligible.filter(r=>autoFitnessEffortClass(r)!=='ordinary'&&autoFitnessEffortClass(r)!=='none'&&!/fallback proportional/i.test(r?.powerDiagnostics?.mapping||''));
+ const sampleRows=[];
+ for(const r of highQualityRuns){for(const d of autoFitnessRunEvidence(r)){
+  if(!(d.powerCoverage>=.92&&d.avgPower>=100&&d.avgPower<=600))continue;
+  sampleRows.push({...d,date:r.date,runId:r.id,effortClass:autoFitnessEffortClass(r)});
+ }}
+ // An independent short and long maximal/near-maximal performance constrains a
+ // two-parameter power-duration relationship P(t) = CP + anaerobic_work / t.
+ const short=sampleRows.filter(x=>x.durationSec>=180&&x.durationSec<=360),long=sampleRows.filter(x=>x.durationSec>=1200&&x.durationSec<=2400);
+ const pairs=[];
+ for(const s of short){for(const l of long){
+  if(s.runId===l.runId||!(s.avgPower>l.avgPower*1.035&&s.avgPower<l.avgPower*1.75))continue;
+  const cp=(l.avgPower*l.durationSec-s.avgPower*s.durationSec)/(l.durationSec-s.durationSec);
+  if(cp<120||cp>500||cp<.67*l.avgPower||cp>l.avgPower*.995)continue;
+  pairs.push({cp,short:s,long:l});
+ }}
+ pairs.sort((a,b)=>a.cp-b.cp);
+ let power=null;
+ if(pairs.length){
+  const center=pairs[Math.floor(pairs.length/2)].cp;
+  const consistent=pairs.filter(x=>Math.abs(x.cp/center-1)<.09);
+  const ids=[...new Set(consistent.flatMap(x=>[x.short.runId,x.long.runId]))];
+  const candidate=consistent.map(x=>x.cp).sort((a,b)=>a-b);const medianValue=candidate[Math.floor(candidate.length/2)];
+  const hasUnverified=consistent.some(x=>x.short.effortClass==='structured'||x.long.effortClass==='structured');
+ if(ids.length>=(hasUnverified?3:2)&&candidate.length>=1){
+   const confidence=ids.length>=3&&candidate.length>=3?.85:.7;
+   const contributing=consistent.flatMap(x=>[x.short,x.long]);const effectiveOn=contributing.map(x=>x.date).sort().at(-1);
+   power={kind:'power',value:Math.round(medianValue),date:effectiveOn,confidence,status:confidence>=.8?'Strong evidence':'Moderate evidence',source:`power-duration model · ${ids.length} hard runs`,used:ids.length,fitSpread:Math.max(...candidate)/Math.min(...candidate)-1};
+  }
+ }
+ // Only explicit lactate-threshold metadata or sustained >30 min quality running
+ // gives a threshold HR candidate. Average HR from an easy run is NOT LT2.
+ let hr=null;
+ const deviceHR=eligible.filter(r=>Number(r.deviceThresholdHr)>=100&&Number(r.deviceThresholdHr)<=210).sort((a,b)=>b.date.localeCompare(a.date))[0];
+ if(deviceHR){hr={kind:'hr',value:Math.round(Number(deviceHR.deviceThresholdHr)),date:deviceHR.date,confidence:.94,status:'Device measurement',source:`${deviceHR.sourceDevice||'FIT'} explicit threshold HR`,used:1}}
+ else{
+  const cp=power?.value||null;
+  const threshold=sampleRows.filter(x=>x.durationSec>=1800&&Number.isFinite(x.tailHr)&&x.tailHr>=120&&x.tailHr<=205&&x.cvPower<=.12&&x.hrCoverage>=.92&&(cp?x.avgPower>=cp*.9&&x.avgPower<=cp*1.08:true));
+  const ids=[...new Set(threshold.map(x=>x.runId))];
+  if(ids.length>=2&&cp){
+   const candidates=threshold.map(x=>x.tailHr).sort((a,b)=>a-b),spread=candidates.at(-1)-candidates[0];
+   if(spread<=12){hr={kind:'hr',value:Math.round(candidates[Math.floor(candidates.length/2)]),date:threshold.map(x=>x.date).sort().at(-1),confidence:ids.length>=3?.84:.7,status:'Estimated · sustained threshold efforts',source:`last-20-min HR across ${ids.length} qualifying runs`,used:ids.length}}
+  }
+ }
+ const directCP=eligible.filter(r=>Number(r.deviceCriticalPower)>=100&&Number(r.deviceCriticalPower)<=500).sort((a,b)=>b.date.localeCompare(a.date))[0];
+ if(directCP&&(!power||directCP.date>=power.date)){power={kind:'power',value:Math.round(Number(directCP.deviceCriticalPower)),date:directCP.date,confidence:.97,status:'Device measurement',source:`${directCP.sourceDevice||'FIT'} explicit Critical Power`,used:1}}
+ const exponent=1.06;
+ const predictions=pace?[[5,'5 km'],[10,'10 km'],[21.0975,'Half marathon'],[42.195,'Marathon']].map(([km,label])=>({km,label,seconds:Math.round(pace.estimated5kSeconds*Math.pow(km/5,exponent)),confidence:pace.confidence,source:'5 km equivalent × distance exponent 1.06; flat-course estimate'})):[];
+ const result={asOf:end,windowDays:AUTO_FITNESS_WINDOW_DAYS,pace,power,hr,predictions,counts:{runs:eligible.length,highQuality:highQualityRuns.length,efforts:efforts.length,powerSamples:sampleRows.length},policy:'Max efforts for pace; independent short and long best-effort power windows for CP; sustained near-threshold HR only. Never use whole-run average power or heart rate as thresholds.'};
+ if(autoFitnessCache.size>10)autoFitnessCache.clear();autoFitnessCache.set(cacheKey,result);return result;
+}
+function automaticFitnessRecord(kind,date=iso(today())){
+ if(state.autoFitness?.enabled===false||kind==='weight')return null;
+ const estimate=autoFitnessModel(date)[kind];if(!estimate||!(Number(estimate.value)>0))return null;
+ const effectiveOn=estimate.date,prev=ensureCalibrationState().records.filter(r=>r.kind===kind&&calibrationRecordIsCurrent(r,date)&&!r.legacy).sort((a,b)=>b.effectiveOn.localeCompare(a.effectiveOn))[0];
+ // A newer intentional manual setting is an override until newer evidence is available.
+ if(prev&&prev.effectiveOn>=effectiveOn&&prev.source!=='Fitness assessment')return null;
+ return{...estimate,id:`automatic-${kind}-${effectiveOn}`,effectiveOn,measuredOn:effectiveOn,confirmedOn:null,source:`Automatic: ${estimate.source}`,automatic:true,legacy:false,...(kind==='pace'?{testDistance:estimate.rawDistance||5,testTime:estimate.rawTime||estimate.estimated5kSeconds,estimated5kSeconds:estimate.estimated5kSeconds}:{})};
+}
+function automaticFitnessSnapshot(date=iso(today())){
+ const result=autoFitnessModel(date);
+ return{pace:result.pace?Math.round(result.pace.value*10)/10:null,power:result.power?.value??null,hr:result.hr?.value??null};
+}
+function autoFitnessChanged(before,after){return ['pace','power','hr'].some(key=>before?.[key]!=null||after?.[key]!=null?Number(before?.[key]||0)!==Number(after?.[key]||0):false)}
+function persistAutomaticFitnessUpdate(before){
+ invalidateAutomaticFitnessCache();
+ const model=autoFitnessModel(),calibration=ensureCalibrationState();
+ // Commit accepted results as dated evidence. A 90-day expiry does not restore
+ // an obsolete manual seed: the last confirmed automated result remains active
+ // (with its old measurement date visible) until newer evidence qualifies.
+ for(const kind of ['pace','power','hr']){
+  const e=model[kind];if(!e||!calibrationValidValue(kind,e.value))continue;
+  const lastManual=calibration.records.filter(r=>r.kind===kind&&!r.automatic&&!r.legacy&&!r.assessmentId&&calibrationRecordIsCurrent(r,iso(today()))).sort((a,b)=>b.effectiveOn.localeCompare(a.effectiveOn))[0];
+  if(lastManual?.effectiveOn>=e.date)continue;
+  const duplicate=calibration.records.some(r=>r.kind===kind&&r.automatic&&r.effectiveOn===e.date&&Math.abs(Number(r.value)-e.value)<.0001);
+  if(duplicate)continue;
+  calibrationAppendRecord(calibration,{kind,value:e.value,effectiveOn:e.date,measuredOn:e.date,confirmedOn:null,source:`Automatic: ${e.source}`,automatic:true,legacy:false,confidence:e.confidence,status:e.status,...(kind==='pace'?{testDistance:e.rawDistance||5,testTime:e.rawTime||e.estimated5kSeconds,estimated5kSeconds:e.estimated5kSeconds}:{})});
+ }
+ const after=automaticFitnessSnapshot();
+ // A new reliable baseline rebuilds ONLY uncompleted prescriptions. The plan
+ // builder already protects all past workouts and those linked to recorded runs.
+ return autoFitnessChanged(before,after)?buildPlan():save();
+}
+function autoFitnessSummaryHtml(){
+ const model=autoFitnessModel(),effective=kind=>{
+  if(model[kind])return {...model[kind],displayStatus:model[kind].status,displayDate:model[kind].date};
+  const held=calibrationFor(kind);
+  if(held?.automatic)return {...held,displayStatus:'Last qualified automatic estimate · older than current evidence window',displayDate:held.measuredOn||held.effectiveOn};
+  return held?{...held,displayStatus:'Retained starting value · not independently estimated',displayDate:held.measuredOn||held.effectiveOn}:null;
+ };
+ const metric=(title,info,unit,blank)=>`<div class="autoFitnessMetric"><small>${title}</small><b>${info?`${unit==='pace'?pace(info.value):`${Math.round(info.value)} ${unit}`}`:blank}</b><span>${info?`${esc(info.displayStatus)}${info.displayDate?` · ${esc(fmtDate(info.displayDate))}`:''}`:'Insufficient qualifying evidence'}</span></div>`;
+ const pred=model.predictions.map(x=>`<div><small>${esc(x.label)}</small><b>${esc(fmtTime(x.seconds))}</b></div>`).join('');
+ const notAvailable=['pace','power','hr'].filter(k=>!model[k]);
+ return`<section class="autoFitnessCard" aria-label="Automatic fitness estimates"><div class="panelHead"><div><small>AUTOMATIC · OFFLINE</small><h3>Fitness estimates</h3><p class="muted compact">Uses up to ${model.windowDays} days of saved activities. Each imported FIT/CSV run re-evaluates fitness; VO₂-equivalent is tracked in Progress. Power and threshold-HR targets change only with qualifying evidence.</p></div></div><div class="autoFitnessGrid">${metric('5 km reference',effective('pace'),'pace','Waiting for a hard effort')}${metric('Critical power',effective('power'),'W','Waiting for power data')}${metric('Threshold HR',effective('hr'),'bpm','Waiting for threshold data')}</div>${pred?`<details><summary>Current race-time estimates (flat course)</summary><div class="autoFitnessRaces">${pred}</div><p class="muted compact">These are estimates, not guaranteed race results. Marathon estimates have additional uncertainty until race-specific endurance evidence is available.</p></details>`:''}<details><summary>Evidence and limitations</summary><p class="muted compact">${model.counts.runs} activities in the window · ${model.counts.highQuality} quality efforts. ${esc(model.policy)}</p>${notAvailable.length?`<p class="muted compact">Waiting for stronger ${notAvailable.join(', ')} evidence. Prior calibration is retained and explicitly labelled, never silently inferred from an easy run. Import recent timestamped FIT/CSV activities with power/HR and sufficient hard efforts.</p>`:''}<p class="muted compact">This offline app does not connect directly to Stryd or Garmin and cannot reproduce their proprietary estimates exactly. Device CP/LTHR are used only if explicitly included in a FIT activity.</p></details></section>`;
+}
+/* END offline automatic fitness model */
+
+/* BEGIN Garmin-style continuous aerobic running observation v15.7.28 */
+// A compact steady-state HR/speed measurement, NOT VO2max. Compute at import
+// before the second-by-second activity is deleted. Never derive a fitness
+// baseline from a whole-run mean, manually keyed run or planned workout.
+function autoAerobicSteadyEvidence(records){
+ const rows=(records||[]).map(x=>({t:Number(x.t),d:Number(x.distance),hr:Number(x.hr),alt:Number(x.altitude)}))
+   .filter(x=>Number.isFinite(x.t)&&Number.isFinite(x.d)).sort((a,b)=>a.t-b.t);
+ if(rows.length<95)return null;
+ const parts=[];let from=0;
+ for(let i=1;i<=rows.length;i++){
+  if(i===rows.length||rows[i].t<=rows[i-1].t||rows[i].t-rows[i-1].t>10||rows[i].d+2<rows[i-1].d){
+   if(i-from>=95)parts.push(rows.slice(from,i));from=i;
+  }
+ }
+ let selected=null;
+ for(const part of parts){
+  if(part.at(-1).t-part[0].t<600)continue;
+  const stride=Math.max(15,Math.floor(part.length/90));
+  for(let i=0;i<part.length;i+=stride){
+   for(const target of [1200,900,600]){
+    if(part.at(-1).t-part[i].t<target)continue;
+    let lo=i+1,hi=part.length-1;
+    while(lo<hi){const m=(lo+hi)>>1;if(part[m].t-part[i].t<target)lo=m+1;else hi=m}
+    const end=lo,span=part[end].t-part[i].t;
+    if(span<target||span>target+10)continue;
+    const metres=part[end].d-part[i].d,speed=metres/span;
+    if(!(speed>=1.75&&speed<=6.5))continue;
+    const sub=part.slice(i,end+1),valid=sub.filter(x=>x.hr>=95&&x.hr<=205);
+    if(valid.length/sub.length<.92||valid.length<80)continue;
+    const meanHr=valid.reduce((n,x)=>n+x.hr,0)/valid.length;
+    if(!(meanHr>=117&&meanHr<=195))continue;
+    const hrStd=Math.sqrt(valid.reduce((n,x)=>n+(x.hr-meanHr)**2,0)/valid.length);
+    if(hrStd>7.5)continue;
+    const midpoint=part[i].t+span/2,first=valid.filter(x=>x.t<=midpoint),last=valid.filter(x=>x.t>midpoint);
+    if(first.length<30||last.length<30)continue;
+    const avg=a=>a.reduce((n,x)=>n+x.hr,0)/a.length;
+    const drift=avg(last)-avg(first);
+    if(Math.abs(drift)>12)continue; // unstable effort or sensor/heat drift
+    // Assess pacing across three equal elapsed-time thirds using recorded
+    // cumulative distance, not instantaneous GPS speed spikes.
+    const at=(when)=>{let k=0;while(k+1<sub.length&&sub[k+1].t<when)k++;if(k+1>=sub.length)return sub.at(-1).d;const a=sub[k],b=sub[k+1];return a.d+(b.d-a.d)*(when-a.t)/Math.max(1,b.t-a.t)};
+    const boundary=[part[i].d,at(part[i].t+span/3),at(part[i].t+2*span/3),part[end].d];
+    const speeds=[0,1,2].map(j=>(boundary[j+1]-boundary[j])/(span/3));
+    const mn=speeds.reduce((a,b)=>a+b,0)/3;
+    const variation=Math.sqrt(speeds.reduce((a,b)=>a+(b-mn)**2,0)/3)/mn;
+    if(speeds.some(x=>x<1.65)||variation>.125)continue;
+    // An available elevation trace can reject sustained climbing/descending.
+    // Missing altitude remains explicitly unverified; it is never assumed flat.
+    const altitude=sub.filter(x=>Number.isFinite(x.alt)&&x.alt>-500&&x.alt<9000&&x.alt!==0);
+    const terrainKnown=altitude.length/sub.length>.8;
+    const gain=terrainKnown?altitude.at(-1).alt-altitude[0].alt:null;
+    const range=terrainKnown?Math.max(...altitude.map(x=>x.alt))-Math.min(...altitude.map(x=>x.alt)):null;
+    if(terrainKnown&&(Math.abs(gain)/metres>.025||range/metres>.035))continue;
+    const quality=(target/1200)*.25 + (1-variation/.125)*.28 + (1-Math.abs(drift)/12)*.25+(terrainKnown?.22:.07);
+    const row={version:1,method:'steady recorded distance and HR',durationSec:target,avgHr:Number(meanHr.toFixed(1)),speedMps:Number(speed.toFixed(4)),paceSecPerKm:Number((1000/speed).toFixed(1)),speedVariation:Number(variation.toFixed(3)),hrDrift:Number(drift.toFixed(1)),hrCoverage:Number((valid.length/sub.length).toFixed(3)),terrainVerified:terrainKnown,quality:Number(quality.toFixed(3))};
+    if(!selected||row.quality>selected.quality)selected=row;
+   }
+  }
+ }
+ return selected;
+}
+/* END Garmin-style continuous aerobic running observation */
+
+/* BEGIN cardiorespiratory fitness tracking v15.7.28
+   Performance-derived oxygen-demand proxy (Daniels VDOT), NOT measured VO2max.
+   Age-equivalent is experimental: median FRIEND treadmill VO2max versus VDOT
+   are not interchangeable measurements, so never present it as medical age.
+   Steady-run HR/pace is used only for anchored aerobic trends, not as direct VO2max. */
+const FITNESS_AGE_REFERENCE={
+  // FRIEND registry, treadmill CPET 50th percentiles by sex/age decade.
+  // Table 3, https://pmc.ncbi.nlm.nih.gov/articles/PMC4919021/
+  men:[[25,48.0],[35,42.4],[45,37.8],[55,32.6],[65,28.2],[75,24.4]],
+  women:[[25,37.6],[35,30.2],[45,26.7],[55,23.4],[65,20.0],[75,18.3]]
+};
+function raceEquivalentVdot(paceSecPerKm){
+ const p=Number(paceSecPerKm),min=p*5/60;
+ if(!(p>=135&&p<=1200&&min>=10&&min<=100))return null;
+ const metresPerMinute=5000/min;
+ const oxygenCost=-4.60+.182258*metresPerMinute+.000104*metresPerMinute*metresPerMinute;
+ const fractionalVO2=.8+.1894393*Math.exp(-.012778*min)+.2989558*Math.exp(-.1932605*min);
+ const score=oxygenCost/fractionalVO2;
+ return Number.isFinite(score)&&score>=10&&score<=100?score:null;
+}
+function referenceMedianVO2(group,age){
+ const refs=FITNESS_AGE_REFERENCE[group],a=Number(age);
+ if(!refs||!Number.isFinite(a)||a<20||a>79)return null;
+ if(a<=refs[0][0])return refs[0][1];
+ if(a>=refs.at(-1)[0])return refs.at(-1)[1];
+ for(let i=1;i<refs.length;i++)if(a<=refs[i][0]){
+  const [lowAge,lowVO2]=refs[i-1],[highAge,highVO2]=refs[i];
+  return lowVO2+(a-lowAge)/(highAge-lowAge)*(highVO2-lowVO2);
+ }
+ return null;
+}
+function aerobicFitnessAgeEquivalent(vdot,group){
+ const refs=FITNESS_AGE_REFERENCE[group],v=Number(vdot);
+ if(!refs||!Number.isFinite(v)||v<10||v>100)return null;
+ if(v>refs[0][1])return{value:null,label:'Under 25',boundary:true};
+ if(v<refs.at(-1)[1])return{value:null,label:'Over 75',boundary:true};
+ for(let i=1;i<refs.length;i++)if(v>=refs[i][1]){
+  const [young,high]=refs[i-1],[older,low]=refs[i];
+  const age=young+(high-v)/(high-low)*(older-young);
+  return{value:age,label:`≈ ${Math.round(age/5)*5} years`,boundary:false};
+ }
+ return{value:75,label:'≈ 75 years',boundary:false};
+}
+function fitnessChronologicalAge(year,date=iso(today())){
+ const y=Number(year),onYear=Number(String(date).slice(0,4));
+ if(!Number.isInteger(y)||y<1900||!Number.isFinite(onYear))return null;
+ const a=onYear-y;
+ return a>=20&&a<=79?a:null;
+}
+function fitnessMedian(numbers){const list=numbers.filter(Number.isFinite).sort((a,b)=>a-b);if(!list.length)return null;const m=Math.floor(list.length/2);return list.length%2?list[m]:(list[m-1]+list[m])/2}
+function aerobicFitnessTrendPoints(performanceHistory,asOf=iso(today())){
+ const cutoff=CORE.isIsoDate(asOf)&&asOf<iso(today())?asOf:iso(today());
+ // This is a within-athlete aerobic-efficiency TREND, not an absolute VO2max
+ // measurement. A dated performance anchor is needed for VDOT units.
+ const anchors=(performanceHistory||[]).filter(x=>x&&x.quality>=1&&Number.isFinite(x.vdot)&&CORE.isIsoDate(x.date)&&x.date<=cutoff).sort((a,b)=>a.date.localeCompare(b.date));
+ if(!anchors.length)return[];
+ const entries=(state.runs||[]).filter(r=>r&&r.aerobicFitnessEvidence?.version===1&&CORE.isIsoDate(r.date)&&r.date<=cutoff&&r.source!=='assessment'&&
+   (!Number.isFinite(Number(r.rpe))||Number(r.rpe)<=7)&&(!Number.isFinite(Number(r.pain))||Number(r.pain)<3))
+ .map(r=>{
+  const e=r.aerobicFitnessEvidence,threshold=Number(state.setup?.thresholdHr);
+  // When available, the current threshold is used only to establish whether
+  // the effort was aerobic enough to be informative; it is not fitted from it.
+  if(Number.isFinite(threshold)&&threshold>=125&&e.avgHr<threshold*.76)return null;
+  const h=e.avgHr,v=e.speedMps;
+  if(!(h>=117&&h<=192&&v>=1.75&&v<=6.5&&e.hrCoverage>=.9&&e.quality>=.35))return null;
+  // Normalize to 145 bpm with a deliberately modest fixed log-speed slope.
+  // HR-speed relationships vary across individuals and temperature; for that
+  // reason only small, repeated changes are accepted as trends.
+  const index=v*Math.exp(-.0075*(h-145));
+  return{date:r.date,runId:r.id,index,quality:e.quality,hr:h,pace:e.paceSecPerKm,terrainVerified:e.terrainVerified};
+ }).filter(Boolean).sort((a,b)=>a.date.localeCompare(b.date)||String(a.runId).localeCompare(String(b.runId)));
+ if(entries.length<3)return[];
+ const output=[];
+ for(let i=2;i<entries.length;i++){
+  const current=entries[i];const anchor=anchors.filter(a=>a.date<=current.date).at(-1);
+  if(!anchor)continue;
+  const daysSince=calendarDayNumber(current.date)-calendarDayNumber(anchor.date);
+  if(daysSince>240)continue; // an old time trial cannot indefinitely anchor VO2 units
+  const period=entries.slice(0,i+1).filter(e=>e.date>=anchor.date&&e.date<=current.date);
+  // Include up to 14 days prior to the first post-anchor observation for a
+  // representative starting aerobic-efficiency baseline.
+  const nearby=entries.slice(0,i+1).filter(e=>e.date>=iso(addCalendarDays(anchor.date,-14))&&e.date<=current.date);
+  const basis=period.length>=3?period:nearby;
+  if(basis.length<3||new Set(basis.map(e=>e.date)).size<3)continue;
+  const firstThree=basis.slice(0,3);
+  const firstSpread=calendarDayNumber(firstThree.at(-1).date)-calendarDayNumber(firstThree[0].date);
+  if(firstSpread>35)continue;
+  const baseline=fitnessMedian(firstThree.map(e=>e.index));
+  const recent=basis.filter(e=>e.date>=iso(addCalendarDays(current.date,-28))).slice(-5);
+  if(recent.length<2||new Set(recent.map(e=>e.date)).size<2)continue;
+  const currentIndex=fitnessMedian(recent.map(e=>e.index));
+  if(!(baseline>0&&currentIndex>0))continue;
+  const ratio=Math.max(.92,Math.min(1.08,currentIndex/baseline));
+  const raw=anchor.vdot*ratio;
+  // Never allow a single new normal run to move the VO2-equivalent chart by
+  // more than 0.8; larger physiological changes require repeated data.
+  const prior=output.at(-1);
+  const vdot=prior&&prior.anchorDate===anchor.date?Math.max(prior.vdot-.8,Math.min(prior.vdot+.8,raw)):raw;
+  if(!(vdot>=10&&vdot<=100))continue;
+  output.push({date:current.date,vdot:Number(vdot.toFixed(3)),quality:.5,sequence:i,pace:null,automatic:true,
+   confidence:null,source:'Steady-run HR/pace trend (submaximal estimate)',submax:true,anchorDate:anchor.date,
+   basisRuns:basis.length,recentRuns:recent.length,terrainVerified:recent.every(e=>e.terrainVerified),
+   note:'HR-normalized steady running trend anchored to a recorded 5 km-equivalent result; not a direct VO₂max measurement.'});
+ }
+ return output;
+}
+function observedFitnessHistory(asOf=iso(today())){
+ const cutoff=CORE.isIsoDate(asOf)&&asOf<iso(today())?asOf:iso(today()),cal=ensureCalibrationState();
+ const byDay=new Map();
+ for(const record of cal.records||[]){
+  if(record?.kind!=='pace'||record.legacy)continue;
+  const date=record.measuredOn||record.effectiveOn;
+  if(!CORE.isIsoDate(date)||date>cutoff||!(record.automatic||record.assessmentId||record.measuredOn))continue;
+  const value=Number(record.value),vdot=raceEquivalentVdot(value);
+  if(vdot===null)continue;
+  // One observation per calendar day; prefer documented timed assessments
+  // over model-derived efforts on the same day, then the latest sequence.
+  const quality=record.assessmentId?3:record.automatic?2:1,old=byDay.get(date);
+  if(!old||quality>old.quality||(quality===old.quality&&Number(record.sequence)>old.sequence))byDay.set(date,{date,vdot,pace:value,quality,sequence:Number(record.sequence)||0,source:String(record.source||'Timed performance'),automatic:Boolean(record.automatic),confidence:record.confidence??null});
+ }
+ // Render a current qualified import that has not yet been committed, but never
+ // use a stale auto estimate to supplant a newer explicit reference.
+ const current=calibrationFor('pace',cutoff),currentDate=current?.measuredOn||current?.effectiveOn;
+ if(current&&!current.legacy&&CORE.isIsoDate(currentDate)&&currentDate<=cutoff&&(current.automatic||current.assessmentId||current.measuredOn)){
+  const v=raceEquivalentVdot(current.value),old=byDay.get(currentDate);
+  const quality=current.assessmentId?3:current.automatic?2:1;
+  if(v!==null&&(!old||quality>old.quality||(quality===old.quality&&Number(current.sequence)>old.sequence)))byDay.set(currentDate,{date:currentDate,vdot:v,pace:Number(current.value),quality,sequence:Number(current.sequence)||0,source:String(current.source||'Timed performance'),automatic:Boolean(current.automatic),confidence:current.confidence??null});
+ }
+ // Steady aerobic sections can show ongoing change without claiming a new race
+ // performance. They are anchored to an actual dated performance and are
+ // deliberately never written to the pace benchmark or workout prescriptions.
+ for(const point of aerobicFitnessTrendPoints([...byDay.values()],cutoff)){
+  const previous=byDay.get(point.date);
+  if(!previous||previous.quality<point.quality||(previous.quality===point.quality&&Number(point.sequence)>Number(previous.sequence)))byDay.set(point.date,point);
+ }
+ return [...byDay.values()].sort((a,b)=>a.date.localeCompare(b.date));
+}
+function fitnessTrajectory(asOf=iso(today())){
+ const history=observedFitnessHistory(asOf),latest=history.at(-1)||null,first=history[0]||null;
+ const profile=state.fitnessProfile||{},group=profile.referenceGroup||null;
+ const age=fitnessChronologicalAge(profile.birthYear,asOf);
+ const validAge=latest&&age!==null&&group;
+ const fitnessAge=validAge?aerobicFitnessAgeEquivalent(latest.vdot,group):null;
+ const cohortMedian=validAge?referenceMedianVO2(group,age):null;
+ const trajectory=history.map(x=>({...x,ageEquivalent:age!==null&&group?aerobicFitnessAgeEquivalent(x.vdot,group)?.value??null:null,chronologicalAge:fitnessChronologicalAge(profile.birthYear,x.date)}));
+ return{latest,first,history:trajectory,age,group,fitnessAge,cohortMedian,delta:latest&&first&&history.length>1?latest.vdot-first.vdot:null};
+}
+function fitnessProgressCardHtml(){
+ const f=fitnessTrajectory(),profile=state.fitnessProfile||{},hasProfile=Boolean(profile.birthYear&&profile.referenceGroup),latest=f.latest;
+ const numeric=val=>Number(val).toFixed(1),latestLabel=latest?numeric(latest.vdot):'—';
+ const trend=!latest?'Awaiting enough steady or timed evidence':f.delta==null?'Awaiting a second qualifying result':`${f.delta>=0?'+':''}${numeric(f.delta)} vs first qualified result`;
+ const details=latest?`${esc(fmtDate(latest.date))} · ${esc(latest.source)}${latest.submax?' · Provisional, low-confidence trend':latest.confidence!=null?' · Qualification strength: '+(latest.confidence>=.85?'high':'moderate'):''}`:'Import timestamped FIT/CSV runs with HR and distance. Steady running trends require an earlier dated performance anchor; whole-run averages are not used.';
+ const ageLabel=f.fitnessAge?f.fitnessAge.label:hasProfile?'Not enough validated performance evidence':'Set profile once to enable';
+ const referenceText=f.cohortMedian!==null?`At age ${f.age}, the ${f.group==='men'?'men':'women'} reference median is ${numeric(f.cohortMedian)} mL/kg/min; the running VO₂-equivalent model currently indicates ${numeric(latest.vdot)}; submaximal updates are lower-confidence estimates.`:'Requires a birth year, study reference group and a qualifying performance estimate.';
+ const selected=(value,chosen)=>value===chosen?'selected':'';
+ return`<section class="cardioFitnessPanel" aria-label="Running VO2max and cardiorespiratory fitness age">
+ <div class="cardioFitnessHead"><div><small>RUNNING PERFORMANCE · AUTOMATIC</small><h4>VO₂max &amp; fitness age</h4><p>Runs are evaluated after every FIT/CSV import. Timed performances establish the VDOT baseline; steady-run pace/heart-rate changes can update the trend. Not a laboratory VO₂max measurement.</p></div></div>
+ <div class="cardioFitnessKpis"><article><small>RUNNING-ESTIMATED VO₂max</small><strong>${latestLabel}</strong><span>VDOT · mL/kg/min equivalent</span><small>${esc(trend)}</small></article><article><small>APPROX. CARDIO FITNESS AGE</small><strong>${esc(ageLabel)}</strong><span>${f.age===null?'Chronological age not configured':`Approx. chronological age ${f.age} years`}</span><small>${latest?'Comparison is indicative, not medical age':'Waiting for qualifying performance evidence'}</small></article></div>
+ <p class="cardioFitnessEvidence">${details}${latest?.submax?` · ${latest.basisRuns} steady runs, most recent ${latest.recentRuns}; ${latest.terrainVerified?'terrain verified':'terrain not fully verified'} · lower confidence`:''}</p><div class="cardioFitnessCharts"><div><div class="cardioFitnessChartLabel"><b>Running VO₂ estimate over time</b><small>Qualified timed and steady-run observations</small></div><div id="fitnessVo2ChartMount" class="progressChartMount" aria-label="Estimated running VO2 trend"></div></div><div><div class="cardioFitnessChartLabel"><b>Cardio fitness-age comparison</b><small>Approximate median-equivalent age</small></div><div id="fitnessAgeChartMount" class="progressChartMount" aria-label="Estimated cardio fitness age trend"></div></div></div>
+ <details class="cardioFitnessProfile"><summary>${hasProfile?'Edit age-comparison profile':'Set up fitness-age comparison once'}</summary><p class="muted compact">For age comparison only: an optional birth year and the reference cohort used by the published study. No need to update either after setup. Stored locally.</p><div class="cardioFitnessForm"><label>Birth year<input id="fitnessBirthYear" type="number" inputmode="numeric" min="1900" max="${today().getFullYear()-18}" placeholder="e.g. 1980" value="${profile.birthYear??''}"></label><label>Reference population<select id="fitnessReferenceGroup"><option value="">No comparison</option><option value="men" ${selected('men',profile.referenceGroup)}>Men (FRIEND treadmill)</option><option value="women" ${selected('women',profile.referenceGroup)}>Women (FRIEND treadmill)</option></select></label><button type="button" id="saveFitnessProfile" class="secondary">Save profile</button></div><div id="fitnessProfileFeedback" class="muted compact" role="status"></div></details>
+ <details class="cardioFitnessMethod"><summary>How are these values calculated?</summary><p>A dated 5 km-equivalent performance establishes VDOT using Daniels–Gilbert equations. Afterwards, the app uses steady, well-covered 10–20-minute HR/pace sections of imported GPS/footpod runs to estimate small within-runner aerobic-efficiency changes. The HR-normalization slope is a pragmatic heuristic and is not validated against laboratory VO₂max. Easy-run evidence does not redefine your race performance benchmark, CP or lactate-threshold HR.</p><p>${esc(referenceText)}</p><p>Fitness age is the approximate age at which the FRIEND registry’s treadmill-test median VO₂max matches the VDOT value. Because these are different measurement methods, fitness age is exploratory and can differ markedly from Garmin fitness age. Values beyond the 25–75-year reference midpoints are displayed only as bounds.</p><p>Source: <a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC4919021/" target="_blank" rel="noopener noreferrer">FRIEND reference standards (Table 3)</a>; Daniels–Gilbert running VDOT equations. This is not a health diagnosis, biological age, or a clinical measurement.</p></details>
+ </section>`;
+}
+function renderFitnessProgressPanel(){
+ const host=$('cardioFitnessProgress');if(!host)return;
+ const f=fitnessTrajectory();host.innerHTML=fitnessProgressCardHtml();
+ const rows=f.history.slice(-36),labels=rows.map(x=>x.date.slice(5)),vdot=rows.map(x=>Number(x.vdot.toFixed(1))),age=rows.map(x=>x.ageEquivalent==null?null:Number(x.ageEquivalent.toFixed(1))),chronological=rows.map(x=>x.chronologicalAge);
+ const limits=tightMetricChartBounds(vdot,{paddingFraction:.10,minPadding:1,singlePadding:3});
+ progressSvgIntoMount('fitnessVo2ChartMount',[{label:'VDOT / VO₂-equivalent',data:vdot,color:'#55d6b6'}],{labels,scaleMin:limits?.min,scaleMax:limits?.max,formatY:v=>v.toFixed(0),aria:'Running performance VDOT over qualifying test dates',empty:'Import detailed FIT/CSV runs; a dated timed performance is needed to anchor VO₂-equivalent units.'});
+ const ages=age.filter(Number.isFinite),ageLimit=tightMetricChartBounds([...ages,...chronological.filter(Number.isFinite)],{paddingFraction:.1,minPadding:1,singlePadding:4});
+ progressSvgIntoMount('fitnessAgeChartMount',[
+  {label:'Approx. cardio fitness age',data:age,color:'#70b6f5'},
+  {label:'Approx. chronological age',data:chronological,color:'#a8b2c1',dashed:true,points:false}
+ ],{labels,scaleMin:ageLimit?.min,scaleMax:ageLimit?.max,formatY:v=>`${v.toFixed(1)} y`,aria:'Exploratory fitness-age equivalent compared with chronological age',empty:'Enter your birth year and reference population once. A qualifying running performance is also required.'});
+ const saveBtn=$('saveFitnessProfile');if(!saveBtn)return;
+ saveBtn.onclick=()=>{
+  const raw=$('fitnessBirthYear').value.trim(),birth=raw===''?null:Number(raw),group=$('fitnessReferenceGroup').value||null;
+  const err=$('fitnessProfileFeedback');
+  if((birth!==null&&(!Number.isInteger(birth)||birth<1900||birth>today().getFullYear()-20||today().getFullYear()-birth>79))||(group&&!['men','women'].includes(group))||(group&&birth===null)){
+   if(err)err.textContent='Enter a valid birth year for an adult aged 20–79, or clear both fields to hide fitness age.';
+   return;
+  }
+  const prior=state.fitnessProfile;
+  state.fitnessProfile={birthYear:birth,referenceGroup:group};
+  if(save()===false){state.fitnessProfile=prior;if(err)err.textContent='Could not save the profile on this device.';return}
+  invalidatePageRenderCache('dashboard');renderFitnessProgressPanel();
+ };
+}
+/* END cardiorespiratory fitness tracking */
+
+
 /* END calibration-core */
 /* BEGIN calibration-ui */
 /* Calibration review UI. Insert inside the app IIFE after the calibration engine.
    Call bindCalibrationControls(document) once. No automatic modal on startup. */
 function calibrationUiKinds(){
  return[
-  {kind:'pace',label:'Pace benchmark',days:28,help:'Use the distance and time from a current timed benchmark. Updating critical power does not require a new pace test.'},
-  {kind:'power',label:'Critical power',days:28,help:'Enter your current critical-power estimate, for example the CP shown by Stryd. An ordinary run’s average watts is not a CP measurement.'},
-  {kind:'hr',label:'Threshold heart rate',days:28,help:'Use a current threshold-HR estimate from a suitable assessment or trusted device estimate. An ordinary run’s average HR is not threshold HR.'},
+  {kind:'pace',label:'5 km pace reference (automatic)',days:28,help:'A measured 5 km race/time trial or a distance-normalized estimate from a strong timed race. Imported races update this automatically.'},
+  {kind:'power',label:'Critical power (automatic)',days:28,help:'The model needs separate short and long hard efforts with timestamped power, or an explicit CP embedded in a FIT file. One average power reading cannot define CP.'},
+  {kind:'hr',label:'Threshold heart rate (automatic)',days:28,help:'Requires repeated sustained near-threshold efforts with reliable heart rate, or explicit lactate-threshold HR metadata; not the average HR of an easy run.'},
   {kind:'weight',label:'Actual body weight',days:14,help:'Enter your actual body weight. Stryd’s configured mass is a separate device setting; this form does not change it.'}
  ];
 }
@@ -1507,7 +1994,7 @@ function calibrationUiDate(value){return CORE.isIsoDate(value)?`${fmtDate(value)
 function calibrationUiValue(kind,record){
  const value=Number(record?.value);
  if(!(value>0))return'Not recorded';
- if(kind==='pace')return pace(value);
+ if(kind==='pace')return `5 km ${pace(value)}`;
  if(kind==='power')return`${Math.round(value)} W`;
  if(kind==='hr')return`${Math.round(value)} bpm`;
  return`${value.toFixed(1)} kg`;
@@ -1525,7 +2012,9 @@ function calibrationUiReviewState(asOf=iso(today())){
   const dates=[record?.confirmedOn,record?.measuredOn].filter(date=>CORE.isIsoDate(date)&&date<=asOf).sort();
   const lastReview=dates.at(-1)||null;
   const age=lastReview?calendarDayNumber(asOf)-calendarDayNumber(lastReview):null;
-  return{...def,record,lastReview,age,due:age===null||age>=def.days};
+  // Fitness metrics are auto-maintained when sufficient evidence exists.
+  // Do not nag runners to manually re-enter CP, threshold HR or benchmark pace.
+  return{...def,record,lastReview,age,due:def.kind==='weight'&&(age===null||age>=def.days)};
  });
  const deferredUntil=CORE.isIsoDate(calibration.deferredUntil)?calibration.deferredUntil:null;
  return{rows,due:rows.filter(row=>row.due),deferredUntil,deferred:Boolean(deferredUntil&&deferredUntil>asOf)};
@@ -1533,27 +2022,27 @@ function calibrationUiReviewState(asOf=iso(today())){
 function calibrationReviewCardHtml(context='today'){
  const review=calibrationUiReviewState(),settings=context==='settings';
  if(!settings&&(!review.due.length||review.deferred))return'';
- const status=review.deferred?`Reminder ${calibrationUiDate(review.deferredUntil)}`:review.due.length?'Review suggested':'Up to date';
- const summary=review.due.length?`${review.due.map(row=>row.label).join(', ')} ${review.due.length===1?'is':'are'} ready to check.`:'Your current values and their measurement sources are recorded.';
+ const status=review.deferred?`Reminder ${calibrationUiDate(review.deferredUntil)}`:review.due.length?'Weight review suggested':'Automatic';
+ const summary=review.due.length?'Check your body weight if it has changed; pace, CP and threshold HR update automatically from qualified run evidence.':'Pace, CP and threshold HR are evaluated from imported activities. Missing evidence leaves the previous value in place.';
  return`<section class="${settings?'settingsNested':'todayRunnerCard'} calibrationReviewCard" aria-label="Training input review">
   <div class="panelHead"><div><small class="muted">TRAINING INPUTS</small><h3>Keep your values current</h3></div><span class="calibrationBadge">${esc(status)}</span></div>
   <p class="muted compact">${esc(summary)}</p>
   <div class="calibrationCardGrid">${review.rows.map(row=>`<div><small>${esc(row.label)}</small><b>${esc(calibrationUiValue(row.kind,row.record))}</b><span>${esc(calibrationUiSource(row.record))}</span>${row.record?.confirmedOn?`<span>Last checked ${esc(calibrationUiDate(row.record.confirmedOn))}</span>`:''}</div>`).join('')}</div>
   <div class="buttonRow calibrationActions"><button type="button" class="primary" data-calibration-action="review">${settings?'Review fitness values':'Review values'}</button>${review.due.length&&!review.deferred?'<button type="button" class="secondary" data-calibration-action="defer">Remind me in 7 days</button>':''}</div>
   ${settings?'<button type="button" class="secondary full calibrationAssessmentLink" data-go="assessments">Record a timed assessment</button>':''}
-  <p class="muted calibrationMicro">Review reminders suggest checking your inputs; they do not prescribe a new fitness test.</p>
+  <p class="muted calibrationMicro">Fitness inputs refresh without a manual review when the activity evidence is strong enough. Body weight still needs a measured value.</p>
  </section>`;
 }
 function calibrationUiPaceInputs(record){
  const testDistance=Number(record?.testDistance)>0?Number(record.testDistance):Math.max(.1,Number(state.setup.testDistance)||1);
- const testTime=Number(record?.testTime)>0?Number(record.testTime):Number(record?.value)>0?Number(record.value)*testDistance:Number(state.setup.testTime)||0;
+ const testTime=Number(record?.testTime)>0?Number(record.testTime):Number(record?.value)>0?Number(record.value)*5:Number(state.setup.testTime)||0;
  return{testDistance,testTime};
 }
 function calibrationUiInputFields(kind,record,now){
  let values='';
  if(kind==='pace'){
   const benchmark=calibrationUiPaceInputs(record);
-  values=`<div class="field"><label for="calibrationPaceDistance">Benchmark distance (km)</label><input id="calibrationPaceDistance" data-calibration-field="testDistance" type="number" inputmode="decimal" min="0.1" max="200" step="0.01" value="${esc(benchmark.testDistance)}"></div><div class="field"><label for="calibrationPaceTime">Benchmark time (M:SS or H:MM:SS)</label><input id="calibrationPaceTime" data-calibration-field="testTime" type="text" inputmode="numeric" value="${esc(fmtTime(benchmark.testTime))}"></div>`;
+  values=`<div class="field"><label for="calibrationPaceDistance">Timed performance distance (km)</label><input id="calibrationPaceDistance" data-calibration-field="testDistance" type="number" inputmode="decimal" min="0.1" max="200" step="0.01" value="${esc(benchmark.testDistance)}"></div><div class="field"><label for="calibrationPaceTime">Benchmark time (M:SS or H:MM:SS)</label><input id="calibrationPaceTime" data-calibration-field="testTime" type="text" inputmode="numeric" value="${esc(fmtTime(benchmark.testTime))}"></div>`;
  }else{
   const def=kind==='power'?{field:'criticalPower',label:'Critical power (W)',min:50,max:1500,step:1}:kind==='hr'?{field:'thresholdHr',label:'Threshold heart rate (bpm)',min:60,max:240,step:1}:{field:'bodyWeight',label:'Actual body weight (kg)',min:25,max:250,step:.1};
   values=`<div class="field"><label for="calibrationValue-${kind}">${def.label}</label><input id="calibrationValue-${kind}" data-calibration-field="${def.field}" type="number" inputmode="decimal" min="${def.min}" max="${def.max}" step="${def.step}" value="${esc(record?.value??state.setup[def.field]??'')}"></div>`;
@@ -1570,7 +2059,7 @@ function openCalibrationReview(){
   <div data-calibration-editor hidden>${calibrationUiInputFields(row.kind,row.record,now)}<p class="note">${esc(row.help)}</p></div>
   <p class="muted calibrationMicro" data-calibration-confirmation hidden>Today will be recorded as the date you checked this value. Its original measurement date and source are retained.</p>
  </fieldset>`).join('');
- showDialog(`<div class="calibrationReviewModal"><h2>Review training inputs</h2><p>Confirm the values you have checked, or record a new measurement. You can review one input at a time.</p><p class="note">Pace, critical power and threshold HR are separate inputs. Updating one does not require new tests for the others.</p><form id="calibrationReviewForm" novalidate><div id="calibrationReviewErrors" class="formErrors hidden" role="alert"></div>${cards}<div class="buttonRow calibrationActions"><button type="submit" class="primary">Save reviewed values</button><button type="button" class="secondary" data-calibration-action="defer">Remind me in 7 days</button></div></form><p class="muted calibrationMicro">Suggested check-in intervals: body weight every 14 days; pace benchmark, CP and threshold HR every 28 days. These are reminders to review existing information.</p></div>`,'Review training inputs');
+ showDialog(`<div class="calibrationReviewModal"><h2>Review training inputs</h2><p>Confirm the values you have checked, or record a new measurement. You can review one input at a time.</p><p class="note">Pace, critical power and threshold HR are separate inputs. Updating one does not require new tests for the others.</p><form id="calibrationReviewForm" novalidate><div id="calibrationReviewErrors" class="formErrors hidden" role="alert"></div>${cards}<div class="buttonRow calibrationActions"><button type="submit" class="primary">Save reviewed values</button><button type="button" class="secondary" data-calibration-action="defer">Remind me in 7 days</button></div></form><p class="muted calibrationMicro">Body weight can be checked every 14 days. Automatic fitness estimates need enough qualifying FIT/CSV evidence; manually changing CP, HR or pace is optional.</p></div>`,'Review training inputs');
  const form=$('calibrationReviewForm');
  form.querySelectorAll('[data-calibration-choice]').forEach(control=>{control.onchange=()=>{
   const card=control.closest('[data-calibration-kind]');
@@ -1674,13 +2163,13 @@ function calibrationTargetDetailsHtml(p){
 /* END calibration-ui */
 function calibrationBenchmarkOn(date=iso(today())){
  const record=calibrationFor('pace',date);
- const distance=Number(record?.testDistance)||Number(state.setup.testDistance)||5;
- return{distance,time:(Number(record?.value)||Number(state.setup.testTime)/distance)*distance,date:record?.measuredOn||record?.effectiveOn||null,source:record?.source||'Settings entry',assessmentId:record?.assessmentId||null};
+ const distance=5,value=Number(record?.value)||fiveKmEquivalentSeconds(state.setup.testTime,state.setup.testDistance)/5;
+ return{distance,time:value*5,date:record?.measuredOn||record?.effectiveOn||null,source:record?.source||'Setup baseline',assessmentId:record?.assessmentId||null,originalDistance:record?.testDistance||state.setup.testDistance,originalTime:record?.testTime||state.setup.testTime,estimated:Math.abs((record?.testDistance||5)-5)>.01};
 }
 function baselineOn(date=iso(today())){
  const paceRecord=calibrationFor('pace',date),powerRecord=calibrationFor('power',date),hrRecord=calibrationFor('hr',date),weightRecord=calibrationFor('weight',date);
  const paceFactor=calibrationAdjustedFactor('pace',date),powerFactor=calibrationAdjustedFactor('power',date),ev=trainingEvidence(date);
- const baselinePace=Number(paceRecord?.value)||state.setup.testTime/state.setup.testDistance,baselinePower=Number(powerRecord?.value)||state.setup.criticalPower,baselineHr=Number(hrRecord?.value)||state.setup.thresholdHr;
+ const baselinePace=Number(paceRecord?.value)||fiveKmEquivalentSeconds(state.setup.testTime,state.setup.testDistance)/5,baselinePower=Number(powerRecord?.value)||state.setup.criticalPower,baselineHr=Number(hrRecord?.value)||state.setup.thresholdHr;
  // Store the accepted records with the prescription, so a later baseline review
  // cannot rewrite the provenance of an already completed workout.
  const snapshot=r=>r?{id:r.id,value:Number(r.value),source:r.source,measuredOn:r.measuredOn||null,confirmedOn:r.confirmedOn||null,effectiveOn:r.effectiveOn,assessmentId:r.assessmentId||null,testDistance:r.testDistance||null,testTime:r.testTime||null,legacy:!!r.legacy}:null;
@@ -2228,7 +2717,7 @@ function prescription(type,km,w,ph,z,context={}){
  }
 
  if(bt==='Fitness assessment'){
-  const test=Math.max(1,r1(Number(state.setup.testDistance)||5)),total=Math.max(test+1.5,Math.min(Math.max(km,test+1.5),test+3.5)),shell=r1(total-test),warm=r1(Math.max(.9,shell*.58)),cool=r1(Math.max(.6,shell-warm)),main=test;
+  const test=5,total=Math.max(test+1.5,Math.min(Math.max(km,test+1.5),test+3.5)),shell=r1(total-test),warm=r1(Math.max(.9,shell*.58)),cool=r1(Math.max(.6,shell-warm)),main=test;
   return result(warm,main,cool,{warmup:`${fmt(warm)} km easy, with drills and relaxed strides near the end`,main:`${fmt(test)} km evenly paced maximal assessment`,cooldown:`${fmt(cool)} km very easy`,purpose:'Create a repeatable benchmark that can update future training targets.',coach:'The assessment is scheduled only when the capacity envelope can accommodate the complete test plus safe preparation and recovery running.',fuel:'Use a normal pre-run meal and avoid starting depleted.',targetScope:'Assessment effort only',assessmentDistance:test,accounting:[{label:'Warm-up',km:warm},{label:'Assessment',km:test},{label:'Cooldown',km:cool}],whyThis:'A repeatable benchmark updates training zones and race prediction using completed evidence.',whyAmount:`The ${fmt(test)} km test is retained, while warm-up and cooldown are sized inside the current session ceiling.`,skipImpact:'Postpone the assessment when ill, injured or poorly recovered; normal training can continue without compensating.'});
  }
 
@@ -3892,7 +4381,7 @@ function dailyCoachFocus(){return''}
 function renderToday(){
  const p=state.plan.find(x=>x.date===iso(today()));
  $('todayDate').textContent=today().toLocaleDateString(undefined,{weekday:'long',day:'numeric',month:'long',year:'numeric'});
- $('todayCard').innerHTML=consolidatedTodayCoachBriefing(p)+calibrationReviewCardHtml('today');$('todayCoach').innerHTML='';
+ $('todayCard').innerHTML=consolidatedTodayCoachBriefing(p)+autoFitnessSummaryHtml()+calibrationReviewCardHtml('today');$('todayCoach').innerHTML='';
  document.querySelectorAll('#today [data-workout-toggle]').forEach(btn=>btn.addEventListener('click',()=>{
    const details=document.getElementById(`workout-details-${btn.dataset.workoutToggle}`);
    if(!details)return;
@@ -4141,6 +4630,7 @@ function summariseCSV(rows){
    strydDistance:find(['Stryd Distance (meters)']),
    cadence:find(['Cadence (spm)','Cadence']),
    gct:find(['Ground Time (ms)','Ground Contact Time (ms)']),
+   altitude:find(['Altitude (m)','Elevation (meters)','Altitude']),
    vo:find(['Vertical Oscillation (cm)','Vertical Oscillation'])
  };
  const number=(r,i)=>{
@@ -4172,7 +4662,8 @@ function summariseCSV(rows){
      hr:number(r,indexMap.hr),
      speed:number(r,indexMap.watchSpeed)||number(r,indexMap.strydSpeed),
      power:resolvedPower,
-     distance:number(r,indexMap.watchDistance)||number(r,indexMap.strydDistance)
+     distance:number(r,indexMap.watchDistance)||number(r,indexMap.strydDistance),
+     altitude:number(r,indexMap.altitude)
    }
  }).filter(r=>Number.isFinite(r.t));
  if(records.length<2)throw Error('Too few valid timestamped records were found in the CSV.');
@@ -4197,7 +4688,7 @@ function summariseCSV(rows){
    rpe:null,pain:null,recovery:null,temperature:null,notes:'Imported from Stryd CSV',
    drift:null,powerDrift:null,paceDrift:null,
    candidateDrift:analysis?.drift??null,candidatePowerDrift:analysis?.powerDrift??null,candidatePaceDrift:analysis?.paceDrift??null,
-   candidateStreamEvidence:analysis,streamEvidence:null,sourceFormat:'csv-timeseries',fitRecords:records.map(r=>({t:r.t,hr:r.hr,speed:r.speed,power:r.power,distance:r.distance}))
+   candidateStreamEvidence:analysis,streamEvidence:null,sourceFormat:'csv-timeseries',fitRecords:records.map(r=>({t:r.t,hr:r.hr,speed:r.speed,power:r.power,distance:r.distance,altitude:r.altitude}))
  };
 }
 
@@ -4535,6 +5026,8 @@ function compactStreamThirds(records){
 function compactRunActivityStream(run){
  if(!run||!Array.isArray(run.fitRecords)||!run.fitRecords.length)return false;
  const records=run.fitRecords,recordCount=records.length;
+ if(!run.fitnessPowerCurve&&typeof autoFitnessPowerCurve==='function')run.fitnessPowerCurve=autoFitnessPowerCurve(records);
+ if(!run.aerobicFitnessEvidence&&typeof autoAerobicSteadyEvidence==='function')run.aerobicFitnessEvidence=autoAerobicSteadyEvidence(records);
  captureSteadySectionEvidence(run,run.planId?(state.plan||[]).find(p=>p.id===run.planId):null);
  if(!run.streamEvidence){const analysis=streamAnalysis(records);if(analysis)run.streamEvidence=analysis}
  if(!run.streamThirdsEvidence)run.streamThirdsEvidence=compactStreamThirds(records);
@@ -4585,7 +5078,7 @@ async function summariseFIT(file){
  const developerFieldMap=fitDeveloperFieldMap(messages);
  let records=recordsRaw.map(r=>{
    const d=fitDateValue(r.timestamp);
-   return{t:d?d.getTime()/1000:null,hr:fitNumber(r,['heartRate','heart_rate']),speed:fitNumber(r,['enhancedSpeed','speed']),power:findFitPower(r,developerFieldMap,powerFieldDiagnostics),distance:fitDistanceMeters(fitNumber(r,['distance'])),cadence:fitNumber(r,['cadence','fractionalCadence'])};
+   return{t:d?d.getTime()/1000:null,hr:fitNumber(r,['heartRate','heart_rate']),speed:fitNumber(r,['enhancedSpeed','speed']),power:findFitPower(r,developerFieldMap,powerFieldDiagnostics),distance:fitDistanceMeters(fitNumber(r,['distance'])),altitude:fitNumber(r,['enhancedAltitude','altitude']),cadence:fitNumber(r,['cadence','fractionalCadence'])};
  }).filter(r=>Number.isFinite(r.t)).sort((a,b)=>a.t-b.t);
  const startDate=fitDateValue(session.startTime||session.timestamp)||fitDateValue(recordsRaw[0]?.timestamp);
  if(!startDate)throw Error('The FIT file does not contain a valid activity start time.');
@@ -4608,12 +5101,14 @@ async function summariseFIT(file){
  const analysis=streamAnalysis(records);
  const fitLaps=laps.map((lap,i)=>fitLapSummary(lap,i,developerFieldMap,records)).filter(l=>Number(l.durationSec)>0||Number(l.distanceKm)>0);
  const sourceHint=/stryd/i.test(file.name)||recordsRaw.some(r=>Object.keys(r||{}).some(k=>/stryd|formPower|legSpring/i.test(k)))?'Stryd FIT':'Garmin FIT';
+ const deviceCP=fitNumber(session,['criticalPower','strydCriticalPower','stryd_critical_power']);
+ const deviceLthr=fitNumber(session,['lactateThresholdHeartRate','lactate_threshold_heart_rate','thresholdHeartRate']);
  const startSeconds=Math.round(startDate.getTime()/1000);
  return{
    id:'fit-'+startSeconds+'-'+Math.round(distanceM),date:iso(startDate),type:'Easy',distanceKm:distanceM/1000,durationSec:duration,
    avgHr:Number.isFinite(avgHr)?Math.round(avgHr):null,avgPower:Number.isFinite(avgPower)?Math.round(avgPower):null,
    cadence:Number.isFinite(avgCadence)?Math.round(avgCadence):null,gct:null,vo:null,rpe:null,pain:null,recovery:null,temperature:null,
-   notes:'Imported from Stryd FIT',
+   notes:'Imported from activity FIT',deviceCriticalPower:deviceCP>=100&&deviceCP<=500?deviceCP:null,deviceThresholdHr:deviceLthr>=100&&deviceLthr<=210?deviceLthr:null,
    drift:null,powerDrift:null,paceDrift:null,candidateDrift:analysis?.drift??null,candidatePowerDrift:analysis?.powerDrift??null,candidatePaceDrift:analysis?.paceDrift??null,
    candidateStreamEvidence:analysis,streamEvidence:null,sourceFormat:'fit-activity',sourceDevice:sourceHint,powerDiagnostics:{recordCount:records.length,poweredRecords:records.filter(r=>Number(r.power)>0).length,coverage:records.length?records.filter(r=>Number(r.power)>0).length/records.length:0,mapping:rawMap.method||null,rawSource:rawStrydPower?.source||null,rawCount:rawStrydPower?.count||0},fitWarnings:[...(errors||[]).map(String).slice(0,5),...(rawStrydPower?[`Running power read from Stryd developer Power (${rawStrydPower.count} samples).${rawMap.method?' '+rawMap.method+'.':''}`]:[]),...(avgPower?[]:['No usable native or developer running-power field was found.'])],lapCount:laps.length,fitLaps,fitRecords:records.map(r=>({t:r.t,hr:r.hr,speed:r.speed,power:r.power,distance:r.distance}))
  };
@@ -5214,6 +5709,7 @@ function progressTrendState(canvas,count,singular,plural){
 }
 
 function renderMetrics(){
+ renderFitnessProgressPanel();
  refreshSavedStreamMetrics();
  let rs=completedRuns().slice().sort((a,b)=>a.date.localeCompare(b.date));
  let efficiencyRuns=rs.filter(r=>Number.isFinite(metrics(r).efficiencyJ));
@@ -5497,7 +5993,7 @@ function renderSettings(){
   {title:'Plan limits',eyebrow:'PROGRAMME CONSTRAINTS',fields:[['maxWeekly','Maximum weekly distance','number',1,400,'km/week'],['growth','Maximum weekly growth','percent',1,30,'%'],['peakLong','Peak long run','number',1,200,'km'],['taperDays','Taper duration','number',0,42,'days']]}
  ];
  const fieldHtml=d=>{let v=state.setup[d[0]];if(d[2]==='time')v=fmtTime(v);if(d[2]==='percent')v=Math.round(v*100);if(d[2]==='select'){const options=d[6]||[];return`<div class="field settingsField"><label>${d[1]}</label><div class="settingsInputWrap"><select data-setting="${d[0]}" data-type="select">${options.map(o=>`<option value="${o[0]}" ${(v||(d[0]==='shoeRotationPriority'?'purchase-spacing':'unknown'))===o[0]?'selected':''}>${o[1]}</option>`).join('')}</select></div><small class="muted">Used only by the Shoes equipment/purchase engine.</small></div>`}const type=d[2]==='date'?'date':d[2]==='number'||d[2]==='percent'?'number':'text';const bounds=d[3]!==undefined?`min="${d[3]}" max="${d[4]}" step="${d[3]<1?'.1':'1'}"`:'';return`<div class="field settingsField"><label>${d[1]}</label><div class="settingsInputWrap"><input data-setting="${d[0]}" data-type="${d[2]}" type="${type}" ${bounds} value="${esc(v)}">${d[5]?`<span>${d[5]}</span>`:''}</div></div>`};
- $('settingsGrid').innerHTML=calibrationReviewCardHtml('settings')+groups.map(g=>`<section class="settingsGroup"><div class="settingsGroupHead"><small>${g.eyebrow}</small><h4>${g.title}</h4></div><div class="formGrid">${g.fields.map(fieldHtml).join('')}</div></section>`).join('');
+ $('settingsGrid').innerHTML=autoFitnessSummaryHtml()+calibrationReviewCardHtml('settings')+groups.map(g=>`<section class="settingsGroup"><div class="settingsGroupHead"><small>${g.eyebrow}</small><h4>${g.title}</h4></div><div class="formGrid">${g.fields.map(fieldHtml).join('')}</div></section>`).join('');
  let raceDistanceInput=document.querySelector('[data-setting="raceDistance"]');
  const inputSetup=()=>{let x={...state.setup};document.querySelectorAll('[data-setting]').forEach(el=>{let v=el.value,t=el.dataset.type;if(t==='number')v=Number(v);if(t==='time')v=parseTime(v);if(t==='percent')v=Number(v)/100;x[el.dataset.setting]=v});return x};
  const showRecommendedDate=()=>{let r=recommendedRaceDate(inputSetup()),box=$('raceDateRecommendation');if(box)box.innerHTML=`<b>Model-recommended race date: ${fmtDate(r.date)}</b><p class="muted compact">${r.totalWeeks} weeks total: ${r.requiredBuildWeeks.toFixed(1)} estimated build weeks, ${r.taperWeeks.toFixed(1)} taper weeks and an ideal-scenario buffer.</p><button id="recommendRaceDate" type="button" class="secondary">Use this date</button>`;let btn=$('recommendRaceDate');if(btn)btn.onclick=()=>{let dateInput=document.querySelector('[data-setting="raceDate"]');if(dateInput)dateInput.value=r.date;toast(`Recommended race date applied: ${fmtDate(r.date)}.`)};return r};
@@ -11574,12 +12070,12 @@ function openRunDetails(runId){
     let updated=updatedRunFromForm(r),i=state.runs.findIndex(x=>x.id===r.id);
     if(i<0)throw Error('Run not found.');
     const oldShoeId=selectedShoeIdForRun(r)||null,shoeId=updated.shoeId||null,shoeBefore=shoeId?shoeMileage((state.shoes||[]).find(s=>s.id===shoeId)||{}):null;
-    state.runs.splice(i,1);const before=postRunCoachSnapshot(updated.date);state.runs.splice(i,0,updated);assignRunShoe(updated,shoeId,'run-edit');(state.injuries||[]).forEach(injury=>(injury.checkIns||[]).forEach(check=>{const matched=matchingLoggedRunForRehab(check);if(matched?.id===updated.id)check.rehabShoeId=shoeId||null;if(check.linkedRunId===updated.id&&check.date!==updated.date){check.linkedRunId=null;check.linkedRunChoiceMade=false}}));autoLinkRunToEligibleRehabCheckIns(updated);recordPredictionSnapshot(updated.date,'Run update',updated.id);const after=postRunCoachSnapshot(updated.date);updated.coachUpdate=postRunCoachUpdate(updated,before,after);save();refreshShoeActualsAfterActivity();const shoeNote=shoeReallocationConfirmation(oldShoeId,shoeId,updated.distanceKm,'run')||shoeMileageConfirmation(shoeId,shoeBefore,'run');renderAll();$('modalContent').innerHTML=runAnalysisStackHtml(updated,false)+`<button id="closeCoachUpdate" class="primary full" type="button">Done</button>`;$('modal').className='modal logDetailModal';$('closeCoachUpdate').onclick=closeDialog;toast(shoeNote||'Run updated and coaching update recalculated.');
+    state.runs.splice(i,1);const before=postRunCoachSnapshot(updated.date),beforeAuto=automaticFitnessSnapshot();state.runs.splice(i,0,updated);assignRunShoe(updated,shoeId,'run-edit');(state.injuries||[]).forEach(injury=>(injury.checkIns||[]).forEach(check=>{const matched=matchingLoggedRunForRehab(check);if(matched?.id===updated.id)check.rehabShoeId=shoeId||null;if(check.linkedRunId===updated.id&&check.date!==updated.date){check.linkedRunId=null;check.linkedRunChoiceMade=false}}));autoLinkRunToEligibleRehabCheckIns(updated);recordPredictionSnapshot(updated.date,'Run update',updated.id);const after=postRunCoachSnapshot(updated.date);updated.coachUpdate=postRunCoachUpdate(updated,before,after);persistAutomaticFitnessUpdate(beforeAuto);refreshShoeActualsAfterActivity();const shoeNote=shoeReallocationConfirmation(oldShoeId,shoeId,updated.distanceKm,'run')||shoeMileageConfirmation(shoeId,shoeBefore,'run');renderAll();$('modalContent').innerHTML=runAnalysisStackHtml(updated,false)+`<button id="closeCoachUpdate" class="primary full" type="button">Done</button>`;$('modal').className='modal logDetailModal';$('closeCoachUpdate').onclick=closeDialog;toast(shoeNote||'Run updated and coaching update recalculated.');
    }catch(err){toast(err.message,true)}
  };
  $('deleteEditedRun').onclick=()=>{
    if(!confirm('Delete this run?'))return;
-   detachRunFromRehab(r.id);state.runs=state.runs.filter(x=>x.id!==r.id);state.shoeUsage=(state.shoeUsage||[]).filter(u=>u.runId!==r.id);state.predictionHistory=(state.predictionHistory||[]).filter(x=>x.entityId!==r.id);save();refreshShoeActualsAfterActivity();$('modal').className='modal hidden';renderAll();toast('Run deleted.');
+   const beforeAuto=automaticFitnessSnapshot();detachRunFromRehab(r.id);state.runs=state.runs.filter(x=>x.id!==r.id);state.shoeUsage=(state.shoeUsage||[]).filter(u=>u.runId!==r.id);state.predictionHistory=(state.predictionHistory||[]).filter(x=>x.entityId!==r.id);persistAutomaticFitnessUpdate(beforeAuto);refreshShoeActualsAfterActivity();$('modal').className='modal hidden';renderAll();toast('Run deleted.');
  };
 }
 $('runList').onclick=e=>{const card=e.target.closest('[data-run]');if(card)openRunDetails(card.dataset.run)};
@@ -11590,7 +12086,7 @@ $('manualRunBtn').onclick=()=>{
  $('modal').className='modal logEditModal';
  bindEditorPlanRefresh(r);
  $('saveRunEdit').onclick=()=>{
-   try{let created=updatedRunFromForm(r),before=postRunCoachSnapshot(created.date),shoeId=created.shoeId||null,shoeBefore=shoeId?shoeMileage((state.shoes||[]).find(s=>s.id===shoeId)||{}):null;state.runs.push(created);assignRunShoe(created,shoeId,'manual-run');autoLinkRunToEligibleRehabCheckIns(created);recordPredictionSnapshot(created.date,'Run saved',created.id);let after=postRunCoachSnapshot(created.date);created.coachUpdate=postRunCoachUpdate(created,before,after);save();refreshShoeActualsAfterActivity();const shoeNote=shoeMileageConfirmation(shoeId,shoeBefore,'run');renderAll();$('modalContent').innerHTML=runAnalysisStackHtml(created,false)+`<button id="closeCoachUpdate" class="primary full" type="button">Done</button>`;$('modal').className='modal logEditModal';$('closeCoachUpdate').onclick=closeDialog;toast(shoeNote||'Run saved and coaching update calculated.')}catch(err){toast(err.message,true)}
+   try{let created=updatedRunFromForm(r),before=postRunCoachSnapshot(created.date),beforeAuto=automaticFitnessSnapshot(),shoeId=created.shoeId||null,shoeBefore=shoeId?shoeMileage((state.shoes||[]).find(s=>s.id===shoeId)||{}):null;state.runs.push(created);assignRunShoe(created,shoeId,'manual-run');autoLinkRunToEligibleRehabCheckIns(created);recordPredictionSnapshot(created.date,'Run saved',created.id);let after=postRunCoachSnapshot(created.date);created.coachUpdate=postRunCoachUpdate(created,before,after);persistAutomaticFitnessUpdate(beforeAuto);refreshShoeActualsAfterActivity();const shoeNote=shoeMileageConfirmation(shoeId,shoeBefore,'run');renderAll();$('modalContent').innerHTML=runAnalysisStackHtml(created,false)+`<button id="closeCoachUpdate" class="primary full" type="button">Done</button>`;$('modal').className='modal logEditModal';$('closeCoachUpdate').onclick=closeDialog;toast(shoeNote||'Run saved and coaching update calculated.')}catch(err){toast(err.message,true)}
  };
 };
 $('closeModal').onclick=closeDialog;
@@ -11653,11 +12149,11 @@ $('activityFile').onchange=async e=>{
       compactRunActivityStream(preview);
       let before=null;try{before=postRunCoachSnapshot(preview.date)}catch(e){console.warn('Coach pre-snapshot failed',e)}
       const stateBeforeImport=JSON.stringify(state);
-      const savedRun={...preview},shoeId=$('iShoe')?$('iShoe').value||null:null,shoeBefore=shoeId?shoeMileage((state.shoes||[]).find(s=>s.id===shoeId)||{}):null;state.runs.push(savedRun);if($('iShoe'))assignRunShoe(savedRun,shoeId,'import');reconcileExactDateMatches();autoLinkRunToEligibleRehabCheckIns(savedRun);
+      const beforeAuto=automaticFitnessSnapshot(),savedRun={...preview},shoeId=$('iShoe')?$('iShoe').value||null:null,shoeBefore=shoeId?shoeMileage((state.shoes||[]).find(s=>s.id===shoeId)||{}):null;state.runs.push(savedRun);if($('iShoe'))assignRunShoe(savedRun,shoeId,'import');reconcileExactDateMatches();autoLinkRunToEligibleRehabCheckIns(savedRun);
       recordPredictionSnapshot(savedRun.date,savedRun.sourceFormat==='fit-activity'?'FIT import':'Stryd import',savedRun.id);
       let coachHtml='',coachWarning='';
       try{const after=postRunCoachSnapshot(savedRun.date);if(before){savedRun.coachUpdate=postRunCoachUpdate(savedRun,before,after);coachHtml=postRunCoachUpdateHtml(savedRun)}}catch(e){console.warn('Coach update failed',e);coachWarning=' Run saved; Coach Update unavailable for this import.'}
-      const saveOk=save();
+      const saveOk=persistAutomaticFitnessUpdate(beforeAuto);
       if(!saveOk){state=normaliseState(JSON.parse(stateBeforeImport));runtimeDomainFingerprints=null;throw Error('The run could not be committed to device storage. Nothing was added; the import preview is still open so you can retry.')}
       refreshShoeActualsAfterActivity();const shoeNote=shoeMileageConfirmation(shoeId,shoeBefore,'run');$('importPreview').className='hidden';preview=null;input.value='';renderAll();
       if(coachHtml){$('modalContent').innerHTML=coachHtml+`<button id="closeCoachUpdate" class="primary full" type="button">Done</button>`;$('modal').className='modal logDetailModal';$('closeCoachUpdate').onclick=closeDialog}
@@ -11667,7 +12163,7 @@ $('activityFile').onchange=async e=>{
  }catch(err){preview=null;input.value='';$('importPreview').className='hidden';toast(err?.message||'The activity file could not be imported.',true)}
 };
 $('addAssessmentBtn').onclick=()=>{
- const form=$('assessmentForm');form.className='panel';form.innerHTML=`<h3>Fitness assessment result</h3><p class="note">A valid timed assessment updates your pace benchmark. Enter the activity averages below; critical power and threshold heart rate are reviewed separately under Fitness inputs.</p><form id="assessmentEntryForm" novalidate><div class="formGrid"><div class="field"><label>Date</label><input id="aDate" type="date" max="${iso(today())}" required value="${iso(today())}"></div><div class="field"><label>Distance km</label><input id="aDist" type="number" inputmode="decimal" min="0.1" max="200" step="0.01" required value="5"></div><div class="field"><label>Time (M:SS or H:MM:SS)</label><input id="aTime" inputmode="numeric" required placeholder="25:15"></div><div class="field"><label>Recorded average heart rate (optional)</label><input id="aAvgHr" type="number" min="30" max="250" placeholder="Activity average, bpm"></div><div class="field"><label>Recorded average power (optional)</label><input id="aAvgPower" type="number" min="1" max="2000" placeholder="Activity average, W"></div><div class="field"><label>Valid pace benchmark</label><select id="aValid"><option value="true">Yes — representative timed effort</option><option value="false">No — keep as activity only</option></select></div></div><button id="saveAssessment" type="submit" class="primary full">Save assessment and completed run</button></form>`;
+ const form=$('assessmentForm');form.className='panel';form.innerHTML=`<h3>Timed performance result</h3><p class="note">Enter the timed distance and result. A representative 5 km effort is used directly; other race distances are converted to an estimated 5 km reference. CP and threshold HR are independently estimated from suitable recent FIT/CSV data.</p><form id="assessmentEntryForm" novalidate><div class="formGrid"><div class="field"><label>Date</label><input id="aDate" type="date" max="${iso(today())}" required value="${iso(today())}"></div><div class="field"><label>Distance km</label><input id="aDist" type="number" inputmode="decimal" min="0.1" max="200" step="0.01" required value="5"></div><div class="field"><label>Time (M:SS or H:MM:SS)</label><input id="aTime" inputmode="numeric" required placeholder="25:15"></div><div class="field"><label>Recorded average heart rate (optional)</label><input id="aAvgHr" type="number" min="30" max="250" placeholder="Activity average, bpm"></div><div class="field"><label>Recorded average power (optional)</label><input id="aAvgPower" type="number" min="1" max="2000" placeholder="Activity average, W"></div><div class="field"><label>Valid pace benchmark</label><select id="aValid"><option value="true">Yes — representative timed effort</option><option value="false">No — keep as activity only</option></select></div></div><button id="saveAssessment" type="submit" class="primary full">Save assessment and completed run</button></form>`;
  ensureAccessibleForms(form);
  $('assessmentEntryForm').onsubmit=event=>{
   event.preventDefault();
@@ -11676,7 +12172,7 @@ $('addAssessmentBtn').onclick=()=>{
   const errors=refineTimeErrors(CORE.validateAssessment(a,{today:iso(today())}),[{field:'time',label:'Assessment time',value:$('aTime').value}]);
   if(errors.length){showFieldErrors(errors,{date:'#aDate',distance:'#aDist',time:'#aTime',avgHr:'#aAvgHr',avgPower:'#aAvgPower'},form);return toast(CORE.firstErrorMessage(errors),true)}
   ensureCalibrationState();state.assessments.push(a);syncAssessmentRun(a);ensureCalibrationState();
-  withPlanLoader('Updating running plan…',()=>{buildPlan();syncAssessmentRun(a);recordPredictionSnapshot(a.date,'Fitness assessment',a.id);save();renderAll();form.className='hidden';toast(a.valid?'Assessment saved. Future pace targets updated; CP and threshold HR retain their separate baselines.':'Assessment saved as an activity; fitness baselines unchanged.')});
+  withPlanLoader('Updating running plan…',()=>{buildPlan();syncAssessmentRun(a);recordPredictionSnapshot(a.date,'Fitness assessment',a.id);save();renderAll();form.className='hidden';toast(a.valid?'Timed performance saved; 5 km-equivalent pace updated. CP/HR update separately when evidence qualifies.':'Assessment saved as an activity; fitness baselines unchanged.')});
  };
 };
 

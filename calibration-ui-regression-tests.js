@@ -90,8 +90,8 @@ let passed=0,failed=0;
 function test(name,work){try{work();passed++;console.log('PASS '+name)}catch(e){failed++;console.error('FAIL '+name+'\n'+e.stack)}}
 test('Unknown input dates suggest a review without opening a modal',()=>{
  const h=harness(),html=h.evaluate('calibrationReviewCardHtml()');
- assert.match(html,/Review suggested/);assert.match(html,/294 W/);assert.match(html,/measurement date not recorded/);assert.equal(h.events.dialogs,0);
- assert.equal(h.evaluate('calibrationUiReviewState().due.length'),4);
+ assert.match(html,/Weight review suggested/);assert.match(html,/294 W/);assert.match(html,/measurement date not recorded/);assert.equal(h.events.dialogs,0);
+ assert.equal(h.evaluate('calibrationUiReviewState().due.length'),1);
  assert.match(h.evaluate("calibrationReviewCardHtml('settings')"),/data-go="assessments">Record a timed assessment/);
 });
 test('Modal defaults leave all four independent inputs untouched',()=>{
@@ -130,10 +130,10 @@ test('Malformed benchmark time and fractional threshold HR are rejected',()=>{
  const h=harness();h.open();h.choose('pace','update');h.set('calibrationSource-pace','Timed benchmark');h.set('calibrationPaceTime','30:99');h.choose('hr','update');h.set('calibrationSource-hr','Threshold assessment');h.set('calibrationValue-hr','179.5');h.submit();
  assert.equal(h.events.saved,0);assert.match(h.document.getElementById('calibrationReviewErrors').innerHTML,/valid benchmark time/);assert.match(h.document.getElementById('calibrationReviewErrors').innerHTML,/whole bpm/);
 });
-test('Independent reminder intervals are 14 days for weight and 28 for other inputs',()=>{
+test('Only measured body weight needs 14-day manual reminder; fitness estimates are automatic',()=>{
  const h=harness();h.evaluate("recordCalibrationReview(['pace','power','hr','weight'])");
  h.evaluate("clock='2026-11-01'");assert.equal(h.evaluate('calibrationUiReviewState().due.map(row=>row.kind).join()'),'weight');
- h.evaluate("clock='2026-11-15'");assert.equal(h.evaluate('calibrationUiReviewState().due.length'),4);
+ h.evaluate("clock='2026-11-15'");assert.equal(h.evaluate('calibrationUiReviewState().due.length'),1);
 });
 test('Startup delegation survives new buttons and a reminder lasts seven calendar days across DST',()=>{
  const h=harness();h.evaluate("clock='2026-10-23';bindCalibrationControls(document);bindCalibrationControls(document)");
@@ -143,7 +143,7 @@ test('Startup delegation survives new buttons and a reminder lasts seven calenda
  host.innerHTML=h.evaluate("calibrationReviewCardHtml('settings')");h.click(host.querySelector('[data-calibration-action="review"]'));assert.equal(h.events.dialogs,2);
  h.click(h.form().querySelector('[data-calibration-action="defer"]'));
  assert.equal(h.evaluate('state.calibration.deferredUntil'),'2026-10-30');assert.equal(h.evaluate('calibrationReviewCardHtml()'),'');assert.match(h.evaluate("calibrationReviewCardHtml('settings')"),/Reminder/);
- h.evaluate("clock='2026-10-30'");assert.match(h.evaluate('calibrationReviewCardHtml()'),/Review suggested/);
+ h.evaluate("clock='2026-10-30'");assert.match(h.evaluate('calibrationReviewCardHtml()'),/Weight review suggested/);
 });
 test('False save returns never report a successful confirmation or reminder',()=>{
  const h=harness();h.open();h.choose('power','confirm');h.events.failSave=true;h.submit();

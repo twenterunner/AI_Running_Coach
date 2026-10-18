@@ -212,7 +212,7 @@ test('Equal-pace benchmark with a different distance is a new pace anchor and pr
   const c = fixture({setup: {testTime: 1500, testDistance: 5}}); c.mockFactor = 1.04;
   const result = c.applyCalibrationReview(candidate(c, {testTime: 3000, testDistance: 10}), {kinds: ['pace'], sources: {pace: 'Timed 10K'}});
   assert.deepEqual(Array.from(result.changedKinds), ['pace']); assert.equal(result.rebuildRequired, true);
-  assert.equal(c.calibrationBenchmarkOn().distance, 10); assert.equal(c.calibrationBenchmarkOn().time, 3000);
+  assert.equal(c.calibrationBenchmarkOn().distance, 5); approx(c.calibrationBenchmarkOn().time, 3000 * Math.pow(.5, 1.06)); assert.equal(c.calibrationBenchmarkOn().originalDistance, 10); assert.equal(c.calibrationBenchmarkOn().originalTime, 3000);
   approx(c.calibrationAdjustedFactor('pace'), 1); approx(c.calibrationAdjustedFactor('power'), 1.04);
 });
 

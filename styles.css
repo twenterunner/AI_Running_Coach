@@ -6443,3 +6443,46 @@ body:has(#onboarding:not(.hidden)) #nav,body:has(#onboarding:not(.hidden)) #more
 @media(max-width:350px){.calibrationCardGrid{grid-template-columns:1fr}.calibrationReviewCard .panelHead{flex-wrap:wrap}.calibrationBadge{max-width:100%}}
 
 /* END calibration-ui */
+
+/* 15.7.26 automatic, evidence-qualified fitness model */
+.autoFitnessCard{padding:16px;margin:10px 0 18px;border:1px solid rgba(110,222,200,.28);border-radius:16px;background:rgba(35,65,78,.25);min-width:0;}
+.autoFitnessCard .panelHead{margin-bottom:10px;}
+.autoFitnessGrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;margin-bottom:10px;}
+.autoFitnessMetric{display:flex;flex-direction:column;gap:5px;min-width:0;padding:12px 10px;border:1px solid rgba(110,222,200,.12);border-radius:10px;}
+.autoFitnessMetric small{opacity:.8;font-size:10px;}
+.autoFitnessMetric b{font-size:clamp(13px,2.8vw,20px);overflow-wrap:anywhere;}
+.autoFitnessMetric span{font-size:10px;opacity:.85;overflow-wrap:anywhere;line-height:1.4;}
+.autoFitnessRaces{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:10px;}
+.autoFitnessRaces>div{display:flex;flex-direction:column;gap:4px;}
+.autoFitnessRaces small{opacity:.75;font-size:10px;}
+.autoFitnessRaces b{font-size:14px;}
+.autoFitnessCard details{padding:12px 0;border-top:1px solid rgba(110,222,200,.15);}
+@media(max-width:570px){.autoFitnessGrid{grid-template-columns:1fr}.autoFitnessRaces{grid-template-columns:repeat(2,minmax(0,1fr));}}
+
+/* v15.7.27 · VO2-equivalent and exploratory fitness-age tracking */
+.cardioFitnessPanel{background:linear-gradient(135deg,rgba(19,49,57,.62),rgba(9,22,37,.8));border:1px solid rgba(115,211,213,.2);border-radius:18px;padding:clamp(15px,3vw,24px);display:grid;gap:16px;min-width:0}
+.cardioFitnessHead small{font-size:10px;letter-spacing:.13em;color:#6fe2d3;font-weight:800}
+.cardioFitnessHead h4{font-size:clamp(20px,3.3vw,25px);margin:4px 0 8px;color:#ecf9fc}
+.cardioFitnessHead p,.cardioFitnessMethod p{margin:0;color:#abc4ca;font-size:13px;line-height:1.5}
+.cardioFitnessKpis{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.cardioFitnessKpis article{background:rgba(4,19,30,.54);border:1px solid rgba(115,211,213,.16);border-radius:14px;padding:16px;display:grid;gap:6px;min-width:0}
+.cardioFitnessKpis article>small:first-child{color:#8aaab4;text-transform:uppercase;font-size:10px;letter-spacing:.1em;font-weight:700}
+.cardioFitnessKpis strong{color:#f0fbfe;font-size:clamp(20px,3vw,32px);line-height:1.16;overflow-wrap:anywhere}
+.cardioFitnessKpis span,.cardioFitnessKpis small{color:#a4bcc4;font-size:12px}
+.cardioFitnessEvidence{margin:0;color:#9cbdc7;font-size:12px;overflow-wrap:anywhere}
+.cardioFitnessCharts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.cardioFitnessCharts>div{min-width:0;border:1px solid rgba(115,211,213,.11);border-radius:12px;padding:12px;background:rgba(8,21,37,.35)}
+.cardioFitnessChartLabel{display:flex;align-items:baseline;flex-wrap:wrap;gap:5px 12px;margin-bottom:8px}
+.cardioFitnessChartLabel b{color:#e8f4f8;font-size:13px}.cardioFitnessChartLabel small{color:#91aeb7;font-size:11px}
+.cardioFitnessProfile,.cardioFitnessMethod{border-top:1px solid rgba(115,211,213,.19);padding-top:13px;color:#b3cbd2;min-width:0}
+.cardioFitnessProfile summary,.cardioFitnessMethod summary{font-size:13px;font-weight:750;color:#e1f2f7;cursor:pointer;line-height:1.5}
+.cardioFitnessProfile p,.cardioFitnessMethod p{margin:10px 0}
+.cardioFitnessForm{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto;gap:10px;align-items:end;margin:12px 0}
+.cardioFitnessForm label{font-size:12px;display:grid;gap:5px;min-width:0;color:#c4d6de}
+.cardioFitnessForm input,.cardioFitnessForm select{min-width:0;width:100%}
+.cardioFitnessForm button{white-space:normal}
+@media(max-width:760px){.cardioFitnessCharts{grid-template-columns:1fr}.cardioFitnessForm{grid-template-columns:1fr 1fr}.cardioFitnessForm button{grid-column:1/-1}.cardioFitnessKpis{gap:8px}.cardioFitnessKpis article{padding:12px}}
+@media(max-width:360px){.cardioFitnessKpis{grid-template-columns:1fr}.cardioFitnessForm{grid-template-columns:1fr}}
+
+/* v15.7.28: preserve readable provenance for automatic submax aerobic updates. */
+.cardioFitnessEvidence{overflow-wrap:anywhere;}

@@ -1,3 +1,61 @@
+AI Running Coach v15.7.28 · build 51028
+
+Per-run aerobic fitness tracking
+- Every detailed FIT/CSV import is evaluated for a stable 10–20 minute pace/heart-rate segment. This derived section is saved before second-by-second samples are compacted. Missing/unstable HR, stops, erratic pace, large HR drift and available hill data are screened out. Terrain without elevation data is flagged unverified.
+- Progress combines dated race/assessment VDOT results with conservative low-confidence within-runner aerobic-efficiency trends anchored to those results. A steady-run trend never overwrites the recorded 5 km benchmark or race-time forecasts.
+- Automatic CP and lactate-threshold HR still require appropriate strong evidence, just as Garmin does not accept an update after every run. Evaluated on every import does not mean changed every run.
+- Fitness-age equivalent recomputes from the most recent defensible VDOT-equivalent observation. It is NOT Garmin's multi-factor fitness age or a medical age.
+- Historical completed workouts and existing app storage schema remain unchanged. Detailed FIT/CSV imports are needed for new steady evidence; previously compacted recordings cannot be retroactively reconstructed.
+- These model coefficients are explicit heuristics, not clinically validated thresholds, and the output is not laboratory VO₂max.
+
+AI Running Coach v15.7.27 · build 51027
+Running-estimated VO2 and exploratory cardio fitness age in Progress
+- VO2-equivalent (VDOT) from qualified timed 5 km-equivalent performance; Daniels–Gilbert equations. Not measured laboratory VO2max, not a Garmin estimate, and not a diagnosis.
+- Daily/easy-run average power, pace, HR, and purely predicted race performance never become VO2 evidence.
+- Historical points come from dated qualified race, assessment, explicit timed benchmark or persisted automatic 5 km fitness calibrations; legacy undated setup seeds are excluded. No fabricated smooth trend.
+- Optional birth year and FRIEND treadmill men/women reference group entered once, kept locally and in normal backups. Fitness age is an exploratory median-equivalent comparison across FRIEND age bands, not a clinical or biological age.
+- The chart shows chronological age separately; missing personal reference data or missing timed performances produce an honest placeholder.
+- All existing training, imported activities, calibration records, race predictions and historic workout targets remain unchanged. No storage schema change.
+- Flat mobile upload: upload all files from the ZIP root to the repository root, replacing matching names; preserve the user's browser storage.
+- Source: FRIEND 2015 reference standards, https://pmc.ncbi.nlm.nih.gov/articles/PMC4919021/. Daniels–Gilbert running VDOT equations.
+
+AI Running Coach v15.7.26 · build 51026
+AUTOMATIC FITNESS ESTIMATES + REPEATABLE 5 KM TESTS — 18 October 2026
+
+Scope
+- Extends the current v15.7.24 base; includes the 5 km distance-normalisation changes discussed for v15.7.25.
+- Requires no cloud service and sends no training data to a third party. Does not automatically connect to Garmin or Stryd: new FIT/CSV activity imports are still required.
+- Body weight is still measured by the runner. The app will no longer repeatedly require manual CP, HR threshold or pace benchmark confirmations.
+
+What is automatic
+- A dated 5 km-equivalent pace reference and current race-time estimates (5 km, 10 km, half marathon, marathon) are derived from valid completed timed assessments/races or clearly labelled hard-effort evidence. They use a transparent 1.06 distance exponent, not Garmin's proprietary predictor. Ordinary easy-run averages do not replace a maximal benchmark.
+- Critical power is an **app-estimated** running CP, not necessarily Stryd Auto CP. It uses verified short (3–6 min) and long (20–40 min) high-quality, time-stamped running-power efforts on different dates. The power-duration curve is P(t)=CP+W-prime/t. Structured efforts missing RPE require extra independent sessions. If the FIT activity explicitly includes a credible CP field, that measurement is preferred when at least as recent.
+- Threshold HR can be taken from a credible explicit FIT lactate-threshold HR field, or derived from multiple sustained stable near-threshold efforts when a CP estimate and adequate continuous heart-rate data exist. The HR value is an *estimate*, not a clinical lactate threshold measurement. Routine whole-run average HR is not treated as LTHR.
+- The analysis uses up to 90 days of running evidence. Each new qualifying import refreshes the displayed estimates and recalculates uncompleted future workout prescriptions. The most recent qualified estimate remains as a dated stored calibration when a later 90-day window is insufficient. Manual corrections remain possible, and a newer or same-day explicit manual measurement wins over older automatic evidence.
+- Old completed workout targets stay unchanged, including the power/pace/HR values originally prescribed. Historical data stored locally remains locally stored; schema 10400 is unchanged.
+- Races or assessments can update the 5 km reference directly. Other distance records are explicitly converted to 5 km; original distance/time are retained for provenance.
+- The app schedules optional 5 km assessment opportunities about every seven weeks before taper: for a 27-week plan, weeks 1, 8, 15, 22. Training capacity, injury/illness pauses and recovery safeguards take priority. Assessments are not compulsory.
+
+Important limitations
+- The updated estimator is original transparent heuristic modelling, not independently calibrated against Stryd or Garmin. Do not assume matching values or equivalent predictive accuracy.
+- Historical runs whose high-frequency FIT data were already compacted under an earlier build usually cannot supply new CP duration curves retroactively. Future detailed FIT/CSV imports build the model; do not delete historical runs to force a reimport. Some FIT exports contain explicit CP/LTHR, many do not.
+- If qualifying evidence is insufficient, the app visibly labels and *retains* the previous benchmark/CP/LTHR, even if that existing number may be stale. It does not invent values. During initial use, check known outdated inputs before using the targets as hard limits.
+- The race-time estimates shown in the automatic evidence card are a simple flat-course 5 km extrapolation. The separate marathon-specific programme outlook additionally adjusts for endurance, training completion and other assumptions; they are not the same statistic.
+- Sensor dropout, inadequate power/HR coverage, training pauses, unusual pain, future-dated runs and ordinary easy efforts are screened out of threshold estimation. Results require sensible interpretation by the athlete; illness and recovery may affect maximal performance and test suitability.
+
+Verification
+- Dedicated synthetic automatic-fitness suite: 21/21 PASS, including independence, 90-day ageing, persistence, threshold/CP/race extraction and non-maximal safeguards.
+- Calibration core: 25/25 PASS; calibration UI: 14/14 PASS; workout comparison: 21/21 PASS; weekly review: 29/29 PASS; plan timeline: 5/5 PASS.
+- Total targeted checks: 115/115 PASS. JavaScript syntax and manifest/version consistency checked. Browser automation could not navigate local test pages in this environment; no visual browser test is claimed.
+
+Install from a phone
+- Extract AI_Running_Coach_v15.7.26_flat.zip. All files are flat at ZIP root; no subfolders.
+- Upload all extracted files to the ROOT of twenterunner/AI_Running_Coach, replacing matching files, then commit in GitHub. GitHub Pages may take time to update.
+- Reload the application, confirm v15.7.26 / build 51026 in Settings. Do NOT clear browser storage or reset the app. Preserve a Settings > Download backup JSON before upgrading.
+- Import new Garmin/Stryd FIT or detailed CSV activities, confirming the actual session type and optionally RPE. Review the automatic fitness evidence in Today or Settings; when an estimate says 'retained' it has not been newly measured.
+
+----- PREVIOUS RELEASE NOTES BELOW -----
+
 AI Running Coach v15.7.24 · build 51024
 
 Training-input calibration and comparable workout targets
