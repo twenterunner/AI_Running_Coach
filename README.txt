@@ -1,3 +1,61 @@
+AI Running Coach v15.7.24 · build 51024
+
+Training-input calibration and comparable workout targets
+
+INSTALL FROM A PHONE
+1. If you have already completed a run that is still unlogged, log/import it against its existing planned workout first. This preserves the prescription you actually received.
+2. Use Settings > Backup before installing the update.
+3. Extract the flat update ZIP. Upload all enclosed files to the existing GitHub repository root, replacing files with the same names. There are no folders in the ZIP.
+4. Wait for the existing GitHub Pages deployment to finish, then reload the app. Check for v15.7.24 / build 51024 in Settings.
+5. Open Today > Review values, or Settings > Review fitness values. Choose Update measurement for Critical power, enter the current value from your power source, its source and estimate date, then Save reviewed values. Review other inputs separately when needed.
+
+WHAT CHANGED
+- Pace benchmark, critical power, threshold heart rate and actual body weight now have separate, dated calibration records with their source, measurement date and last confirmation date.
+- Existing undated inputs are labelled as legacy/unknown-date values and prompt a review. An unrelated settings edit or activity import does not mark them as freshly measured.
+- Today prompts when a review is due; Settings always exposes the active values. Suggested intervals are 14 days for weight and 28 days for pace, CP and threshold HR. These are check-in reminders, not required test intervals. A reminder can be deferred for seven calendar days.
+- Each input can be left for now, explicitly confirmed unchanged, or updated with a new measurement. Confirming an unchanged input preserves its original measurement date and source and does not reset its learned adjustment.
+- The latest accepted dated value for each input wins. A new explicit update is no longer silently overridden by an older assessment, including an assessment before programme start.
+- A new CP or pace benchmark rebases that input's learned adjustment so previously accepted learning is not simply applied again to the new anchor. Updating CP does not replace the separate pace benchmark.
+- A new workout saves its actual calibration sources and factors. Today and Plan provide a “Where these targets come from” explanation. Older saved workouts disclose when original provenance was not stored.
+- Completed/linked and past prescriptions retain their original target values during future plan rebuilding.
+- Measured activity averages are separate from CP and threshold HR. New fitness assessments update the timed pace benchmark and store actual averages; they do not substitute average watts for CP or average HR for threshold HR.
+- CP/HR comparison and pace prediction inputs use the same dated baseline selection rather than independently preferring raw Settings or an old assessment.
+- Historical run weight is retained for W/kg and weight-dependent metrics. Existing undated historical weight remains an explicitly labelled estimate. CSV W/kg-to-watts conversions retain their conversion weight and source.
+- Ordinary steady workouts compare pace, power and HR from the same recorded main section when distance/time samples or aligned whole laps reliably identify it. Otherwise the app explicitly labels whole-run supporting evidence. Short runs are never rescaled into invented prescribed sections; missing main-section power is not filled using the whole-run average.
+- Section summaries survive normal activity-stream compaction. Re-matching or editing incompatible run distances invalidates them.
+- Large pace/power disagreement prompts a review of benchmark and CP source/date. A single ordinary run does not establish a new CP or pace benchmark.
+- The prior completed-week review and local-calendar boundary corrections remain included.
+
+TARGET CALCULATION
+The existing controlled long-run rule is:
+  power = round(critical power × 0.78 × accepted power adjustment)
+  pace = benchmark seconds per kilometre × 1.30 / accepted pace adjustment
+  heart-rate guide = round(threshold HR × 0.84)
+At adjustment 1.000, an example CP update from 294 W to 254 W changes the power guide from 229 W to 198 W. It leaves an unchanged pace benchmark's guide unchanged. These example numbers are regression fixtures; they are not hardcoded application defaults.
+The weekly Distance & Load factor is a separate calculation.
+
+SOURCES AND LIMITS
+- Ordinary FIT/CSV activity imports do not synchronize Stryd Auto CP. Enter/confirm the current CP reported by the same power source you use to record running.
+- Actual body weight in this app is distinct from Stryd's configured device mass. This update does not change Stryd device settings.
+- Existing raw activity history is retained. Where old section samples or input dates were never saved, the app labels that limitation; it does not reconstruct measurements.
+- Target formula corrections do not establish that a single faster run was appropriate for the planned intensity.
+
+VERIFICATION
+The included Node regression scripts extract and exercise the actual functions from app.js:
+  node calibration-regression-tests.js
+  node calibration-ui-regression-tests.js
+  node target-comparison-regression-tests.js
+  node weekly-review-regression-tests.js
+  node plan-timeline-regression-tests.js
+Syntax is checked with node --check app.js; release versions and ZIP structure are checked separately.
+UI tests use a DOM stand-in and CSS layout assertions. A live visual browser check was not available in this session.
+
+Official Stryd references:
+https://help.stryd.com/en/articles/6879345-critical-power-definition
+https://help.stryd.com/en/articles/6879314-set-height-and-weight-using-the-stryd-app
+
+Previous release history follows.
+
 AI Running Coach v15.7.23 · build 51023
 
 Weekly review consistency

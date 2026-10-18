@@ -6397,3 +6397,49 @@ body:has(#onboarding:not(.hidden)) #nav,body:has(#onboarding:not(.hidden)) #more
 .loadReviewBreakdown>details{padding:12px;border:1px solid rgba(115,211,213,.15);border-radius:12px;min-width:0;}
 .loadReviewBreakdown summary{white-space:normal;line-height:1.4;}
 .planAdaptAmountHead h4,.adaptAmountCompare small{white-space:normal;overflow-wrap:anywhere;}
+
+/* BEGIN calibration-ui */
+/* Calibration review: compact cards, independent inputs, no blocking startup prompt. */
+.calibrationReviewCard{min-width:0;margin:12px 0;padding:15px;border:1px solid var(--line);border-radius:16px;background:var(--app-2)}
+#today .calibrationReviewCard{display:block}
+.calibrationReviewCard>*{min-width:0}
+.calibrationReviewCard .panelHead{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:8px}
+.calibrationReviewCard h3{margin:3px 0;font-size:18px;line-height:1.2}
+.calibrationBadge{display:inline-block;flex-shrink:0;max-width:46%;padding:5px 8px;border:1px solid var(--line);border-radius:9px;color:var(--muted);font-size:11px;line-height:1.35}
+.calibrationCardGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:12px 0}
+.calibrationCardGrid>div{display:flex;flex-direction:column;gap:4px;min-width:0;padding:10px;border-radius:10px;background:var(--nested);overflow-wrap:anywhere}
+.calibrationCardGrid small{font-size:11px;color:var(--muted)}
+.calibrationCardGrid b{font-size:17px;line-height:1.2}
+.calibrationCardGrid span{font-size:11px;line-height:1.45;color:var(--muted)}
+.calibrationActions{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.calibrationActions button{flex:1 1 150px;min-height:46px;white-space:normal;line-height:1.3}
+.calibrationAssessmentLink{margin-top:8px;min-height:44px}
+.calibrationMicro{margin:8px 0 0;font-size:12px;line-height:1.45;overflow-wrap:anywhere}
+.calibrationReviewModal{min-width:0;overflow-wrap:anywhere}
+.calibrationReviewModal h2{margin:0 0 12px}
+.calibrationReviewModal .note{font-size:12px;line-height:1.5}
+.calibrationReviewModal .calibrationMicro{font-size:12px!important}
+.calibrationInputCard{min-width:0;margin:16px 0 0;padding:12px;border:1px solid var(--line);border-radius:13px;background:var(--nested)}
+.calibrationInputCard legend{padding:0 5px;font-weight:800;font-size:15px}
+.calibrationCurrent{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.calibrationCurrent b{font-size:20px}
+.calibrationCurrent span{font-size:11px;line-height:1.4;color:var(--muted);text-align:right}
+.calibrationInputCard .field{min-width:0;margin-top:12px}
+.calibrationInputCard label{display:block;margin-bottom:5px;font-size:12px;font-weight:700;line-height:1.4}
+.calibrationInputCard .formGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 10px}
+.calibrationInputCard input,.calibrationInputCard select{box-sizing:border-box;width:100%;min-width:0;min-height:46px;font-size:16px}
+.calibrationInputCard [hidden]{display:none!important}
+.calibrationReviewModal .formErrors p{margin:4px 0;font-size:14px!important}
+.calibrationTargetDetails{margin-top:12px;padding:11px 12px;border:1px solid var(--line);border-radius:12px;background:var(--nested);overflow-wrap:anywhere}
+.calibrationTargetDetails summary{font-size:13px;font-weight:800;cursor:pointer;min-height:28px;line-height:1.5}
+.calibrationTargetDetails p{font-size:12px;line-height:1.5}
+.calibrationTargetRows{display:grid;gap:8px;margin:10px 0}
+.calibrationTargetRows>div{padding:10px;border:1px solid var(--line);border-radius:10px;min-width:0}
+.calibrationTargetRows>div>span{display:flex;justify-content:space-between;gap:10px;font-size:13px;line-height:1.4}
+.calibrationTargetRows p{margin:6px 0}
+.calibrationTargetRows small{display:block;font-size:11px;line-height:1.45;color:var(--muted)}
+.calibrationTargetDetails button{min-height:44px;width:100%;margin-top:8px}
+@media(max-width:480px){.calibrationInputCard .formGrid{grid-template-columns:1fr}.calibrationActions button{flex-basis:100%}}
+@media(max-width:350px){.calibrationCardGrid{grid-template-columns:1fr}.calibrationReviewCard .panelHead{flex-wrap:wrap}.calibrationBadge{max-width:100%}}
+
+/* END calibration-ui */

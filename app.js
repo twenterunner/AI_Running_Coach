@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '15.7.23';
-  const BUILD = 51023;
+  const VERSION = '15.7.24';
+  const BUILD = 51024;
   const SCHEMA = 10400;
   const PRIMARY_STORAGE_KEY = 'arc_v10400_web';
   const MIRROR_STORAGE_KEY = 'arc_v10400_mirror';
@@ -119,6 +119,8 @@
     numberError(errors, 'time', 'Assessment time', assessment.time, 30, 172800, { required: true });
     numberError(errors, 'thresholdHr', 'Assessment heart rate', assessment.thresholdHr, 30, 250);
     numberError(errors, 'criticalPower', 'Assessment power', assessment.criticalPower, 1, 2000);
+    numberError(errors, 'avgHr', 'Recorded average heart rate', assessment.avgHr, 30, 250);
+    numberError(errors, 'avgPower', 'Recorded average power', assessment.avgPower, 1, 2000);
     return errors;
   }
 
@@ -342,7 +344,7 @@ const diagnostics=[];
 function recordDiagnostic(source,error){const message=error?.stack||error?.message||String(error);diagnostics.unshift({time:new Date().toLocaleString(),source,message});if(diagnostics.length>20)diagnostics.length=20;console.error(source,error);renderDiagnostics();}
 function renderDiagnostics(){const box=$('diagnosticsContent');if(!box)return;box.innerHTML=diagnostics.length?diagnostics.map(x=>`<div class="diagnosticItem"><b>${esc(x.time)} · ${esc(x.source)}</b><pre>${esc(x.message)}</pre></div>`).join(''):'<p class="muted">No JavaScript errors have been recorded in this session.</p>';}
 window.addEventListener('error',e=>recordDiagnostic('Window error',e.error||e.message));window.addEventListener('unhandledrejection',e=>recordDiagnostic('Unhandled promise rejection',e.reason));
-const PLAN_ENGINE_VERSION=5;
+const PLAN_ENGINE_VERSION=6;
 const FIVE_DAY_TEMPLATE=[['Monday',false,'Easy'],['Tuesday',true,'Intervals'],['Wednesday',true,'Easy'],['Thursday',true,'Tempo'],['Friday',false,'Easy'],['Saturday',true,'Easy'],['Sunday',true,'Long run']];
 const RACE_PROFILES=[
  {key:'5k',label:'5K',maxDistance:7.5,currentWeekly:18,peakLong:12,maxWeekly:32,growth:.07,taperDays:7,days:[['Monday',false,'Easy'],['Tuesday',true,'Intervals'],['Wednesday',true,'Easy'],['Thursday',false,'Easy'],['Friday',false,'Easy'],['Saturday',true,'Tempo'],['Sunday',true,'Long run']]},
@@ -559,7 +561,7 @@ function runtimeFingerprint(value){
 }
 function runtimeDomainState(){
  return{
-  setup:{setup:state.setup,days:state.days},
+  setup:{setup:state.setup,days:state.days,calibration:state.calibration},
   plan:state.plan,
   runs:(state.runs||[]).map(r=>({
    id:r.id,date:r.date,type:r.type,distanceKm:r.distanceKm,durationSec:r.durationSec,avgHr:r.avgHr,avgPower:r.avgPower,
@@ -659,6 +661,7 @@ function writeMirrorBestEffort(text){
  }
 }
 function save(){
+ ensureCalibrationState();snapshotHistoricalRunWeights();
  reconcileShoeUsage();prunePlannedShoeAssignments();
  // Persist derived FIT evidence, not second-by-second streams. This is safe to run
  // repeatedly and keeps older imports from consuming browser storage indefinitely.
@@ -745,11 +748,91 @@ function expectedRpe(type){const b=baseType(type);return({Recovery:[1,3],Easy:[2
 function scoreBand(score){return score>=95?'Excellent execution':score>=85?'Good execution':score>=70?'Useful session; improve control':score>=50?'Limited training benefit':'Session objective largely missed'}
 function targetMetricReliability(plan){if(!plan)return 0;const t=plan.type,b=baseType(t);if(['Recovery','Easy','Steady','Long run','Race'].includes(b)&&!['Progression','Specific long run','Race rehearsal'].includes(t))return .85;return .35}
 function intervalScoredWorkRows(analysis){if(!analysis)return[];if(Array.isArray(analysis.scoredWork)&&analysis.scoredWork.length)return analysis.scoredWork;const work=Array.isArray(analysis.work)?analysis.work:[],expected=Math.max(0,Number(analysis.expectedReps)||0);return expected>0?work.slice(0,expected):work}
+function steadyTargetSection(plan){
+ if(!plan||!['Easy','Long run','Medium-long','Steady aerobic'].includes(plan.type))return null;
+ // Saved scope is part of the historical prescription, including legacy Easy plans.
+ if(/^(?:entire\b|whole[- ]run\b)/i.test(String(plan.targetScope||'').trim()))return null;
+ if(plan.type==='Long run'&&/marathon effort|race-specific|final 3 km/i.test(`${plan.main||''} ${plan.targetScope||''}`))return null;
+ const present=v=>v!==null&&v!==undefined&&v!==''&&Number.isFinite(Number(v));
+ if(![plan.warmDistance,plan.mainDistance,plan.coolDistance,plan.distance].every(present))return{configured:false};
+ const warm=Number(plan.warmDistance),main=Number(plan.mainDistance),cool=Number(plan.coolDistance),total=Number(plan.distance);
+ if(warm<0||!(main>0)||cool<0||Math.abs(warm+main+cool-total)>.051)return{configured:false};
+ return{configured:true,startKm:warm,endKm:warm+main,mainKm:main,totalKm:total,label:plan.type==='Long run'?'controlled endurance section':plan.type==='Easy'?'central easy section':'controlled aerobic main section'};
+}
+function steadySectionEvidenceKey(run,plan,section){
+ return JSON.stringify([1,plan?.id||null,plan?.type||null,section?.startKm,section?.endKm,section?.totalKm,Number(run?.distanceKm),Number(run?.durationSec),run?.powerDiagnostics?.mapping||null]);
+}
+function steadySectionAnalysis(run,plan){
+ const section=steadyTargetSection(plan),fallback=reason=>({applicable:true,available:false,reason,scope:'whole-run fallback · main section unavailable'});
+ if(!section)return{applicable:false,available:false};
+ if(!section.configured)return fallback('The saved prescription has no reliable warm-up, main-section and cooldown distances.');
+ const total=Number(run?.distanceKm),duration=Number(run?.durationSec),tolerance=Math.max(.02,section.totalKm*.005);
+ if(!(duration>0)||!(total>=section.totalKm-tolerance))return fallback('The run is shorter than the prescribed warm-up, main section and cooldown; section boundaries have not been rescaled.');
+ const key=steadySectionEvidenceKey(run,plan,section),stored=run?.steadySectionEvidence;
+ if(stored?.version===1&&stored.key===key&&stored.available)return{...stored,applicable:true};
+ const present=v=>v!==null&&v!==undefined&&v!==''&&Number.isFinite(Number(v));
+ const metric=(rows,k)=>{let weighted=0,covered=0;for(let i=1;i<rows.length;i++){const a=rows[i-1],b=rows[i],dt=b.t-a.t;if(present(a[k])&&present(b[k])&&Number(a[k])>=(k==='power'?0:1)&&Number(b[k])>=(k==='power'?0:1)){weighted+=(Number(a[k])+Number(b[k]))/2*dt;covered+=dt;}}const span=rows.at(-1).t-rows[0].t;return{value:covered>=span*.95?weighted/covered:null,coverage:span>0?covered/span:0};};
+ const finish=(data)=>({version:1,key,applicable:true,available:true,targetSection:section.label,scope:`recorded ${section.label} · ${data.startKm.toFixed(2)}–${data.endKm.toFixed(2)} km`,...data});
+ const records=(run?.fitRecords||[]).filter(r=>present(r.t)&&present(r.distance)).map(r=>({...r,t:Number(r.t),distance:Number(r.distance)}));
+ if(records.length>=20){
+  const first=records[0],last=records.at(-1),elapsed=last.t-first.t;
+  const ordered=records.every((r,i)=>i===0||(r.t>records[i-1].t&&r.distance>=records[i-1].distance));
+  const complete=first.distance>=0&&first.distance<=20&&Math.abs(last.distance/1000-total)<=Math.max(.03,total*.01)&&Math.abs(elapsed-duration)<=Math.max(30,duration*.02);
+  const startM=section.startKm*1000,endM=section.endKm*1000,edgeTolerance=Math.min(20,section.mainKm*20);
+  const rows=records.filter(r=>r.distance>=startM&&r.distance<=endM);
+  if(ordered&&complete&&rows.length>=20){
+   const a=rows[0],b=rows.at(-1),dt=b.t-a.t,km=(b.distance-a.distance)/1000;
+   const continuous=rows.every((r,i)=>i===0||(r.t-rows[i-1].t<=15&&(r.distance-rows[i-1].distance)/(r.t-rows[i-1].t)<=15));
+   if(continuous&&dt>=60&&km>=section.mainKm*.95&&a.distance-startM<=edgeTolerance&&endM-b.distance<=edgeTolerance){
+    const pw=metric(rows,'power'),hr=metric(rows,'hr');
+    // Proportional alignment does not establish which power samples belong to this section.
+    const powerReliable=!/proportional alignment/i.test(run?.powerDiagnostics?.mapping||'');
+    return finish({source:'recorded distance/time samples',startKm:a.distance/1000,endKm:b.distance/1000,distanceKm:km,durationSec:dt,paceSecPerKm:dt/km,avgPower:powerReliable?pw.value:null,avgHr:hr.value,powerCoverage:powerReliable?pw.coverage:0,hrCoverage:hr.coverage,recordCount:rows.length});
+   }
+  }
+ }
+ // Whole laps may identify the section only when their measured boundaries align.
+ // Do not split a lap or scale its average to manufacture missing section samples.
+ const laps=run?.fitLaps||[];
+ if(laps.length&&laps.every(l=>present(l.distanceKm)&&Number(l.distanceKm)>0&&present(l.durationSec)&&Number(l.durationSec)>0)){
+  let distance=0;const rows=laps.map(l=>{const row={...l,startKm:distance,endKm:distance+Number(l.distanceKm)};distance=row.endKm;return row;});
+  const lapDuration=rows.reduce((s,l)=>s+Number(l.durationSec),0),edgeTolerance=Math.min(.02,section.mainKm*.01);
+  const selected=rows.filter(l=>l.startKm>=section.startKm-edgeTolerance&&l.endKm<=section.endKm+edgeTolerance);
+  if(Math.abs(distance-total)<=Math.max(.03,total*.01)&&Math.abs(lapDuration-duration)<=Math.max(30,duration*.02)&&selected.length&&Math.abs(selected[0].startKm-section.startKm)<=edgeTolerance&&Math.abs(selected.at(-1).endKm-section.endKm)<=edgeTolerance){
+   const seconds=selected.reduce((s,l)=>s+Number(l.durationSec),0),km=selected.reduce((s,l)=>s+Number(l.distanceKm),0),mean=k=>selected.every(l=>present(l[k])&&Number(l[k])>0)?selected.reduce((s,l)=>s+Number(l[k])*Number(l.durationSec),0)/seconds:null;
+   if(seconds>=60&&km>=section.mainKm*.95)return finish({source:'aligned recorded lap boundaries',startKm:selected[0].startKm,endKm:selected.at(-1).endKm,distanceKm:km,durationSec:seconds,paceSecPerKm:seconds/km,avgPower:mean('avgPower'),avgHr:mean('avgHr'),powerCoverage:mean('avgPower')!==null?1:0,hrCoverage:mean('avgHr')!==null?1:0,lapCount:selected.length});
+  }
+ }
+ return fallback('Recorded distance/time samples or aligned laps do not reliably identify the prescribed main section. Whole-run averages include warm-up and cooldown.');
+}
+function captureSteadySectionEvidence(run,plan){
+ if(!run)return null;
+ const result=steadySectionAnalysis(run,plan);
+ if(result.available)run.steadySectionEvidence=result;
+ else if(run.steadySectionEvidence)delete run.steadySectionEvidence;
+ return result;
+}
+function workoutTargetComparison(run,plan){
+ const section=steadySectionAnalysis(run,plan),measured=section.available;
+ const valid=v=>v!==null&&v!==undefined&&Number.isFinite(Number(v))&&Number(v)>0?Number(v):null;
+ const actualPace=measured?valid(section.paceSecPerKm):valid(Number(run?.durationSec)/Number(run?.distanceKm)),actualPower=measured?valid(section.avgPower):valid(run?.avgPower),actualHr=measured?valid(section.avgHr):valid(run?.avgHr);
+ // Always compare with the saved prescription, including after a later CP update.
+ const targetPace=valid(plan?.zone?.pace),targetPower=valid(plan?.zone?.power),targetHr=valid(plan?.zone?.hr);
+ const paceSpeedDifferencePct=actualPace&&targetPace?(targetPace/actualPace-1)*100:null,powerDifferencePct=actualPower&&targetPower?(actualPower/targetPower-1)*100:null;
+ const needsReview=!!section.applicable&&Number.isFinite(paceSpeedDifferencePct)&&Math.abs(paceSpeedDifferencePct)>=10&&Number.isFinite(powerDifferencePct)&&Math.abs(powerDifferencePct)<=5;
+ const scope=measured?section.scope:section.applicable?'whole-run fallback · main section unavailable':'entire run';
+ const notice=needsReview?`${measured?'Recorded main-section':'Whole-run'} pace was ${pace(actualPace)} versus the saved ${pace(targetPace)} guide, while power was ${Math.round(actualPower)} W versus ${Math.round(targetPower)} W (${Math.abs(powerDifferencePct).toFixed(1)}% ${powerDifferencePct>=0?'above':'below'}). Review pace benchmark and CP source/date.${!measured?' The prescribed main section cannot be compared separately from warm-up and cooldown.':''} This run does not establish a new pace benchmark or critical power.`:'';
+ return{section,scope,actualPace,actualPower,actualHr,targetPace,targetPower,targetHr,paceSpeedDifferencePct,powerDifferencePct,hrDifference:actualHr&&targetHr?actualHr-targetHr:null,needsReview,notice};
+}
+
 function workoutScoreDetails(run,plan=run?.planId?state.plan.find(p=>p.id===run.planId):null){
  if(!run)return null;
  const actualKm=Number(run.distanceKm)||0,dur=Number(run.durationSec)||0;
  if(!(actualKm>0&&dur>0))return null;
- const type=plan?.type||run.type||'Easy',b=baseType(type),family=workoutFamily(type),profile=executionProfile(type),plannedKm=plan?Math.max(.1,Number(plan.distance)||0):null,actualPace=dur/actualKm;
+ const type=plan?.type||run.type||'Easy',b=baseType(type),family=workoutFamily(type),profile=executionProfile(type),plannedKm=plan?Math.max(.1,Number(plan.distance)||0):null,wholeRunPace=dur/actualKm;
+ const targetComparison=workoutTargetComparison(run,plan),steadySection=targetComparison.section,actualPace=targetComparison.actualPace||wholeRunPace,actualPower=targetComparison.actualPower,actualHr=targetComparison.actualHr;
+ const averageLabel=steadySection.available?'measured main-section average':steadySection.applicable?'whole-run fallback average':'whole-run average';
+ const scopeNote=steadySection.applicable&&!steadySection.available?` ${steadySection.reason} This is supporting evidence only.`:'';
  const isShortIntervals=family==='interval'||b==='Repetition',isThreshold=family==='threshold',isTargetedLong=['Specific long run','Race rehearsal','Progression'].includes(type);
  const iaCandidate=run.intervalAnalysis,ia=iaCandidate?.structured&&iaCandidate?.usableForScore&&intervalScoredWorkRows(iaCandidate).length?iaCandidate:null;
  const components=[],add=(key,name,score,baseWeight,detail,reliability=1,scope='whole session')=>{if(Number.isFinite(score)&&baseWeight>0&&reliability>0)components.push({key,name,score:clamp(score,0,100),baseWeight,weight:baseWeight*reliability,detail,reliability,scope})};
@@ -781,22 +864,24 @@ function workoutScoreDetails(run,plan=run?.planId?state.plan.find(p=>p.id===run.
        const ratio=plan.zone.pace/actualPace;score=clamp(100-Math.abs(1-ratio)*145,0,100);
        reliability=isThreshold||isTargetedLong?.35:b==='Marathon'?.6:.65;scope='entire run · supporting target estimate';
      }
-     add('pace',exactTarget?'Pace execution':'Pace control',score,profile.pace,`${pace(actualPace)} whole-run average versus ${pace(plan.zone.pace)} ${exactTarget?'target':'intensity guide'}.${exactTarget&&reliability<.5?' Warm-up/cooldown make the whole-run value supporting evidence only.':' Slower-than-guide running is not penalised for this session type.'}`,reliability,scope);
+     if(steadySection.applicable){reliability=Math.min(reliability,steadySection.available?.95:.35);scope=steadySection.available?`${steadySection.scope} · intensity ceiling`:`${targetComparison.scope} · supporting guide`;if(targetComparison.needsReview)reliability=Math.min(reliability,.35);}
+     add('pace',exactTarget?'Pace execution':'Pace control',score,profile.pace,`${pace(actualPace)} ${averageLabel} versus ${pace(plan.zone.pace)} ${exactTarget?'target':'intensity guide'}.${exactTarget&&reliability<.5?' Warm-up/cooldown make the whole-run value supporting evidence only.':' Slower-than-guide running is not penalised for this session type.'}${scopeNote}${targetComparison.needsReview?' Pace benchmark and CP source/date need review; target agreement is limited evidence.':''}`,reliability,scope);
    }
  }
- if(Number(run.avgPower)>0&&plan?.zone?.power>0){
+ if(actualPower>0&&plan?.zone?.power>0){
    if(useWorkTargets&&workPower.length>=2)add('power',isShortIntervals?'Interval power execution':'Work-segment power execution',avg(workPower),profile.power,`${workPower.length} detected work repetitions/segments compared directly with ${Math.round(plan.zone.power)} W target.`,1,'detected work sections');
    else if(!isShortIntervals){
      const exactTarget=isThreshold||['Marathon','Fitness assessment','Race'].includes(b)||isTargetedLong;
      let score,reliability,scope;
      if(!exactTarget){
-       const ratio=Number(run.avgPower)/plan.zone.power;score=ratio<=1.05?100:clamp(100-(ratio-1.05)*200,0,100);
+       const ratio=actualPower/plan.zone.power;score=ratio<=1.05?100:clamp(100-(ratio-1.05)*200,0,100);
        reliability=family==='recovery'||family==='aerobic'||family==='long'?.9:.75;scope='entire run · intensity ceiling';
      }else{
-       const ratio=Number(run.avgPower)/plan.zone.power;score=clamp(100-Math.abs(1-ratio)*140,0,100);
+       const ratio=actualPower/plan.zone.power;score=clamp(100-Math.abs(1-ratio)*140,0,100);
        reliability=isThreshold||isTargetedLong?.35:b==='Marathon'?.6:.65;scope='entire run · supporting target estimate';
      }
-     add('power',exactTarget?'Power execution':'Power control',score,profile.power,`${Math.round(Number(run.avgPower))} W whole-run average versus ${Math.round(plan.zone.power)} W ${exactTarget?'target':'intensity guide'}.${exactTarget&&reliability<.5?' Warm-up/cooldown make the whole-run value supporting evidence only.':' Lower-than-guide power is not penalised for this session type.'}`,reliability,scope);
+     if(steadySection.applicable){reliability=Math.min(reliability,steadySection.available?.95:.35);scope=steadySection.available?`${steadySection.scope} · intensity ceiling`:`${targetComparison.scope} · supporting guide`;if(targetComparison.needsReview)reliability=Math.min(reliability,.35);}
+     add('power',exactTarget?'Power execution':'Power control',score,profile.power,`${Math.round(actualPower)} W ${averageLabel} versus ${Math.round(plan.zone.power)} W ${exactTarget?'target':'intensity guide'}.${exactTarget&&reliability<.5?' Warm-up/cooldown make the whole-run value supporting evidence only.':' Lower-than-guide power is not penalised for this session type.'}${scopeNote}${targetComparison.needsReview?' Pace benchmark and CP source/date need review; target agreement is limited evidence.':''}`,reliability,scope);
    }
  }
  if(ia&&Number(ia.adherencePenalty)>0){
@@ -804,9 +889,10 @@ function workoutScoreDetails(run,plan=run?.planId?state.plan.find(p=>p.id===run.
    add('repAdherence','Repetition prescription adherence',adherenceScore,.12,`${ia.detectedReps} detected versus ${ia.expectedReps} prescribed. ${ia.extraReps?`${ia.extraReps} extra rep${ia.extraReps===1?'':'s'} added unplanned load.`:''}${ia.missingReps?`${ia.missingReps} prescribed rep${ia.missingReps===1?' was':'s were'} not detected.`:''}`,1,'workout structure');
  }
 
- // Heart rate: continuous aerobic sessions use the whole run; quality sessions use detected work sections when available.
- if(Number(run.avgHr)>0&&plan?.zone?.hr>0){
-   let hr=Number(run.avgHr),reliability=1,scope='entire run',label='Heart-rate control';
+ // Heart rate uses the same measured steady section as pace and power, or the same explicit whole-run fallback.
+ if(actualHr>0&&plan?.zone?.hr>0){
+   let hr=actualHr,reliability=1,scope='entire run',label='Heart-rate control';
+   if(steadySection.applicable){reliability=steadySection.available?1:.35;scope=steadySection.available?steadySection.scope:targetComparison.scope;label=steadySection.available?'Main-section heart-rate control':'Heart-rate control (whole-run fallback)';}
    if(ia&&(isShortIntervals||isThreshold)){
      const hrRows=scoredWork.map(x=>Number(x.avgHr)).filter(v=>Number.isFinite(v)&&v>0);
      if(hrRows.length>=2){
@@ -816,7 +902,7 @@ function workoutScoreDetails(run,plan=run?.planId?state.plan.find(p=>p.id===run.
    }else if(isTargetedLong){reliability=.55;scope='entire run · mixed-session support'}
    else if(['Fitness assessment','Race'].includes(b)){reliability=.5;scope='entire run · supporting only'}
    const guide=plan.zone.hr,delta=(hr-guide)/Math.max(1,guide),score=hr<=guide?100:clamp(100-delta*180,0,100);
-   add('hr',label,score,profile.hr,`${Math.round(hr)} bpm ${scope.includes('work')?'work-section':'whole-run'} value versus ${Math.round(guide)} bpm guide. Heart rate is treated as an upper control guide; lower HR receives full, not extra, credit.${isShortIntervals?' HR lags short repetitions, so its execution weight is deliberately low.':''}`,reliability,scope);
+   add('hr',label,score,profile.hr,`${Math.round(hr)} bpm ${steadySection.available?'main-section':scope.includes('work')?'work-section':steadySection.applicable?'whole-run fallback':'whole-run'} value versus ${Math.round(guide)} bpm guide. Heart rate is treated as an upper control guide; lower HR receives full, not extra, credit.${isShortIntervals?' HR lags short repetitions, so its execution weight is deliberately low.':''}`,reliability,scope);
  }
 
  // Power-based cardiac drift is a continuous-aerobic metric. It is not an execution score for short intervals/repetitions.
@@ -846,7 +932,7 @@ function workoutScoreDetails(run,plan=run?.planId?state.plan.find(p=>p.id===run.
  const final=Number.isFinite(raw)?Math.round(clamp(cap==null?raw:Math.min(raw,cap),0,100)):null;
  const baseWeightTotal=sum(components.map(c=>c.baseWeight)),weightedReliability=baseWeightTotal?sum(components.map(c=>c.baseWeight*c.reliability))/baseWeightTotal:0;
  const evidenceQuality=plan?(weightedReliability>=.8?'high':weightedReliability>=.55?'moderate':'limited'):(components.length>=2?'low':'very low');
- return{score:final,rawScore:Number.isFinite(raw)?raw:null,components,cap,capReason,plan,objective:plan?.purpose||profile.objective,interpretation:scoreBand(final),evidenceQuality,weightedReliability};
+ return{score:final,rawScore:Number.isFinite(raw)?raw:null,components,cap,capReason,plan,objective:plan?.purpose||profile.objective,interpretation:scoreBand(final),evidenceQuality,weightedReliability,targetComparison};
 }
 function workoutScore(run,plan=run?.planId?state.plan.find(p=>p.id===run.planId):null){return workoutScoreDetails(run,plan)?.score??null}
 
@@ -1226,9 +1312,384 @@ function pacePowerReviewState(date=iso(today())){
  const applied=pacePowerCommittedFactor(date),provisional=pacePowerProvisionalFactor(date);
  return{applied,provisional,delta:provisional-applied};
 }
-function baselineOn(date){let valid=state.assessments.filter(a=>a.valid&&a.date<=date).sort((a,b)=>a.date.localeCompare(b.date)),a=valid.at(-1),base=a?{pace:a.time/a.distance,hr:a.thresholdHr||state.setup.thresholdHr,cp:a.criticalPower||state.setup.criticalPower}:{pace:state.setup.testTime/state.setup.testDistance,hr:state.setup.thresholdHr,cp:state.setup.criticalPower},ev=trainingEvidence(date),applied=pacePowerCommittedFactor(date);return{pace:base.pace/applied,hr:base.hr,cp:base.cp*applied,evidence:{...ev,appliedAdjustment:applied,provisionalAdjustment:ev.adjustment}}}
+/* BEGIN calibration-core */
+/* Dated calibration records. No initialization: call after the application state exists. */
+function calibrationKinds(){return['pace','power','hr','weight']}
+function calibrationSetupValue(kind,setup=state.setup){
+ if(kind==='pace'){const t=Number(setup?.testTime),d=Number(setup?.testDistance);return t>0&&d>0?t/d:null}
+ const key={power:'criticalPower',hr:'thresholdHr',weight:'bodyWeight'}[kind],n=Number(setup?.[key]);
+ return key&&Number.isFinite(n)&&n>0?n:null;
+}
+function calibrationValidValue(kind,value){
+ const n=Number(value);if(!Number.isFinite(n)||!(n>0))return false;
+ if(kind==='power')return n<=2000;
+ if(kind==='hr')return n>=30&&n<=250;
+ if(kind==='weight')return n>=25&&n<=250;
+ return kind==='pace';
+}
+function calibrationDate(value){return typeof value==='string'&&CORE.isIsoDate(value)?value:null}
+function calibrationSequence(records){return Math.max(0,...(records||[]).map(r=>Number(r.sequence)||0))}
+function calibrationAppendRecord(calibration,record){
+ const sequence=calibrationSequence(calibration.records)+1;
+ const row={...record,id:record.id||`calibration-v1-${sequence}`,sequence};
+ calibration.records.push(row);return row;
+}
+function calibrationAssessmentValues(a){
+ const out=[],t=Number(a?.time),d=Number(a?.distance);
+ if(t>0&&d>0)out.push({kind:'pace',value:t/d,testTime:t,testDistance:d});
+ if(Number(a?.criticalPower)>0)out.push({kind:'power',value:Number(a.criticalPower)});
+ if(Number(a?.thresholdHr)>0)out.push({kind:'hr',value:Number(a.thresholdHr)});
+ return out;
+}
+function ensureCalibrationState(previousSetup=state.setup){
+ const existing=state.calibration,first=!existing||existing.version!==1||!Array.isArray(existing.records);
+ if(first){
+  state.calibration={version:1,records:[],deferredUntil:null};
+  const effectiveOn=calibrationDate(previousSetup?.planStart)||iso(today());
+  for(const kind of calibrationKinds()){
+   const value=calibrationSetupValue(kind,previousSetup);if(!calibrationValidValue(kind,value))continue;
+   calibrationAppendRecord(state.calibration,{kind,value,effectiveOn,measuredOn:null,confirmedOn:null,source:'Legacy setup',legacy:true,...(kind==='pace'?{testTime:Number(previousSetup.testTime),testDistance:Number(previousSetup.testDistance)}:{})});
+  }
+ }
+ const calibration=state.calibration;
+ if(!('deferredUntil' in calibration))calibration.deferredUntil=null;
+ // Import dated assessment values once. Reads never calculate an adaptive factor or invent a confirmation date.
+ for(const a of state.assessments||[]){
+  if(!a?.id||!a.valid||!calibrationDate(a.date))continue;
+  for(const value of calibrationAssessmentValues(a)){
+   if(!calibrationValidValue(value.kind,value.value))continue;
+   const present=calibration.records.some(r=>r.assessmentId===a.id&&r.kind===value.kind&&r.effectiveOn===a.date&&Number(r.value)===value.value&&(value.kind!=='pace'||(Number(r.testTime)===value.testTime&&Number(r.testDistance)===value.testDistance)));
+   if(!present)calibrationAppendRecord(calibration,{...value,effectiveOn:a.date,measuredOn:a.date,confirmedOn:null,source:'Fitness assessment',assessmentId:a.id});
+  }
+ }
+ return calibration;
+}
+function calibrationRecordIsCurrent(record,cutoff){
+ if(!record||!calibrationKinds().includes(record.kind)||record.valid===false||!calibrationValidValue(record.kind,record.value))return false;
+ if(!calibrationDate(record.effectiveOn)||(!record.legacy&&record.effectiveOn>cutoff))return false;
+ if(record.measuredOn!=null&&(!calibrationDate(record.measuredOn)||record.measuredOn>cutoff))return false;
+ if(record.confirmedOn!=null&&(!calibrationDate(record.confirmedOn)||record.confirmedOn>cutoff))return false;
+ if(record.assessmentId){
+  const a=(state.assessments||[]).find(x=>x.id===record.assessmentId);
+  if(!a?.valid||a.date!==record.effectiveOn||a.date>cutoff)return false;
+  const value=calibrationAssessmentValues(a).find(x=>x.kind===record.kind);
+  if(!value||Number(record.value)!==value.value)return false;
+  if(record.kind==='pace'&&(Number(record.testTime)!==value.testTime||Number(record.testDistance)!==value.testDistance))return false;
+ }
+ return true;
+}
+function calibrationFor(kind,date=iso(today())){
+ const calibration=ensureCalibrationState(),now=iso(today()),requested=calibrationDate(date);if(!requested)return null;
+ const cutoff=requested<now?requested:now;
+ const priority=r=>r.assessmentId?1:r.legacy?0:2;
+ const eligible=calibration.records.filter(r=>r.kind===kind&&calibrationRecordIsCurrent(r,cutoff)),dated=eligible.filter(r=>!r.legacy),pool=dated.length?dated:eligible;
+ return pool.sort((a,b)=>b.effectiveOn.localeCompare(a.effectiveOn)||priority(b)-priority(a)||(Number(b.sequence)||0)-(Number(a.sequence)||0)||String(b.id||'').localeCompare(String(a.id||'')))[0]||null;
+}
+function calibrationLegacyFactor(date=iso(today())){
+ const n=typeof pacePowerCommittedFactor==='function'?Number(pacePowerCommittedFactor(date)):1;
+ return Number.isFinite(n)&&n>0?n:1;
+}
+function calibrationFactorEpoch(date=iso(today())){
+ let cutoff=date;
+ if(typeof weekStart==='function'&&typeof reviewWeekForDate==='function'&&typeof currentWeek==='function'){
+  const w=Math.min(reviewWeekForDate(date),currentWeek());if(w<=1)return'setup';
+  const end=weekStart(w);end.setDate(end.getDate()-1);cutoff=iso(end);
+ }
+ const a=(state.assessments||[]).filter(x=>x?.valid&&calibrationDate(x.date)&&x.date<=cutoff&&x.date<=iso(today())).sort((x,y)=>y.date.localeCompare(x.date))[0];
+ return a?`assessment:${a.id}:${a.date}`:'setup';
+}
+function calibrationAdjustedFactor(kind,date=iso(today())){
+ const record=calibrationFor(kind,date);if(!record||!['pace','power'].includes(kind))return 1;
+ const raw=calibrationLegacyFactor(date),anchor=Number(record.anchorFactor);
+ if(!(anchor>0))return raw;
+ // A new legacy assessment starts its own adjustment epoch; never divide a reset factor by an old epoch's anchor.
+ const denominator=record.anchorEpoch&&record.anchorEpoch!==calibrationFactorEpoch(date)?1:anchor;
+ const factor=raw/denominator;return Number.isFinite(factor)&&factor>0?factor:1;
+}
+function calibrationWeightForRun(run){
+ const saved=Number(run?.calibrationWeight?.value);if(calibrationValidValue('weight',saved))return saved;
+ const converted=Number(run?.powerConversion?.weightKg);if(calibrationValidValue('weight',converted))return converted;
+ const record=calibrationFor('weight',run?.date||iso(today()));if(record)return Number(record.value);
+ // An activity before the programme needs the undated legacy estimate, never a later explicit measurement.
+ const legacy=ensureCalibrationState().records.filter(r=>r.kind==='weight'&&r.legacy&&calibrationValidValue('weight',r.value)).sort((a,b)=>(Number(a.sequence)||0)-(Number(b.sequence)||0))[0];
+ return legacy?Number(legacy.value):null;
+}
+function snapshotRunCalibrationWeight(run,fallbackWeight=state.setup?.bodyWeight){
+ if(!run||calibrationValidValue('weight',run.calibrationWeight?.value))return false;
+ const record=calibrationFor('weight',run.date||iso(today())),value=calibrationWeightForRun(run)??(calibrationValidValue('weight',fallbackWeight)?Number(fallbackWeight):null);
+ if(!calibrationValidValue('weight',value))return false;
+ const converted=calibrationValidValue('weight',run.powerConversion?.weightKg);
+ run.calibrationWeight={value:Number(value),recordId:record?.id||null,effectiveOn:record?.effectiveOn||null,source:converted?(run.powerConversion.source||'Imported conversion weight'):record?.source||'Legacy setup estimate',estimated:converted?run.powerConversion.estimated!==false:!record||Boolean(record.legacy)};
+ return true;
+}
+function snapshotHistoricalRunWeights(fallbackWeight=state.setup?.bodyWeight){
+ ensureCalibrationState();let changed=false;for(const run of state.runs||[])if(snapshotRunCalibrationWeight(run,fallbackWeight))changed=true;return changed;
+}
+function calibrationInputForKind(kind,setup){
+ const value=calibrationSetupValue(kind,setup);
+ if(!calibrationValidValue(kind,value))throw Error(`Enter a valid ${kind==='power'?'critical power':kind==='hr'?'threshold heart rate':kind==='weight'?'body weight':'benchmark time and distance'}.`);
+ if(kind==='power'&&(value<50||value>1500))throw Error('Critical power must be between 50 and 1500 W.');
+ if(kind==='hr'&&(!Number.isInteger(value)||value<60||value>240))throw Error('Threshold heart rate must be a whole number between 60 and 240 bpm.');
+ if(kind==='pace'){
+  const testTime=Number(setup.testTime),testDistance=Number(setup.testDistance);
+  if(!(testTime>=30&&testTime<=172800&&testDistance>=.1&&testDistance<=200))throw Error('Enter a valid benchmark time and distance.');
+  return{kind,value,testTime,testDistance};
+ }
+ return{kind,value};
+}
+function calibrationOptionValue(option,kind){return option&&typeof option==='object'?option[kind]:option}
+function calibrationWriteReview(candidateSetup,options={},compareSetup=null){
+ const now=iso(today()),on=options.on||now;if(!calibrationDate(on)||on>now)throw Error('Calibration confirmation must be today or earlier.');
+ const kinds=[...new Set(options.kinds||calibrationKinds())];if(kinds.some(k=>!calibrationKinds().includes(k)))throw Error('Unknown calibration field.');
+ const remeasured=new Set(options.remeasuredKinds||[]);
+ // Validate the entire candidate before mutating records, settings or activity snapshots.
+ const inputs=kinds.map(kind=>{
+  const input=calibrationInputForKind(kind,candidateSetup),measured=calibrationOptionValue(options.measuredOn,kind);
+  if(measured!=null&&measured!==''&&(!calibrationDate(measured)||measured>on))throw Error('Measurement dates must be valid and no later than the confirmation date.');
+  return{...input,measuredOn:measured||null,requestedSource:calibrationOptionValue(options.sources||options.source,kind)};
+ });
+ const calibration=ensureCalibrationState(compareSetup||state.setup),oldRecords=new Map(kinds.map(kind=>[kind,calibrationFor(kind,on)]));
+ const changedKinds=inputs.filter(input=>{
+  const previous=compareSetup?calibrationSetupValue(input.kind,compareSetup):oldRecords.get(input.kind)?.value;
+  const previousPace=compareSetup||oldRecords.get(input.kind);
+  return Number(previous)!==input.value||(input.kind==='pace'&&(Number(previousPace?.testTime)!==input.testTime||Number(previousPace?.testDistance)!==input.testDistance));
+ }).map(input=>input.kind);
+ const newAnchors=inputs.filter(input=>changedKinds.includes(input.kind)||remeasured.has(input.kind));
+ const needsFactor=newAnchors.some(input=>['pace','power'].includes(input.kind)),anchorFactor=needsFactor?calibrationLegacyFactor(on):null,anchorEpoch=needsFactor?calibrationFactorEpoch(on):null;
+ snapshotHistoricalRunWeights(compareSetup?.bodyWeight??state.setup?.bodyWeight);
+ const records=[];
+ for(const input of inputs){
+  const old=oldRecords.get(input.kind),newAnchor=changedKinds.includes(input.kind)||remeasured.has(input.kind);
+  if(newAnchor||!old){
+   const {requestedSource,...base}=input;
+   const source=CORE.cleanText(String(requestedSource||options.defaultSource||'Manual confirmation'),240).trim()||'Manual confirmation';
+   records.push(calibrationAppendRecord(calibration,{...base,effectiveOn:on,confirmedOn:on,source,...(['pace','power'].includes(input.kind)&&anchorFactor>0?{anchorFactor,anchorEpoch}:{})}));
+  }else{
+   const {id,sequence,...base}=old;
+   records.push(calibrationAppendRecord(calibration,{...base,confirmedOn:on}));
+  }
+ }
+ calibration.deferredUntil=null;
+ return{changedKinds,reviewedKinds:kinds,records,reanchoredKinds:newAnchors.filter(input=>['pace','power'].includes(input.kind)).map(input=>input.kind),rebuildRequired:newAnchors.length>0};
+}
+function recordCalibrationSettingChanges(previousSetup,nextSetup,options={}){
+ const kinds=calibrationKinds().filter(kind=>calibrationSetupValue(kind,previousSetup)!==calibrationSetupValue(kind,nextSetup)||(kind==='pace'&&(Number(previousSetup.testTime)!==Number(nextSetup.testTime)||Number(previousSetup.testDistance)!==Number(nextSetup.testDistance))));
+ if(!kinds.length){ensureCalibrationState(previousSetup);return{changedKinds:[],reviewedKinds:[],records:[],reanchoredKinds:[],rebuildRequired:false}}
+ return calibrationWriteReview(nextSetup,{...options,kinds,defaultSource:options.source||'Settings update'},previousSetup);
+}
+function recordCalibrationReview(kinds=calibrationKinds(),options={}){
+ const candidate={...state.setup};
+ for(const kind of kinds){const r=calibrationFor(kind,options.on||iso(today()));if(!r)continue;if(kind==='pace'){candidate.testTime=r.testTime;candidate.testDistance=r.testDistance}else candidate[{power:'criticalPower',hr:'thresholdHr',weight:'bodyWeight'}[kind]]=Number(r.value)}
+ return calibrationWriteReview(candidate,{...options,kinds});
+}
+function applyCalibrationReview(candidateSetup,options={}){
+ const result=calibrationWriteReview(candidateSetup,options);
+ for(const kind of result.reviewedKinds){
+  if(kind==='pace'){state.setup.testTime=Number(candidateSetup.testTime);state.setup.testDistance=Number(candidateSetup.testDistance)}
+  else state.setup[{power:'criticalPower',hr:'thresholdHr',weight:'bodyWeight'}[kind]]=Number(candidateSetup[{power:'criticalPower',hr:'thresholdHr',weight:'bodyWeight'}[kind]]);
+ }
+ return result;
+}
+
+/* END calibration-core */
+/* BEGIN calibration-ui */
+/* Calibration review UI. Insert inside the app IIFE after the calibration engine.
+   Call bindCalibrationControls(document) once. No automatic modal on startup. */
+function calibrationUiKinds(){
+ return[
+  {kind:'pace',label:'Pace benchmark',days:28,help:'Use the distance and time from a current timed benchmark. Updating critical power does not require a new pace test.'},
+  {kind:'power',label:'Critical power',days:28,help:'Enter your current critical-power estimate, for example the CP shown by Stryd. An ordinary run’s average watts is not a CP measurement.'},
+  {kind:'hr',label:'Threshold heart rate',days:28,help:'Use a current threshold-HR estimate from a suitable assessment or trusted device estimate. An ordinary run’s average HR is not threshold HR.'},
+  {kind:'weight',label:'Actual body weight',days:14,help:'Enter your actual body weight. Stryd’s configured mass is a separate device setting; this form does not change it.'}
+ ];
+}
+function calibrationUiDate(value){return CORE.isIsoDate(value)?`${fmtDate(value)} ${String(value).slice(0,4)}`:'Not recorded'}
+function calibrationUiValue(kind,record){
+ const value=Number(record?.value);
+ if(!(value>0))return'Not recorded';
+ if(kind==='pace')return pace(value);
+ if(kind==='power')return`${Math.round(value)} W`;
+ if(kind==='hr')return`${Math.round(value)} bpm`;
+ return`${value.toFixed(1)} kg`;
+}
+function calibrationUiSource(record,asOf=iso(today())){
+ const measured=CORE.isIsoDate(record?.measuredOn)?record.measuredOn:null;
+ const age=measured?Math.max(0,calendarDayNumber(asOf)-calendarDayNumber(measured)):null;
+ const source=String(record?.source||'Source not recorded');
+ return`${source} · ${measured?`measured ${calibrationUiDate(measured)}${age===0?' · today':` · ${age} days ago`}`:'measurement date not recorded'}`;
+}
+function calibrationUiReviewState(asOf=iso(today())){
+ const calibration=ensureCalibrationState();
+ const rows=calibrationUiKinds().map(def=>{
+  const record=calibrationFor(def.kind,asOf);
+  const dates=[record?.confirmedOn,record?.measuredOn].filter(date=>CORE.isIsoDate(date)&&date<=asOf).sort();
+  const lastReview=dates.at(-1)||null;
+  const age=lastReview?calendarDayNumber(asOf)-calendarDayNumber(lastReview):null;
+  return{...def,record,lastReview,age,due:age===null||age>=def.days};
+ });
+ const deferredUntil=CORE.isIsoDate(calibration.deferredUntil)?calibration.deferredUntil:null;
+ return{rows,due:rows.filter(row=>row.due),deferredUntil,deferred:Boolean(deferredUntil&&deferredUntil>asOf)};
+}
+function calibrationReviewCardHtml(context='today'){
+ const review=calibrationUiReviewState(),settings=context==='settings';
+ if(!settings&&(!review.due.length||review.deferred))return'';
+ const status=review.deferred?`Reminder ${calibrationUiDate(review.deferredUntil)}`:review.due.length?'Review suggested':'Up to date';
+ const summary=review.due.length?`${review.due.map(row=>row.label).join(', ')} ${review.due.length===1?'is':'are'} ready to check.`:'Your current values and their measurement sources are recorded.';
+ return`<section class="${settings?'settingsNested':'todayRunnerCard'} calibrationReviewCard" aria-label="Training input review">
+  <div class="panelHead"><div><small class="muted">TRAINING INPUTS</small><h3>Keep your values current</h3></div><span class="calibrationBadge">${esc(status)}</span></div>
+  <p class="muted compact">${esc(summary)}</p>
+  <div class="calibrationCardGrid">${review.rows.map(row=>`<div><small>${esc(row.label)}</small><b>${esc(calibrationUiValue(row.kind,row.record))}</b><span>${esc(calibrationUiSource(row.record))}</span>${row.record?.confirmedOn?`<span>Last checked ${esc(calibrationUiDate(row.record.confirmedOn))}</span>`:''}</div>`).join('')}</div>
+  <div class="buttonRow calibrationActions"><button type="button" class="primary" data-calibration-action="review">${settings?'Review fitness values':'Review values'}</button>${review.due.length&&!review.deferred?'<button type="button" class="secondary" data-calibration-action="defer">Remind me in 7 days</button>':''}</div>
+  ${settings?'<button type="button" class="secondary full calibrationAssessmentLink" data-go="assessments">Record a timed assessment</button>':''}
+  <p class="muted calibrationMicro">Review reminders suggest checking your inputs; they do not prescribe a new fitness test.</p>
+ </section>`;
+}
+function calibrationUiPaceInputs(record){
+ const testDistance=Number(record?.testDistance)>0?Number(record.testDistance):Math.max(.1,Number(state.setup.testDistance)||1);
+ const testTime=Number(record?.testTime)>0?Number(record.testTime):Number(record?.value)>0?Number(record.value)*testDistance:Number(state.setup.testTime)||0;
+ return{testDistance,testTime};
+}
+function calibrationUiInputFields(kind,record,now){
+ let values='';
+ if(kind==='pace'){
+  const benchmark=calibrationUiPaceInputs(record);
+  values=`<div class="field"><label for="calibrationPaceDistance">Benchmark distance (km)</label><input id="calibrationPaceDistance" data-calibration-field="testDistance" type="number" inputmode="decimal" min="0.1" max="200" step="0.01" value="${esc(benchmark.testDistance)}"></div><div class="field"><label for="calibrationPaceTime">Benchmark time (M:SS or H:MM:SS)</label><input id="calibrationPaceTime" data-calibration-field="testTime" type="text" inputmode="numeric" value="${esc(fmtTime(benchmark.testTime))}"></div>`;
+ }else{
+  const def=kind==='power'?{field:'criticalPower',label:'Critical power (W)',min:50,max:1500,step:1}:kind==='hr'?{field:'thresholdHr',label:'Threshold heart rate (bpm)',min:60,max:240,step:1}:{field:'bodyWeight',label:'Actual body weight (kg)',min:25,max:250,step:.1};
+  values=`<div class="field"><label for="calibrationValue-${kind}">${def.label}</label><input id="calibrationValue-${kind}" data-calibration-field="${def.field}" type="number" inputmode="decimal" min="${def.min}" max="${def.max}" step="${def.step}" value="${esc(record?.value??state.setup[def.field]??'')}"></div>`;
+ }
+ const placeholder=kind==='power'?'For example, Stryd current CP':kind==='hr'?'For example, threshold assessment':kind==='weight'?'For example, home scale':'For example, timed benchmark';
+ return`<div class="formGrid">${values}<div class="field"><label for="calibrationMeasured-${kind}">${kind==='power'||kind==='hr'?'Measurement / estimate date':'Measurement date'}</label><input id="calibrationMeasured-${kind}" data-calibration-field="measuredOn" type="date" max="${now}" value="${now}"></div><div class="field"><label for="calibrationSource-${kind}">Source of this value</label><input id="calibrationSource-${kind}" data-calibration-field="source" type="text" maxlength="120" placeholder="${esc(placeholder)}" value="${esc(record?.legacy?'':record?.source||'')}"></div></div>`;
+}
+function openCalibrationReview(){
+ const now=iso(today()),review=calibrationUiReviewState(now);
+ const cards=review.rows.map(row=>`<fieldset class="calibrationInputCard" data-calibration-kind="${row.kind}"><legend>${esc(row.label)}</legend>
+  <div class="calibrationCurrent"><b>${esc(calibrationUiValue(row.kind,row.record))}</b><span>${row.due?'Review suggested':`Checked ${esc(calibrationUiDate(row.lastReview))}`}</span></div>
+  <p class="muted calibrationMicro">${esc(calibrationUiSource(row.record,now))}</p>
+  <div class="field"><label for="calibrationAction-${row.kind}">Review this input</label><select id="calibrationAction-${row.kind}" data-calibration-choice><option value="leave">Leave for now</option><option value="confirm">I checked it — keep the current value</option><option value="update">Update measurement</option></select></div>
+  <div data-calibration-editor hidden>${calibrationUiInputFields(row.kind,row.record,now)}<p class="note">${esc(row.help)}</p></div>
+  <p class="muted calibrationMicro" data-calibration-confirmation hidden>Today will be recorded as the date you checked this value. Its original measurement date and source are retained.</p>
+ </fieldset>`).join('');
+ showDialog(`<div class="calibrationReviewModal"><h2>Review training inputs</h2><p>Confirm the values you have checked, or record a new measurement. You can review one input at a time.</p><p class="note">Pace, critical power and threshold HR are separate inputs. Updating one does not require new tests for the others.</p><form id="calibrationReviewForm" novalidate><div id="calibrationReviewErrors" class="formErrors hidden" role="alert"></div>${cards}<div class="buttonRow calibrationActions"><button type="submit" class="primary">Save reviewed values</button><button type="button" class="secondary" data-calibration-action="defer">Remind me in 7 days</button></div></form><p class="muted calibrationMicro">Suggested check-in intervals: body weight every 14 days; pace benchmark, CP and threshold HR every 28 days. These are reminders to review existing information.</p></div>`,'Review training inputs');
+ const form=$('calibrationReviewForm');
+ form.querySelectorAll('[data-calibration-choice]').forEach(control=>{control.onchange=()=>{
+  const card=control.closest('[data-calibration-kind]');
+  card.querySelector('[data-calibration-editor]').hidden=control.value!=='update';
+  card.querySelector('[data-calibration-confirmation]').hidden=control.value!=='confirm';
+ }});
+ form.onsubmit=event=>{
+  event.preventDefault();
+  const draft=calibrationUiReadDraft(form);
+  if(draft.errors.length)return calibrationUiShowErrors(form,draft.errors);
+  const submit=form.querySelector('[type="submit"]');submit.disabled=true;
+  try{
+   const result=applyCalibrationReview(draft.candidate,{on:now,kinds:draft.kinds,measuredOn:draft.measuredOn,sources:draft.sources,remeasuredKinds:draft.remeasuredKinds});
+   const finish=()=>{
+    try{
+     if(result.rebuildRequired&&buildPlan()===false)throw Error('The updated targets could not be saved on this device.');
+     ensureCalibrationState().deferredUntil=null;
+     if(save()===false)throw Error('The reviewed values could not be saved on this device.');
+     invalidatePageRenderCache(result.rebuildRequired?['today','plan','runs','dashboard','assessments','settings']:['today','settings','assessments']);
+     closeDialog();renderAll();
+     toast(result.rebuildRequired?'Training inputs saved. Future workout targets updated.':'Reviewed values confirmed.');
+    }finally{submit.disabled=false}
+   };
+   if(result.rebuildRequired)withPlanLoader('Updating training targets…',finish);else finish();
+  }catch(error){submit.disabled=false;calibrationUiShowErrors(form,[{message:error?.message||'The reviewed values could not be saved.'}])}
+ };
+ ensureAccessibleForms(form);
+}
+function calibrationUiReadDraft(form){
+ const now=iso(today()),candidate={...state.setup},kinds=[],remeasuredKinds=[],measuredOn={},sources={},errors=[];
+ for(const def of calibrationUiKinds()){
+  const card=form.querySelector(`[data-calibration-kind="${def.kind}"]`),choice=card.querySelector('[data-calibration-choice]').value;
+  if(choice==='leave')continue;
+  kinds.push(def.kind);
+  const record=calibrationFor(def.kind,now),field=name=>card.querySelector(`[data-calibration-field="${name}"]`);
+  if(choice==='confirm'){
+   if(!(Number(record?.value)>0)){errors.push({id:`calibrationAction-${def.kind}`,message:`Record a ${def.label.toLowerCase()} value before confirming it.`});continue}
+   if(def.kind==='pace')Object.assign(candidate,calibrationUiPaceInputs(record));
+   else candidate[def.kind==='power'?'criticalPower':def.kind==='hr'?'thresholdHr':'bodyWeight']=Number(record.value);
+   measuredOn[def.kind]=record.measuredOn||null;sources[def.kind]=record.source||'';
+   continue;
+  }
+  remeasuredKinds.push(def.kind);
+  measuredOn[def.kind]=field('measuredOn').value;sources[def.kind]=field('source').value.trim();
+  if(!CORE.isIsoDate(measuredOn[def.kind])||measuredOn[def.kind]>now)errors.push({id:field('measuredOn').id,message:`Enter a valid ${def.label.toLowerCase()} measurement date on or before today.`});
+  if(!sources[def.kind])errors.push({id:field('source').id,message:`Enter the source of your ${def.label.toLowerCase()} value.`});
+  if(def.kind==='pace'){
+   candidate.testDistance=Number(field('testDistance').value);candidate.testTime=parseTime(field('testTime').value);
+   if(!(candidate.testDistance>=.1&&candidate.testDistance<=200))errors.push({id:field('testDistance').id,message:'Benchmark distance must be between 0.1 and 200 km.'});
+   if(!(candidate.testTime>=30&&candidate.testTime<=172800))errors.push({id:field('testTime').id,message:'Enter a valid benchmark time using M:SS or H:MM:SS.'});
+  }else{
+   const name=def.kind==='power'?'criticalPower':def.kind==='hr'?'thresholdHr':'bodyWeight';
+   candidate[name]=Number(field(name).value);
+   const min=Number(field(name).min),max=Number(field(name).max),value=candidate[name];
+   if(!(value>=min&&value<=max)||(def.kind==='hr'&&!Number.isInteger(value)))errors.push({id:field(name).id,message:`Enter a valid ${def.label.toLowerCase()} between ${min} and ${max}${def.kind==='hr'?' in whole bpm':''}.`});
+  }
+ }
+ if(!kinds.length)errors.push({id:'calibrationAction-pace',message:'Choose Confirm or Update measurement for at least one input, or use the reminder button.'});
+ return{candidate,kinds,remeasuredKinds,measuredOn,sources,errors};
+}
+function calibrationUiShowErrors(form,errors){
+ form.querySelectorAll('[aria-invalid="true"]').forEach(control=>control.removeAttribute('aria-invalid'));
+ const box=form.querySelector('#calibrationReviewErrors');
+ box.className='formErrors';box.innerHTML=errors.map(error=>`<p>${esc(error.message)}</p>`).join('');
+ for(const error of errors){const control=error.id?form.querySelector(`#${error.id}`):null;if(control)control.setAttribute('aria-invalid','true')}
+ const first=errors.find(error=>error.id);if(first)form.querySelector(`#${first.id}`)?.focus();
+}
+function bindCalibrationControls(root=document){
+ if(root.__arcCalibrationControlsBound)return;
+ root.__arcCalibrationControlsBound=true;
+ root.addEventListener('click',event=>{
+  const button=event.target.closest?.('[data-calibration-action]');
+  if(!button||!root.contains(button))return;
+  event.preventDefault();
+  if(button.dataset.calibrationAction==='review')return openCalibrationReview();
+  if(button.dataset.calibrationAction==='defer'){
+   const calibration=ensureCalibrationState(),previous=calibration.deferredUntil;
+   try{
+    calibration.deferredUntil=iso(addCalendarDays(today(),7));
+    if(save()===false)throw Error('The reminder could not be saved on this device.');
+    invalidatePageRenderCache(['today','settings']);
+    if(button.closest('#modal'))closeDialog();renderAll();toast('Training-input reminder set for 7 days from today.');
+   }catch(error){calibration.deferredUntil=previous;toast(error?.message||'The reminder could not be saved.',true)}
+  }
+ });
+}
+function calibrationTargetDetailsHtml(p){
+ if(!p?.zone||p.type==='Rest')return'';
+ const z=p.zone,snapshot=z.calibration,scope=p.targetScope||'The prescribed running section';
+ if(!snapshot?.pace||!snapshot?.power||!snapshot?.hr){
+  return`<details class="calibrationTargetDetails"><summary>Where these targets come from</summary><p>These are the saved guides for ${esc(scope.toLowerCase())}. The original input sources were not saved with this older workout.</p><p class="muted compact">Your current input values are available in the review form. They may differ from the inputs used when this workout was created.</p><button type="button" class="secondary" data-calibration-action="review">Review current values</button></details>`;
+ }
+ const multiplier=snapshot.multipliers||{},paceFactor=Number(snapshot.paceFactor)||1,powerFactor=Number(snapshot.powerFactor)||1;
+ const paceRule=Number.isFinite(Number(multiplier.pace))?`${pace(Number(snapshot.pace.value))} benchmark × ${Number(multiplier.pace).toFixed(2)} ÷ ${paceFactor.toFixed(3)}`:'Saved pace calculation';
+ const powerRule=Number.isFinite(Number(multiplier.power))?`${Math.round(Number(snapshot.power.value))} W CP × ${Math.round(Number(multiplier.power)*100)}% × ${powerFactor.toFixed(3)}`:'Saved power calculation';
+ const hrRule=Number.isFinite(Number(multiplier.hr))?`${Math.round(Number(snapshot.hr.value))} bpm threshold HR × ${Math.round(Number(multiplier.hr)*100)}%`:'Saved heart-rate calculation';
+ const rows=[{kind:'pace',label:'Pace guide',value:pace(Number(z.pace)),rule:paceRule},{kind:'power',label:'Power guide',value:`${Math.round(Number(z.power))} W`,rule:powerRule},{kind:'hr',label:'Heart-rate guide',value:`${Math.round(Number(z.hr))} bpm`,rule:hrRule}];
+ return`<details class="calibrationTargetDetails"><summary>Where these targets come from</summary><p>These guides apply to ${esc(scope.toLowerCase())}. Follow the separate opening and closing instructions.</p><div class="calibrationTargetRows">${rows.map(row=>`<div><span><b>${row.label}</b><strong>${esc(row.value)}</strong></span><p>${esc(row.rule)}</p><small>${esc(calibrationUiSource(snapshot[row.kind]))}</small></div>`).join('')}</div><p class="muted calibrationMicro">These are the input values saved with this workout. Critical power, pace and threshold HR can be reviewed separately.</p><button type="button" class="secondary" data-calibration-action="review">Review current values</button></details>`;
+}
+
+/* END calibration-ui */
+function calibrationBenchmarkOn(date=iso(today())){
+ const record=calibrationFor('pace',date);
+ const distance=Number(record?.testDistance)||Number(state.setup.testDistance)||5;
+ return{distance,time:(Number(record?.value)||Number(state.setup.testTime)/distance)*distance,date:record?.measuredOn||record?.effectiveOn||null,source:record?.source||'Settings entry',assessmentId:record?.assessmentId||null};
+}
+function baselineOn(date=iso(today())){
+ const paceRecord=calibrationFor('pace',date),powerRecord=calibrationFor('power',date),hrRecord=calibrationFor('hr',date),weightRecord=calibrationFor('weight',date);
+ const paceFactor=calibrationAdjustedFactor('pace',date),powerFactor=calibrationAdjustedFactor('power',date),ev=trainingEvidence(date);
+ const baselinePace=Number(paceRecord?.value)||state.setup.testTime/state.setup.testDistance,baselinePower=Number(powerRecord?.value)||state.setup.criticalPower,baselineHr=Number(hrRecord?.value)||state.setup.thresholdHr;
+ // Store the accepted records with the prescription, so a later baseline review
+ // cannot rewrite the provenance of an already completed workout.
+ const snapshot=r=>r?{id:r.id,value:Number(r.value),source:r.source,measuredOn:r.measuredOn||null,confirmedOn:r.confirmedOn||null,effectiveOn:r.effectiveOn,assessmentId:r.assessmentId||null,testDistance:r.testDistance||null,testTime:r.testTime||null,legacy:!!r.legacy}:null;
+ return{pace:baselinePace/paceFactor,hr:baselineHr,cp:baselinePower*powerFactor,
+  calibration:{version:1,asOf:date,pace:snapshot(paceRecord),power:snapshot(powerRecord),hr:snapshot(hrRecord),weight:snapshot(weightRecord),paceFactor,powerFactor},
+  evidence:{...ev,appliedAdjustment:paceFactor,appliedPowerAdjustment:powerFactor,provisionalAdjustment:ev.adjustment}};
+}
 const zoneDef={Recovery:[1.42,.78,.72,'RPE 2–3 · relaxed and restorative'],Easy:[1.30,.84,.78,'RPE 3–4 · conversational aerobic running'],Steady:[1.20,.89,.84,'RPE 5 · controlled moderate work'],Marathon:[1.15,.92,.88,'RPE 5–6 · race-specific control'],Tempo:[1.08,1,.95,'RPE 7–8 · strong but sustainable'],Intervals:[.98,1.04,1.05,'RPE 8–9 · quality repetitions'],Repetition:[.92,1.08,1.15,'RPE 9 · short fast work'],['Fitness assessment']:[1,1,1,'Even maximal benchmark'],['Race Day']:[1.15,.92,.88,'Controlled race execution']};
-function zone(type,date){let b=baselineOn(date),z=zoneDef[baseType(type)]||zoneDef.Easy;return{pace:b.pace*z[0],hr:Math.round(b.hr*z[1]),power:Math.round(b.cp*z[2]),guide:z[3],fitnessIndex:b.evidence?.index||100}}
+function zone(type,date){let b=baselineOn(date),z=zoneDef[baseType(type)]||zoneDef.Easy;return{pace:b.pace*z[0],hr:Math.round(b.hr*z[1]),power:Math.round(b.cp*z[2]),guide:z[3],fitnessIndex:b.evidence?.index||100,calibration:{...b.calibration,multipliers:{pace:z[0],hr:z[1],power:z[2]}}}}
 function weeks(){return Math.max(1,Math.floor((calendarDayNumber(state.setup.raceDate)-calendarDayNumber(state.setup.planStart))/7)+1)}
 function weekStart(w){return addCalendarDays(state.setup.planStart,(w-1)*7)}
 function weekEnd(w){return addCalendarDays(weekStart(w),7)}
@@ -1252,7 +1713,7 @@ function completedRuns(asOf=iso(today())){
  return value;
 }
 function recentRuns(days=28){return completedRuns().filter(r=>today()-dte(r.date)<=days*DAY)}
-function metrics(r){let dur=Number(r.durationSec),km=Number(r.distanceKm),hr=Number(r.avgHr),pw=Number(r.avgPower),kg=Number(state.setup.bodyWeight);
+function metrics(r){let dur=Number(r.durationSec),km=Number(r.distanceKm),hr=Number(r.avgHr),pw=Number(r.avgPower),kg=Number(calibrationWeightForRun(r));
 let validRun=dur>0&&km>0,validHr=validRun&&hr>0,validPw=validRun&&pw>0&&kg>0;
 return{pace:validRun?dur/km:null,dph:validHr?km*1000/(dur/60*hr):null,wpb:validHr&&pw>0?pw/hr:null,
  efficiencyJ:validHr&&pw>0?pw*60/hr:null,effect:validPw?(km*1000/dur)/(pw/kg):null,wkg:pw>0&&kg>0?pw/kg:null}}
@@ -1466,7 +1927,7 @@ function validatePlan(plan=state.plan){
 function safeWorkoutFallback(item){
  const total=Math.max(3,Number(item.distance)||3),warm=Math.min(1,Math.max(.5,total*.15)),cool=Math.min(1,Math.max(.5,total*.15)),main=Math.max(.5,total-warm-cool);
  return{...item,type:'Easy',distance:Math.round((warm+main+cool)*10)/10,warmDistance:Math.round(warm*10)/10,mainDistance:Math.round(main*10)/10,coolDistance:Math.round(cool*10)/10,
-  warmup:`${warm.toFixed(1)} km very easy`,main:`${main.toFixed(1)} km conversational easy running`,cooldown:`${cool.toFixed(1)} km very easy`,distanceCheck:`${warm.toFixed(1)} + ${main.toFixed(1)} + ${cool.toFixed(1)} = ${(warm+main+cool).toFixed(1)} km`,purpose:'Preserve aerobic continuity with a safe fallback session.',coach:'The original workout failed internal validation and was replaced with an easy run. Review Plan Health for details.',fuel:'Water according to thirst.',targetScope:'Entire easy run',whyThis:'A safe aerobic session preserves consistency without relying on an invalid prescription.',whyAmount:'The distance is limited to the planned session allowance.',skipImpact:'Skipping one fallback easy run has little fitness impact; do not compensate later.'};
+  warmup:`${warm.toFixed(1)} km very easy`,main:`${main.toFixed(1)} km conversational easy running`,cooldown:`${cool.toFixed(1)} km very easy`,distanceCheck:`${warm.toFixed(1)} + ${main.toFixed(1)} + ${cool.toFixed(1)} = ${(warm+main+cool).toFixed(1)} km`,purpose:'Preserve aerobic continuity with a safe fallback session.',coach:'The original workout failed internal validation and was replaced with an easy run. Review Plan Health for details.',fuel:'Water according to thirst.',targetScope:'Central easy section',whyThis:'A safe aerobic session preserves consistency without relying on an invalid prescription.',whyAmount:'The distance is limited to the planned session allowance.',skipImpact:'Skipping one fallback easy run has little fitness impact; do not compensate later.'};
 }
 
 const PROGRAMME_PAUSE_REASON={illness:'Illness / sickness',travel:'Travel obligations',other:'Personal / other'};
@@ -1739,7 +2200,7 @@ function prescription(type,km,w,ph,z,context={}){
 
  if(bt==='Easy'){
   const total=Math.max(1,km),warm=r1(Math.max(.3,Math.min(1,total*.15))),cool=r1(Math.max(.3,Math.min(1,total*.15))),main=r1(Math.max(.4,total-warm-cool));
-  return result(warm,main,cool,{warmup:`${fmt(warm)} km very easy to settle into relaxed running`,main:`${fmt(main)} km conversational easy running`,cooldown:`${fmt(cool)} km very easy`,purpose:'Develop aerobic capacity while keeping fatigue low.',coach:'The entire run remains easy. Pace, HR and power describe the central easy section; the opening and closing sections should feel even gentler. Slow down for heat, hills, illness or poor recovery.',fuel:total>=12?'Carry fluids; use carbohydrate if running longer than 75–90 min.':'Water according to thirst.',targetScope:'Entire easy run',whyThis:'Easy running builds aerobic capacity and supports recovery from harder sessions.',whyAmount:'The distance fills the aerobic share of the week while keeping intensity low.',skipImpact:'Missing one easy run has little effect. Do not compensate by extending a hard or long session.'});
+  return result(warm,main,cool,{warmup:`${fmt(warm)} km very easy to settle into relaxed running`,main:`${fmt(main)} km conversational easy running`,cooldown:`${fmt(cool)} km very easy`,purpose:'Develop aerobic capacity while keeping fatigue low.',coach:'The entire run remains easy. Pace, HR and power describe the central easy section; the opening and closing sections should feel even gentler. Slow down for heat, hills, illness or poor recovery.',fuel:total>=12?'Carry fluids; use carbohydrate if running longer than 75–90 min.':'Water according to thirst.',targetScope:'Central easy section',whyThis:'Easy running builds aerobic capacity and supports recovery from harder sessions.',whyAmount:'The distance fills the aerobic share of the week while keeping intensity low.',skipImpact:'Missing one easy run has little effect. Do not compensate by extending a hard or long session.'});
  }
  if(bt==='Long run'){
   const total=Math.max(1,km),warm=r1(Math.min(2,Math.max(.2,total*.1))),cool=r1(Math.min(1.5,Math.max(.2,total*.07))),main=r1(Math.max(.2,total-warm-cool));
@@ -1838,6 +2299,7 @@ function applyRunMatch(run,selection,method='user'){
   run.planId=p.id;run.matchStatus='matched';run.plannedDate=p.date;
   run.dayOffset=Math.round((dte(run.date)-dte(p.date))/DAY);
  }else run.matchStatus=selection==='unresolved'?'unresolved':'adHoc';
+ captureSteadySectionEvidence(run,run.planId?state.plan.find(p=>p.id===run.planId):null);
  return run;
 }
 function suggestedPlanId(run){
@@ -1895,7 +2357,7 @@ function confidence(){
  let windowStart=due.length?dte(due[0].date):new Date(today().getTime()-28*DAY);
  let recent=state.runs.filter(r=>dte(r.date)>=windowStart&&dte(r.date)<=today());
  let plannedKm=sum(due.map(p=>p.distance)),actual=sum(recent.map(r=>r.distanceKm));
- let latest=state.assessments.filter(a=>a.valid&&a.date<=iso(today())).sort((a,b)=>b.date.localeCompare(a.date))[0];
+ let latest=calibrationBenchmarkOn();
  let testTime=latest?latest.time:state.setup.testTime,testDist=latest?latest.distance:state.setup.testDistance;
  let riegel=testTime*Math.pow(state.setup.raceDistance/testDist,1.06);
  let fitness=clamp(100-(riegel/state.setup.targetTime-1)*300,0,100);
@@ -2008,7 +2470,7 @@ function rawPrediction(){
  // Raw model signal. This is not applied in full after every activity because
  // ordinary training runs provide much weaker fitness evidence than assessments.
  const c=confidence();
- const latest=state.assessments.filter(a=>a.valid&&a.date<=iso(today())).sort((a,b)=>b.date.localeCompare(a.date))[0];
+ const latest=calibrationBenchmarkOn();
  const testTime=latest?latest.time:state.setup.testTime,testDist=Math.max(.1,latest?latest.distance:state.setup.testDistance);
  const prep=c.pillars.find(p=>p.name==='Marathon preparation');
  const prepEvidence=prep?.coverage||0,prepScore=Number.isFinite(prep?.score)?prep.score:0;
@@ -2182,7 +2644,7 @@ function normalCdf(z){
 }
 function probabilityLabel(probability){return probability>=80?'Very likely':probability>=60?'Good chance':probability>=40?'Possible':'Unlikely'}
 function predictionUncertainty(c,pred,confidenceScore,projected=false){
- const latest=state.assessments.filter(a=>a.valid&&a.date<=iso(today())).sort((a,b)=>b.date.localeCompare(a.date))[0];
+ const latest=calibrationBenchmarkOn();
  const testDistance=Math.max(.1,Number(latest?.distance||state.setup.testDistance)||5);
  const extrapolation=clamp(Math.log(Math.max(1,state.setup.raceDistance/testDistance))/Math.log(42.195/5),0,1);
  const evidence=projected?Math.max(c.evidenceCoverage,.45):clamp(c.evidenceCoverage,0,1);
@@ -2332,7 +2794,7 @@ function planHealthAssessment(c=confidence()){
  return{score,label,components,recommendations,validation,profile};
 }
 function programmeProjection(c,currentPred,projectedPreparation){
- const latest=state.assessments.filter(a=>a.valid&&a.date<=iso(today())).sort((a,b)=>b.date.localeCompare(a.date))[0];
+ const latest=calibrationBenchmarkOn();
  const testTime=latest?latest.time:state.setup.testTime,testDist=Math.max(.1,latest?latest.distance:state.setup.testDistance);
  const profile=projectedPreparation.profile,healthAssessment=planHealthAssessment(c),planHealthScore=healthAssessment.score;
  const weeksRemaining=Math.max(0,c.usableBuildWeeks),saturation=1-Math.exp(-.12*weeksRemaining);
@@ -2392,9 +2854,9 @@ function componentEvidence(c,item){
  const name=item.name,score=Number(item.displayScore),window=name==='Long-run execution'?'Last 84 days':name==='Specificity'?'Last 56 days':name==='Volume progression'?'Latest 4 training weeks':name==='Fitness'?'Latest valid assessment or configured test':'Recent 28-day training window';
  let facts=[];
  if(name==='Fitness'){
-  const latest=state.assessments.filter(a=>a.valid&&a.date<=iso(today())).sort((a,b)=>b.date.localeCompare(a.date))[0];
-  facts.push(latest?`Latest valid assessment: ${latest.distance.toFixed(1)} km in ${fmtTime(latest.time)} on ${fmtDate(latest.date)}`:`Configured benchmark: ${Number(state.setup.testDistance).toFixed(1)} km in ${fmtTime(state.setup.testTime)}`);
-  facts.push(`Assessment-only Riegel estimate: ${fmtTime(c.riegel)} versus target ${fmtTime(state.setup.targetTime)}`);
+  const benchmark=calibrationBenchmarkOn(),record=calibrationFor('pace');
+  facts.push(`Active pace benchmark: ${benchmark.distance.toFixed(1)} km in ${fmtTime(benchmark.time)} · ${benchmark.source}${record?.measuredOn?` · measured ${fmtDate(record.measuredOn)}`:' · measurement date unknown'}`);
+  facts.push(`Benchmark Riegel estimate: ${fmtTime(c.riegel)} versus target ${fmtTime(state.setup.targetTime)}`);
  }else if(name==='Endurance')facts.push(`Longest verified completed run: ${c.completedLongest.toFixed(1)} km`,`Planned peak long run: ${Number(state.setup.peakLong).toFixed(1)} km`);
  else if(name==='Adherence')facts.push(`Completed distance: ${c.actual.toFixed(1)} km`,`Due planned distance: ${c.plannedKm.toFixed(1)} km`);
  else if(name==='Consistency')facts.push(`Completed due sessions: ${c.matched}`,`Due sessions: ${c.opportunities}`);
@@ -2951,7 +3413,7 @@ function workoutHtml(p){
  const quick=p.type==='Rest'?'' : `<div class="planWorkoutQuick"><span><b>${Number(p.distance).toFixed(1)}</b><small>km</small></span><span><b>${pace(z.pace)}</b><small>pace</small></span><span><b>${Number.isFinite(Number(z.power))?Math.round(z.power):'—'}</b><small>W</small></span></div>`;
  const completion=linked?`<div class="planCompletedEvidence"><span>${planTinyIcon('check')}</span><div><small>COMPLETED EVIDENCE</small><b>${Number(linked.distanceKm).toFixed(1)} km${Number.isFinite(completedScore)?` · ${Math.round(completedScore)}/100 execution`:''}</b></div></div>`:'';
  if(p.type==='Rest'){const paused=Boolean(p.programPauseId),pauseLabel=paused?programmePauseReasonLabel(p.programPauseReason):null;return`<details class="workout planWorkout restWorkout ${paused?'programmePausedWorkout':''}" data-id="${esc(p.id)}"><summary class="planWorkoutSummary"><div class="planDateBox"><small>${day}</small><b>${dt.getDate()}</b><span>${month}</span></div><span class="planWorkoutIcon">${planWorkoutPictogram(p.type)}</span><div class="planWorkoutIdentity"><div class="planWorkoutName"><h3>${paused?'Programme paused':'Rest'}</h3><span class="planStatus ${paused?'paused':st}">${paused?'Paused':statusLabel}</span></div><p>${esc(paused?`${pauseLabel}${p.programPauseOriginalType?` · ${p.programPauseOriginalType} removed`:''}`:p.purpose)}</p>${paused?'<div class="planAdaptChips"><span class="planAdaptChip pauseChip">No catch-up</span></div>':''}</div></summary><div class="planWorkoutBody"><ul class="planBulletList"><li>${esc(p.coach)}</li><li>${esc(paused?`Pause window ${fmtDate(p.programPauseStart)}–${fmtDate(p.programPauseEnd)}.`:p.fuel)}</li></ul></div></details>`}
- return`<details class="workout planWorkout workout-${workoutTypeClass(p.type)}" data-id="${esc(p.id)}"><summary class="planWorkoutSummary"><div class="planDateBox"><small>${day}</small><b>${dt.getDate()}</b><span>${month}</span></div><span class="planWorkoutIcon">${planWorkoutPictogram(p.type)}</span><div class="planWorkoutIdentity"><div class="planWorkoutName"><h3>${esc(p.type)}</h3><span class="planStatus ${st}">${statusLabel}</span></div><p>${esc(p.purpose)}</p>${quick}${planShoeSummaryHtml(p)}${chips.length?`<div class="planAdaptChips">${chips.join('')}</div>`:''}</div></summary><div class="planWorkoutBody">${completion}<div class="planTargets"><div><small>PACE</small><strong>${pace(z.pace)}</strong><span>${esc(p.targetScope||'main set')}</span></div><div><small>POWER</small><strong>${Number.isFinite(Number(z.power))?Math.round(z.power)+' W':'—'}</strong><span>${esc(p.targetScope||'main set')}</span></div><div><small>HEART RATE</small><strong>${Number.isFinite(Number(z.hr))?Math.round(z.hr)+' bpm':'—'}</strong><span>${esc(z.guide||'intensity guide')}</span></div></div>${planWorkoutStructureHtml(p)}<div class="planPrescription"><div><small>WARM-UP</small><p>${esc(p.warmup||'—')}</p></div><div class="main"><small>MAIN SET / INTERVALS</small><p>${esc(p.main||'—')}</p></div><div><small>COOLDOWN</small><p>${esc(p.cooldown||'—')}</p></div></div><div class="planGuidanceGrid"><div><small>WHY THIS SESSION</small><p>${esc(p.whyThis||p.purpose)}</p></div><div><small>WHY THIS AMOUNT</small><p>${esc(p.whyAmount||'The amount follows the generated weekly structure and current adaptation.')}</p></div><div><small>EXECUTION</small><p>${esc(p.coach||'Follow the prescribed intensity and keep the session controlled.')}</p></div><div><small>FUEL / HYDRATION</small><p>${esc(p.fuel||'Normal daily hydration.')}</p></div></div>${planShoeRowHtml(p)}<details class="planWorkoutMore"><summary>Missed-session guidance</summary><p>${esc(p.skipImpact||'Do not stack missed training. Continue with the next appropriate session.')}</p></details>${linked?`<button class="viewPlanRun primary full" data-plan-run="${esc(linked.id)}">Open completed run intelligence</button>`:''}</div></details>`;
+ return`<details class="workout planWorkout workout-${workoutTypeClass(p.type)}" data-id="${esc(p.id)}"><summary class="planWorkoutSummary"><div class="planDateBox"><small>${day}</small><b>${dt.getDate()}</b><span>${month}</span></div><span class="planWorkoutIcon">${planWorkoutPictogram(p.type)}</span><div class="planWorkoutIdentity"><div class="planWorkoutName"><h3>${esc(p.type)}</h3><span class="planStatus ${st}">${statusLabel}</span></div><p>${esc(p.purpose)}</p>${quick}${planShoeSummaryHtml(p)}${chips.length?`<div class="planAdaptChips">${chips.join('')}</div>`:''}</div></summary><div class="planWorkoutBody">${completion}<div class="planTargets"><div><small>PACE</small><strong>${pace(z.pace)}</strong><span>${esc(p.targetScope||'main set')}</span></div><div><small>POWER</small><strong>${Number.isFinite(Number(z.power))?Math.round(z.power)+' W':'—'}</strong><span>${esc(p.targetScope||'main set')}</span></div><div><small>HEART RATE</small><strong>${Number.isFinite(Number(z.hr))?Math.round(z.hr)+' bpm':'—'}</strong><span>${esc(z.guide||'intensity guide')}</span></div></div>${calibrationTargetDetailsHtml(p)}${planWorkoutStructureHtml(p)}<div class="planPrescription"><div><small>WARM-UP</small><p>${esc(p.warmup||'—')}</p></div><div class="main"><small>MAIN SET / INTERVALS</small><p>${esc(p.main||'—')}</p></div><div><small>COOLDOWN</small><p>${esc(p.cooldown||'—')}</p></div></div><div class="planGuidanceGrid"><div><small>WHY THIS SESSION</small><p>${esc(p.whyThis||p.purpose)}</p></div><div><small>WHY THIS AMOUNT</small><p>${esc(p.whyAmount||'The amount follows the generated weekly structure and current adaptation.')}</p></div><div><small>EXECUTION</small><p>${esc(p.coach||'Follow the prescribed intensity and keep the session controlled.')}</p></div><div><small>FUEL / HYDRATION</small><p>${esc(p.fuel||'Normal daily hydration.')}</p></div></div>${planShoeRowHtml(p)}<details class="planWorkoutMore"><summary>Missed-session guidance</summary><p>${esc(p.skipImpact||'Do not stack missed training. Continue with the next appropriate session.')}</p></details>${linked?`<button class="viewPlanRun primary full" data-plan-run="${esc(linked.id)}">Open completed run intelligence</button>`:''}</div></details>`;
 }
 
 
@@ -3088,6 +3550,7 @@ function todayWorkoutCard(p,injuryDay){
    <div class="runnerSectionHead"><span class="runnerCardIcon">${todayPictogram('shoe')}</span><div><small>TODAY’S RUNNING PLAN</small><h3>${esc(p.type)}</h3><p>${esc(p.phase||phase(currentWeek()))} · ${Number(p.distance).toFixed(1)} km</p></div></div>
    ${caution?todayBulletList(caution,'runnerBullets cautionBullets'):''}
    <div class="todayTargetGrid"><div><small>PACE</small><strong>${pace(z.pace)}</strong><span>${targetScope}</span></div><div><small>POWER</small><strong>${Number.isFinite(Number(z.power))?Math.round(z.power)+' W':'—'}</strong><span>${targetScope}</span></div><div><small>HEART RATE</small><strong>${Number.isFinite(Number(z.hr))?Math.round(z.hr)+' bpm':'—'}</strong><span>${targetScope}</span></div></div>
+   ${calibrationTargetDetailsHtml(p)}
    ${todayShoeRowHtml(p)}
    <button type="button" class="workoutVizDisclosure" data-workout-toggle="${esc(p.date)}" aria-expanded="false" aria-controls="workout-details-${esc(p.date)}">
      ${todayWorkoutStructure(p)}
@@ -3301,6 +3764,7 @@ function todayCoachPostRunSessionInsight(run,p){
  let status=Number(run.pain)>=5?'bad':Number.isFinite(score)?(score>=85?'good':score>=70?'warn':'bad'):'neutral';
  const title=Number.isFinite(score)?`${intel.verdict} · ${Math.round(score)}/100`:`${intel.verdict} · execution score building`;
  const facts=[];
+ if(details?.targetComparison?.needsReview)facts.push(details.targetComparison.notice);
  if(Number.isFinite(completion))facts.push(`${Number(run.distanceKm).toFixed(2)} km completed versus ${Number(plan.distance).toFixed(1)} km planned (${Math.round(completion*100)}%).`);
  else facts.push(`${Number(run.distanceKm).toFixed(2)} km completed in ${fmtTime(Number(run.durationSec)||0)}.`);
  if(comp&&comp.confidence!=='Low'&&Number.isFinite(comp.efficiencyDelta))facts.push(`Efficiency was ${Math.abs(comp.efficiencyDelta).toFixed(1)}% ${comp.efficiencyDelta>=0?'above':'below'} ${comp.count} comparable-run baseline${comp.confidence?` (${comp.confidence.toLowerCase()} confidence)`:''}.`);
@@ -3428,7 +3892,7 @@ function dailyCoachFocus(){return''}
 function renderToday(){
  const p=state.plan.find(x=>x.date===iso(today()));
  $('todayDate').textContent=today().toLocaleDateString(undefined,{weekday:'long',day:'numeric',month:'long',year:'numeric'});
- $('todayCard').innerHTML=consolidatedTodayCoachBriefing(p);$('todayCoach').innerHTML='';
+ $('todayCard').innerHTML=consolidatedTodayCoachBriefing(p)+calibrationReviewCardHtml('today');$('todayCoach').innerHTML='';
  document.querySelectorAll('#today [data-workout-toggle]').forEach(btn=>btn.addEventListener('click',()=>{
    const details=document.getElementById(`workout-details-${btn.dataset.workoutToggle}`);
    if(!details)return;
@@ -3692,12 +4156,17 @@ function summariseCSV(rows){
    return Number.isFinite(parsed)?parsed:null;
  };
  if(indexMap.timestamp<0)throw Error('No timestamp column was found in this CSV.');
+ const firstStamp=timestamp(data[0]),conversionDate=Number.isFinite(firstStamp)?iso(new Date((firstStamp>1e12?firstStamp:firstStamp*1000))):iso(today());
+ const conversionRecord=calibrationFor('weight',conversionDate),conversionWeight=calibrationWeightForRun({date:conversionDate});
+ let convertedFromWkg=false;
  let records=data.map(r=>{
    let watts=number(r,indexMap.powerW),wkg=number(r,indexMap.powerKg);
    // Stryd exports may contain either watts or W/kg. Values below 20 in a
    // purported watts column are almost certainly W/kg and are converted.
    if(Number.isFinite(watts)&&watts>0&&watts<20&&!Number.isFinite(wkg))wkg=watts,watts=null;
-   let resolvedPower=Number.isFinite(watts)&&watts>0?watts:(Number.isFinite(wkg)&&wkg>0?wkg*state.setup.bodyWeight:null);
+   const needsWeight=!(Number.isFinite(watts)&&watts>0)&&Number.isFinite(wkg)&&wkg>0&&conversionWeight>0;
+   let resolvedPower=Number.isFinite(watts)&&watts>0?watts:(needsWeight?wkg*conversionWeight:null);
+   if(needsWeight)convertedFromWkg=true;
    return{
      t:timestamp(r),
      hr:number(r,indexMap.hr),
@@ -3719,6 +4188,7 @@ function summariseCSV(rows){
  return{
    id:'stryd-'+Math.round(originalStart)+'-'+Math.round(dist*1000),
    date:iso(new Date(originalStart*1000)),type:'Easy',distanceKm:dist,durationSec:duration,
+   powerSource:'Stryd CSV',powerConversion:convertedFromWkg?{from:'W/kg',weightKg:conversionWeight,date:conversionDate,source:conversionRecord?.source||'Legacy weight estimate',estimated:!conversionRecord||!!conversionRecord.legacy}:null,
    avgHr:Number.isFinite(positive('hr'))?Math.round(positive('hr')):null,
    avgPower:Number.isFinite(positive('power'))?Math.round(positive('power')):null,
    cadence:indexMap.cadence>=0?Math.round(avg(data.map(r=>number(r,indexMap.cadence)).filter(v=>Number.isFinite(v)&&v>0))||0)||null:null,
@@ -4065,6 +4535,7 @@ function compactStreamThirds(records){
 function compactRunActivityStream(run){
  if(!run||!Array.isArray(run.fitRecords)||!run.fitRecords.length)return false;
  const records=run.fitRecords,recordCount=records.length;
+ captureSteadySectionEvidence(run,run.planId?(state.plan||[]).find(p=>p.id===run.planId):null);
  if(!run.streamEvidence){const analysis=streamAnalysis(records);if(analysis)run.streamEvidence=analysis}
  if(!run.streamThirdsEvidence)run.streamThirdsEvidence=compactStreamThirds(records);
  if(!Array.isArray(run.detectedWorkSegments))run.detectedWorkSegments=detectWorkSegments(records,null);
@@ -4374,9 +4845,11 @@ function workoutFamily(type){
  return'aerobic';
 }
 function runIntensityRatio(r){
- const cp=Number(state.setup.criticalPower)||0,pw=Number(r.avgPower)||0;
+ // Use the dated physiological anchor here. Calling baselineOn would feed the
+ // learned adjustment back into the evidence calculation that produces it.
+ const cp=Number(calibrationFor('power',r.date)?.value)||0,pw=Number(r.avgPower)||0;
  if(cp>0&&pw>0)return pw/cp;
- const hr=Number(r.avgHr)||0,thr=Number(state.setup.thresholdHr)||0;
+ const hr=Number(r.avgHr)||0,thr=Number(calibrationFor('hr',r.date)?.value)||0;
  return thr>0&&hr>0?hr/thr:null;
 }
 function injuryContextForRun(r){
@@ -4422,6 +4895,7 @@ function workoutIntelligence(run){
  const plan=run.planId?state.plan.find(p=>p.id===run.planId):null,family=workoutFamily(plan?.type||run.type),details=workoutScoreDetails(run,plan),comp=comparableRunAnalysis(run),thirds=streamThirds(run),m=metrics(run);
  const findings=[],positives=[],cautions=[];
  const add=(kind,text)=>{findings.push({kind,text});(kind==='positive'?positives:cautions).push(text)};
+ if(details?.targetComparison?.needsReview)add('neutral',details.targetComparison.notice);
  if(family==='interval'){
    const ia=run.intervalAnalysis;
    if(ia?.usableForScore&&intervalScoredWorkRows(ia).length){
@@ -4468,7 +4942,8 @@ function workoutIntelligence(run){
  else if(family==='threshold')interpretation=cautions.length?'The target may be sustainable, but physiological or late-session cost argues against automatic progression.':'The sustained-quality stimulus was delivered with good control.';
  else if(family==='aerobic')interpretation=comp?.confidence!=='Low'&&Number.isFinite(comp.efficiencyDelta)?`Aerobic cost was ${comp.efficiencyDelta>=0?'better':'worse'} than the recent comparable baseline.`:'The session is interpreted mainly from intensity control and aerobic stability.';
  else interpretation='This session provides useful benchmark evidence.';
- return{family,verdict,interpretation,findings,details,comp,thirds};
+ if(details?.targetComparison?.needsReview&&!(Number(run.pain)>=3)){verdict='Training targets need review';interpretation='Pace and power guidance disagree with the recorded comparison. Review the pace benchmark and CP source/date before interpreting this as a fitness change.';}
+ return{family,verdict,interpretation,findings,positives,cautions,details,comp,thirds};
 }
 function logPictogram(kind='log'){
  const icons={
@@ -4581,7 +5056,7 @@ function runExecutionBreakdownBodyHtml(r){
  if(!d)return'<p class="muted">Not enough distance and duration information to calculate a score.</p>';
  const rows=d.components.map(c=>`<div class="executionCalcRow"><span>${esc(c.name)}</span><b>${Math.round(c.score)}/100</b><small><b>Scope: ${esc(c.scope||'whole session')}</b> · Effective weight ${Math.round(c.effectiveWeight*100)}%${c.reliability<1?` · ${Math.round(c.reliability*100)}% metric reliability`:''} · ${esc(c.detail)}</small></div>`).join('');
  const paceComp=d.components.find(c=>c.key==='pace'),powerComp=d.components.find(c=>c.key==='power');
- const conflict=paceComp&&powerComp&&Math.abs(paceComp.score-powerComp.score)>=12?`<div class="executionNotice"><b>Pace and power disagree</b><p>Terrain, wind, GPS or whole-run averaging may explain the difference. The coach treats this as mixed evidence rather than assuming either metric is correct on its own.</p></div>`:'';
+ const conflict=d.targetComparison?.needsReview?`<div class="executionNotice"><b>Training targets need review</b><p>${esc(d.targetComparison.notice)}</p></div>`:paceComp&&powerComp&&Math.abs(paceComp.score-powerComp.score)>=12?`<div class="executionNotice"><b>Pace and power disagree</b><p>Terrain, wind, GPS or whole-run averaging may explain the difference. The coach treats this as mixed evidence rather than assuming either metric is correct on its own.</p></div>`:'';
  return`<div class="executionObjective"><small>WORKOUT OBJECTIVE</small><b>${esc(d.objective)}</b><span>${esc(d.interpretation)} · ${esc(d.evidenceQuality)} evidence</span></div>${plan?`<p class="muted compact">Matched to ${fmtDate(plan.date)} · ${esc(plan.type)} · ${plan.distance.toFixed(1)} km.</p>`:'<p class="muted compact">Ad hoc run: only directly observable components are scored. Missing targets reduce evidence quality rather than being awarded neutral points.</p>'}${conflict}<div class="executionCalcRows">${rows}</div><p class="muted compact"><b>Overall score:</b> weighted mean of available components after metric reliability is applied. Missing or low-confidence metrics lose weight rather than receiving an invented neutral score.</p>`;
 }
 function runExecutionBreakdownHtml(r){
@@ -4691,10 +5166,12 @@ function renderRuns(){
  }).join('')||`<div class="logEmptyState"><span>${logPictogram('log')}</span><h3>No runs logged yet</h3><p>Import a FIT/CSV activity for the richest analysis, or add a run manually.</p><label for="activityFile" class="primary">Import your first run</label></div>`;
 }
 function migrateImportedPower(){
- let changed=false,weight=Number(state.setup.bodyWeight)||0;
- if(!weight)return;
+ let changed=false;
  state.runs.forEach(r=>{
+   const weight=calibrationWeightForRun(r);if(!(weight>0))return;
    if((r.sourceFormat==='csv-timeseries'||String(r.id||'').startsWith('stryd-'))&&Number.isFinite(Number(r.avgPower))&&Number(r.avgPower)>0&&Number(r.avgPower)<20){
+     snapshotRunCalibrationWeight(r);
+     r.powerConversion={from:'W/kg',weightKg:weight,date:r.date,source:r.calibrationWeight?.source||'Legacy weight estimate',estimated:!!r.calibrationWeight?.estimated};
      r.avgPower=Math.round(Number(r.avgPower)*weight);
      r.powerUnit='W';
      changed=true;
@@ -4782,8 +5259,10 @@ function syncAssessmentRun(a){
  let planned=state.plan.find(p=>p.date===a.date&&p.type==='Fitness assessment');
  let run={...previous,id,assessmentId:a.id,source:'assessment',date:a.date,type:'Fitness assessment',
    distanceKm:Number(a.distance),durationSec:Number(a.time),
-   avgHr:Number(a.thresholdHr)||previous.avgHr||null,
-   avgPower:Number(a.criticalPower)||previous.avgPower||null,
+   // A physiological threshold is not a measured activity average. Retain
+   // already saved history, and only copy explicitly recorded averages.
+   avgHr:a.avgHr!=null?Number(a.avgHr):previous.avgHr??null,
+   avgPower:a.avgPower!=null?Number(a.avgPower):previous.avgPower??null,
    cadence:previous.cadence??null,rpe:previous.rpe??null,pain:previous.pain??null,
    recovery:previous.recovery??null,temperature:previous.temperature??null,
    notes:previous.notes||'Fitness assessment',planId:planned?.id||previous.planId};
@@ -5013,13 +5492,12 @@ function renderModelDiagnostics(){
 function renderSettings(){
  const groups=[
   {title:'Goal event',eyebrow:'ENTERED BY ATHLETE',fields:[['planStart','Plan start','date'],['raceDate','Race date','date'],['raceName','Race name','text'],['raceDistance','Race distance','number',1,200,'km'],['targetTime','Target time','time']]},
-  {title:'Current training baseline',eyebrow:'ENTERED BY ATHLETE',fields:[['currentWeekly','Current weekly distance','number',0,300,'km/week'],['currentLongest','Current longest run','number',0,200,'km'],['testDistance','Recent test distance','number',.1,200,'km'],['testTime','Recent test time','time']]},
-  {title:'Physiological inputs',eyebrow:'ENTERED BY ATHLETE',fields:[['thresholdHr','Threshold heart rate','number',60,240,'bpm'],['criticalPower','Critical power','number',50,1000,'W'],['bodyWeight','Body weight','number',25,300,'kg']]},
+  {title:'Current training volume',eyebrow:'ENTERED BY ATHLETE',fields:[['currentWeekly','Current weekly distance','number',0,250,'km/week'],['currentLongest','Current longest run','number',0,200,'km']]},
   {title:'Shoe fit context',eyebrow:'ENTERED BY ATHLETE',fields:[['footMechanics','Foot mechanics / pronation','select',null,null,null,[['unknown','Not sure'],['neutral','Neutral'],['pronation','Pronates / overpronates'],['supination','Supinates / underpronates']]]]},
   {title:'Plan limits',eyebrow:'PROGRAMME CONSTRAINTS',fields:[['maxWeekly','Maximum weekly distance','number',1,400,'km/week'],['growth','Maximum weekly growth','percent',1,30,'%'],['peakLong','Peak long run','number',1,200,'km'],['taperDays','Taper duration','number',0,42,'days']]}
  ];
  const fieldHtml=d=>{let v=state.setup[d[0]];if(d[2]==='time')v=fmtTime(v);if(d[2]==='percent')v=Math.round(v*100);if(d[2]==='select'){const options=d[6]||[];return`<div class="field settingsField"><label>${d[1]}</label><div class="settingsInputWrap"><select data-setting="${d[0]}" data-type="select">${options.map(o=>`<option value="${o[0]}" ${(v||(d[0]==='shoeRotationPriority'?'purchase-spacing':'unknown'))===o[0]?'selected':''}>${o[1]}</option>`).join('')}</select></div><small class="muted">Used only by the Shoes equipment/purchase engine.</small></div>`}const type=d[2]==='date'?'date':d[2]==='number'||d[2]==='percent'?'number':'text';const bounds=d[3]!==undefined?`min="${d[3]}" max="${d[4]}" step="${d[3]<1?'.1':'1'}"`:'';return`<div class="field settingsField"><label>${d[1]}</label><div class="settingsInputWrap"><input data-setting="${d[0]}" data-type="${d[2]}" type="${type}" ${bounds} value="${esc(v)}">${d[5]?`<span>${d[5]}</span>`:''}</div></div>`};
- $('settingsGrid').innerHTML=groups.map(g=>`<section class="settingsGroup"><div class="settingsGroupHead"><small>${g.eyebrow}</small><h4>${g.title}</h4></div><div class="formGrid">${g.fields.map(fieldHtml).join('')}</div></section>`).join('');
+ $('settingsGrid').innerHTML=calibrationReviewCardHtml('settings')+groups.map(g=>`<section class="settingsGroup"><div class="settingsGroupHead"><small>${g.eyebrow}</small><h4>${g.title}</h4></div><div class="formGrid">${g.fields.map(fieldHtml).join('')}</div></section>`).join('');
  let raceDistanceInput=document.querySelector('[data-setting="raceDistance"]');
  const inputSetup=()=>{let x={...state.setup};document.querySelectorAll('[data-setting]').forEach(el=>{let v=el.value,t=el.dataset.type;if(t==='number')v=Number(v);if(t==='time')v=parseTime(v);if(t==='percent')v=Number(v)/100;x[el.dataset.setting]=v});return x};
  const showRecommendedDate=()=>{let r=recommendedRaceDate(inputSetup()),box=$('raceDateRecommendation');if(box)box.innerHTML=`<b>Model-recommended race date: ${fmtDate(r.date)}</b><p class="muted compact">${r.totalWeeks} weeks total: ${r.requiredBuildWeeks.toFixed(1)} estimated build weeks, ${r.taperWeeks.toFixed(1)} taper weeks and an ideal-scenario buffer.</p><button id="recommendRaceDate" type="button" class="secondary">Use this date</button>`;let btn=$('recommendRaceDate');if(btn)btn.onclick=()=>{let dateInput=document.querySelector('[data-setting="raceDate"]');if(dateInput)dateInput.value=r.date;toast(`Recommended race date applied: ${fmtDate(r.date)}.`)};return r};
@@ -11022,7 +11500,8 @@ $('prevWeek').onclick=()=>{state.weekView=clamp((state.weekView||currentWeek())-
 
 function runEditorHtml(r){
  if((r.sourceFormat==='csv-timeseries'||String(r.id||'').startsWith('stryd-'))&&Number(r.avgPower)>0&&Number(r.avgPower)<20){
-   r.avgPower=Math.round(Number(r.avgPower)*(Number(state.setup.bodyWeight)||1));
+   const weight=calibrationWeightForRun(r);
+   if(weight>0){snapshotRunCalibrationWeight(r);r.powerConversion={from:'W/kg',weightKg:weight,date:r.date,source:r.calibrationWeight?.source||'Legacy weight estimate',estimated:!!r.calibrationWeight?.estimated};r.avgPower=Math.round(Number(r.avgPower)*weight)}
  }
  return `<div class="logEditorHead"><span>${logPictogram('log')}</span><div><small>RUN DATA</small><h2>Edit run</h2><p>Correct summary fields or change the planned-workout link. Analysis recalculates after saving.</p></div></div><form id="runEditorForm" novalidate><div class="formGrid">
   <div class="field"><label>Date</label><input id="erDate" type="date" max="${iso(today())}" required value="${r.date}"></div>
@@ -11188,14 +11667,21 @@ $('activityFile').onchange=async e=>{
  }catch(err){preview=null;input.value='';$('importPreview').className='hidden';toast(err?.message||'The activity file could not be imported.',true)}
 };
 $('addAssessmentBtn').onclick=()=>{
- const form=$('assessmentForm');form.className='panel';form.innerHTML=`<h3>Fitness assessment result</h3><form id="assessmentEntryForm" novalidate><div class="formGrid"><div class="field"><label>Date</label><input id="aDate" type="date" max="${iso(today())}" required value="${iso(today())}"></div><div class="field"><label>Distance km</label><input id="aDist" type="number" inputmode="decimal" min="0.1" max="200" step="0.01" required value="5"></div><div class="field"><label>Time (M:SS or H:MM:SS)</label><input id="aTime" inputmode="numeric" required placeholder="25:15"></div><div class="field"><label>Average / threshold HR</label><input id="aHr" type="number" min="60" max="240" value="${state.setup.thresholdHr}"></div><div class="field"><label>Average / critical power W</label><input id="aCp" type="number" min="50" max="1000" value="${state.setup.criticalPower}"></div><div class="field"><label>Valid result</label><select id="aValid"><option value="true">Yes</option><option value="false">No</option></select></div></div><button id="saveAssessment" type="submit" class="primary full">Save assessment and completed run</button></form>`;
+ const form=$('assessmentForm');form.className='panel';form.innerHTML=`<h3>Fitness assessment result</h3><p class="note">A valid timed assessment updates your pace benchmark. Enter the activity averages below; critical power and threshold heart rate are reviewed separately under Fitness inputs.</p><form id="assessmentEntryForm" novalidate><div class="formGrid"><div class="field"><label>Date</label><input id="aDate" type="date" max="${iso(today())}" required value="${iso(today())}"></div><div class="field"><label>Distance km</label><input id="aDist" type="number" inputmode="decimal" min="0.1" max="200" step="0.01" required value="5"></div><div class="field"><label>Time (M:SS or H:MM:SS)</label><input id="aTime" inputmode="numeric" required placeholder="25:15"></div><div class="field"><label>Recorded average heart rate (optional)</label><input id="aAvgHr" type="number" min="30" max="250" placeholder="Activity average, bpm"></div><div class="field"><label>Recorded average power (optional)</label><input id="aAvgPower" type="number" min="1" max="2000" placeholder="Activity average, W"></div><div class="field"><label>Valid pace benchmark</label><select id="aValid"><option value="true">Yes — representative timed effort</option><option value="false">No — keep as activity only</option></select></div></div><button id="saveAssessment" type="submit" class="primary full">Save assessment and completed run</button></form>`;
  ensureAccessibleForms(form);
- $('assessmentEntryForm').onsubmit=event=>{event.preventDefault();const a={id:'a-'+Date.now(),date:$('aDate').value,distance:Number($('aDist').value),time:parseTime($('aTime').value),thresholdHr:optionalBounded($('aHr').value,60,240),criticalPower:optionalBounded($('aCp').value,50,1000),valid:$('aValid').value==='true'};const errors=refineTimeErrors(CORE.validateAssessment(a,{today:iso(today())}),[{field:'time',label:'Assessment time',value:$('aTime').value}]);if(errors.length){showFieldErrors(errors,{date:'#aDate',distance:'#aDist',time:'#aTime',thresholdHr:'#aHr',criticalPower:'#aCp'},form);return toast(CORE.firstErrorMessage(errors),true)}state.assessments.push(a);syncAssessmentRun(a);withPlanLoader('Updating running plan…',()=>{buildPlan();syncAssessmentRun(a);recordPredictionSnapshot(a.date,'Fitness assessment',a.id);save();renderAll();form.className='hidden';toast(a.valid?'Assessment saved, added to run history and applied to future targets.':'Assessment saved and added to run history, but not applied to prediction.')})};
+ $('assessmentEntryForm').onsubmit=event=>{
+  event.preventDefault();
+  const optionalValue=id=>$(id).value.trim()===''?null:Number($(id).value);
+  const a={id:'a-'+Date.now(),date:$('aDate').value,distance:Number($('aDist').value),time:parseTime($('aTime').value),avgHr:optionalValue('aAvgHr'),avgPower:optionalValue('aAvgPower'),thresholdHr:null,criticalPower:null,baselineSource:'Timed fitness assessment',valid:$('aValid').value==='true'};
+  const errors=refineTimeErrors(CORE.validateAssessment(a,{today:iso(today())}),[{field:'time',label:'Assessment time',value:$('aTime').value}]);
+  if(errors.length){showFieldErrors(errors,{date:'#aDate',distance:'#aDist',time:'#aTime',avgHr:'#aAvgHr',avgPower:'#aAvgPower'},form);return toast(CORE.firstErrorMessage(errors),true)}
+  ensureCalibrationState();state.assessments.push(a);syncAssessmentRun(a);ensureCalibrationState();
+  withPlanLoader('Updating running plan…',()=>{buildPlan();syncAssessmentRun(a);recordPredictionSnapshot(a.date,'Fitness assessment',a.id);save();renderAll();form.className='hidden';toast(a.valid?'Assessment saved. Future pace targets updated; CP and threshold HR retain their separate baselines.':'Assessment saved as an activity; fitness baselines unchanged.')});
+ };
 };
 
 function validateSetup(candidate){return CORE.validateSetup(candidate).map(error=>error.message)}
 function validateBackup(obj){return obj&&typeof obj==='object'&&obj.setup&&Array.isArray(obj.runs)&&Array.isArray(obj.assessments)&&Array.isArray(obj.days)}
-$('saveSettings').onclick=()=>{let candidate={...state.setup};document.querySelectorAll('[data-setting]').forEach(el=>{let k=el.dataset.setting,t=el.dataset.type,v=el.value;if(t==='number')v=Number(v);if(t==='time')v=parseTime(v);if(t==='percent')v=Number(v)/100;candidate[k]=v});let errors=validateSetup(candidate);if(errors.length)return toast(errors[0],true);let selectedDays=[...document.querySelectorAll('[data-day]')].filter(el=>el.checked).length;if(selectedDays<1)return toast('Select at least one training day.',true);const baselineKeys=['planStart','raceDistance','targetTime','testDistance','testTime','currentWeekly','currentLongest','maxWeekly','peakLong'];const baselineChanged=baselineKeys.some(k=>String(candidate[k])!==String(state.setup[k]));state.setup=candidate;if(baselineChanged){state.programStartPrediction=initialProgrammePrediction(candidate);state.predictionHistory=[];state.raceReadinessHistory=[];}document.querySelectorAll('[data-day]').forEach(el=>state.days[Number(el.dataset.day)][1]=el.checked);let longRadio=document.querySelector('[data-long-day]:checked'),longIdx=longRadio?Number(longRadio.dataset.longDay):null;if(longIdx==null||!state.days[longIdx]?.[1])return toast('Select one enabled running day as the long-run day.',true);state.days.forEach((d,i)=>d[2]=i===longIdx?'Long run':'Adaptive');buildPlan();state.weekView=currentWeek();save();renderAll();toast('Settings saved. Training frequency and race outlook and preparation model were recalculated; future workouts rebuilt.')};
 function readSettingsDraft(){const candidate={...state.setup};document.querySelectorAll('[data-setting]').forEach(el=>{let value=el.value;const type=el.dataset.type;if(type==='number')value=el.value.trim()===''?null:Number(value);if(type==='time')value=parseTime(value);if(type==='percent')value=el.value.trim()===''?null:Number(value)/100;candidate[el.dataset.setting]=value});const longRadio=document.querySelector('[data-long-day]:checked'),longIdx=longRadio?Number(longRadio.dataset.longDay):null;const days=state.days.map((day,index)=>[day[0],Boolean(document.querySelector(`[data-day="${index}"]`)?.checked),index===longIdx?'Long run':day[2]==='Long run'?'Adaptive':day[2]]);return{candidate,days}}
 function applySettingsDraft(candidate,days){
  const baselineKeys=['planStart','raceDistance','targetTime','testDistance','testTime','currentWeekly','currentLongest','maxWeekly','peakLong'];
@@ -11211,6 +11697,7 @@ function applySettingsDraft(candidate,days){
   try{localStorage.setItem(UNDO_KEY,JSON.stringify(state))}
   catch(err){recordDiagnostic('Settings undo snapshot unavailable',err);localStorage.removeItem(UNDO_KEY)}
  }
+ recordCalibrationSettingChanges(state.setup,candidate,{on:iso(today()),source:'Settings entry'});
  state.setup={...candidate,raceName:CORE.cleanText(candidate.raceName,100).trim()||'Goal race',footMechanics:candidate.footMechanics||'unknown'};
  state.days=days;
  if(baselineChanged){state.programStartPrediction=initialProgrammePrediction(state.setup);state.predictionHistory=[];state.raceReadinessHistory=[]}
@@ -11240,7 +11727,7 @@ $('pillarCards')?.addEventListener('click',e=>{const card=e.target.closest('.pil
 $('pillarCards')?.addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&e.target.classList.contains('pillarCard')){e.preventDefault();e.target.click()}});
 function setOnboardingOpen(open){const overlay=$('onboarding');overlay.classList.toggle('hidden',!open);document.body.classList.toggle('onboardingOpen',open);$('mainContent').inert=open;$('nav').inert=open;$('moreNav').inert=open;if(open)requestAnimationFrame(()=>$('obRaceName').focus())}
 function onboardingDraft(){const profile=raceProfile(Number($('obRaceDistance').value));const setup={...state.setup,planStart:iso(today()),raceName:CORE.cleanText($('obRaceName').value,100).trim(),raceDate:$('obRaceDate').value,raceDistance:Number($('obRaceDistance').value),targetTime:parseTime($('obTargetTime').value),currentWeekly:Number($('obCurrentWeekly').value),currentLongest:Number($('obCurrentLongest').value),bodyWeight:Number($('obBodyWeight').value),testDistance:Number($('obTestDistance').value),testTime:parseTime($('obTestTime').value),thresholdHr:Number($('obThresholdHr').value),criticalPower:Number($('obCriticalPower').value),maxWeekly:Math.max(Number($('obCurrentWeekly').value),profile.maxWeekly),growth:profile.growth,peakLong:profile.peakLong,taperDays:profile.taperDays};return{setup,days:profile.days.map(day=>[...day])}}
-function initOnboarding(){if(state.onboardingComplete)return setOnboardingOpen(false);$('obRaceDate').value=state.setup.raceDate;const form=$('onboardingForm'),submit=form.querySelector('[type="submit"]'),summary=$('onboardingErrors');form.addEventListener('input',()=>{form.dataset.reviewed='';submit.textContent='Review and create my plan';summary.className='formErrors hidden';summary.textContent=''});form.onsubmit=event=>{event.preventDefault();const{setup,days}=onboardingDraft(),errors=refineTimeErrors([...CORE.validateSetup(setup),...CORE.validateDays(days)],[{field:'targetTime',label:'Target time',value:$('obTargetTime').value},{field:'testTime',label:'Recent test time',value:$('obTestTime').value}]);if(!$('obConfirm').checked)errors.push({field:'confirm',message:'Confirm that the values are yours before creating the plan.'});const mapping={raceName:'#obRaceName',raceDate:'#obRaceDate',raceDistance:'#obRaceDistance',targetTime:'#obTargetTime',currentWeekly:'#obCurrentWeekly',currentLongest:'#obCurrentLongest',bodyWeight:'#obBodyWeight',testDistance:'#obTestDistance',testTime:'#obTestTime',thresholdHr:'#obThresholdHr',criticalPower:'#obCriticalPower',confirm:'#obConfirm'};if(errors.length){showFieldErrors(errors,mapping,form);summary.className='formErrors';summary.setAttribute('role','alert');summary.textContent=CORE.firstErrorMessage(errors);return toast(CORE.firstErrorMessage(errors),true)}if(form.dataset.reviewed!=='true'){form.dataset.reviewed='true';summary.className='onboardingReview';summary.setAttribute('role','status');summary.innerHTML=`<b>Review your plan inputs</b><p>${esc(setup.raceName)} · ${esc(setup.raceDistance)} km on ${esc(fmtDate(setup.raceDate))}</p><p>Target ${esc(fmtTime(setup.targetTime))}; recent ${esc(setup.testDistance)} km in ${esc(fmtTime(setup.testTime))}; ${esc(setup.currentWeekly)} km/week.</p>`;submit.textContent='Create my plan';submit.focus();return}state.setup=setup;state.days=days;state.onboardingComplete=true;state.programStartPrediction=initialProgrammePrediction(setup);state.predictionHistory=[];state.raceReadinessHistory=[];withPlanLoader('Creating running plan…',()=>{buildPlan();save();setOnboardingOpen(false);renderAll();toast('Your personal plan is ready. Today is your starting view.')})};setOnboardingOpen(true)}
+function initOnboarding(){if(state.onboardingComplete)return setOnboardingOpen(false);$('obRaceDate').value=state.setup.raceDate;const form=$('onboardingForm'),submit=form.querySelector('[type="submit"]'),summary=$('onboardingErrors');form.addEventListener('input',()=>{form.dataset.reviewed='';submit.textContent='Review and create my plan';summary.className='formErrors hidden';summary.textContent=''});form.onsubmit=event=>{event.preventDefault();const{setup,days}=onboardingDraft(),errors=refineTimeErrors([...CORE.validateSetup(setup),...CORE.validateDays(days)],[{field:'targetTime',label:'Target time',value:$('obTargetTime').value},{field:'testTime',label:'Recent test time',value:$('obTestTime').value}]);if(!$('obConfirm').checked)errors.push({field:'confirm',message:'Confirm that the values are yours before creating the plan.'});const mapping={raceName:'#obRaceName',raceDate:'#obRaceDate',raceDistance:'#obRaceDistance',targetTime:'#obTargetTime',currentWeekly:'#obCurrentWeekly',currentLongest:'#obCurrentLongest',bodyWeight:'#obBodyWeight',testDistance:'#obTestDistance',testTime:'#obTestTime',thresholdHr:'#obThresholdHr',criticalPower:'#obCriticalPower',confirm:'#obConfirm'};if(errors.length){showFieldErrors(errors,mapping,form);summary.className='formErrors';summary.setAttribute('role','alert');summary.textContent=CORE.firstErrorMessage(errors);return toast(CORE.firstErrorMessage(errors),true)}if(form.dataset.reviewed!=='true'){form.dataset.reviewed='true';summary.className='onboardingReview';summary.setAttribute('role','status');summary.innerHTML=`<b>Review your plan inputs</b><p>${esc(setup.raceName)} · ${esc(setup.raceDistance)} km on ${esc(fmtDate(setup.raceDate))}</p><p>Target ${esc(fmtTime(setup.targetTime))}; recent ${esc(setup.testDistance)} km in ${esc(fmtTime(setup.testTime))}; ${esc(setup.currentWeekly)} km/week.</p>`;submit.textContent='Create my plan';submit.focus();return}applyCalibrationReview(setup,{on:iso(today()),kinds:calibrationKinds(),remeasuredKinds:calibrationKinds(),source:'First-time setup'});state.setup=setup;state.days=days;state.onboardingComplete=true;state.programStartPrediction=initialProgrammePrediction(setup);state.predictionHistory=[];state.raceReadinessHistory=[];withPlanLoader('Creating running plan…',()=>{buildPlan();save();setOnboardingOpen(false);renderAll();toast('Your personal plan is ready. Today is your starting view.')})};setOnboardingOpen(true)}
 $('onboarding').addEventListener('keydown',event=>{if($('onboarding').classList.contains('hidden'))return;if(event.key==='Escape'){event.preventDefault();toast('Complete first-time setup before using the coach.',true);$('onboardingTitle').focus?.();return}if(event.key!=='Tab')return;const focusable=[...$('onboarding').querySelectorAll('button,input,select,textarea,[tabindex]:not([tabindex="-1"])')].filter(el=>!el.disabled&&el.offsetParent!==null);if(!focusable.length)return;const first=focusable[0],last=focusable.at(-1);if(event.shiftKey&&document.activeElement===first){event.preventDefault();last.focus()}else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first.focus()}});
 
 
@@ -11362,6 +11849,7 @@ function initialiseApplication(){
  try{
   bindRunnerAnimationFallback();
   startupLoaderStatus('Loading training data…');
+  ensureCalibrationState();snapshotHistoricalRunWeights();bindCalibrationControls(document);
 
   // Stored state has already been loaded and normalised above. Only regenerate
   // the programme if the persisted programme is genuinely absent.
