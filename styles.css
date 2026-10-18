@@ -6486,3 +6486,15 @@ body:has(#onboarding:not(.hidden)) #nav,body:has(#onboarding:not(.hidden)) #more
 
 /* v15.7.28: preserve readable provenance for automatic submax aerobic updates. */
 .cardioFitnessEvidence{overflow-wrap:anywhere;}
+
+/* v15.7.29 provenance-aware running fitness: three cards on wide screens; clear on mobile. */
+@media(min-width:761px){.cardioFitnessKpis{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(min-width:361px) and (max-width:760px){.cardioFitnessKpis article:last-child{grid-column:1/-1}}
+
+/* v15.7.30: optional one-time resting/max HR fields fit narrow phones. */
+.cardioFitnessMethod .loadReviewRow{grid-template-columns:minmax(0,1fr) minmax(0,1.4fr);gap:6px}
+.cardioFitnessMethod .loadReviewRow b{font-size:11px;text-align:right;overflow-wrap:anywhere}
+.cardioFitnessMethod p{line-height:1.55;overflow-wrap:anywhere}
+@media(max-width:380px){.cardioFitnessMethod .loadReviewRow{grid-template-columns:1fr}.cardioFitnessMethod .loadReviewRow b{text-align:left}}
+@media(min-width:761px){.cardioFitnessKpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:760px){.cardioFitnessKpis{grid-template-columns:1fr}.cardioFitnessKpis article:last-child{grid-column:auto}}

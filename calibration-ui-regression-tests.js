@@ -100,6 +100,24 @@ test('Modal defaults leave all four independent inputs untouched',()=>{
  for(const editor of h.form().querySelectorAll('[data-calibration-editor]'))assert.equal(editor.hidden,true);
  h.submit();assert.equal(h.events.saved,0);assert.match(h.document.getElementById('calibrationReviewErrors').innerHTML,/at least one input/);
 });
+test('A Garmin Race Predictor time is saved explicitly as a prediction, not an actual completed test',()=>{
+ const h=harness();h.open();h.choose('pace','update');
+ h.set('calibrationPaceDistance','5');h.set('calibrationPaceTime','27:51');
+ h.set('calibrationPaceKind','predicted');h.set('calibrationSource-pace','Garmin Race Predictor');
+ h.set('calibrationMeasured-pace','2026-10-18');h.submit();
+ assert.equal(h.evaluate('state.setup.testTime'),1671);
+ assert.equal(h.evaluate("calibrationFor('pace').performanceKind"),'predicted');
+ assert.equal(h.evaluate("calibrationFor('pace').source"),'Garmin Race Predictor');
+ assert.equal(h.events.built,1);assert.equal(h.events.closed,1);
+});
+test('A user-attested completed 5 km time is stored as observed, not a device prediction',()=>{
+ const h=harness();h.open();h.choose('pace','update');
+ h.set('calibrationPaceDistance','5');h.set('calibrationPaceTime','25:15');
+ h.set('calibrationPaceKind','observed');h.set('calibrationSource-pace','Actual timed 5 km race');
+ h.set('calibrationMeasured-pace','2026-10-18');h.submit();
+ assert.equal(h.evaluate("calibrationFor('pace').performanceKind"),'observed');
+ assert.equal(h.evaluate('state.setup.testTime'),1515);
+});
 test('Power-only update records 254 W, its source/date and its own new anchor',()=>{
  const h=harness();h.open();const paceBefore=h.evaluate("calibrationAdjustedFactor('pace')");
  h.choose('power','update');h.set('calibrationValue-power','254');h.set('calibrationSource-power','Stryd current CP');h.set('calibrationMeasured-power','2026-10-17');h.submit();

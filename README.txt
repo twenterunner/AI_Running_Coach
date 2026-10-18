@@ -1,3 +1,22 @@
+AI Running Coach v15.7.30 · build 51030 — Independent VO₂max and fitness age
+
+- Progress now shows automatic estimated VO₂max (mL/kg/min) and a separate VO₂max-derived fitness-age comparison. VDOT remains an internal race-performance measure and is not shown as the requested VO₂max.
+- No Garmin prediction or VDOT calculation is used to estimate VO₂max. The independent submaximal model uses reliable steady-run pace/HR sections (ACSM running oxygen cost and heart-rate/VO₂ reserve extrapolation). Runs are re-evaluated on import and at least three qualifying days are required.
+- Archived FIT activities with sequential steady 1 km laps can provide a lower-confidence starting estimate; no fictitious time-series samples are reconstructed. Stable evidence is screened for pacing/HR stability, activity type, sensor quality, and terrain when available.
+- Maximum and resting HR may be supplied once in Progress, otherwise the app discloses and uses conservative age/threshold-based and 60-bpm HR assumptions, respectively. Sensitivity ranges are shown and are not validated confidence intervals. No automatic threshold HR or CP is overwritten by this model.
+- Fitness age is the FRIEND 2016 median treadmill VO₂max equivalent by age/sex. It is a population comparison, not measured biological age and not Garmin's multi-input fitness age.
+- This is an exploratory algorithm, NOT clinically or independently validated against measured VO₂max. Illness, temperature, medication, terrain, running economy, and unknown personal HRmax affect accuracy.
+- No app reset or schema migration required. Completed workout prescriptions and existing data remain preserved.
+
+AI Running Coach v15.7.29 · build 51029 — race prediction provenance and fitness safety
+
+- Garmin Race Predictor times are forecasts, not measured races or time trials. A plain legacy "Garmin" source with no linked assessment is treated as unverified, not as a completed effort.
+- Settings > Review fitness values > 5 km reference now explicitly asks whether the time is completed, device-predicted, or unverified. Existing pace values remain usable for planning, and saved workouts remain unchanged.
+- Progress shows VDOT as a running race-performance equivalent, with source provenance, not as physiological VO₂max. The app no longer produces an unsupported physiological VO₂max number from race pace alone.
+- The old fitness-age calculation was a category error: it compared VDOT to laboratory VO₂max population medians. Fitness age now displays unavailable until a validated compatible physiological VO₂max input and age model exist; no misleading ≈55-year result is produced from Garmin predicted 27:51.
+- Steady-run trends remain available when anchored by actual or qualifying automatic hard-effort evidence; a race-time forecast alone cannot pretend to be a measured performance.
+- No data schema change. Storage, recorded activities, calibration history and all original completed prescriptions remain untouched. Do not reset app storage.
+
 AI Running Coach v15.7.28 · build 51028
 
 Per-run aerobic fitness tracking

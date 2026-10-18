@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '15.7.28';
-  const BUILD = 51028;
+  const VERSION = '15.7.30';
+  const BUILD = 51030;
   const SCHEMA = 10400;
   const PRIMARY_STORAGE_KEY = 'arc_v10400_web';
   const MIRROR_STORAGE_KEY = 'arc_v10400_mirror';
@@ -500,7 +500,7 @@ function recommendedRaceDate(setup){
 }
 const BUILD=CORE.BUILD, SCHEMA=CORE.SCHEMA, STORAGE_KEY=CORE.PRIMARY_STORAGE_KEY, MIRROR_KEY=CORE.MIRROR_STORAGE_KEY, MIGRATION_MARKER='arc_v10400_migration_complete', BACKUP_KEY='arc_v10400_restore_rollback', UNDO_KEY='arc_v10400_settings_undo';
 let raceReadinessHistoryDirty=false;
-const defaults=()=>{let start=iso(new Date()),setup={planStart:start,raceDate:start,raceName:'Goal Race',raceDistance:42.195,targetTime:15300,currentWeekly:35,currentLongest:18,testDistance:5,testTime:1515,thresholdHr:168,criticalPower:300,bodyWeight:70,maxWeekly:65,growth:.07,peakLong:32,taperDays:14,minFactor:.85,maxFactor:1.05,adaptive:true};setup.raceDate=recommendedRaceDate(setup).date;return({schemaVersion:SCHEMA,planEngineVersion:PLAN_ENGINE_VERSION,setup,days:FIVE_DAY_TEMPLATE.map(d=>[...d]),runs:[],assessments:[],injuries:[],activeInjuryPlanId:null,shoes:[],shoeUsage:[],plannedShoeAssignments:[],plannedShoePurchases:[],programPauses:[],plan:[],predictionHistory:[],raceReadinessHistory:[],fitnessProfile:{birthYear:null,referenceGroup:null},weekView:null,onboardingComplete:false,storageRevision:0,updatedAt:new Date().toISOString(),migration:{to:SCHEMA,status:'new',time:new Date().toISOString()}})};
+const defaults=()=>{let start=iso(new Date()),setup={planStart:start,raceDate:start,raceName:'Goal Race',raceDistance:42.195,targetTime:15300,currentWeekly:35,currentLongest:18,testDistance:5,testTime:1515,thresholdHr:168,criticalPower:300,bodyWeight:70,maxWeekly:65,growth:.07,peakLong:32,taperDays:14,minFactor:.85,maxFactor:1.05,adaptive:true};setup.raceDate=recommendedRaceDate(setup).date;return({schemaVersion:SCHEMA,planEngineVersion:PLAN_ENGINE_VERSION,setup,days:FIVE_DAY_TEMPLATE.map(d=>[...d]),runs:[],assessments:[],injuries:[],activeInjuryPlanId:null,shoes:[],shoeUsage:[],plannedShoeAssignments:[],plannedShoePurchases:[],programPauses:[],plan:[],predictionHistory:[],raceReadinessHistory:[],fitnessProfile:{birthYear:null,referenceGroup:null,restingHr:null,maxHr:null},weekView:null,onboardingComplete:false,storageRevision:0,updatedAt:new Date().toISOString(),migration:{to:SCHEMA,status:'new',time:new Date().toISOString()}})};
 let migrationReport={from:null,to:SCHEMA,status:'new install',source:'defaults',runs:0,assessments:0,fieldsRecovered:0,warning:''};
 function parseStored(raw){if(!raw)return null;try{const x=JSON.parse(raw);return x&&typeof x==='object'?x:null}catch(err){recordDiagnostic('Storage parse',err);return null}}
 function storageCandidates(){const keys=[STORAGE_KEY,MIRROR_KEY,...CORE.LEGACY_STORAGE_KEYS];return keys.map(key=>({key,value:parseStored(localStorage.getItem(key))})).filter(x=>x.value)}
@@ -551,7 +551,7 @@ function normaliseState(input){
  const candidateDays=Array.isArray(src.days)?src.days.map(d=>Array.isArray(d)?[CORE.cleanText(d[0],20),Boolean(d[1]),CORE.cleanText(d[2],40)]:d):base.days,days=CORE.validateDays(candidateDays).length?base.days:candidateDays;
  const rawFitnessProfile=src.fitnessProfile&&typeof src.fitnessProfile==='object'?src.fitnessProfile:{};
  const birth=Number(rawFitnessProfile.birthYear),currentYear=today().getFullYear();
- const fitnessProfile={birthYear:Number.isInteger(birth)&&birth>=1900&&birth<=currentYear-18?birth:null,referenceGroup:['men','women'].includes(rawFitnessProfile.referenceGroup)?rawFitnessProfile.referenceGroup:null};
+ const fitnessProfile={birthYear:Number.isInteger(birth)&&birth>=1900&&birth<=currentYear-18?birth:null,referenceGroup:['men','women'].includes(rawFitnessProfile.referenceGroup)?rawFitnessProfile.referenceGroup:null,restingHr:optionalBounded(rawFitnessProfile.restingHr,35,110),maxHr:optionalBounded(rawFitnessProfile.maxHr,125,225)};
  const onboardingComplete=src.onboardingComplete===true||Boolean(input?.setup&&Number(src.schemaVersion||0)<SCHEMA);
  const requestedActiveInjuryId=src.activeInjuryPlanId?CORE.safeId(src.activeInjuryPlanId,''):null,activeInjuryPlanId=requestedActiveInjuryId&&injuries.some(i=>i.id===requestedActiveInjuryId&&!i.rehabArchivedAt)?requestedActiveInjuryId:null;
  return{...base,...src,schemaVersion:SCHEMA,setup,days,runs,assessments,injuries,activeInjuryPlanId,shoes,shoeUsage,plannedShoeAssignments,plannedShoePurchases,programPauses,plan,predictionHistory,raceReadinessHistory,fitnessProfile,programStartPrediction,weekView:Number(src.weekView)||null,onboardingComplete,storageRevision:Math.max(0,Number(src.storageRevision)||0),updatedAt:src.updatedAt||new Date().toISOString(),migration:{...migrationReport,time:new Date().toISOString()}};
@@ -1369,7 +1369,7 @@ function ensureCalibrationState(previousSetup=state.setup){
   for(const value of calibrationAssessmentValues(a)){
    if(!calibrationValidValue(value.kind,value.value))continue;
    const present=calibration.records.some(r=>r.assessmentId===a.id&&r.kind===value.kind&&r.effectiveOn===a.date&&Number(r.value)===value.value&&(value.kind!=='pace'||(Number(r.testTime)===value.testTime&&Number(r.testDistance)===value.testDistance)));
-   if(!present)calibrationAppendRecord(calibration,{...value,effectiveOn:a.date,measuredOn:a.date,confirmedOn:null,source:'Fitness assessment',assessmentId:a.id});
+   if(!present)calibrationAppendRecord(calibration,{...value,effectiveOn:a.date,measuredOn:a.date,confirmedOn:null,source:'Fitness assessment',assessmentId:a.id,performanceKind:value.kind==='pace'?'observed':undefined});
   }
  }
  return calibration;
@@ -1466,7 +1466,9 @@ function calibrationWriteReview(candidateSetup,options={},compareSetup=null){
  const inputs=kinds.map(kind=>{
   const input=calibrationInputForKind(kind,candidateSetup),measured=calibrationOptionValue(options.measuredOn,kind);
   if(measured!=null&&measured!==''&&(!calibrationDate(measured)||measured>on))throw Error('Measurement dates must be valid and no later than the confirmation date.');
-  return{...input,measuredOn:measured||null,requestedSource:calibrationOptionValue(options.sources||options.source,kind)};
+  const performanceKind=kind==='pace'?calibrationOptionValue(options.performanceKinds,kind):null;
+  if(performanceKind!=null&&!['observed','predicted','unverified'].includes(performanceKind))throw Error('Pace evidence must be a completed performance, prediction, or unverified source.');
+  return{...input,measuredOn:measured||null,requestedSource:calibrationOptionValue(options.sources||options.source,kind),...(performanceKind!=null?{performanceKind}:{})};
  });
  const calibration=ensureCalibrationState(compareSetup||state.setup),oldRecords=new Map(kinds.map(kind=>[kind,calibrationFor(kind,on)]));
  const changedKinds=inputs.filter(input=>{
@@ -1787,11 +1789,31 @@ function autoAerobicSteadyEvidence(records){
 }
 /* END Garmin-style continuous aerobic running observation */
 
-/* BEGIN cardiorespiratory fitness tracking v15.7.28
-   Performance-derived oxygen-demand proxy (Daniels VDOT), NOT measured VO2max.
-   Age-equivalent is experimental: median FRIEND treadmill VO2max versus VDOT
-   are not interchangeable measurements, so never present it as medical age.
-   Steady-run HR/pace is used only for anchored aerobic trends, not as direct VO2max. */
+/* BEGIN cardiorespiratory fitness tracking v15.7.30
+   Daniels VDOT is an estimated race-performance equivalent, NOT measured VO2max.
+   In particular, Garmin Race Predictor outputs are forecasts, not timed trials.
+   Do NOT convert VDOT to fitness age using VO2max norms. A distinct, suitably
+   validated physiological VO2max input/model would be required for that. */
+function calibrationPaceEvidenceKind(record){
+ if(!record||record.kind!=='pace')return null;
+ if(record.assessmentId)return'observed';
+ if(record.automatic)return'model-estimate';
+ if(record.legacy)return'unverified';
+ if(record.performanceKind==='observed'||record.performanceKind==='predicted'||record.performanceKind==='unverified')return record.performanceKind;
+ const source=String(record.source||'').trim().toLowerCase();
+ if(/race predic|predicted race|race forecast|estimated race/.test(source))return'predicted';
+ // A device name alone does not prove a race was run. The user's earlier
+ // 'Garmin' entry is a Race Predictor value, not a recorded 5 km result.
+ if(/garmin|stryd|coros|polar|apple|suunto|settings|manual/.test(source))return'unverified';
+ return'unverified';
+}
+function calibrationPaceEvidenceLabel(record){
+ const kind=calibrationPaceEvidenceKind(record);
+ if(kind==='observed')return'Completed race / timed assessment';
+ if(kind==='model-estimate')return'Estimated from imported hard-effort evidence';
+ if(kind==='predicted')return'Device race-time prediction';
+ return'Unverified 5 km pace reference (not a completed assessment)';
+}
 const FITNESS_AGE_REFERENCE={
   // FRIEND registry, treadmill CPET 50th percentiles by sex/age decade.
   // Table 3, https://pmc.ncbi.nlm.nih.gov/articles/PMC4919021/
@@ -1826,7 +1848,7 @@ function aerobicFitnessAgeEquivalent(vdot,group){
  for(let i=1;i<refs.length;i++)if(v>=refs[i][1]){
   const [young,high]=refs[i-1],[older,low]=refs[i];
   const age=young+(high-v)/(high-low)*(older-young);
-  return{value:age,label:`≈ ${Math.round(age/5)*5} years`,boundary:false};
+  return{value:age,label:`≈ ${Math.round(age)} years`,boundary:false};
  }
  return{value:75,label:'≈ 75 years',boundary:false};
 }
@@ -1904,16 +1926,16 @@ function observedFitnessHistory(asOf=iso(today())){
   if(vdot===null)continue;
   // One observation per calendar day; prefer documented timed assessments
   // over model-derived efforts on the same day, then the latest sequence.
-  const quality=record.assessmentId?3:record.automatic?2:1,old=byDay.get(date);
-  if(!old||quality>old.quality||(quality===old.quality&&Number(record.sequence)>old.sequence))byDay.set(date,{date,vdot,pace:value,quality,sequence:Number(record.sequence)||0,source:String(record.source||'Timed performance'),automatic:Boolean(record.automatic),confidence:record.confidence??null});
+  const evidenceKind=calibrationPaceEvidenceKind(record),quality=evidenceKind==='observed'?3:evidenceKind==='model-estimate'?2:.25,old=byDay.get(date);
+  if(!old||quality>old.quality||(quality===old.quality&&Number(record.sequence)>old.sequence))byDay.set(date,{date,vdot,pace:value,quality,sequence:Number(record.sequence)||0,source:String(record.source||'Pace reference'),evidenceKind,automatic:Boolean(record.automatic),confidence:record.confidence??null});
  }
  // Render a current qualified import that has not yet been committed, but never
  // use a stale auto estimate to supplant a newer explicit reference.
  const current=calibrationFor('pace',cutoff),currentDate=current?.measuredOn||current?.effectiveOn;
  if(current&&!current.legacy&&CORE.isIsoDate(currentDate)&&currentDate<=cutoff&&(current.automatic||current.assessmentId||current.measuredOn)){
   const v=raceEquivalentVdot(current.value),old=byDay.get(currentDate);
-  const quality=current.assessmentId?3:current.automatic?2:1;
-  if(v!==null&&(!old||quality>old.quality||(quality===old.quality&&Number(current.sequence)>old.sequence)))byDay.set(currentDate,{date:currentDate,vdot:v,pace:Number(current.value),quality,sequence:Number(current.sequence)||0,source:String(current.source||'Timed performance'),automatic:Boolean(current.automatic),confidence:current.confidence??null});
+  const evidenceKind=calibrationPaceEvidenceKind(current),quality=evidenceKind==='observed'?3:evidenceKind==='model-estimate'?2:.25;
+  if(v!==null&&(!old||quality>old.quality||(quality===old.quality&&Number(current.sequence)>old.sequence)))byDay.set(currentDate,{date:currentDate,vdot:v,pace:Number(current.value),quality,sequence:Number(current.sequence)||0,source:String(current.source||'Pace reference'),evidenceKind,automatic:Boolean(current.automatic),confidence:current.confidence??null});
  }
  // Steady aerobic sections can show ongoing change without claiming a new race
  // performance. They are anchored to an actual dated performance and are
@@ -1924,57 +1946,207 @@ function observedFitnessHistory(asOf=iso(today())){
  }
  return [...byDay.values()].sort((a,b)=>a.date.localeCompare(b.date));
 }
+/* BEGIN independent VO2max model v15.7.30
+   Submaximal estimate: ACSM running oxygen cost and HRR≈VO2 reserve.
+   Neither the Daniels race-performance score nor Garmin race predictions enter
+   the oxygen estimate. Do not treat the number as laboratory measured VO2max.
+   This model has NOT been externally calibrated or clinically validated. */
+function runningVo2LapObservation(run){
+ const laps=Array.isArray(run?.fitLaps)?run.fitLaps:[];
+ // This fallback reconstructs a compact steady window from already-imported
+ // 1 km FIT laps. It never invents the second-by-second trace.
+ const eligible=laps.filter(l=>Number(l.distanceKm)>=.94&&Number(l.distanceKm)<=1.08&&
+  Number(l.durationSec)>=220&&Number(l.durationSec)<=750&&Number(l.avgHr)>=108&&Number(l.avgHr)<=195&&
+  Number(l.index)>=2).sort((a,b)=>Number(a.index)-Number(b.index));
+ let best=null;
+ for(let start=0;start<eligible.length;start++)for(let n=3;n<=Math.min(6,eligible.length-start);n++){
+  const rows=eligible.slice(start,start+n);
+  if(rows.some((x,i)=>i>0&&Number(x.index)!==Number(rows[i-1].index)+1))continue;
+  const duration=rows.reduce((a,x)=>a+Number(x.durationSec),0),dist=rows.reduce((a,x)=>a+Number(x.distanceKm),0)*1000;
+  if(duration<900||duration>3600)continue;
+  const hr=rows.reduce((a,x)=>a+Number(x.avgHr)*Number(x.durationSec),0)/duration;
+  const speeds=rows.map(x=>1000*Number(x.distanceKm)/Number(x.durationSec));
+  const avgSpeed=dist/duration;
+  const cv=Math.sqrt(speeds.reduce((a,x)=>a+(x-avgSpeed)**2,0)/speeds.length)/avgSpeed;
+  const maxHr=Math.max(...rows.map(x=>Number(x.avgHr))),minHr=Math.min(...rows.map(x=>Number(x.avgHr)));
+  if(!(avgSpeed>=2&&avgSpeed<=5.5)||cv>.075||maxHr-minHr>14)continue;
+  const quality=Math.min(.65,.33+(duration>=1200?.12:0)+Math.max(0,.12-cv));
+  const candidate={source:'archived FIT 1 km laps',date:run.date,runId:run.id,durationSec:duration,
+   speedMps:avgSpeed,avgHr:hr,terrainVerified:false,quality,sourceDetail:`${rows.length} consecutive 1 km laps`,
+   paceSecPerKm:1000/avgSpeed};
+  if(!best||candidate.quality>best.quality||(candidate.quality===best.quality&&duration>best.durationSec))best=candidate;
+ }
+ return best;
+}
+function runningVo2Observation(run){
+ if(!run||!CORE.isIsoDate(run.date)||run.date>iso(today()))return null;
+ // Continuous, steady endurance only. Maximal intervals and treadmill runs
+ // require different metabolic/grade models and are not extrapolated here.
+ if(!['Easy','Easy + strides','Long run','Specific long run','Steady aerobic','Medium-long','Recovery','Shakeout'].includes(run.type))return null;
+ if(/treadmill|indoor/i.test(String(run.notes||'')))return null;
+ if(run.pain!=null&&Number(run.pain)>=3)return null;
+ if(run.rpe!=null&&Number(run.rpe)>=7)return null;
+ const e=run.aerobicFitnessEvidence;
+ if(e?.version===1){
+  if(!(Number(e.durationSec)>=600&&Number(e.avgHr)>=108&&Number(e.avgHr)<=195&&
+    Number(e.speedMps)>=2&&Number(e.speedMps)<=5.5&&Number(e.hrCoverage)>=.9&&
+    Number(e.quality)>=.35&&Number(e.speedVariation)<=.12&&Math.abs(Number(e.hrDrift))<=12))return null;
+  return{date:run.date,runId:run.id,source:'recorded steady FIT/CSV section',durationSec:Number(e.durationSec),
+   speedMps:Number(e.speedMps),avgHr:Number(e.avgHr),terrainVerified:Boolean(e.terrainVerified),
+   quality:Number(e.quality),sourceDetail:'timestamped steady segment',paceSecPerKm:Number(e.paceSecPerKm)};
+ }
+ return runningVo2LapObservation(run);
+}
+function runningVo2HeartRateInputs(asOf=iso(today())){
+ const profile=state.fitnessProfile||{},age=fitnessChronologicalAge(profile.birthYear,asOf);
+ // A birth year is needed before deriving age-predicted maximum HR. A more
+ // accurate one-time profile value can replace this assumption, without
+ // needing recurring manual calibration.
+ if(age===null)return null;
+ const rhr=Number(profile.restingHr),knownRest=profile.restingHr!=null&&Number.isFinite(rhr)&&rhr>=35&&rhr<=110;
+ const restingHr=knownRest?rhr:60;
+ const mh=Number(profile.maxHr),knownMax=profile.maxHr!=null&&Number.isFinite(mh)&&mh>=125&&mh<=225;
+ const ageMax=208-.7*age;
+ const t=Number(calibrationFor('hr',asOf)?.value??state.setup?.thresholdHr);
+ // Threshold HR is not measured HRmax. When it exceeds the population-age
+ // prediction, it supplies only a conservative lower bound for HRmax. The
+ // 8-bpm guard is a model assumption, displayed as such, not a measured fact.
+ const thresholdBound=Number.isFinite(t)&&t>=100&&t<=204?t+8:0;
+ const maxHr=knownMax?mh:Math.min(215,Math.max(ageMax,thresholdBound));
+ if(maxHr-restingHr<50)return null;
+ return{age,restingHr,maxHr,knownRest,knownMax,ageMax,thresholdBound,
+  sourceMax:knownMax?'Profile-reported maximum HR':thresholdBound>ageMax?'Age formula + threshold-HR lower bound':'Tanaka age-predicted maximum HR',
+  sourceRest:knownRest?'Profile-reported resting HR':'Unmeasured resting HR default: 60 bpm'};
+}
+function runningVo2EstimateForObservation(observation,restingHr,maxHr,oxygenScale=1){
+ const hr=Number(observation?.avgHr),speed=Number(observation?.speedMps);
+ if(!(hr>=108&&hr<=195&&speed>=2&&speed<=5.5&&maxHr-restingHr>=45))return null;
+ const fraction=(hr-restingHr)/(maxHr-restingHr);
+ if(!(fraction>=.57&&fraction<=.92))return null;
+ const oxygenCost=3.5+.2*speed*60*oxygenScale; // ACSM level running, mL/kg/min
+ const estimate=3.5+(oxygenCost-3.5)/fraction; // HRR approximates VO2 reserve
+ return Number.isFinite(estimate)&&estimate>=17&&estimate<=85?estimate:null;
+}
+function runningVo2Observations(asOf=iso(today())){
+ const cutoff=CORE.isIsoDate(asOf)&&asOf<iso(today())?asOf:iso(today()),inputs=runningVo2HeartRateInputs(cutoff);
+ if(!inputs)return{inputs:null,rows:[],cutoff};
+ const all=(state.runs||[]).filter(r=>r&&CORE.isIsoDate(r.date)&&r.date<=cutoff&&r.date>=iso(addCalendarDays(cutoff,-730)));
+ const rows=[];
+ for(const run of all){
+  const obs=runningVo2Observation(run);if(!obs)continue;
+  const estimate=runningVo2EstimateForObservation(obs,inputs.restingHr,inputs.maxHr);
+  if(estimate===null)continue;
+  // No grade estimate is assumed. Terrain unknown is flagged and widens the
+  // sensitivity span rather than being called 'flat terrain'.
+  rows.push({...obs,vo2max:estimate,assumptions:inputs});
+ }
+ // One best-quality observation per run date prevents duplicate FIT imports
+ // from dominating the rolling estimate.
+ const byDate=new Map();
+ for(const r of rows){const prev=byDate.get(r.date);if(!prev||r.quality>prev.quality)byDate.set(r.date,r)}
+ return{inputs,rows:[...byDate.values()].sort((a,b)=>a.date.localeCompare(b.date)),cutoff};
+}
+function runningVo2Timeline(asOf=iso(today())){
+ const {inputs,rows,cutoff}=runningVo2Observations(asOf);
+ if(!inputs)return{latest:null,history:[],rows:[],inputs:null,cutoff,reason:'Set your birth year once to allow HRmax estimation.'};
+ const history=[];
+ for(let i=0;i<rows.length;i++){
+  const current=rows[i];const recent=rows.slice(0,i+1).filter(x=>x.date>=iso(addCalendarDays(current.date,-56))).slice(-8);
+  // Require at least three *different dates*. After that, the estimate is
+  // recomputed after every qualifying activity; a nonqualifying run holds it.
+  if(recent.length<3)continue;
+  const median=fitnessMedian(recent.map(r=>r.vo2max)),prev=history.at(-1);
+  const newValue=prev?Math.max(prev.value-1.5,Math.min(prev.value+1.5,prev.value*.55+median*.45)):median;
+  const lowCandidates=[],highCandidates=[];
+  for(const r of recent){
+   const restingRange=inputs.knownRest?4:12,maxRange=inputs.knownMax?4:12;
+   for(const rr of [Math.max(35,inputs.restingHr-restingRange),Math.min(110,inputs.restingHr+restingRange)]){
+    for(const mm of [Math.max(125,inputs.maxHr-maxRange),Math.min(220,inputs.maxHr+maxRange)]){
+     for(const scale of [.9,1.1]){
+      const sample=runningVo2EstimateForObservation(r,rr,mm,scale);
+      if(sample!==null){lowCandidates.push(sample);highCandidates.push(sample)}
+     }
+    }
+   }
+  }
+  // Sensitivity span, NOT a statistical CI or validated measurement error.
+  const lower=lowCandidates.length?Math.min(...lowCandidates):newValue-6;
+  const upper=highCandidates.length?Math.max(...highCandidates):newValue+6;
+  const allKnownTerrain=recent.every(x=>x.terrainVerified);
+  const confidence=recent.length>=5&&inputs.knownMax&&inputs.knownRest&&allKnownTerrain?'moderate':'low';
+  history.push({date:current.date,value:Number(newValue.toFixed(2)),lower:Number(Math.max(15,Math.min(newValue-3,lower)).toFixed(1)),upper:Number(Math.min(90,Math.max(newValue+3,upper)).toFixed(1)),
+   count:recent.length,source:current.source,confidence,runId:current.runId,terrainVerified:allKnownTerrain,
+   recentRuns:recent.map(x=>({date:x.date,runId:x.runId,hr:Number(x.avgHr.toFixed(1)),pace:Number(x.paceSecPerKm.toFixed(1)),estimate:Number(x.vo2max.toFixed(1)),source:x.source,terrainVerified:x.terrainVerified}))});
+ }
+ return{latest:history.at(-1)||null,history,rows,inputs,cutoff,reason:history.length?'':'Need at least three separate qualifying steady runs in the last 56 days.'};
+}
 function fitnessTrajectory(asOf=iso(today())){
- const history=observedFitnessHistory(asOf),latest=history.at(-1)||null,first=history[0]||null;
- const profile=state.fitnessProfile||{},group=profile.referenceGroup||null;
- const age=fitnessChronologicalAge(profile.birthYear,asOf);
- const validAge=latest&&age!==null&&group;
- const fitnessAge=validAge?aerobicFitnessAgeEquivalent(latest.vdot,group):null;
- const cohortMedian=validAge?referenceMedianVO2(group,age):null;
- const trajectory=history.map(x=>({...x,ageEquivalent:age!==null&&group?aerobicFitnessAgeEquivalent(x.vdot,group)?.value??null:null,chronologicalAge:fitnessChronologicalAge(profile.birthYear,x.date)}));
- return{latest,first,history:trajectory,age,group,fitnessAge,cohortMedian,delta:latest&&first&&history.length>1?latest.vdot-first.vdot:null};
+ const model=runningVo2Timeline(asOf),profile=state.fitnessProfile||{},group=profile.referenceGroup||null;
+ const age=fitnessChronologicalAge(profile.birthYear,asOf),latest=model.latest;
+ const fitnessAge=latest&&group?aerobicFitnessAgeEquivalent(latest.value,group):null;
+ const history=model.history.map(point=>({...point,ageEquivalent:group?aerobicFitnessAgeEquivalent(point.value,group)?.value??null:null,
+  chronologicalAge:fitnessChronologicalAge(profile.birthYear,point.date)}));
+ return{...model,history,age,group,vo2max:latest?.value??null,fitnessAge,
+  cohortMedian:age!==null&&group?referenceMedianVO2(group,age):null,
+  delta:history.length>=2?history.at(-1).value-history[0].value:null};
 }
 function fitnessProgressCardHtml(){
- const f=fitnessTrajectory(),profile=state.fitnessProfile||{},hasProfile=Boolean(profile.birthYear&&profile.referenceGroup),latest=f.latest;
- const numeric=val=>Number(val).toFixed(1),latestLabel=latest?numeric(latest.vdot):'—';
- const trend=!latest?'Awaiting enough steady or timed evidence':f.delta==null?'Awaiting a second qualifying result':`${f.delta>=0?'+':''}${numeric(f.delta)} vs first qualified result`;
- const details=latest?`${esc(fmtDate(latest.date))} · ${esc(latest.source)}${latest.submax?' · Provisional, low-confidence trend':latest.confidence!=null?' · Qualification strength: '+(latest.confidence>=.85?'high':'moderate'):''}`:'Import timestamped FIT/CSV runs with HR and distance. Steady running trends require an earlier dated performance anchor; whole-run averages are not used.';
- const ageLabel=f.fitnessAge?f.fitnessAge.label:hasProfile?'Not enough validated performance evidence':'Set profile once to enable';
- const referenceText=f.cohortMedian!==null?`At age ${f.age}, the ${f.group==='men'?'men':'women'} reference median is ${numeric(f.cohortMedian)} mL/kg/min; the running VO₂-equivalent model currently indicates ${numeric(latest.vdot)}; submaximal updates are lower-confidence estimates.`:'Requires a birth year, study reference group and a qualifying performance estimate.';
+ const f=fitnessTrajectory(),profile=state.fitnessProfile||{},hasProfile=Boolean(profile.birthYear&&profile.referenceGroup),current=f.latest;
+ const ageLabel=f.fitnessAge?f.fitnessAge.label:'—';
+ const stale=current&&(calendarDayNumber(iso(today()))-calendarDayNumber(current.date)>56);
+ const ageTitle=f.fitnessAge?'Estimated fitness age':'Fitness age';
+ const sourceInfo=current?`${current.count} qualifying runs · ${stale?'Last qualified update':'Updated'} ${fmtDate(current.date)} · ${current.confidence} confidence${stale?' · stale; fresh running evidence needed':''}`:
+   f.reason||'Awaiting sufficient pace and heart-rate evidence';
+ const sourceRows=current?.recentRuns||[];
+ const evidenceRows=sourceRows.map(r=>`<div class="loadReviewRow"><span>${esc(fmtDate(r.date))} · ${esc(r.source)}</span><b>${pace(r.pace)} · ${r.hr.toFixed(0)} bpm · ${r.estimate.toFixed(1)}</b></div>`).join('');
  const selected=(value,chosen)=>value===chosen?'selected':'';
- return`<section class="cardioFitnessPanel" aria-label="Running VO2max and cardiorespiratory fitness age">
- <div class="cardioFitnessHead"><div><small>RUNNING PERFORMANCE · AUTOMATIC</small><h4>VO₂max &amp; fitness age</h4><p>Runs are evaluated after every FIT/CSV import. Timed performances establish the VDOT baseline; steady-run pace/heart-rate changes can update the trend. Not a laboratory VO₂max measurement.</p></div></div>
- <div class="cardioFitnessKpis"><article><small>RUNNING-ESTIMATED VO₂max</small><strong>${latestLabel}</strong><span>VDOT · mL/kg/min equivalent</span><small>${esc(trend)}</small></article><article><small>APPROX. CARDIO FITNESS AGE</small><strong>${esc(ageLabel)}</strong><span>${f.age===null?'Chronological age not configured':`Approx. chronological age ${f.age} years`}</span><small>${latest?'Comparison is indicative, not medical age':'Waiting for qualifying performance evidence'}</small></article></div>
- <p class="cardioFitnessEvidence">${details}${latest?.submax?` · ${latest.basisRuns} steady runs, most recent ${latest.recentRuns}; ${latest.terrainVerified?'terrain verified':'terrain not fully verified'} · lower confidence`:''}</p><div class="cardioFitnessCharts"><div><div class="cardioFitnessChartLabel"><b>Running VO₂ estimate over time</b><small>Qualified timed and steady-run observations</small></div><div id="fitnessVo2ChartMount" class="progressChartMount" aria-label="Estimated running VO2 trend"></div></div><div><div class="cardioFitnessChartLabel"><b>Cardio fitness-age comparison</b><small>Approximate median-equivalent age</small></div><div id="fitnessAgeChartMount" class="progressChartMount" aria-label="Estimated cardio fitness age trend"></div></div></div>
- <details class="cardioFitnessProfile"><summary>${hasProfile?'Edit age-comparison profile':'Set up fitness-age comparison once'}</summary><p class="muted compact">For age comparison only: an optional birth year and the reference cohort used by the published study. No need to update either after setup. Stored locally.</p><div class="cardioFitnessForm"><label>Birth year<input id="fitnessBirthYear" type="number" inputmode="numeric" min="1900" max="${today().getFullYear()-18}" placeholder="e.g. 1980" value="${profile.birthYear??''}"></label><label>Reference population<select id="fitnessReferenceGroup"><option value="">No comparison</option><option value="men" ${selected('men',profile.referenceGroup)}>Men (FRIEND treadmill)</option><option value="women" ${selected('women',profile.referenceGroup)}>Women (FRIEND treadmill)</option></select></label><button type="button" id="saveFitnessProfile" class="secondary">Save profile</button></div><div id="fitnessProfileFeedback" class="muted compact" role="status"></div></details>
- <details class="cardioFitnessMethod"><summary>How are these values calculated?</summary><p>A dated 5 km-equivalent performance establishes VDOT using Daniels–Gilbert equations. Afterwards, the app uses steady, well-covered 10–20-minute HR/pace sections of imported GPS/footpod runs to estimate small within-runner aerobic-efficiency changes. The HR-normalization slope is a pragmatic heuristic and is not validated against laboratory VO₂max. Easy-run evidence does not redefine your race performance benchmark, CP or lactate-threshold HR.</p><p>${esc(referenceText)}</p><p>Fitness age is the approximate age at which the FRIEND registry’s treadmill-test median VO₂max matches the VDOT value. Because these are different measurement methods, fitness age is exploratory and can differ markedly from Garmin fitness age. Values beyond the 25–75-year reference midpoints are displayed only as bounds.</p><p>Source: <a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC4919021/" target="_blank" rel="noopener noreferrer">FRIEND reference standards (Table 3)</a>; Daniels–Gilbert running VDOT equations. This is not a health diagnosis, biological age, or a clinical measurement.</p></details>
+ return`<section class="cardioFitnessPanel" aria-label="Automatic estimated VO2max and fitness age">
+ <div class="cardioFitnessHead"><div><small>AUTOMATIC RUNNING FITNESS</small><h4>VO₂max & fitness age</h4><p>Independent <b>submaximal estimates</b> from steady running pace and heart-rate response. Updated after each qualifying FIT/CSV import. Not a laboratory measurement and not Garmin's proprietary algorithm.</p></div></div>
+ <div class="cardioFitnessKpis"><article><small>ESTIMATED VO₂MAX</small><strong>${current?current.value.toFixed(1):'—'}</strong><span>mL/kg/min · ${current?esc(current.confidence)+' confidence':'insufficient evidence'}</span><small>${current?`Model sensitivity: ${current.lower.toFixed(1)}–${current.upper.toFixed(1)}`:'No qualifying multi-run estimate yet'}</small></article>
+ <article><small>${ageTitle.toUpperCase()}</small><strong>${ageLabel}</strong><span>${f.age==null?'Birth year not set':`Chronological age ${f.age} years`}</span><small>${f.fitnessAge?`${current?.confidence||'low'}-confidence VO₂-based FRIEND equivalent · not biological age or Garmin fitness age`:'Needs an independent VO₂max estimate and age/sex reference group'}</small></article></div>
+ <p class="cardioFitnessEvidence">${esc(sourceInfo)}${f.cohortMedian!==null?` · Age-group median VO₂max: ${f.cohortMedian.toFixed(1)}`:''}</p>
+ <div class="cardioFitnessCharts"><div><div class="cardioFitnessChartLabel"><b>Estimated VO₂max trend</b><small>mL/kg/min · pace/HR effort model</small></div><div id="fitnessVo2ChartMount" class="progressChartMount" aria-label="Running-estimated physiological VO2max trend"></div></div><div><div class="cardioFitnessChartLabel"><b>Estimated fitness age trend</b><small>Based on VO₂max and FRIEND population medians, not Garmin's algorithm</small></div><div id="fitnessAgeChartMount" class="progressChartMount" aria-label="VO2-derived cardio fitness age and chronological age"></div></div></div>
+ <details class="cardioFitnessMethod"><summary>Evidence and calculation details</summary><p><b>VO₂max:</b> For each sustained, stable run section, the ACSM running oxygen-demand equation (level-ground assumption) is combined with the percentage of heart-rate reserve. A rolling median of at least three distinct qualifying days estimates maximum aerobic oxygen consumption; a single run cannot create or drastically change the number.</p>
+ <p><b>Input assumptions:</b> ${f.inputs?`${esc(f.inputs.sourceMax)} (${f.inputs.maxHr.toFixed(0)} bpm); ${esc(f.inputs.sourceRest)} (${f.inputs.restingHr.toFixed(0)} bpm)`:'Birth year is required before an age-based HRmax assumption can be formed'}. ${current?'The displayed span varies HRmax, resting HR and oxygen cost; it is not a confidence interval.':''}</p>
+ <p>Archived FIT laps can provide a lower-quality starting estimate. Treadmill, hill/interval, missing-HR and unstable efforts are excluded. Missing grade remains an uncertainty. This algorithm is exploratory and has <b>not been validated against laboratory gas exchange</b>. Illness, heat, medication, poor sleep and HR sensor issues can bias it.</p>
+ ${current?`<div class="loadReviewBreakdown"><b>Recent contributing observations</b>${evidenceRows}</div>`:`<p>${esc(f.reason||'Insufficient running evidence.')}</p>`}
+ <p><b>Fitness age:</b> age where the model-estimated VO₂max equals the median measured treadmill VO₂max in the ${esc(f.group||'chosen')} FRIEND 2016 reference group. This is a population comparison only; it is not biological age and does not reproduce Garmin's multi-input fitness age.</p>
+ <p>Research: <a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC12419060/" target="_blank" rel="noopener noreferrer">ACSM running equation</a> · <a href="https://pubmed.ncbi.nlm.nih.gov/9502363/" target="_blank" rel="noopener noreferrer">heart-rate and VO₂ reserve</a> · <a href="https://pubmed.ncbi.nlm.nih.gov/11153730/" target="_blank" rel="noopener noreferrer">age-predicted HRmax</a> · <a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC4919021/" target="_blank" rel="noopener noreferrer">FRIEND reference medians</a>.</p></details>
+ <details class="cardioFitnessProfile"><summary>${hasProfile?'Fitness profile and optional HR inputs':'Set fitness profile'}</summary><p class="muted compact">One-time profile only. Resting and maximum HR are optional; when absent, the model uses labelled assumptions with wider uncertainty. These values are not training thresholds and never overwrite your CP or threshold HR.</p><div class="cardioFitnessForm">
+ <label>Birth year<input id="fitnessBirthYear" type="number" inputmode="numeric" min="1900" max="${today().getFullYear()-18}" value="${profile.birthYear??''}"></label>
+ <label>Reference population<select id="fitnessReferenceGroup"><option value="">No comparison</option><option value="men" ${selected('men',profile.referenceGroup)}>Men (FRIEND treadmill)</option><option value="women" ${selected('women',profile.referenceGroup)}>Women (FRIEND treadmill)</option></select></label>
+ <label>Resting HR (optional, bpm)<input id="fitnessRestingHr" type="number" inputmode="numeric" min="35" max="110" placeholder="Auto assumption: 60" value="${profile.restingHr??''}"></label>
+ <label>Maximum HR (optional, bpm)<input id="fitnessMaxHr" type="number" inputmode="numeric" min="125" max="225" placeholder="Age/threshold estimate" value="${profile.maxHr??''}"></label>
+ <button type="button" id="saveFitnessProfile" class="secondary">Save profile</button></div><div id="fitnessProfileFeedback" class="muted compact" role="status"></div></details>
  </section>`;
 }
 function renderFitnessProgressPanel(){
  const host=$('cardioFitnessProgress');if(!host)return;
  const f=fitnessTrajectory();host.innerHTML=fitnessProgressCardHtml();
- const rows=f.history.slice(-36),labels=rows.map(x=>x.date.slice(5)),vdot=rows.map(x=>Number(x.vdot.toFixed(1))),age=rows.map(x=>x.ageEquivalent==null?null:Number(x.ageEquivalent.toFixed(1))),chronological=rows.map(x=>x.chronologicalAge);
- const limits=tightMetricChartBounds(vdot,{paddingFraction:.10,minPadding:1,singlePadding:3});
- progressSvgIntoMount('fitnessVo2ChartMount',[{label:'VDOT / VO₂-equivalent',data:vdot,color:'#55d6b6'}],{labels,scaleMin:limits?.min,scaleMax:limits?.max,formatY:v=>v.toFixed(0),aria:'Running performance VDOT over qualifying test dates',empty:'Import detailed FIT/CSV runs; a dated timed performance is needed to anchor VO₂-equivalent units.'});
- const ages=age.filter(Number.isFinite),ageLimit=tightMetricChartBounds([...ages,...chronological.filter(Number.isFinite)],{paddingFraction:.1,minPadding:1,singlePadding:4});
- progressSvgIntoMount('fitnessAgeChartMount',[
-  {label:'Approx. cardio fitness age',data:age,color:'#70b6f5'},
-  {label:'Approx. chronological age',data:chronological,color:'#a8b2c1',dashed:true,points:false}
- ],{labels,scaleMin:ageLimit?.min,scaleMax:ageLimit?.max,formatY:v=>`${v.toFixed(1)} y`,aria:'Exploratory fitness-age equivalent compared with chronological age',empty:'Enter your birth year and reference population once. A qualifying running performance is also required.'});
+ const rows=f.history.slice(-36),labels=rows.map(x=>x.date.slice(5)),vo2=rows.map(x=>Number(x.value.toFixed(1))),age=rows.map(x=>x.ageEquivalent==null?null:Number(x.ageEquivalent.toFixed(1))),chronological=rows.map(x=>x.chronologicalAge);
+ const vo2Limits=tightMetricChartBounds(vo2,{paddingFraction:.1,minPadding:1,singlePadding:4});
+ progressSvgIntoMount('fitnessVo2ChartMount',[{label:'Estimated VO₂max (submaximal)',data:vo2,color:'#55d6b6'}],{labels,scaleMin:vo2Limits?.min,scaleMax:vo2Limits?.max,formatY:v=>v.toFixed(0),aria:'Independent running-estimated VO2max',empty:'Import at least three qualifying steady running sessions with reliable heart-rate data.'});
+ const validAge=age.filter(Number.isFinite),ageLimits=tightMetricChartBounds([...validAge,...chronological.filter(Number.isFinite)],{paddingFraction:.1,minPadding:1,singlePadding:5});
+ progressSvgIntoMount('fitnessAgeChartMount',[{label:'VO₂-derived fitness age',data:age,color:'#70b6f5'},{label:'Chronological age',data:chronological,color:'#a8b2c1',dashed:true,points:false}],
+  {labels,scaleMin:ageLimits?.min,scaleMax:ageLimits?.max,formatY:v=>`${v.toFixed(0)} y`,aria:'Approximate VO2max-based fitness age and chronological age',empty:'Fitness age needs a qualifying VO2max estimate and birth year/reference population.'});
  const saveBtn=$('saveFitnessProfile');if(!saveBtn)return;
  saveBtn.onclick=()=>{
   const raw=$('fitnessBirthYear').value.trim(),birth=raw===''?null:Number(raw),group=$('fitnessReferenceGroup').value||null;
-  const err=$('fitnessProfileFeedback');
-  if((birth!==null&&(!Number.isInteger(birth)||birth<1900||birth>today().getFullYear()-20||today().getFullYear()-birth>79))||(group&&!['men','women'].includes(group))||(group&&birth===null)){
-   if(err)err.textContent='Enter a valid birth year for an adult aged 20–79, or clear both fields to hide fitness age.';
-   return;
-  }
+  const restRaw=$('fitnessRestingHr').value.trim(),maxRaw=$('fitnessMaxHr').value.trim();
+  const restingHr=restRaw===''?null:Number(restRaw),maxHr=maxRaw===''?null:Number(maxRaw),err=$('fitnessProfileFeedback');
+  const invalid=(birth!==null&&(!Number.isInteger(birth)||birth<1900||birth>today().getFullYear()-20||today().getFullYear()-birth>79))||
+   (group&&!['men','women'].includes(group))||(group&&birth===null)||
+   (restingHr!==null&&(!Number.isInteger(restingHr)||restingHr<35||restingHr>110))||
+   (maxHr!==null&&(!Number.isInteger(maxHr)||maxHr<125||maxHr>225))||
+   (restingHr!==null&&maxHr!==null&&maxHr-restingHr<50);
+  if(invalid){if(err)err.textContent='Check birth year (adult 20–79), resting HR (35–110), maximum HR (125–225), and their difference (at least 50 bpm).';return}
   const prior=state.fitnessProfile;
-  state.fitnessProfile={birthYear:birth,referenceGroup:group};
+  state.fitnessProfile={birthYear:birth,referenceGroup:group,restingHr,maxHr};
   if(save()===false){state.fitnessProfile=prior;if(err)err.textContent='Could not save the profile on this device.';return}
   invalidatePageRenderCache('dashboard');renderFitnessProgressPanel();
  };
 }
+/* END independent VO2max model */
 /* END cardiorespiratory fitness tracking */
 
 
@@ -1984,7 +2156,7 @@ function renderFitnessProgressPanel(){
    Call bindCalibrationControls(document) once. No automatic modal on startup. */
 function calibrationUiKinds(){
  return[
-  {kind:'pace',label:'5 km pace reference (automatic)',days:28,help:'A measured 5 km race/time trial or a distance-normalized estimate from a strong timed race. Imported races update this automatically.'},
+  {kind:'pace',label:'5 km pace reference (automatic)',days:28,help:'Choose completed race/time trial versus device-predicted race time. Both can guide training pace, but a Garmin Race Predictor time is NOT a measured performance and cannot establish VO₂max or fitness age.'},
   {kind:'power',label:'Critical power (automatic)',days:28,help:'The model needs separate short and long hard efforts with timestamped power, or an explicit CP embedded in a FIT file. One average power reading cannot define CP.'},
   {kind:'hr',label:'Threshold heart rate (automatic)',days:28,help:'Requires repeated sustained near-threshold efforts with reliable heart rate, or explicit lactate-threshold HR metadata; not the average HR of an easy run.'},
   {kind:'weight',label:'Actual body weight',days:14,help:'Enter your actual body weight. Stryd’s configured mass is a separate device setting; this form does not change it.'}
@@ -2003,7 +2175,8 @@ function calibrationUiSource(record,asOf=iso(today())){
  const measured=CORE.isIsoDate(record?.measuredOn)?record.measuredOn:null;
  const age=measured?Math.max(0,calendarDayNumber(asOf)-calendarDayNumber(measured)):null;
  const source=String(record?.source||'Source not recorded');
- return`${source} · ${measured?`measured ${calibrationUiDate(measured)}${age===0?' · today':` · ${age} days ago`}`:'measurement date not recorded'}`;
+ const kindText=record?.kind==='pace'&&typeof calibrationPaceEvidenceLabel==='function'?`${calibrationPaceEvidenceLabel(record)} · `:'';
+ return`${kindText}${source} · ${measured?`${record?.kind==='pace'?'reference':'measurement'} date ${calibrationUiDate(measured)}${age===0?' · today':` · ${age} days ago`}`:(record?.kind==='pace'?'reference date not recorded':'measurement date not recorded')}`;
 }
 function calibrationUiReviewState(asOf=iso(today())){
  const calibration=ensureCalibrationState();
@@ -2042,7 +2215,8 @@ function calibrationUiInputFields(kind,record,now){
  let values='';
  if(kind==='pace'){
   const benchmark=calibrationUiPaceInputs(record);
-  values=`<div class="field"><label for="calibrationPaceDistance">Timed performance distance (km)</label><input id="calibrationPaceDistance" data-calibration-field="testDistance" type="number" inputmode="decimal" min="0.1" max="200" step="0.01" value="${esc(benchmark.testDistance)}"></div><div class="field"><label for="calibrationPaceTime">Benchmark time (M:SS or H:MM:SS)</label><input id="calibrationPaceTime" data-calibration-field="testTime" type="text" inputmode="numeric" value="${esc(fmtTime(benchmark.testTime))}"></div>`;
+  const kindLabel=typeof calibrationPaceEvidenceKind==='function'?calibrationPaceEvidenceKind(record):'unverified';
+  values=`<div class="field"><label for="calibrationPaceKind">What is this 5 km time?</label><select id="calibrationPaceKind" data-calibration-field="performanceKind"><option value="unverified" ${kindLabel==='unverified'?'selected':''}>Source not verified</option><option value="predicted" ${kindLabel==='predicted'?'selected':''}>Device race prediction (e.g. Garmin Race Predictor)</option><option value="observed" ${kindLabel==='observed'?'selected':''}>Actual race or timed time trial I completed</option></select><p class="muted compact">Only an actual completed performance is measured race evidence. A device forecast is useful for planning but cannot establish VO₂max or fitness age.</p></div><div class="field"><label for="calibrationPaceDistance">Race/assessment distance (km)</label><input id="calibrationPaceDistance" data-calibration-field="testDistance" type="number" inputmode="decimal" min="0.1" max="200" step="0.01" value="${esc(benchmark.testDistance)}"></div><div class="field"><label for="calibrationPaceTime">Time, actual or predicted (M:SS or H:MM:SS)</label><input id="calibrationPaceTime" data-calibration-field="testTime" type="text" inputmode="numeric" value="${esc(fmtTime(benchmark.testTime))}"></div>`;
  }else{
   const def=kind==='power'?{field:'criticalPower',label:'Critical power (W)',min:50,max:1500,step:1}:kind==='hr'?{field:'thresholdHr',label:'Threshold heart rate (bpm)',min:60,max:240,step:1}:{field:'bodyWeight',label:'Actual body weight (kg)',min:25,max:250,step:.1};
   values=`<div class="field"><label for="calibrationValue-${kind}">${def.label}</label><input id="calibrationValue-${kind}" data-calibration-field="${def.field}" type="number" inputmode="decimal" min="${def.min}" max="${def.max}" step="${def.step}" value="${esc(record?.value??state.setup[def.field]??'')}"></div>`;
@@ -2072,7 +2246,7 @@ function openCalibrationReview(){
   if(draft.errors.length)return calibrationUiShowErrors(form,draft.errors);
   const submit=form.querySelector('[type="submit"]');submit.disabled=true;
   try{
-   const result=applyCalibrationReview(draft.candidate,{on:now,kinds:draft.kinds,measuredOn:draft.measuredOn,sources:draft.sources,remeasuredKinds:draft.remeasuredKinds});
+   const result=applyCalibrationReview(draft.candidate,{on:now,kinds:draft.kinds,measuredOn:draft.measuredOn,sources:draft.sources,performanceKinds:draft.performanceKinds,remeasuredKinds:draft.remeasuredKinds});
    const finish=()=>{
     try{
      if(result.rebuildRequired&&buildPlan()===false)throw Error('The updated targets could not be saved on this device.');
@@ -2089,7 +2263,7 @@ function openCalibrationReview(){
  ensureAccessibleForms(form);
 }
 function calibrationUiReadDraft(form){
- const now=iso(today()),candidate={...state.setup},kinds=[],remeasuredKinds=[],measuredOn={},sources={},errors=[];
+ const now=iso(today()),candidate={...state.setup},kinds=[],remeasuredKinds=[],measuredOn={},sources={},performanceKinds={},errors=[];
  for(const def of calibrationUiKinds()){
   const card=form.querySelector(`[data-calibration-kind="${def.kind}"]`),choice=card.querySelector('[data-calibration-choice]').value;
   if(choice==='leave')continue;
@@ -2107,6 +2281,8 @@ function calibrationUiReadDraft(form){
   if(!CORE.isIsoDate(measuredOn[def.kind])||measuredOn[def.kind]>now)errors.push({id:field('measuredOn').id,message:`Enter a valid ${def.label.toLowerCase()} measurement date on or before today.`});
   if(!sources[def.kind])errors.push({id:field('source').id,message:`Enter the source of your ${def.label.toLowerCase()} value.`});
   if(def.kind==='pace'){
+   performanceKinds.pace=field('performanceKind').value;
+   if(!['observed','predicted','unverified'].includes(performanceKinds.pace))errors.push({id:'calibrationPaceKind',message:'Select whether this is a completed performance or a device prediction.'});
    candidate.testDistance=Number(field('testDistance').value);candidate.testTime=parseTime(field('testTime').value);
    if(!(candidate.testDistance>=.1&&candidate.testDistance<=200))errors.push({id:field('testDistance').id,message:'Benchmark distance must be between 0.1 and 200 km.'});
    if(!(candidate.testTime>=30&&candidate.testTime<=172800))errors.push({id:field('testTime').id,message:'Enter a valid benchmark time using M:SS or H:MM:SS.'});
@@ -2118,7 +2294,7 @@ function calibrationUiReadDraft(form){
   }
  }
  if(!kinds.length)errors.push({id:'calibrationAction-pace',message:'Choose Confirm or Update measurement for at least one input, or use the reminder button.'});
- return{candidate,kinds,remeasuredKinds,measuredOn,sources,errors};
+ return{candidate,kinds,remeasuredKinds,measuredOn,sources,performanceKinds,errors};
 }
 function calibrationUiShowErrors(form,errors){
  form.querySelectorAll('[aria-invalid="true"]').forEach(control=>control.removeAttribute('aria-invalid'));
@@ -2164,7 +2340,7 @@ function calibrationTargetDetailsHtml(p){
 function calibrationBenchmarkOn(date=iso(today())){
  const record=calibrationFor('pace',date);
  const distance=5,value=Number(record?.value)||fiveKmEquivalentSeconds(state.setup.testTime,state.setup.testDistance)/5;
- return{distance,time:value*5,date:record?.measuredOn||record?.effectiveOn||null,source:record?.source||'Setup baseline',assessmentId:record?.assessmentId||null,originalDistance:record?.testDistance||state.setup.testDistance,originalTime:record?.testTime||state.setup.testTime,estimated:Math.abs((record?.testDistance||5)-5)>.01};
+ return{distance,time:value*5,date:record?.measuredOn||record?.effectiveOn||null,source:record?.source||'Setup baseline',assessmentId:record?.assessmentId||null,originalDistance:record?.testDistance||state.setup.testDistance,originalTime:record?.testTime||state.setup.testTime,estimated:Math.abs((record?.testDistance||5)-5)>.01||typeof calibrationPaceEvidenceKind==='function'&&calibrationPaceEvidenceKind(record)!=='observed',performanceKind:typeof calibrationPaceEvidenceKind==='function'?calibrationPaceEvidenceKind(record):'unverified' };
 }
 function baselineOn(date=iso(today())){
  const paceRecord=calibrationFor('pace',date),powerRecord=calibrationFor('power',date),hrRecord=calibrationFor('hr',date),weightRecord=calibrationFor('weight',date);
@@ -2172,7 +2348,7 @@ function baselineOn(date=iso(today())){
  const baselinePace=Number(paceRecord?.value)||fiveKmEquivalentSeconds(state.setup.testTime,state.setup.testDistance)/5,baselinePower=Number(powerRecord?.value)||state.setup.criticalPower,baselineHr=Number(hrRecord?.value)||state.setup.thresholdHr;
  // Store the accepted records with the prescription, so a later baseline review
  // cannot rewrite the provenance of an already completed workout.
- const snapshot=r=>r?{id:r.id,value:Number(r.value),source:r.source,measuredOn:r.measuredOn||null,confirmedOn:r.confirmedOn||null,effectiveOn:r.effectiveOn,assessmentId:r.assessmentId||null,testDistance:r.testDistance||null,testTime:r.testTime||null,legacy:!!r.legacy}:null;
+ const snapshot=r=>r?{id:r.id,value:Number(r.value),source:r.source,measuredOn:r.measuredOn||null,confirmedOn:r.confirmedOn||null,effectiveOn:r.effectiveOn,assessmentId:r.assessmentId||null,testDistance:r.testDistance||null,testTime:r.testTime||null,legacy:!!r.legacy,performanceKind:r.kind==='pace'&&typeof calibrationPaceEvidenceKind==='function'?calibrationPaceEvidenceKind(r):null}:null;
  return{pace:baselinePace/paceFactor,hr:baselineHr,cp:baselinePower*powerFactor,
   calibration:{version:1,asOf:date,pace:snapshot(paceRecord),power:snapshot(powerRecord),hr:snapshot(hrRecord),weight:snapshot(weightRecord),paceFactor,powerFactor},
   evidence:{...ev,appliedAdjustment:paceFactor,appliedPowerAdjustment:powerFactor,provisionalAdjustment:ev.adjustment}};

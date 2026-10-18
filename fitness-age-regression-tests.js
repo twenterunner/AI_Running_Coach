@@ -1,66 +1,85 @@
 'use strict';
 const fs=require('fs'),assert=require('assert/strict'),vm=require('vm'),path=require('path');
-const base=__dirname,app=fs.readFileSync(path.join(base,'app.js'),'utf8'),html=fs.readFileSync(path.join(base,'index.html'),'utf8'),css=fs.readFileSync(path.join(base,'styles.css'),'utf8');
-const start=app.indexOf('/* BEGIN cardiorespiratory fitness tracking v15.7.28'),end=app.indexOf('/* END cardiorespiratory fitness tracking */',start);
-assert(start>0&&end>start,'New source region exists');
-const functions=app.slice(start,end);
-let successes=0,failures=0;
-function test(name,fn){try{fn();successes++;console.log('PASS',name)}catch(e){failures++;console.error('FAIL',name,':',e.message)}}
-function sample(date,pace,more={}){return{kind:'pace',value:pace,date,effectiveOn:date,measuredOn:date,sequence:1,source:'Fitness assessment',assessmentId:`test-${date}`,...more}}
-function harness({records=[],group=null,birthYear=null,now='2026-10-18',calibration=null,saveOk=true,currentOverride=null}={}){
- const ctx=vm.createContext({console,Math,Number,String,Map,Set});
- const script=`
-  let sampleDay=${JSON.stringify(now)};
-  function today(){return new Date(sampleDay+'T12:00:00')}
-  function iso(d){const x=new Date(d);return [x.getFullYear(),String(x.getMonth()+1).padStart(2,'0'),String(x.getDate()).padStart(2,'0')].join('-')}
-  const CORE={isIsoDate:x=>/^\\d{4}-\\d{2}-\\d{2}$/.test(String(x||''))};
-  const state={fitnessProfile:{birthYear:${birthYear==null?'null':birthYear},referenceGroup:${JSON.stringify(group)}},calibration:{version:1,records:${JSON.stringify(records)}}};
-  function ensureCalibrationState(){return state.calibration}
-  function calibrationFor(kind,date){return state.calibration.records.filter(r=>r.kind===kind&&r.effectiveOn<=date).sort((a,b)=>a.effectiveOn.localeCompare(b.effectiveOn)||a.sequence-b.sequence).at(-1)||null}
-  function fmtDate(date){return date}
-  function esc(x){return String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]||c))}
-  function tightMetricChartBounds(vals){if(!vals.length)return null;return{min:Math.min(...vals)-2,max:Math.max(...vals)+2}}
-  let charts=[];
-  function progressSvgIntoMount(mountId,series,options){charts.push({mountId,series,options})}
-  let saveCount=0;function save(){saveCount++;return ${saveOk?'true':'false'}}
-  let invalidationCount=0;function invalidatePageRenderCache(x){invalidationCount++}
-  const elements=new Map();
-  const $=id=>{if(!elements.has(id))elements.set(id,{id,value:'',innerHTML:'',textContent:'',onclick:null});return elements.get(id)};
-  ${functions}
- `;
- vm.runInContext(script,ctx,{timeout:10000});
- return code=>vm.runInContext(code,ctx,{timeout:4000});
+const root=__dirname,app=fs.readFileSync(path.join(root,'app.js'),'utf8');
+const begin=app.indexOf('/* BEGIN cardiorespiratory fitness tracking v15.7.30'),end=app.indexOf('/* END cardiorespiratory fitness tracking */',begin);
+assert(begin>0&&end>begin,'Integrated independent aerobic fitness source exists');
+const code=app.slice(begin,end);
+const html=fs.readFileSync(path.join(root,'index.html'),'utf8'),css=fs.readFileSync(path.join(root,'styles.css'),'utf8');
+let passed=0,failed=0;
+function test(name,fn){try{fn();passed++;console.log('PASS',name)}catch(error){failed++;console.error('FAIL',name,'\n',error.stack)}}
+function eq(r){return JSON.parse(JSON.stringify(r))}
+function run(date,opts={}){
+ const {hr=158,speed=2.5,quality=.75,terrainVerified=true,rpe=4,pain=0,type='Easy',notes='',durationSec=1200,runId=date,missing=false}=opts;
+ return{id:runId,date,type,rpe,pain,notes,sourceFormat:'fit-activity',
+  ...(!missing?{aerobicFitnessEvidence:{version:1,durationSec,avgHr:hr,speedMps:speed,hrCoverage:.98,quality,
+   speedVariation:.025,hrDrift:2.2,terrainVerified,paceSecPerKm:1000/speed}}:{})};
 }
-test('Known Daniels benchmark 5 km in 25:00 yields approximately 38.3 VDOT',()=>{const e=harness();const x=e('raceEquivalentVdot(300)');assert(x>38.1&&x<38.5,x)});
-test('A 5 km in 20:00 indicates a higher running oxygen equivalent than 25:00',()=>{const e=harness();assert(e('raceEquivalentVdot(240)')>e('raceEquivalentVdot(300)'))});
-test('Pace outside defensible race time range is rejected',()=>{const e=harness();for(const pace of [0,30,134,1201,Infinity,-1,NaN])assert.equal(e(`raceEquivalentVdot(${Number.isNaN(pace)?'NaN':pace===Infinity?'Infinity':pace})`),null)});
-test('FRIEND 2015 men age-45 reference median is 37.8',()=>{const e=harness();assert.equal(e("referenceMedianVO2('men',45)"),37.8)});
-test('FRIEND 2015 women age-45 reference median is 26.7',()=>{const e=harness();assert.equal(e("referenceMedianVO2('women',45)"),26.7)});
-test('Reference interpolation is monotonic across an age decade',()=>{const e=harness();assert(e("referenceMedianVO2('men',41)")>e("referenceMedianVO2('men',43)"))});
-test('Unsupported normative groups and ages do not produce fitness-age values',()=>{const e=harness();for(let a of [0,19,80,100])assert.equal(e(`referenceMedianVO2('men',${a})`),null);assert.equal(e("referenceMedianVO2('other',45)"),null)});
-test('A VO2-equivalent equal to male median age 45 maps to about age 45',()=>{const e=harness();assert.equal(e("aerobicFitnessAgeEquivalent(37.8,'men').value"),45)});
-test('Higher running fitness maps to younger age-equivalent within same cohort',()=>{const e=harness();assert(e("aerobicFitnessAgeEquivalent(42,'men').value")<e("aerobicFitnessAgeEquivalent(32,'men').value"))});
-test('Reference age beyond limits is bounded, not extrapolated',()=>{const e=harness();assert.equal(e("aerobicFitnessAgeEquivalent(70,'men').label"),'Under 25');assert.equal(e("aerobicFitnessAgeEquivalent(12,'men').label"),'Over 75')});
-test('Age references distinguish men and women; no sex-independent invented result',()=>{const e=harness();assert.equal(e("aerobicFitnessAgeEquivalent(38,'unknown')"),null);assert(e("aerobicFitnessAgeEquivalent(38,'women').value")<e("aerobicFitnessAgeEquivalent(38,'men').value"))});
-test('Unverified legacy setup is not treated as a VO2max observation',()=>{const e=harness({records:[{kind:'pace',value:300,effectiveOn:'2026-01-01',source:'Legacy setup',legacy:true}]});assert.equal(e('fitnessTrajectory().latest'),null);assert(e('fitnessProgressCardHtml()').includes('Awaiting enough steady or timed evidence'));assert(e('fitnessProgressCardHtml()').includes('—'))});
-test('Two historical validated 5 km assessments create two ordered trend points',()=>{const e=harness({records:[sample('2026-03-01',300),sample('2026-08-01',290)]});assert.equal(e('fitnessTrajectory().history.length'),2);assert(e('fitnessTrajectory().delta')>0);assert.equal(e('fitnessTrajectory().latest.date'),'2026-08-01')});
-test('Dated automatic running performances enter the history and survive window expiry',()=>{const e=harness({records:[{kind:'pace',value:285,effectiveOn:'2025-09-01',measuredOn:'2025-09-01',automatic:true,source:'Automatic: race / assessment',sequence:2}]});assert.equal(e('fitnessTrajectory().history.length'),1);assert.equal(e('fitnessTrajectory().latest.date'),'2025-09-01')});
-test('Future-dated records are not shown in current trends',()=>{const e=harness({records:[sample('2026-11-12',245),sample('2026-07-01',300)]});assert.equal(e('fitnessTrajectory().history.length'),1);assert.equal(e('fitnessTrajectory().latest.date'),'2026-07-01')});
-test('One day contributes at most one point; qualified assessment preferred',()=>{const records=[sample('2026-04-01',300,{assessmentId:null,automatic:true,sequence:7}),sample('2026-04-01',295,{assessmentId:'a',sequence:1})];const e=harness({records});assert.equal(e('fitnessTrajectory().history.length'),1);assert.equal(e('fitnessTrajectory().latest.pace'),295)});
-test('A demographic profile without a timed result shows no invented fitness age',()=>{const e=harness({group:'men',birthYear:1982});assert.equal(e('fitnessTrajectory().fitnessAge'),null);assert(e('fitnessProgressCardHtml()').includes('Not enough validated performance evidence'))});
-test('Valid performance but missing demographics shows VO2 and no misleading age',()=>{const e=harness({records:[sample('2026-04-01',300)]});assert(e('fitnessTrajectory().latest.vdot')>38);assert.equal(e('fitnessTrajectory().fitnessAge'),null);assert(e('fitnessProgressCardHtml()').includes('Set profile once to enable'))});
-test('One-time birth year and reference group support automatic fitness-age trend',()=>{const e=harness({group:'men',birthYear:1982,records:[sample('2026-04-01',300),sample('2026-07-01',285)]});assert.equal(e('fitnessTrajectory().age'),44);assert(e('fitnessTrajectory().fitnessAge.value')>20);assert(e('fitnessTrajectory().history.every(x=>x.ageEquivalent!==null)'))});
-test('Birth year stored, chronological age changes without any profile update',()=>{const e=harness({group:'men',birthYear:1982,now:'2026-12-31'});assert.equal(e('fitnessChronologicalAge(1982,"2026-12-31")'),44);assert.equal(e('fitnessChronologicalAge(1982,"2027-01-01")'),45)});
-test('Progress HTML describes VO2 as VDOT not lab test and age as nonmedical',()=>{const e=harness({records:[sample('2026-04-01',300)],group:'men',birthYear:1982});const h=e('fitnessProgressCardHtml()');for(const a of ['VO₂max','VDOT','not a laboratory','not a health diagnosis','not medical age','FRIEND'])assert(h.toLowerCase().includes(a.toLowerCase()),a)});
-test('Fitness profile is optional and only reference cohort chosen appears in form',()=>{const e=harness({group:'women',birthYear:1988});const h=e('fitnessProgressCardHtml()');assert(h.includes('value="1988"'));assert(h.includes('value="women" selected'))});
-test('Rendering creates both trend series in Progress and invokes no automatic saves',()=>{const e=harness({group:'men',birthYear:1982,records:[sample('2026-04-01',300),sample('2026-07-01',285)]});e('renderFitnessProgressPanel()');const arr=JSON.parse(e('JSON.stringify(charts)'));assert.equal(arr.length,2);assert.equal(arr[0].series[0].data.length,2);assert.equal(arr[1].series[0].data.length,2);assert.equal(e('saveCount'),0)});
-test('Empty running evidence keeps both charts in explanatory empty states',()=>{const e=harness();e('renderFitnessProgressPanel()');const arr=JSON.parse(e('JSON.stringify(charts)'));assert.deepEqual(arr[0].series[0].data,[]);assert.deepEqual(arr[1].series[0].data,[])});
-test('Saving profile writes profile only, not workouts or a plan rebuild',()=>{const e=harness({records:[sample('2026-04-01',300)]});e('renderFitnessProgressPanel()');e("$('fitnessBirthYear').value='1982';$('fitnessReferenceGroup').value='men';$('saveFitnessProfile').onclick()");assert.equal(e('state.fitnessProfile.birthYear'),1982);assert.equal(e('state.fitnessProfile.referenceGroup'),'men');assert.equal(e('saveCount'),1);assert.equal(e('invalidationCount'),1)});
-test('Invalid profile year is rejected without saving',()=>{const e=harness();e('renderFitnessProgressPanel()');e("$('fitnessBirthYear').value='1899';$('fitnessReferenceGroup').value='men';$('saveFitnessProfile').onclick()");assert.equal(e('saveCount'),0);assert.equal(e('state.fitnessProfile.birthYear'),null)});
-test('Failed storage save restores prior demographics',()=>{const e=harness({saveOk:false});e('renderFitnessProgressPanel()');e("$('fitnessBirthYear').value='1982';$('fitnessReferenceGroup').value='men';$('saveFitnessProfile').onclick()");assert.equal(e('state.fitnessProfile.birthYear'),null);assert.equal(e('saveCount'),1)});
-test('Existing chart and fitness metric elements are retained',()=>{for(let id of ['metricKpis','efficiencyChartMount','driftChartMount','cardioFitnessProgress'])assert(html.includes(`id="${id}"`))});
-test('No existing run or assessment modification introduced in cardio fitness segment',()=>{assert(!functions.includes('state.runs='));assert(!functions.includes('state.assessments='));assert(!functions.includes('buildPlan('))});
-test('New profile has strict load-time normalization without changing primary schema',()=>{assert(app.includes('const fitnessProfile={birthYear:Number.isInteger'));assert(app.includes("const SCHEMA = 10400"));assert(app.includes('fitnessProfile,programStartPrediction'))});
-test('New version markers and deployment assets agree',()=>{const manifest=JSON.parse(fs.readFileSync(path.join(base,'manifest.webmanifest'))),sw=fs.readFileSync(path.join(base,'service-worker.js'));assert(app.includes("VERSION = '15.7.28'"));assert(html.includes('build 51028'));assert.equal(manifest.version,'15.7.28');assert.equal(manifest.build,51028);assert(sw.includes('51028'));assert(html.includes('app.js?v=51028'))});
-test('Mobile CSS includes single-column and two-column layouts',()=>{assert(css.includes('.cardioFitnessCharts{grid-template-columns:1fr}'));assert(css.includes('@media(max-width:360px)'))});
-console.log(`FITNESS AGE TRACKING ${successes}/${successes+failures} passed`);process.exitCode=failures?1:0;
+const dates=['2026-09-04','2026-09-06','2026-09-08','2026-10-03','2026-10-11','2026-10-18','2026-10-20'];
+const runs=()=>dates.slice(0,6).map((date,i)=>run(date,{hr:159+i%2,speed:2.45+i*.015}));
+function harness({runs:runsIn=[],calibrationRecords=[],birthYear=1982,group='men',restingHr=null,maxHr=null,thresholdHr=180,now='2026-10-18',saveOk=true}={}){
+ const context=vm.createContext({console});
+ const prepare=[
+  'const state='+JSON.stringify({runs:runsIn,calibration:{records:calibrationRecords},setup:{thresholdHr},fitnessProfile:{birthYear,referenceGroup:group,restingHr,maxHr}})+';',
+  'const CORE={isIsoDate:s=>/^20[0-9]{2}-[0-9]{2}-[0-9]{2}$/.test(String(s||""))};',
+  'const now='+JSON.stringify(now)+';',
+  'function today(){return new Date(now+"T12:00:00")}',
+  'function iso(date){const x=new Date(date);return [x.getFullYear(),String(x.getMonth()+1).padStart(2,"0"),String(x.getDate()).padStart(2,"0")].join("-")}',
+  'function addCalendarDays(value,days){const x=value instanceof Date?new Date(value):new Date(value+"T12:00:00");x.setDate(x.getDate()+days);return x}',
+  'function calendarDayNumber(value){const x=value instanceof Date?value:new Date(value+"T12:00:00");return Date.UTC(x.getFullYear(),x.getMonth(),x.getDate())/86400000}',
+  'function calibrationFor(kind,date){return state.calibration.records.filter(r=>r.kind===kind&&r.effectiveOn<=date).sort((a,b)=>a.effectiveOn.localeCompare(b.effectiveOn)).at(-1)||null}',
+  'function ensureCalibrationState(){return state.calibration}',
+  'function fmtDate(date){return date}',
+  'function esc(x){return String(x??"")}',
+  'function pace(s){return Math.floor(s/60)+":"+String(Math.round(s%60)).padStart(2,"0")+"/km"}',
+  'function tightMetricChartBounds(v){return v.length?{min:Math.min(...v)-3,max:Math.max(...v)+3}:null}',
+  'const charts=[];function progressSvgIntoMount(id,series,options){charts.push({id,series,options})}',
+  'const elements=new Map();const $=id=>{if(!elements.has(id))elements.set(id,{id,value:"",innerHTML:"",textContent:"",onclick:null});return elements.get(id)};',
+  'let saveCount=0,invalidations=0;function save(){saveCount++;return '+saveOk+'} function invalidatePageRenderCache(){invalidations++}',
+  code
+ ].join('\n');
+ vm.runInContext(prepare,context,{timeout:12000});
+ return expr=>vm.runInContext(expr,context,{timeout:6000});
+}
+const close=(actual,expected,tolerance=.001)=>assert(Math.abs(actual-expected)<=tolerance,`Expected ${expected} but got ${actual}`);
+test('ACSM level running oxygen-demand and HR reserve are distinct from VDOT',()=>{const e=harness();close(e('runningVo2EstimateForObservation({avgHr:160,speedMps:2.5},60,188)'),41.9)});
+test('No ordinary running evidence means no invented VO2max or fitness age',()=>{const e=harness();assert.equal(e('fitnessTrajectory().vo2max'),null);assert.equal(e('fitnessTrajectory().fitnessAge'),null)});
+test('A device race prediction alone never becomes a VO2max observation',()=>{const e=harness({calibrationRecords:[{kind:'pace',value:334.2,effectiveOn:'2026-10-18',source:'Garmin Race Predictor',performanceKind:'predicted'}]});assert.equal(e('fitnessTrajectory().vo2max'),null);assert.equal(e('fitnessTrajectory().fitnessAge'),null)});
+test('Three eligible separate dates establish a physiological-model estimate',()=>{const e=harness({runs:runs().slice(0,3)});const f=e('fitnessTrajectory()');assert(f.vo2max>30&&f.vo2max<60);assert.equal(f.history.length,1);assert.equal(f.latest.count,3)});
+test('One and two run dates are insufficient',()=>{for(const n of [1,2])assert.equal(harness({runs:runs().slice(0,n)})('fitnessTrajectory().vo2max'),null)});
+test('Independent estimate is invariant to changed Garmin race-time prediction',()=>{const list=runs().slice(0,3),ref=t=>[{kind:'pace',value:t,effectiveOn:'2026-10-18',measuredOn:'2026-10-18',source:'Garmin Race Predictor'}];close(harness({runs:list,calibrationRecords:ref(270)})('fitnessTrajectory().vo2max'),harness({runs:list,calibrationRecords:ref(350)})('fitnessTrajectory().vo2max'))});
+test('Changing the measured HR or pace changes the oxygen-based model',()=>{const a=harness({runs:runs().slice(0,3)})('fitnessTrajectory().vo2max'),b=harness({runs:runs().slice(0,3).map(r=>({...r,aerobicFitnessEvidence:{...r.aerobicFitnessEvidence,speedMps:2.9,paceSecPerKm:1000/2.9}}))})('fitnessTrajectory().vo2max');assert(b>a+2)});
+test('Low confidence when resting HR and HRmax are not measured',()=>{const e=harness({runs:runs().slice(0,3)});assert.equal(e('fitnessTrajectory().latest.confidence'),'low');assert(e('fitnessTrajectory().latest.upper')-e('fitnessTrajectory().latest.lower')>6)});
+test('Model explicitly records age + HR assumptions',()=>{const e=harness({runs:runs().slice(0,3)});assert.equal(e('fitnessTrajectory().inputs.maxHr'),188);assert.equal(e('fitnessTrajectory().inputs.restingHr'),60);assert.equal(e('fitnessTrajectory().inputs.knownRest'),false);assert.equal(e('fitnessTrajectory().inputs.knownMax'),false)});
+test('One-time resting/max HR inputs replace defaults',()=>{const e=harness({runs:runs().slice(0,3),restingHr:48,maxHr:193});assert.equal(e('fitnessTrajectory().inputs.maxHr'),193);assert.equal(e('fitnessTrajectory().inputs.restingHr'),48);assert.equal(e('fitnessTrajectory().inputs.knownMax'),true)});
+test('Quality may be moderate only with both HR measurements plus terrain and repeated data',()=>{const e=harness({runs:runs(),restingHr:48,maxHr:193});assert.equal(e('fitnessTrajectory().latest.confidence'),'moderate')});
+test('Missing birth year blocks age-predicted HRmax and VO2max',()=>{const e=harness({runs:runs(),birthYear:null});assert.equal(e('fitnessTrajectory().vo2max'),null);assert.match(e('fitnessTrajectory().reason'),/birth year/i)});
+test('Missing comparison group leaves VO2max but suppresses fitness age',()=>{const e=harness({runs:runs(),group:null});assert(e('fitnessTrajectory().vo2max')>20);assert.equal(e('fitnessTrajectory().fitnessAge'),null)});
+test('Population fitness age uses model VO2max and FRIEND median, not race pace',()=>{const e=harness({runs:runs()});const f=e('fitnessTrajectory()');assert(f.fitnessAge.value>20&&f.fitnessAge.value<75);assert.equal(f.cohortMedian>30,true);assert(!e('fitnessProgressCardHtml()').includes('33.7'))});
+test('VO2max 37.8 maps to male age 45 in FRIEND lookup',()=>{const e=harness();close(e("aerobicFitnessAgeEquivalent(37.8,'men').value"),45)});
+test('Fitness age improves monotonically as VO2max improves',()=>{const e=harness();assert(e("aerobicFitnessAgeEquivalent(40,'men').value")<e("aerobicFitnessAgeEquivalent(34,'men').value"))});
+test('VO2max estimates outside the plausible model bounds are rejected',()=>{const e=harness();assert.equal(e('runningVo2EstimateForObservation({avgHr:99,speedMps:2.5},60,188)'),null);assert.equal(e('runningVo2EstimateForObservation({avgHr:180,speedMps:1.7},60,188)'),null)});
+test('HR too close to extrapolated maximum is rejected',()=>{const e=harness();assert.equal(e('runningVo2EstimateForObservation({avgHr:193,speedMps:2.5},60,188)'),null)});
+test('Treadmill activity with unknown grade is excluded',()=>{const arr=runs().slice(0,3).map(r=>({...r,notes:'Treadmill'}));const e=harness({runs:arr});assert.equal(e('fitnessTrajectory().vo2max'),null)});
+test('Intervals and hill sessions are not interpreted as steady aerobic effort',()=>{for(const type of ['Hills','Intervals','Tempo','Race']){const e=harness({runs:runs().slice(0,3).map(r=>({...r,type}))});assert.equal(e('fitnessTrajectory().vo2max'),null)}});
+test('Higher pain and hard RPE reject evidence',()=>{const e=harness({runs:runs().slice(0,3).map(r=>({...r,rpe:9,pain:4}))});assert.equal(e('fitnessTrajectory().vo2max'),null)});
+test('Missing or low-quality HR coverage rejects evidence',()=>{const e=harness({runs:runs().slice(0,3).map(r=>({...r,aerobicFitnessEvidence:{...r.aerobicFitnessEvidence,hrCoverage:.2}}))});assert.equal(e('fitnessTrajectory().vo2max'),null)});
+test('Excessive speed variation or HR drift is rejected',()=>{for(const patch of [{speedVariation:.3},{hrDrift:18}]){const e=harness({runs:runs().slice(0,3).map(r=>({...r,aerobicFitnessEvidence:{...r.aerobicFitnessEvidence,...patch}}))});assert.equal(e('fitnessTrajectory().vo2max'),null)}});
+test('Run dates after today do not leak into fitness estimates',()=>{const arr=[...runs().slice(0,2),run('2026-10-20')];const e=harness({runs:arr,now:'2026-10-18'});assert.equal(e('fitnessTrajectory().vo2max'),null)});
+test('Duplicate imports on same date do not provide three independent runs',()=>{const arr=[run('2026-10-01'),run('2026-10-01',{runId:'duplicate'}),run('2026-10-04')];const e=harness({runs:arr});assert.equal(e('fitnessTrajectory().vo2max'),null)});
+test('An implausible single fast run cannot jump the VO2 estimate by more than 1.5',()=>{const arr=runs().slice(0,5);arr.push(run('2026-10-18',{speed:3.8,hr:158}));const e=harness({runs:arr});const h=eq(e('fitnessTrajectory().history'));for(let i=1;i<h.length;i++)assert(Math.abs(h[i].value-h[i-1].value)<=1.501)});
+test('Historical VO2 estimates update over repeated qualifying runs',()=>{const e=harness({runs:runs()});assert(e('fitnessTrajectory().history.length')>=4)});
+test('Nonqualifying newest run holds last qualified figure without inventing evidence',()=>{const arr=[...runs(),run('2026-10-18',{type:'Hills',runId:'newer'})];const e=harness({runs:arr});assert.equal(e('fitnessTrajectory().latest.date'),'2026-10-18')});
+test('Older results remain as dated stale estimates after a long import pause',()=>{const e=harness({runs:runs().slice(0,4),now:'2027-02-10'});assert(e('fitnessTrajectory().vo2max')>20);assert.match(e('fitnessProgressCardHtml()'),/stale/)});
+test('Archived FIT laps can reconstruct a steady observation without resurrecting raw streams',()=>{const base=runs().slice(0,3).map((r,i)=>{delete r.aerobicFitnessEvidence;r.fitLaps=[{index:1,distanceKm:1,durationSec:410,avgHr:140},...Array.from({length:4},(_,j)=>({index:j+2,distanceKm:1,durationSec:400+i*3,avgHr:158+j}))];return r});const e=harness({runs:base});assert(e('fitnessTrajectory().vo2max')>25);assert.match(e('fitnessProgressCardHtml()'),/archived FIT/)});
+test('Laps that fluctuate strongly in pace cannot establish submaximal VO2max',()=>{const r=run('2026-10-10',{missing:true});r.fitLaps=Array.from({length:5},(_,i)=>({index:i+2,distanceKm:1,durationSec:i%2?550:300,avgHr:157}));assert.equal(harness({runs:[r]})('runningVo2LapObservation(state.runs[0])'),null)});
+test('Reference group age and sex appear as explicit source context',()=>{const e=harness({runs:runs()});const h=e('fitnessProgressCardHtml()');assert.match(h,/FRIEND/);assert.match(h,/not biological age/)});
+test('VO2 progress deliberately does not display VDOT as main metric',()=>{const e=harness({runs:runs()});const h=e('fitnessProgressCardHtml()');assert.match(h,/ESTIMATED VO₂MAX/);assert.match(h,/Estimated fitness age/);assert.doesNotMatch(h,/RACE PERFORMANCE · VDOT/)});
+test('Rendering gives VO2max and age chart series without writes',()=>{const e=harness({runs:runs()});e('renderFitnessProgressPanel()');const charts=eq(e('charts'));assert.equal(charts.length,2);assert.equal(charts[0].series[0].data.length,4);assert(charts[1].series[0].data.every(Number.isFinite));assert.equal(e('saveCount'),0)});
+test('Profile save accepts optional HR values without rebuilding the plan',()=>{const e=harness({runs:runs()});e('renderFitnessProgressPanel()');e("$('fitnessBirthYear').value='1982';$('fitnessReferenceGroup').value='men';$('fitnessRestingHr').value='47';$('fitnessMaxHr').value='191';$('saveFitnessProfile').onclick()");assert.equal(e('state.fitnessProfile.restingHr'),47);assert.equal(e('state.fitnessProfile.maxHr'),191);assert.equal(e('saveCount'),1)});
+test('Invalid HR profiles are rejected without saving',()=>{const e=harness({runs:runs()});e('renderFitnessProgressPanel()');e("$('fitnessBirthYear').value='1982';$('fitnessReferenceGroup').value='men';$('fitnessRestingHr').value='100';$('fitnessMaxHr').value='140';$('saveFitnessProfile').onclick()");assert.equal(e('saveCount'),0)});
+test('Failed profile write restores prior profile',()=>{const e=harness({runs:runs(),saveOk:false});e('renderFitnessProgressPanel()');e("$('fitnessBirthYear').value='1982';$('fitnessReferenceGroup').value='men';$('fitnessRestingHr').value='47';$('fitnessMaxHr').value='191';$('saveFitnessProfile').onclick()");assert.equal(e('state.fitnessProfile.restingHr'),null)});
+test('Fitness model never edits runs, calibration, planned workouts or HR thresholds',()=>{const e=harness({runs:runs()});const before=e('JSON.stringify(state)');e('fitnessTrajectory()');assert.equal(e('JSON.stringify(state)'),before);assert(!code.includes('buildPlan('))});
+test('Original Progress mount and small-screen layout exist',()=>{assert(html.includes('id="cardioFitnessProgress"'));assert(css.includes('@media(max-width:360px)'));assert(css.includes('.cardioFitnessCharts{grid-template-columns:1fr}'))});
+test('Normalization preserves optional HR fields without changing storage schema',()=>{assert(app.includes('restingHr:optionalBounded(rawFitnessProfile.restingHr,35,110)'));assert(app.includes('maxHr:optionalBounded(rawFitnessProfile.maxHr,125,225)'));assert(app.includes('const SCHEMA = 10400'))});
+test('Version markers align across script, HTML, manifest and service worker',()=>{const man=JSON.parse(fs.readFileSync(path.join(root,'manifest.webmanifest'))),sw=fs.readFileSync(path.join(root,'service-worker.js'));assert(app.includes("VERSION = '15.7.30'"));assert.equal(man.version,'15.7.30');assert.equal(man.build,51030);assert(html.includes('app.js?v=51030'));assert(sw.includes('51030'))});
+console.log(`INDEPENDENT VO2MAX + FITNESS AGE ${passed}/${passed+failed} passed`);process.exitCode=failed?1:0;
