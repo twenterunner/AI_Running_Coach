@@ -1,0 +1,18 @@
+/* Scoped only: no change to existing app selectors. */
+.arcTrainingMount{margin:16px 0;max-width:100%;min-width:0}
+.arcTrainingCard{background:linear-gradient(145deg,#075468,#062c3d);color:#e6f1f4;border:1px solid rgba(40,214,219,.42);border-radius:16px;padding:20px;overflow-wrap:anywhere;font:inherit}
+.arcTrainingCard h3{font-size:1.25rem;margin:5px 0 12px;color:inherit}.arcTrainingCard h4{margin:18px 0 8px;color:inherit}
+.arcTrainingCard p{line-height:1.55;color:inherit}.arcTrainingCard small{letter-spacing:.07em;color:#86dcd6}
+.arcTrainingHead{display:flex;gap:12px;justify-content:space-between;align-items:start;flex-wrap:wrap}
+.arcTrainingBadge{padding:6px 10px;border-radius:20px;background:#224551;color:#b4fff5;font-size:.8rem}
+.arcTrainingNote{font-size:.86rem;opacity:.83}.arcTrainingCard label{display:block;margin:12px 0;font-weight:600}
+.arcTrainingCard select,.arcTrainingCard input,.arcTrainingCard textarea{box-sizing:border-box;display:block;max-width:100%;width:100%;margin-top:6px;padding:10px;background:#0b1923;border:1px solid #678592;border-radius:8px;color:#ecf8fa;font:inherit}
+.arcTrainingCard button{border:1px solid #82d2cc;background:#183e48;border-radius:8px;padding:11px 14px;color:#f1ffff;font:inherit;cursor:pointer;white-space:normal;min-height:44px}
+.arcTrainingCard button:focus-visible,.arcTrainingCard summary:focus-visible,.arcTrainingCard input:focus-visible,.arcTrainingCard select:focus-visible,.arcTrainingCard textarea:focus-visible{outline:3px solid #b3ffe5;outline-offset:3px}
+.arcTrainingCard details{margin-top:14px;border-top:1px solid #365361;padding-top:12px}.arcTrainingCard summary{cursor:pointer;min-height:32px;line-height:1.5;color:#caf6f2}
+.arcDoseBar{height:16px;display:flex;border-radius:5px;overflow:hidden;background:#243845}.arcDoseBar span{min-width:0}
+.arcDose-low{background:#61c0ac}.arcDose-moderate{background:#e3bd65}.arcDose-high{background:#f08387}.arcDose-unknown{background:#657681}
+.arcDoseLegend{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:10px;font-size:.84rem}.arcDoseLegend span{display:block;min-width:0}.arcDoseLegend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px}.arcDoseLegend b{font-weight:600}
+.arcTrainingFields{display:grid;grid-template-columns:1fr 1fr;gap:12px}.arcTrainingActions{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
+.arcEvidenceRun{border-bottom:1px solid #365361;padding:12px 0}.arcEvidenceRun p{margin:4px 0;font-size:.86rem}.arcChangeList{padding-left:20px}.arcChangeList li{padding:8px 0}.arcTrainingCard [role=alert]{color:#ffc4c4}
+@media(max-width:480px){.arcTrainingCard{padding:14px}.arcTrainingFields{grid-template-columns:1fr}.arcTrainingActions{flex-direction:column}.arcTrainingActions button{width:100%}.arcDoseLegend{grid-template-columns:1fr 1fr}}

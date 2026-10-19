@@ -1,0 +1,17 @@
+AI Running Coach v15.8.0 · build 51800
+FULL APPLICATION UPLOAD PACKAGE — 19 October 2026
+
+INSTALL
+1. In your existing running app, Settings > Download backup. Keep the JSON backup.
+2. Extract this ZIP. Upload ALL extracted files into the existing GitHub repository ROOT,
+   replacing matching files. Do not upload the ZIP itself and do not put the app in a subfolder.
+3. Keep the same GitHub Pages address. Wait for deployment, close/reopen or reload the app,
+   and check Settings shows v15.8.0 / build 51800.
+4. Do not reset the app, clear site data, uninstall its stored data or change its URL.
+
+FIRST USE
+Open Training plan > Coordinated training > Controls, LT1 evidence and other sports.
+Default: Shadow (compare only). Choose Active and confirm to permit bounded future changes.
+Example other sport: Thursday | Tennis | 60 | 7
+Leave LT1 empty when you do not have a supported dated estimate.
+Progress contains the actual-dose views. Old recordings without streams remain unknown.

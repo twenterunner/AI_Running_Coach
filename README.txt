@@ -1,3 +1,62 @@
+AI Running Coach v15.8.0 · build 51800
+FULL APPLICATION UPLOAD PACKAGE — 19 October 2026
+
+INSTALL
+1. In your existing running app, Settings > Download backup. Keep the JSON backup.
+2. Extract this ZIP. Upload ALL extracted files into the existing GitHub repository ROOT,
+   replacing matching files. Do not upload the ZIP itself and do not put the app in a subfolder.
+3. Keep the same GitHub Pages address. Wait for deployment, close/reopen or reload the app,
+   and check Settings shows v15.8.0 / build 51800.
+4. Do not reset the app, clear site data, uninstall its stored data or change its URL.
+
+NEW FEATURES
+- Training plan > Coordinated training: Off / Shadow / Active controls, read-only preview,
+  decision explanations, dated optional LT1 evidence and recurring other-sport entries.
+- Progress > Actual training stimulus: 7 / 28 / 84-day recorded HR-zone and relative-CP
+  distributions with explicit unknown time, source limitations and recent activity evidence.
+- Measurement is enabled on new FIT/CSV imports. Shadow mode is the default and does not
+  change the workout mix. Active mode requires explicit confirmation in the new controls.
+- Active mode reviews completed-week evidence when a review is due at startup or import;
+  it considers unlocked sessions in the next 28 days, outside the current training week.
+- The first optimizer is a bounded, deterministic policy selector: retain the existing plan,
+  protect recovery/other-sport spacing, emphasize easier aerobic work, or substitute one
+  development quality session when repeated suitable evidence supports considering it.
+- Existing Distance & Load still sets the running budget and Pace & Power still supplies
+  targets. No second volume multiplier, new fitness bonus or predicted time gain is added.
+- Daily readiness and rehabilitation remain governed by the existing app. The new optimizer
+  does not add an independent immediate-day medical clearance or recovery calculation.
+
+DATA AND SAFEGUARDS
+- Existing storage schema 10400, primary/mirror keys, recorded activities and completed
+  prescriptions are retained. New dose/configuration/review fields are additive.
+- Current-week optimizer choices are carried forward rather than silently reverting when
+  the week starts. Core calibrated targets and any reduced core allowance remain authoritative.
+- User-locked workouts, pauses and guarded re-entry are preserved. Compiled alternatives are
+  validated again at the integration boundary; faults fall back to the core-generated plan.
+- Intentionally demoted sessions cannot earn positive absolute-load learning merely for
+  completing a smaller/easier prescription. Old interval graphics are cleared on type changes.
+- FIT altitude and timer events are preserved for measurement. Detailed dose is captured
+  before existing raw-stream compaction. Editing date/distance/duration invalidates stale dose.
+- A pre-existing absent-plan-with-history startup ordering fault was corrected by delaying
+  startup rebuilding/link reconciliation until model caches are initialized.
+
+MEASUREMENT LIMITS
+- Power bands at 80% and 100% of dated CP are policy bands, NOT measured LT1/LT2 zones.
+- Three-zone HR interpretation needs LT1 as well as the existing threshold-HR anchor.
+  Leave LT1 blank when unknown; lower-than-LT2 time then stays unknown, not assumed easy.
+- Historical raw streams already discarded cannot be reconstructed. Their time is unknown;
+  new detailed imports gradually populate the charts. Do not delete runs just to re-import them.
+- No direct Garmin/Stryd synchronization was added. FIT decoding retains the existing
+  network-loaded Garmin SDK dependency; this release does not introduce a server.
+- No independently validated injury-risk percentage, marathon success probability or guaranteed
+  performance improvement is claimed. Existing exploratory VO2max/fitness-age models remain.
+
+TESTING
+See RELEASE_TEST_REPORT.md for executed checks, faults, boundary cases and environmental
+limits. The separate QA bundle contains reproducible code, fixtures and logs.
+
+----- PREVIOUS BASELINE RELEASE HISTORY (UNCHANGED) -----
+
 AI Running Coach v15.7.30 · build 51030 — Independent VO₂max and fitness age
 
 - Progress now shows automatic estimated VO₂max (mL/kg/min) and a separate VO₂max-derived fitness-age comparison. VDOT remains an internal race-performance measure and is not shown as the requested VO₂max.
