@@ -1,0 +1,45 @@
+'use strict';
+/* Offline deterministic synthetic tests only; no user's activity history. */
+const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),vm=require('node:vm');
+const root=__dirname;
+const ctx=vm.createContext({console});vm.runInContext('var window=globalThis;',ctx);
+vm.runInContext(fs.readFileSync(path.join(root,'adaptive-learning.js'),'utf8'),ctx);
+const api=ctx.ARC_ADAPTIVE_LEARNING;
+let passed=0,failed=0;
+function check(title,fn){try{fn();passed++;console.log('PASS',title)}catch(e){failed++;console.error('FAIL',title,e.stack)}}
+const json=o=>JSON.parse(JSON.stringify(o));
+const near=(a,b,tol=1e-9)=>assert(Math.abs(a-b)<tol,`${a} != ${b}`);
+const iso=i=>{const d=new Date(Date.UTC(2026,0,1+i));return d.toISOString().slice(0,10)};
+const fixture=(n,truth=.34,noise=0)=>Array.from({length:n},(_,i)=>{
+ const a=i*.37,features=[Math.sin(a)*.6,Math.cos(a*.7)*.9,Math.sin(a*1.3)*.3,Math.cos(a*1.4)*.2];
+ const actual=features[0]*(1-truth-.18)+features[1]*truth+features[2]*.11+features[3]*.07 +Math.sin(i*.93)*noise;
+ return {anchorDate:iso(i),outcomeDate:iso(i+2),features,quality:false,capability:83,confidence:.5,target:actual,targetRate:Math.max(-.007,Math.min(.007,actual/100))};
+});
+check('Default parameters match frozen historical engine exactly',()=>{const p=json(api.copyBase());assert.deepEqual(p,{paceWeights:[.58,.24,.12,.06],loadWeights:[.40,.38,.14,.08],threshold:82,paceRate:.0065,loadPositiveRate:.012,loadNegativeRate:.025});});
+check('Sparse evidence cannot tune even when perfectly predictable',()=>{const f=json(api.fit(fixture(19),fixture(19)));assert.equal(f.validatedPace,false);assert.equal(f.validatedLoad,false);assert.deepEqual(f.params,json(api.copyBase()));});
+check('Causal chronological holdout can validate a real signal shift',()=>{const f=json(api.fit(fixture(80),fixture(80)));assert(f.validatedPace);assert(f.paceGain>.08);assert(f.params.paceWeights[1]>.24);near(f.params.paceWeights.reduce((a,b)=>a+b),1);});
+check('Each subsequent tune requires genuinely new unseen outcome dates',()=>{const rows=fixture(80);const earlier=json(api.fit(rows,[],api.copyBase(),{pace:iso(73)}));assert(earlier.validatedPace);const stale=json(api.fit(rows,[],api.copyBase(),{pace:iso(77)}));assert.equal(stale.validatedPace,false);});
+check('No holdout improvement keeps baseline even with large training fit',()=>{const rows=fixture(80);rows.slice(56).forEach((r,i)=>r.target=-(r.features[1]*.8));const f=json(api.fit(rows,rows));assert(!f.validatedPace);near(f.params.paceRate,.0065);});
+check('Small heldout sets cannot promote settings',()=>{const rows=fixture(20);rows.slice(14).forEach(r=>r.outcomeDate=rows[15].outcomeDate);const f=json(api.fit(rows,rows));assert(!f.validatedPace);});
+check('A snapshot applies only on or after its effective date',()=>{const base=json(api.copyBase()),custom={...base,paceRate:.008};const m=json(api.normalizeState({history:[{effectiveFrom:'2026-10-21',params:custom}]}));near(api.paramsAt(m,'2026-10-20').paceRate,.0065);near(api.paramsAt(m,'2026-10-21').paceRate,.008);near(api.paramsAt(m,'2026-10-22').paceRate,.008);});
+check('History sorting selects latest eligible snapshot, never later settings',()=>{const m=json(api.normalizeState({history:[{effectiveFrom:'2026-10-29',params:{paceRate:.009}},{effectiveFrom:'2026-10-22',params:{paceRate:.008}}]}));near(api.paramsAt(m,'2026-10-23').paceRate,.008);near(api.paramsAt(m,'2026-10-29').paceRate,.009);});
+check('Invalid rates, weights, thresholds, future garbage cannot override baseline',()=>{const p=json(api.normalizeParams({paceRate:Infinity,loadPositiveRate:-1000,loadNegativeRate:NaN,threshold:Infinity,paceWeights:[Infinity,0,0,0],loadWeights:['bad',NaN,Infinity,null]}));near(p.paceRate,.0065);near(p.loadPositiveRate,.006);near(p.loadNegativeRate,.025);near(p.threshold,82);near(p.paceWeights[0],.58);});
+check('Negative-load learning remains at least as protective as original',()=>{for(const v of [-999,0,.003,.012,.02,.025,.029,.3,Infinity,NaN]){const p=api.normalizeParams({loadNegativeRate:v});assert(p.loadNegativeRate>=.025&&p.loadNegativeRate<=.03);}});
+check('Weights always normalized, bounded, and nonnegative',()=>{const test=[[1,0,0,0],[.8,.8,.8,.8],[0,0,0,0],[999,999,999,999],[-99,-8,7,Infinity]];for(const raw of test){const p=json(api.normalizeParams({paceWeights:raw,loadWeights:raw}));for(const w of [p.paceWeights,p.loadWeights]){near(w.reduce((a,b)=>a+b),1,1e-8);assert(w.every(x=>x>=0&&Number.isFinite(x)));}}});
+check('Easy-run gate preserves zero direct performance even with positive theoretical capability',()=>{const p=api.copyBase();const a={features:[0,.6,.1,0],quality:false,capability:84};near(api.prediction(a,'pace',p),(.6*.24+.1*.12));a.quality=true;near(api.prediction(a,'pace',p),((84-82)/18*.58+.6*.24+.1*.12));});
+check('Repeated deterministic fitting reproduces identical personalized parameters',()=>{const r=fixture(80);const a=json(api.fit(r,r)),b=json(api.fit(r,r));assert.deepEqual(a,b);});
+check('Malformed rows do not cause a false positive update',()=>{const rows=Array.from({length:50},(_,i)=>({anchorDate:iso(i),outcomeDate:iso(i+1),features:[0,'bad',NaN,null],target:NaN,targetRate:Infinity}));const f=json(api.fit(rows,rows));assert(!f.validatedPace);assert(!f.validatedLoad);});
+check('Input and prior object remain unmodified after optimization',()=>{const rows=fixture(80),prior=json(api.copyBase()),raw=JSON.stringify(rows),old=JSON.stringify(prior);api.fit(rows,rows,prior);assert.equal(JSON.stringify(rows),raw);assert.equal(JSON.stringify(prior),old);});
+check('Rate tuning rejects tiny and noisy datasets',()=>{const rows=fixture(8);assert.equal(api.tuneRate(rows,'pace',.0065).accepted,false);});
+check('Post-run audit shows actual full-precision factor instead of zero',()=>{const source=fs.readFileSync(path.join(root,'app.js'),'utf8');assert(source.includes('fmtSigned(contributionCalc,7)'));assert(source.includes('fmtSigned(contributionCalc*100,5)'));assert(source.includes('Easy run — no direct speed-gain credit'));});
+check('Successful saves schedule learning; backups normalize additive model',()=>{const source=fs.readFileSync(path.join(root,'app.js'),'utf8');assert(source.includes('schedulePersonalAdaptiveLearning();'));assert(source.includes('normalizeState(src.personalAdaptive)'));assert(source.includes("typeof adaptiveCollectionMode!=='undefined'&&adaptiveCollectionMode"));});
+check('Default clinical safety logic remains enforced independently of personalized weights',()=>{const source=fs.readFileSync(path.join(root,'app.js'),'utf8');assert(source.includes('Pain safety override: pain'));assert(source.includes('combined=Math.min(combined,-.65)'));assert(source.includes('Conflicting evidence safeguard'));});
+for(let i=0;i<200;i++)check(`fault injection: ${i+1}`,()=>{const raw=fixture(80);const k=i%raw.length,cell=i%4;
+ if(i%5===0)raw[k].features[cell]=NaN;
+ if(i%5===1)raw[k].target=Infinity;
+ if(i%5===2)raw[k].outcomeDate='bad';
+ if(i%5===3)raw[k].features[0]=undefined;
+ if(i%5===4)raw[k].targetRate=-Infinity;
+ const f=api.fit(raw,raw);const p=json(f.params);assert(p.paceRate>=.0035&&p.paceRate<=.009);assert(p.loadNegativeRate>=.025&&p.loadNegativeRate<=.03);assert(p.paceWeights.every(Number.isFinite));
+});
+console.log(`PERSONAL ADAPTIVE LEARNING: ${passed} / ${passed+failed} passed`);if(failed)process.exitCode=1;

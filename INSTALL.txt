@@ -1,17 +1,19 @@
-AI Running Coach v15.8.1 / build 51810 — COMPLETE GITHUB UPLOAD ZIP
+AI Running Coach v15.8.2 / build 51820 — COMPLETE GITHUB UPLOAD ZIP
 
-1. Extract AI_Running_Coach_v15.8.1_FULL_UPLOAD.zip.
+1. Extract AI_Running_Coach_v15.8.2_FULL_UPLOAD.zip.
 2. Upload ALL extracted files to the root of your existing GitHub repository,
-   replacing matching filenames and adding the new training-lt1.js file.
+   replacing matching filenames and adding the new adaptive-learning.js file.
 3. Leave the repository and GitHub Pages address unchanged.
-4. Reload the app after GitHub Pages deploys and verify v15.8.1 / build 51810.
+4. Reload the app after GitHub Pages deploys and verify v15.8.2 / build 51820.
 
 Your running history, shoes and calibrations live in your browser storage.
 Do not reset, uninstall or clear site data. A JSON backup before upgrading is
 recommended protection but is not a requirement or something you must restore
 for a normal update.
 
-NEW: Automatic LT1 evidence from timestamped HR in FIT/CSV imports; no manual
+NEW: Personal adaptive learning (guarded, held-out validation) and transparent
+precision in factor calculations. Existing LT1 remains.
+Automatic LT1 evidence from timestamped HR in FIT/CSV imports; no manual
 LT1 or talk-test entry; no separate other-sport inputs. Shadow mode is default.
 LT1 is an exploratory, low-confidence HR decoupling proxy, not laboratory LT1.
 Insufficient data leaves the boundary unknown. See README.txt and the report.

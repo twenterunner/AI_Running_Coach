@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '15.8.1';
-  const BUILD = 51810;
+  const VERSION = '15.8.2';
+  const BUILD = 51820;
   const SCHEMA = 10400;
   const PRIMARY_STORAGE_KEY = 'arc_v10400_web';
   const MIRROR_STORAGE_KEY = 'arc_v10400_mirror';
@@ -708,7 +708,7 @@ function normaliseState(input){
  const fitnessProfile={birthYear:Number.isInteger(birth)&&birth>=1900&&birth<=currentYear-18?birth:null,referenceGroup:['men','women'].includes(rawFitnessProfile.referenceGroup)?rawFitnessProfile.referenceGroup:null,restingHr:optionalBounded(rawFitnessProfile.restingHr,35,110),maxHr:optionalBounded(rawFitnessProfile.maxHr,125,225)};
  const onboardingComplete=src.onboardingComplete===true||Boolean(input?.setup&&Number(src.schemaVersion||0)<SCHEMA);
  const requestedActiveInjuryId=src.activeInjuryPlanId?CORE.safeId(src.activeInjuryPlanId,''):null,activeInjuryPlanId=requestedActiveInjuryId&&injuries.some(i=>i.id===requestedActiveInjuryId&&!i.rehabArchivedAt)?requestedActiveInjuryId:null;
- return{...base,...src,schemaVersion:SCHEMA,setup,days,runs,assessments,injuries,activeInjuryPlanId,shoes,shoeUsage,plannedShoeAssignments,plannedShoePurchases,programPauses,plan,predictionHistory,raceReadinessHistory,fitnessProfile,programStartPrediction,weekView:Number(src.weekView)||null,onboardingComplete,storageRevision:Math.max(0,Number(src.storageRevision)||0),updatedAt:src.updatedAt||new Date().toISOString(),migration:{...migrationReport,time:new Date().toISOString()}};
+ return{...base,...src,personalAdaptive:typeof window!=='undefined'&&window.ARC_ADAPTIVE_LEARNING?window.ARC_ADAPTIVE_LEARNING.normalizeState(src.personalAdaptive):undefined,schemaVersion:SCHEMA,setup,days,runs,assessments,injuries,activeInjuryPlanId,shoes,shoeUsage,plannedShoeAssignments,plannedShoePurchases,programPauses,plan,predictionHistory,raceReadinessHistory,fitnessProfile,programStartPrediction,weekView:Number(src.weekView)||null,onboardingComplete,storageRevision:Math.max(0,Number(src.storageRevision)||0),updatedAt:src.updatedAt||new Date().toISOString(),migration:{...migrationReport,time:new Date().toISOString()}};
 }
 (()=>{const l=document.getElementById('appStartupLoader'),s=l?.querySelector('strong');if(s)s.textContent='Reading saved data…';})();
 let rawState=loadStoredState();
@@ -863,6 +863,7 @@ function save(){
  try{localStorage.setItem(MIGRATION_MARKER,'true')}catch(err){recordDiagnostic('Migration marker save unavailable',err)}
  reclaimObsoleteStorage();
  if(changedDomains.some(k=>['setup','plan','runs','injury','shoes'].includes(k)))scheduleAuthoritativeShoeSnapshotRefresh('state-change');
+ if(typeof schedulePersonalAdaptiveLearning==='function')schedulePersonalAdaptiveLearning();
  return true;
 }
 function primaryStoredStateSnapshot(){
@@ -1271,14 +1272,124 @@ function personalPathwaySignal(run,model,pathway){
  return{value:clamp(value,-.12,.12),confidence:d.confidence.label,detail:`${d.name}: ${d.status} · ${d.confidence.label.toLowerCase()} confidence from ${d.count} observation${d.count===1?'':'s'}.`,dimension:d};
 }
 
+/* BEGIN Personal Adaptive Learning 1.0 — local, chronological, guarded */
+let adaptiveCollectionMode=false,adaptiveRefreshPending=false;
+function personalAdaptiveApi(){return typeof window!=='undefined'?window.ARC_ADAPTIVE_LEARNING:null}
+function adaptiveParametersForRun(run){
+ const api=personalAdaptiveApi();
+ if(adaptiveCollectionMode||!api||!run||!state?.personalAdaptive)return null;
+ const h=state.personalAdaptive.history||[];
+ const applied=h.filter(x=>x.effectiveFrom<=run.date).at(-1);
+ return applied?api.normalizeParams(applied.params):null;
+}
+function adaptiveSourceRows(){
+ // Include corrections to every input used for training, but no raw HR stream.
+ const planById=new Map((state.plan||[]).map(p=>[p.id,p]));
+ const context=JSON.stringify({planStart:state.setup?.planStart,calibration:(state.calibration?.records||[]).map(x=>[x.kind,x.value,x.effectiveOn,x.source]),injuries:(state.injuries||[]).map(x=>[x.id,x.date,x.fullDate,x.rehabArchivedAt]),assessments:(state.assessments||[]).map(x=>[x.id,x.date,x.valid])});
+ let contextHash=2166136261;for(let i=0;i<context.length;i++)contextHash=Math.imul(contextHash^context.charCodeAt(i),16777619)>>>0;
+ return [`context:${contextHash.toString(16)}`,...(state.runs||[]).filter(r=>r&&r.date).slice().sort((a,b)=>a.date.localeCompare(b.date)||String(a.id).localeCompare(String(b.id))).map(r=>{
+  const p=planById.get(r.planId);
+  const brief=[r.id,r.date,r.type,r.planId,r.distanceKm,r.durationSec,r.avgHr,r.avgPower,r.powerDrift,r.rpe,r.pain,r.matchStatus,p?.type,p?.distance,p?.zone?.pace,p?.zone?.power,p?.zone?.hr,r.steadySectionEvidence?.avgHr,r.steadySectionEvidence?.avgPower];
+  let hash=2166136261;const input=JSON.stringify(brief);for(let j=0;j<input.length;j++)hash=Math.imul(hash^input.charCodeAt(j),16777619)>>>0;
+  return `${r.date}:${r.id}:${hash.toString(16)}`;
+ })];
+}
+function adaptiveTrainingCases(){
+ const runs=completedRuns(iso(today())).filter(r=>Number(r.distanceKm)>0).slice().sort((a,b)=>a.date.localeCompare(b.date)||String(a.id).localeCompare(String(b.id))).slice(-170);
+ const pace=[],load=[];const usedPace=new Set(),usedLoad=new Set();
+ adaptiveCollectionMode=true;
+ try{for(let i=0;i<runs.length;i++){
+  const r=runs[i],p=r.planId?state.plan.find(x=>x.id===r.planId):null;
+  if(!r.date||injuryContextForRun(r))continue;
+  const family=effectiveWorkoutFamily(r),dc=decisionSignalForRun(r,p),lc=loadDecisionSignalForRun(r,p);
+  const nextSame=runs.slice(i+1).find(n=>n.date>r.date&&effectiveWorkoutFamily(n)===family&&!injuryContextForRun(n)&&calendarDayNumber(n.date)-calendarDayNumber(r.date)<=28);
+  if(nextSame&&!usedPace.has(nextSame.id)&&dc.signalComponents?.length===4){
+   const comparison=comparableRunAnalysis(nextSame);
+   if(comparison&&comparison.confidence!=='Low'&&Number.isFinite(comparison.efficiencyDelta)&&Math.abs(comparison.efficiencyDelta)<=15){
+    usedPace.add(nextSame.id);
+    pace.push({anchorDate:r.date,outcomeDate:nextSame.date,features:dc.signalComponents.map(x=>Number(x.value)),quality:Boolean(dc.performanceEligible),capability:dc.capabilityScore,confidence:Number(dc.confidenceWeight)||0,target:clamp(comparison.efficiencyDelta/5,-1,1),targetRate:clamp(comparison.efficiencyDelta/100,-.007,.007)});
+   }
+  }
+  const next=runs.slice(i+1).find(n=>n.date>r.date&&calendarDayNumber(n.date)-calendarDayNumber(r.date)<=7);
+  if(next&&!usedLoad.has(next.id)&&lc.signalComponents?.length===4&&!injuryContextForRun(next)){
+   const score=workoutScore(next),pain=next.pain==null?null:Number(next.pain);
+   if(Number.isFinite(score)||Number.isFinite(pain)){
+    const stable=(!Number.isFinite(score)||score>=75)&&(!Number.isFinite(pain)||pain<3),adverse=Number.isFinite(pain)&&pain>=3||Number.isFinite(score)&&score<65;
+    usedLoad.add(next.id);
+    load.push({anchorDate:r.date,outcomeDate:next.date,features:lc.signalComponents.map(x=>Number(x.value)),confidence:Number(lc.confidenceWeight)||0,target:adverse?-.45:stable?.20:-.12,targetRate:adverse?-.008:stable?.003:0});
+   }
+  }
+ }}finally{adaptiveCollectionMode=false}
+ return{pace,load};
+}
+function refreshPersonalAdaptiveLearning(){
+ const api=personalAdaptiveApi();if(!api)return false;
+ const source=adaptiveSourceRows(),stored=api.normalizeState(state.personalAdaptive),prev=stored.sourceRows||[];
+ if(source.length===prev.length&&source.every((r,i)=>r===prev[i]))return false;
+ // Any correction or deletion invalidates snapshots built from now-invalid history.
+ const appendOnly=source.length>=prev.length&&prev.every((r,i)=>r===source[i]);
+ const original=state.personalAdaptive;
+ const model=appendOnly?stored:api.normalizeState(null);
+ let cases={pace:[],load:[]};try{cases=adaptiveTrainingCases()}catch(err){recordDiagnostic('Personal adaptive learning',err);return false}
+ const newPace=cases.pace.filter(x=>!model.lastAttemptPaceAt||x.outcomeDate>model.lastAttemptPaceAt);
+ const newLoad=cases.load.filter(x=>!model.lastAttemptLoadAt||x.outcomeDate>model.lastAttemptLoadAt);
+ const evaluatePace=cases.pace.length>=20&&new Set(newPace.map(x=>x.outcomeDate)).size>=6;
+ const evaluateLoad=cases.load.length>=20&&new Set(newLoad.map(x=>x.outcomeDate)).size>=6;
+ const prior=model.history.length?model.history.at(-1).params:api.copyBase();
+ const result=api.fit(evaluatePace?cases.pace:[],evaluateLoad?cases.load:[],prior,{pace:model.lastAttemptPaceAt,load:model.lastAttemptLoadAt});
+ if(evaluatePace)model.lastAttemptPaceAt=cases.pace.at(-1).outcomeDate;
+ if(evaluateLoad)model.lastAttemptLoadAt=cases.load.at(-1).outcomeDate;
+ model.sourceRows=source;
+ model.paceCases=cases.pace.length;model.loadCases=cases.load.length;
+ model.paceGain=result.validatedPace?result.paceGain:(model.paceGain||0);model.loadGain=result.validatedLoad?result.loadGain:(model.loadGain||0);
+ model.lastTrainedThrough=source.length>1?source.at(-1).split(':')[0]:null;
+ if((result.validatedPace||result.validatedLoad)&&source.length>1){
+  const latest=source.at(-1).split(':')[0],effectiveFrom=iso(addCalendarDays(dte(latest>iso(today())?latest:iso(today())),1));
+  const old=model.history.at(-1);
+  const snapshot={effectiveFrom,trainedThrough:latest,params:result.params,paceCases:result.paceCases,loadCases:result.loadCases,paceGain:model.paceGain,loadGain:model.loadGain};
+  if(old?.effectiveFrom===effectiveFrom)model.history[model.history.length-1]=snapshot;
+  else model.history.push(snapshot);
+  model.history=model.history.slice(-48);
+ }
+ model.status=model.history.length?'personalized':'baseline';
+ state.personalAdaptive=model;
+ if(!save()){
+  state.personalAdaptive=original;return false;
+ }
+ invalidatePageRenderCache();
+ if(typeof activePageId==='function'&&activePageId()==='dashboard')renderPage('dashboard',{force:true});
+ return true;
+}
+function schedulePersonalAdaptiveLearning(){
+ if(adaptiveRefreshPending||!personalAdaptiveApi()||!Array.isArray(state?.runs))return;
+ const rows=adaptiveSourceRows(),prior=state.personalAdaptive?.sourceRows||[];
+ if(rows.length===prior.length&&rows.every((r,i)=>r===prior[i]))return;
+ adaptiveRefreshPending=true;
+ const execute=()=>{adaptiveRefreshPending=false;try{refreshPersonalAdaptiveLearning()}catch(err){recordDiagnostic('Personal adaptive refresh',err)}};
+ if(typeof setTimeout==='function')setTimeout(execute,80);else execute();
+}
+function personalAdaptiveProgressHtml(){
+ const api=personalAdaptiveApi(),m=api?api.normalizeState(state.personalAdaptive):null;if(!api)return '';
+ const current=api.paramsAt(m,iso(today())),pending=m?.history?.at(-1)||null,upcoming=pending&&pending.effectiveFrom>iso(today());
+ const p=upcoming?pending.params:current,fmt=(v)=>Number(v*100).toFixed(2)+'%',w=(vals,names)=>names.map((name,i)=>`<span>${esc(name)} <b>${fmt(vals[i])}</b></span>`).join('');
+ return `<section class="personalAdaptivePanel uiLevel2"><div class="personalAdaptiveHead"><div><small>PERSONALIZED LEARNING</small><h3>${pending?'Learning from your follow-up runs':'Baseline protected until validated'}</h3></div><strong>${pending?'Validated updates':'Baseline'}</strong></div>
+ <p class="muted compact">After each new run, the engine evaluates outcomes of later comparable runs. It only accepts changes that outperform the original rules on a held-out chronological set. There is no external AI or upload.</p>
+ <div class="personalAdaptiveMetrics"><div><small>PACE FOLLOW-UPS</small><b>${m.paceCases}</b><span>20+ required for calibration</span></div><div><small>LOAD FOLLOW-UPS</small><b>${m.loadCases}</b><span>20+ required for calibration</span></div><div><small>PACE HOLDOUT GAIN</small><b>${pending&&m.paceGain>=.08?(100*m.paceGain).toFixed(1)+'%':'Not validated'}</b></div><div><small>LOAD HOLDOUT GAIN</small><b>${pending&&m.loadGain>=.08?(100*m.loadGain).toFixed(1)+'%':'Not validated'}</b></div></div>
+ <details><summary>View current personalized parameters</summary><p class="muted compact">${upcoming?'New calibration becomes eligible for runs from '+esc(pending.effectiveFrom)+'. Existing runs and their prescribed targets are not rewritten.':'Applied parameters for runs dated today. Historical decisions use only calibration available at the time.'}</p>
+ <div class="personalAdaptiveParameter"><b>Pace learning rate</b><span>${fmt(p.paceRate)} <small>(default 0.65%)</small></span></div><div class="personalAdaptiveParameter"><b>Positive load learning</b><span>${fmt(p.loadPositiveRate)} <small>(default 1.20%)</small></span></div><div class="personalAdaptiveParameter"><b>Conservative load learning</b><span>${fmt(p.loadNegativeRate)} <small>(default 2.50%)</small></span></div><div class="personalAdaptiveParameter"><b>Quality-workout capability threshold</b><span>${p.threshold.toFixed(1)} <small>(default 82)</small></span></div><div class="personalAdaptiveWeights"><strong>Pace & Power signal weights</strong>${w(p.paceWeights,['Execution','Comparable runs','Physiological cost','Personal response'])}</div><div class="personalAdaptiveWeights"><strong>Distance & Load signal weights</strong>${w(p.loadWeights,['Completion','Tolerance','Execution','Personal response'])}</div>
+ <p class="muted compact">Future-outcome validation is observational, not proof of training causality or medical validation. When data is insufficient or improvement is unverified, default parameters stay in force.</p></details></section>`;
+}
+/* END Personal Adaptive Learning 1.0 */
 const PATHWAY_LEARNING_RATE={pace:.0065,loadPositive:.012,loadNegative:.025};
+/* Baseline values remain frozen for regression comparison and fallbacks.
+   Personalized rates are read from the dated, strictly future-effective record. */
 function paceAcceptedContribution(decision){
  if(!decision||!Number.isFinite(decision.finalSignal)||!Number.isFinite(decision.confidenceWeight))return 0;
- return decision.finalSignal*decision.confidenceWeight*PATHWAY_LEARNING_RATE.pace;
+ return decision.finalSignal*decision.confidenceWeight*(Number.isFinite(decision.learningRate)?decision.learningRate:PATHWAY_LEARNING_RATE.pace);
 }
 function loadAcceptedContribution(decision){
  if(!decision||!Number.isFinite(decision.finalSignal)||!Number.isFinite(decision.confidenceWeight))return 0;
- const rate=decision.finalSignal>=0?PATHWAY_LEARNING_RATE.loadPositive:PATHWAY_LEARNING_RATE.loadNegative;
+ const rate=Number.isFinite(decision.learningRate)?decision.learningRate:(decision.finalSignal>=0?PATHWAY_LEARNING_RATE.loadPositive:PATHWAY_LEARNING_RATE.loadNegative);
  return decision.finalSignal*decision.confidenceWeight*rate;
 }
 function weeklyPaceEvidence(w=trainingWeekForDate(iso(today())),asOf=iso(today())){
@@ -1298,14 +1409,14 @@ function pathwayEvidenceTrace(run,pathway){
    const rawProjected=clamp(Number(paceEvidence.rawIndex)/100,state.setup.minFactor,state.setup.maxFactor),committedProjection=Number(paceEvidence.adjustment)||applied;
    const projected=rawProjected;
    const thresholdBlocked=Math.abs(projected-applied)>=.00005&&Math.abs(committedProjection-applied)<.0005;
-   return{pathway:'pace',week:w,asOf:run.date,rawSignal:Number.isFinite(d.rawIntegratedSignal)?d.rawIntegratedSignal:d.finalSignal,acceptedSignal:d.finalSignal,confidenceWeight:d.confidenceWeight,learningRate:PATHWAY_LEARNING_RATE.pace,acceptedContribution:accepted,weeklyBucket:bucket,analysedCount:analysedRows.length,analysedCount:analysedRows.length,weeklyRows:acceptedRows.map(x=>({date:x.run.date,type:x.run.type,contribution:x.contribution})),applied,rawProjected,projected,committedProjection,thresholdBlocked,safeguard:d.safeguardNote||'No additional safeguard changed the integrated signal.',status:thresholdBlocked?'Accepted evidence is accumulating; the projected next-review value shows the exact candidate before the Pace & Power stability threshold is applied.':Math.abs(projected-applied)>=.0005?'Projected change pending weekly review.':'No accepted factor change from current evidence.'};
+   return{pathway:'pace',week:w,asOf:run.date,rawSignal:Number.isFinite(d.rawIntegratedSignal)?d.rawIntegratedSignal:d.finalSignal,acceptedSignal:d.finalSignal,confidenceWeight:d.confidenceWeight,learningRate:Number.isFinite(d.learningRate)?d.learningRate:PATHWAY_LEARNING_RATE.pace,acceptedContribution:accepted,weeklyBucket:bucket,analysedCount:analysedRows.length,analysedCount:analysedRows.length,weeklyRows:acceptedRows.map(x=>({date:x.run.date,type:x.run.type,contribution:x.contribution})),applied,rawProjected,projected,committedProjection,thresholdBlocked,safeguard:d.safeguardNote||'No additional safeguard changed the integrated signal.',status:thresholdBlocked?'Accepted evidence is accumulating; the projected next-review value shows the exact candidate before the Pace & Power stability threshold is applied.':Math.abs(projected-applied)>=.0005?'Projected change pending weekly review.':'No accepted factor change from current evidence.'};
  }
  const d=loadDecisionSignalForRun(run,plan),accepted=loadAcceptedContribution(d),weekly=weeklyLoadEvidence(w,false,run.date);
  const analysedRows=weekly.decisions;
  const acceptedRows=analysedRows.filter(x=>Math.abs(x.contribution)>=.00005);
  const bucket=sum(acceptedRows.map(x=>x.contribution));
  const applied=adaptiveFactorDetails(w).cumulativeFactor,weeklyDelta=state.setup.adaptive?weekly.runDelta:0,rawProjected=clamp(applied*(1+weeklyDelta),state.setup.minFactor,state.setup.maxFactor);
- return{pathway:'load',week:w,asOf:run.date,rawSignal:Number.isFinite(d.rawIntegratedSignal)?d.rawIntegratedSignal:d.finalSignal,acceptedSignal:d.finalSignal,confidenceWeight:d.confidenceWeight,learningRate:d.finalSignal>=0?PATHWAY_LEARNING_RATE.loadPositive:PATHWAY_LEARNING_RATE.loadNegative,acceptedContribution:accepted,weeklyBucket:bucket,weeklyRows:acceptedRows.map(x=>({date:x.run.date,type:x.run.type,contribution:x.contribution})),applied,rawProjected,projected:rawProjected,thresholdBlocked:false,safeguard:d.safeguardNote||'No additional safeguard changed the integrated signal.',status:Math.abs(rawProjected-applied)>=.0005?'Projected change pending weekly review.':'No accepted factor change from current evidence.'};
+ return{pathway:'load',week:w,asOf:run.date,rawSignal:Number.isFinite(d.rawIntegratedSignal)?d.rawIntegratedSignal:d.finalSignal,acceptedSignal:d.finalSignal,confidenceWeight:d.confidenceWeight,learningRate:Number.isFinite(d.learningRate)?d.learningRate:(d.finalSignal>=0?PATHWAY_LEARNING_RATE.loadPositive:PATHWAY_LEARNING_RATE.loadNegative),acceptedContribution:accepted,weeklyBucket:bucket,weeklyRows:acceptedRows.map(x=>({date:x.run.date,type:x.run.type,contribution:x.contribution})),applied,rawProjected,projected:rawProjected,thresholdBlocked:false,safeguard:d.safeguardNote||'No additional safeguard changed the integrated signal.',status:Math.abs(rawProjected-applied)>=.0005?'Projected change pending weekly review.':'No accepted factor change from current evidence.'};
 }
 function decisionSignalForRun(run,plan=run?.planId?state.plan.find(p=>p.id===run.planId):null){
  const details=workoutScoreDetails(run,plan),score=details?.score??null,family=workoutFamily(plan?.type||run.type),type=plan?.type||run.type;
@@ -1316,12 +1427,14 @@ function decisionSignalForRun(run,plan=run?.planId?state.plan.find(p=>p.id===run
  if(Number.isFinite(completion)&&completion<.7){confidenceWeight*=.35;confidenceReasons.push('less than 70% of prescribed distance completed');confidenceMultipliers.push({label:'Less than 70% of prescribed distance',factor:.35})}
 
  const qualitySession=family==='interval'||family==='threshold'||family==='assessment'||['Marathon-specific','Half-marathon-specific','Race rehearsal'].includes(type);
+ const personalCalibration=typeof adaptiveParametersForRun==='function'?adaptiveParametersForRun(run):null;
+ const capabilityThreshold=Number.isFinite(personalCalibration?.threshold)?personalCalibration.threshold:82;
  const capabilityComponents=(details?.components||[]).filter(c=>['pace','power','repAdherence'].includes(c.key));
  const capabilityWeight=sum(capabilityComponents.map(c=>c.effectiveWeight||0));
  const capabilityScore=capabilityComponents.length&&capabilityWeight>0?sum(capabilityComponents.map(c=>c.score*(c.effectiveWeight||0)))/capabilityWeight:null;
  const capabilityExecutionComponents=capabilityComponents.map(c=>({name:c.name,score:c.score,effectiveWeight:capabilityWeight>0?(c.effectiveWeight||0)/capabilityWeight:0,scope:c.scope,detail:c.detail}));
  let performanceSignal=0;
- if(qualitySession&&Number.isFinite(capabilityScore))performanceSignal=clamp((capabilityScore-82)/18,-1,1);
+ if(qualitySession&&Number.isFinite(capabilityScore))performanceSignal=clamp((capabilityScore-capabilityThreshold)/18,-1,1);
  else if(Number.isFinite(score)&&score<65)performanceSignal=clamp((score-70)/30,-.35,0); // poor execution can weaken confidence, easy running cannot manufacture speed gains
  signals.push({name:'Performance capability',value:performanceSignal,detail:Number.isFinite(capabilityScore)?`${Math.round(capabilityScore)}/100 from pace/power/work-repetition evidence`:qualitySession?'No reliable target-section capability score':'Easy/long execution is not treated as direct evidence of faster capability'});
 
@@ -1346,14 +1459,15 @@ function decisionSignalForRun(run,plan=run?.planId?state.plan.find(p=>p.id===run
  costSignal=clamp(costSignal,-1,.20);
  signals.push({name:'Physiological cost',value:costSignal,detail:costDetails.length?costDetails.join(' · '):'No excessive cost signal'});
 
- const personalModel=personalResponseModel(run.date,run.id),personal=personalPathwaySignal(run,personalModel,'pace'),personalSignal=personal.value;
+ const personalModel=personalResponseModel((typeof adaptiveCollectionMode!=='undefined'&&adaptiveCollectionMode)?iso(addCalendarDays(dte(run.date),-1)):run.date,run.id),personal=personalPathwaySignal(run,personalModel,'pace'),personalSignal=personal.value;
  if(personalSignal!==0)signals.push({name:'Personal pace response',value:personalSignal,detail:personal.detail});
 
+ const paceWeights=personalCalibration?.paceWeights||[.58,.24,.12,.06];
  const signalComponents=[
-   {key:'performance',label:'Performance capability',value:performanceSignal,weight:.58},
-   {key:'comparable',label:'Comparable-run efficiency',value:comparableSignal,weight:.24},
-   {key:'cost',label:'Physiological cost',value:costSignal,weight:.12},
-   {key:'personal',label:'Personal pace response',value:personalSignal,weight:.06}
+   {key:'performance',label:'Performance capability',value:performanceSignal,weight:paceWeights[0]},
+   {key:'comparable',label:'Comparable-run efficiency',value:comparableSignal,weight:paceWeights[1]},
+   {key:'cost',label:'Physiological cost',value:costSignal,weight:paceWeights[2]},
+   {key:'personal',label:'Personal pace response',value:personalSignal,weight:paceWeights[3]}
  ];
  let combined=sum(signalComponents.map(x=>x.value*x.weight));
  const initialIntegratedSignal=combined;
@@ -1371,12 +1485,13 @@ function decisionSignalForRun(run,plan=run?.planId?state.plan.find(p=>p.id===run
  if(combined<0&&confidenceWeight<.35){combined=0;safeguardNote=`Developing-confidence protection: the negative signal ${preProtectionSignal.toFixed(2)} is recorded, but is not accepted as a capability downgrade until evidence confidence increases.`;}
  const confidencePct=clamp(Math.round(confidenceWeight/.65*100),0,100),confidence=confidencePct>=75?'High':confidencePct>=45?'Moderate':'Developing';
  const action=combined>.25?'Positive Pace & Power evidence':combined<-.25?'Conservative Pace & Power evidence':'Hold Pace & Power';
- return{pathway:'pace',family,score,capabilityScore,capabilityExecutionComponents,signals,signalComponents,performanceSignal,comparableSignal,costSignal,personalSignal,personalResponse:personal,rawIntegratedSignal:initialIntegratedSignal,preProtectionSignal,finalSignal:clamp(combined,-1,1),baseConfidenceWeight:baseWeight,confidenceWeight,confidencePct,confidence,confidenceMultipliers,conflict,confidenceReasons,safeguardNote,interpretation,action,completion,comparison,componentDerivation:{performance:Number.isFinite(capabilityScore)?`(${capabilityScore.toFixed(1)} − 82) ÷ 18, bounded to −1…+1`:(Number.isFinite(score)&&score<65?`(${score} − 70) ÷ 30, bounded to −0.35…0`:'No direct capability signal'),comparable:comparison&&comparison.confidence!=='Low'&&Number.isFinite(comparison.efficiencyDelta)?`${comparison.efficiencyDelta.toFixed(1)}% ÷ 5, bounded to −1…+1`:'No Moderate/High-confidence comparable-run signal',cost:'Rules from RPE and, where relevant, cardiac drift',personal:personalSignal!==0?personal.detail:'No mature personal-response contribution'}};
+ return{pathway:'pace',family,score,capabilityScore,capabilityThreshold,performanceEligible:qualitySession,learningRate:personalCalibration?.paceRate??PATHWAY_LEARNING_RATE.pace,capabilityExecutionComponents,signals,signalComponents,performanceSignal,comparableSignal,costSignal,personalSignal,personalResponse:personal,rawIntegratedSignal:initialIntegratedSignal,preProtectionSignal,finalSignal:clamp(combined,-1,1),baseConfidenceWeight:baseWeight,confidenceWeight,confidencePct,confidence,confidenceMultipliers,conflict,confidenceReasons,safeguardNote,interpretation,action,completion,comparison,componentDerivation:{performance:Number.isFinite(capabilityScore)?(qualitySession?`(${capabilityScore.toFixed(1)} − ${capabilityThreshold.toFixed(1)}) ÷ 18, bounded to −1…+1`:`Easy/non-quality workout: capability score is shown for transparency but direct speed-performance signal is not applied`):(Number.isFinite(score)&&score<65?`(${score} − 70) ÷ 30, bounded to −0.35…0`:'No direct capability signal'),comparable:comparison&&comparison.confidence!=='Low'&&Number.isFinite(comparison.efficiencyDelta)?`${comparison.efficiencyDelta.toFixed(1)}% ÷ 5, bounded to −1…+1`:'No Moderate/High-confidence comparable-run signal',cost:'Rules from RPE and, where relevant, cardiac drift',personal:personalSignal!==0?personal.detail:'No mature personal-response contribution'}};
 }
 
 function loadDecisionSignalForRun(run,plan=run?.planId?state.plan.find(p=>p.id===run.planId):null){
  const details=workoutScoreDetails(run,plan),score=details?.score??null,family=workoutFamily(plan?.type||run.type);
  const loadWeight={long:.70,aerobic:.45,recovery:.25,threshold:.30,interval:.25,assessment:.18}[family]??.25;
+ const personalCalibration=typeof adaptiveParametersForRun==='function'?adaptiveParametersForRun(run):null;
  let confidenceWeight=loadWeight,confidenceReasons=[],signals=[],confidenceMultipliers=[];
  const completion=plan&&Number(plan.distance)>0?Number(run.distanceKm)/Number(plan.distance):null;
  let completionSignal=0;
@@ -1415,14 +1530,15 @@ function loadDecisionSignalForRun(run,plan=run?.planId?state.plan.find(p=>p.id==
  if(Number.isFinite(score)){if(score>=88)executionSignal=.15;else if(score<65)executionSignal=-.20}
  signals.push({name:'Execution support',value:executionSignal,detail:Number.isFinite(score)?`${score}/100 workout execution`:'No execution score'});
 
- const personalModel=personalResponseModel(run.date,run.id),personal=personalPathwaySignal(run,personalModel,'load'),personalSignal=personal.value;
+ const personalModel=personalResponseModel((typeof adaptiveCollectionMode!=='undefined'&&adaptiveCollectionMode)?iso(addCalendarDays(dte(run.date),-1)):run.date,run.id),personal=personalPathwaySignal(run,personalModel,'load'),personalSignal=personal.value;
  if(personalSignal!==0)signals.push({name:'Personal load response',value:personalSignal,detail:personal.detail});
 
+ const loadWeights=personalCalibration?.loadWeights||[.40,.38,.14,.08];
  const signalComponents=[
-   {key:'completion',label:'Prescribed load completion',value:completionSignal,weight:.40},
-   {key:'tolerance',label:'Load-tolerance response',value:toleranceSignal,weight:.38},
-   {key:'execution',label:'Execution support',value:executionSignal,weight:.14},
-   {key:'personal',label:'Personal load response',value:personalSignal,weight:.08}
+   {key:'completion',label:'Prescribed load completion',value:completionSignal,weight:loadWeights[0]},
+   {key:'tolerance',label:'Load-tolerance response',value:toleranceSignal,weight:loadWeights[1]},
+   {key:'execution',label:'Execution support',value:executionSignal,weight:loadWeights[2]},
+   {key:'personal',label:'Personal load response',value:personalSignal,weight:loadWeights[3]}
  ];
  let combined=sum(signalComponents.map(x=>x.value*x.weight));
  const rawIntegratedSignal=combined;
@@ -1436,7 +1552,7 @@ function loadDecisionSignalForRun(run,plan=run?.planId?state.plan.find(p=>p.id==
  const confidencePct=clamp(Math.round(confidenceWeight/.70*100),0,100),confidence=confidencePct>=75?'High':confidencePct>=45?'Moderate':'Developing';
  const action=combined>.18?'Positive Distance & Load evidence':combined<-.18?'Conservative Distance & Load evidence':'Hold Distance & Load';
  const interpretation=combined>.18?'The run provides positive evidence that this load was tolerated well.':combined<-.18?'The run provides evidence that load progression should be more conservative.':'The run does not materially change the current Distance & Load calibration.';
- return{pathway:'load',family,score,signals,signalComponents,completionSignal,toleranceSignal,executionSignal,personalSignal,personalResponse:personal,rawIntegratedSignal,finalSignal:clamp(combined,-1,1),baseConfidenceWeight:loadWeight,confidenceWeight,confidencePct,confidence,confidenceMultipliers,confidenceReasons,safeguardNote,interpretation,action,completion,componentDerivation:{completion:Number.isFinite(completion)?`${Math.round(completion*100)}% completion → ${completionSignal>=0?'+':''}${completionSignal.toFixed(2)} by the completion rule`:'No matched planned distance',tolerance:toleranceDetails.length?toleranceDetails.join(' · '):'No strong run-specific tolerance observation',execution:Number.isFinite(score)?`${score}/100 execution → ${executionSignal>=0?'+':''}${executionSignal.toFixed(2)} support signal`:'No execution score',personal:personalSignal!==0?personal.detail:'No mature personal-response contribution'}};
+ return{pathway:'load',family,score,learningRate:(combined>=0?personalCalibration?.loadPositiveRate:personalCalibration?.loadNegativeRate)??(combined>=0?PATHWAY_LEARNING_RATE.loadPositive:PATHWAY_LEARNING_RATE.loadNegative),signals,signalComponents,completionSignal,toleranceSignal,executionSignal,personalSignal,personalResponse:personal,rawIntegratedSignal,finalSignal:clamp(combined,-1,1),baseConfidenceWeight:loadWeight,confidenceWeight,confidencePct,confidence,confidenceMultipliers,confidenceReasons,safeguardNote,interpretation,action,completion,componentDerivation:{completion:Number.isFinite(completion)?`${Math.round(completion*100)}% completion → ${completionSignal>=0?'+':''}${completionSignal.toFixed(2)} by the completion rule`:'No matched planned distance',tolerance:toleranceDetails.length?toleranceDetails.join(' · '):'No strong run-specific tolerance observation',execution:Number.isFinite(score)?`${score}/100 execution → ${executionSignal>=0?'+':''}${executionSignal.toFixed(2)} support signal`:'No execution score',personal:personalSignal!==0?personal.detail:'No mature personal-response contribution'}};
 }
 function twoPathwayDecisionForRun(run,plan=run?.planId?state.plan.find(p=>p.id===run.planId):null){
  return{pace:decisionSignalForRun(run,plan),load:loadDecisionSignalForRun(run,plan)};
@@ -3824,7 +3940,7 @@ function progressAdaptationHomeHtml(){
  const appliedEvidence=`<h5>Factor applied in Week ${w}</h5>${loadReviewBreakdownHtml(w-1,Number(loadApplied.baseFactor||1),Number(loadApplied.cumulativeFactor||1),loadApplied.loadReview,true)}`;
  const projectedLabel=w<weeks()?`Projected Week ${w+1}`:'Projected final result';
  const card=(kind,title,stateObj,applied,weekDelta,projected,sinceStart,spark,rows,desc,priorEvidence='')=>`<article class="adaptationVisualCard ${stateObj.cls} uiLevel2"><div class="canonicalPathHead"><div class="pathTitle">${uiIcon(kind)}<div><small>${title}</small><h4>${stateObj.arrow} ${stateObj.label}</h4></div></div><strong>${applied.toFixed(3)}</strong></div><p class="muted compact">Applied in Week ${w}</p><div class="pathSpark">${miniSparkline(spark)}</div><div class="canonicalPathMetrics compact"><div><small>Week ${w} change</small><b>${signedFactorDelta(weekDelta)}</b></div><div><small>${projectedLabel}</small><b>${projected.toFixed(3)}</b></div><div><small>Since start</small><b>${signedFactorDelta(sinceStart)}</b></div></div><details><summary>Evidence</summary><p class="muted compact">${desc}</p>${priorEvidence}<h5>Week ${w} provisional contributions</h5>${rows||`<p class="muted compact">No non-zero accepted contribution in Week ${w}.</p>`}${kind==='load'?'<p class="muted compact">The projection includes recorded-run evidence. Missed-session adherence is added only when the week closes.</p>':''}</details></article>`;
- return`<section class="canonicalAdaptationHome uiLevel1"><div class="canonicalAdaptationHead"><div><small>ADAPTATION</small><h3>Learned training calibration</h3></div><span>Week ${w}</span></div><div class="canonicalPathwayGrid">${card('pace','PACE & POWER',ps,paceReview.applied,paceProjected-paceReview.applied,paceProjected,ast.pathways.pace.sinceStart,paceHist,paceRows,'Capability evidence from target execution, comparable physiology and personal response.')}${card('load','DISTANCE & LOAD',ls,Number(loadApplied.cumulativeFactor||1),loadProjected-Number(loadApplied.cumulativeFactor||1),loadProjected,ast.pathways.load.sinceStart,loadHist,loadRows,'Tolerance evidence from completed exposure, load response, pain and personal history.',appliedEvidence)}</div><details class="canonicalHistory"><summary>Full pathway history</summary>${pathwayHistorySvg(ast.pathways.history)}<p class="muted compact">Readiness is temporary recovery context and does not alter learned capability.</p></details></section>`;
+ return`${typeof personalAdaptiveProgressHtml==='function'?personalAdaptiveProgressHtml():''}<section class="canonicalAdaptationHome uiLevel1"><div class="canonicalAdaptationHead"><div><small>ADAPTATION</small><h3>Learned training calibration</h3></div><span>Week ${w}</span></div><div class="canonicalPathwayGrid">${card('pace','PACE & POWER',ps,paceReview.applied,paceProjected-paceReview.applied,paceProjected,ast.pathways.pace.sinceStart,paceHist,paceRows,'Capability evidence from target execution, comparable physiology and personal response.')}${card('load','DISTANCE & LOAD',ls,Number(loadApplied.cumulativeFactor||1),loadProjected-Number(loadApplied.cumulativeFactor||1),loadProjected,ast.pathways.load.sinceStart,loadHist,loadRows,'Tolerance evidence from completed exposure, load response, pain and personal history.',appliedEvidence)}</div><details class="canonicalHistory"><summary>Full pathway history</summary>${pathwayHistorySvg(ast.pathways.history)}<p class="muted compact">Readiness is temporary recovery context and does not alter learned capability.</p></details></section>`;
 }
 
 function renderDashboard(){
@@ -5505,6 +5621,7 @@ function postRunCoachUpdate(run,before,after){
  const confidence=[paceDecision.confidence,loadDecision.confidence].includes('Developing')?'Developing':[paceDecision.confidence,loadDecision.confidence].includes('Moderate')?'Moderate':'High';
  return{createdAt:new Date().toISOString(),score,evidenceQuality:details?.evidenceQuality||'limited',before,after,paceProvisionalDelta,loadProvisionalDelta,readinessDelta:readyDelta,predictionDeltaSec:predDelta,nextChange,prescriptionChanges:prescriptionChanges.slice(0,6),distancePolicyNote,confidence,decision,decisionSummary:{pace:{action:paceDecision.action,confidence:paceDecision.confidence},load:{action:loadDecision.action,confidence:loadDecision.confidence}}};
 }
+function fmtBridgeSignal(n){return `${n>=0?'+':''}${Number(n||0).toFixed(2)}`}
 function pathwayExecutionBridgeHtml(d){
  const details=d?.score!=null?null:null;
  const path=d.pathway;
@@ -5516,7 +5633,10 @@ function pathwayExecutionBridgeHtml(d){
    if(Number.isFinite(cap)){
      const capRows=(d.capabilityExecutionComponents||[]).map(c=>`<div class="executionBridgeComponent"><div><b>${esc(c.name)}</b><small>${esc(c.scope||'')}</small></div><span>${c.score.toFixed(0)}/100 × ${(c.effectiveWeight*100).toFixed(0)}%</span><strong>${(c.score*c.effectiveWeight).toFixed(1)}</strong></div>`).join('');
      executionRows.push(`<div class="executionBridgeComponents">${capRows}</div><div class="executionBridgeResult"><span>Weighted capability score</span><b>${cap.toFixed(1)}/100</b></div>`);
-     executionRows.push(`<div class="executionBridgeEquation"><span>Convert capability score to pathway signal</span><code>(${cap.toFixed(1)} − 82) ÷ 18</code><b>= ${perf?`${perf.value>=0?'+':''}${perf.value.toFixed(2)}`:'—'}</b></div>`);
+     const threshold=Number.isFinite(d.capabilityThreshold)?d.capabilityThreshold:82;
+     const theoretical=clamp((cap-threshold)/18,-1,1);
+     if(d.performanceEligible)executionRows.push(`<div class="executionBridgeEquation"><span>Applied capability signal</span><code>(${cap.toFixed(1)} − ${threshold.toFixed(1)}) ÷ 18</code><b>= ${perf?fmtBridgeSignal(perf.value):'—'}</b></div>`);
+     else executionRows.push(`<div class="executionBridgeEquation"><span>Easy run — no direct speed-gain credit</span><code>Theoretical (${cap.toFixed(1)} − ${threshold.toFixed(1)}) ÷ 18 = ${fmtBridgeSignal(theoretical)}. Easy runs inform physiology and tolerance; low execution can still yield a caution signal.</code><b>Applied ${perf?fmtBridgeSignal(perf.value):'+0.00'}</b></div>`);
    }else{
      executionRows.push(`<div class="executionBridgeResult"><span>Relevant Execution Breakdown</span><b>No direct capability score</b></div>`);
    }
@@ -5565,7 +5685,7 @@ function pathwayCalculationDetailsHtml(d,t){
    </section>
    <section>
      <h5>5. Accepted signal → factor contribution</h5>
-     <div class="pathCalcEquation contribution"><span>Factor contribution</span><code>${fmtSigned(accepted)} × ${t.confidenceWeight.toFixed(2)} × ${(t.learningRate*100).toFixed(2)}%</code><b>= ${signedFactorDelta(contributionCalc)}</b></div>
+     <div class="pathCalcEquation contribution"><span>Factor contribution</span><code>${fmtSigned(accepted,5)} × ${t.confidenceWeight.toFixed(5)} × ${(t.learningRate*100).toFixed(3)}%</code><b>= ${fmtSigned(contributionCalc,7)} (${fmtSigned(contributionCalc*100,5)}%)</b></div>
      <p>This is the amount this run contributes to the learned pathway. It is not the new factor itself.</p>
    </section>
  </div>`;

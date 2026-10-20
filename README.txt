@@ -1,4 +1,14 @@
-AI RUNNING COACH v15.8.1 · build 51810 — AUTOMATIC LT1 EVIDENCE & SIMPLIFIED OPTIMIZER
+ADAPTIVE PERSONALIZATION (v15.8.2)
+No manual training controls. Run outcomes are evaluated against later runs and validated
+on a chronological holdout. Sparse evidence retains fixed baseline rates and weights.
+When validation supports changes, the bounded local learner stores parameters
+that take effect only from the next day, never rewriting historic workouts.
+Learning rates, signal weights and the quality-session capability threshold may
+adapt; pain safeguards and original load caps remain unchanged. The Progress tab
+shows the evidence counts and parameter values. These are observational proxies
+not scientific/clinical calibration.
+
+AI RUNNING COACH v15.8.2 · build 51820 — AUTOMATIC LT1 EVIDENCE & SIMPLIFIED OPTIMIZER
 20 October 2026
 
 THIS IS A COMPLETE FLAT GITHUB UPLOAD PACKAGE. Keep the SAME GitHub Pages URL and browser
@@ -63,12 +73,12 @@ Total: 522/522 executed checks passed, subject to limitations in RELEASE_TEST_RE
 INSTALL
 Extract the ZIP and upload all files to the GitHub repository ROOT, replacing
 same-named files and adding new training-lt1.js and automatic-lt1-regression-tests.js.
-No folders are required in the repository. Verify v15.8.1 / build 51810.
+No folders are required in the repository. Verify v15.8.2 / build 51820.
 
 ---------- PREVIOUS RELEASE HISTORY (HISTORICAL, SUPERSEDED WHERE IT DESCRIBES LT1
            OR OTHER-SPORT INPUTS) ----------
 
-AI Running Coach v15.8.1 · build 51810
+AI Running Coach v15.8.2 · build 51820
 FULL APPLICATION UPLOAD PACKAGE — 19 October 2026
 
 INSTALL
@@ -76,7 +86,7 @@ INSTALL
 2. Extract this ZIP. Upload ALL extracted files into the existing GitHub repository ROOT,
    replacing matching files. Do not upload the ZIP itself and do not put the app in a subfolder.
 3. Keep the same GitHub Pages address. Wait for deployment, close/reopen or reload the app,
-   and check Settings shows v15.8.1 / build 51810.
+   and check Settings shows v15.8.2 / build 51820.
 4. Do not reset the app, clear site data, uninstall its stored data or change its URL.
 
 NEW FEATURES
