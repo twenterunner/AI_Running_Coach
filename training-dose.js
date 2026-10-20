@@ -5,7 +5,7 @@
   if (root) root.ARCTrainingDose = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
-  const VERSION = '1.0.0', MAX_SECONDS = 172800, MAX_RECORDS = 400000;
+  const VERSION = '1.1.0', MAX_SECONDS = 172800, MAX_RECORDS = 400000;
   const finite = v => v !== null && v !== undefined && v !== '' && typeof v !== 'boolean' && Number.isFinite(Number(v));
   const num = v => finite(v) ? Number(v) : null;
   const validDate = v => { if(typeof v!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(v))return false; const t=Date.parse(v+'T12:00:00Z'); return Number.isFinite(t)&&new Date(t).toISOString().slice(0,10)===v; };
@@ -139,7 +139,25 @@
     }
     return true;
   }
-  function aggregate(runs,asOf,days=28) {
+  function withAutomaticLT1(dose,proxy){
+    if(!dose||!proxy||proxy.status!=='provisional'||!Number.isInteger(proxy.hr))return dose;
+    if(!isUsableDose(dose)||!Array.isArray(dose.hr?.histogram)||!dose.hr.histogram.length)return dose;
+    const lt2=num(dose.calibration?.lt2Hr),lt1=proxy.hr;
+    if(!(lt2>=100&&lt1>=60&&lt1<lt2-5))return dose;
+    const output={...dose,hr:{...dose.hr,seconds:{low:0,moderate:0,high:0,unknown:dose.timerSeconds},boundaries:{lt1,lt2},model:'HR zones from automatically inferred low-confidence LT1 proxy'},flags:[...(dose.flags||[]),'Historical HR histogram reclassified using a provisional LT1 proxy; original samples were not reconstructed']};
+    for(const row of dose.hr.histogram){
+      if(!Array.isArray(row)||!Number.isFinite(Number(row[0]))||!Number.isFinite(Number(row[1]))||Number(row[1])<0)continue;
+      const hr=Number(row[0]),duration=Number(row[1]);
+      const band=hr>=lt2?'high':hr<lt1?'low':'moderate';output.hr.seconds[band]+=duration;
+    }
+    const classified=output.hr.seconds.low+output.hr.seconds.moderate+output.hr.seconds.high;
+    if(classified>dose.timerSeconds+.05)return dose;
+    output.hr.seconds.unknown=Math.max(0,dose.timerSeconds-classified);
+    output.hr.classifiedCoverage=dose.timerSeconds?classified/dose.timerSeconds:0;
+    output.hr.proxyConfidence='low';
+    return output;
+  }
+  function aggregate(runs,asOf,days=28,options={}) {
     if(!validDate(asOf)||![7,28,84].includes(days))throw new Error('Invalid reporting window');
     const cutoff=Date.parse(asOf+'T12:00:00Z'),min=cutoff-(days-1)*86400000;
     const output={asOf,days,totalSeconds:0,runs:0,measuredRuns:0,distinctMeasuredDays:0,
@@ -149,7 +167,8 @@
       if(!r||!validDate(r.date))continue;
       const day=Date.parse(r.date+'T12:00:00Z');if(day<min||day>cutoff)continue;
       const id=String(r.id||r.date+'|'+r.durationSec+'|'+r.distanceKm);if(seen.has(id))continue;seen.add(id);
-      const d=doseMatchesActivity(r,r.trainingDose)?r.trainingDose:failure(r,'Detailed history unavailable or activity was edited');
+      const valid=doseMatchesActivity(r,r.trainingDose)?r.trainingDose:failure(r,'Detailed history unavailable or activity was edited');
+      const d=options.lt1?withAutomaticLT1(valid,options.lt1):valid;
       if(!d.timerSeconds)continue;
       output.totalSeconds+=d.timerSeconds;output.runs++;
       if(d.status==='measured'||d.status==='partial'){output.measuredRuns++;dates.add(r.date);}else output.missingRuns++;
@@ -165,5 +184,5 @@
     }
     return output;
   }
-  return Object.freeze({VERSION,measure,aggregate,failure,isUsableDose,doseMatchesActivity,calibration,validDate});
+  return Object.freeze({VERSION,measure,aggregate,failure,isUsableDose,doseMatchesActivity,withAutomaticLT1,calibration,validDate});
 });

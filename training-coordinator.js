@@ -1,7 +1,7 @@
 /* AI Running Coach coordinated optimizer 1.0.0. Bounded rules, not outcome-validated predictions. */
 (function(root,factory){const api=factory();if(typeof module==='object'&&module.exports)module.exports=api;if(root)root.ARCTrainingCoordinator=api;})(typeof globalThis!=='undefined'?globalThis:this,function(){
 'use strict';
-const VERSION='1.0.0';
+const VERSION='1.1.0';
 const QUALITY=new Set(['Tempo','Intervals','Threshold','Threshold intervals','VO₂max intervals','Race-pace intervals','Hills','Fartlek','Marathon-specific','Half-marathon-specific','Specific long run','Race rehearsal','Fitness assessment','Repetition']);
 const LONG=new Set(['Long run','Specific long run','Race rehearsal','Progression']);
 const clone=x=>JSON.parse(JSON.stringify(x));
@@ -13,19 +13,8 @@ function config(value={}){
  if(!value||typeof value!=='object')throw Error('Invalid coordinator settings');
  const mode=value.mode===undefined?'shadow':value.mode;
  if(!['off','shadow','active'].includes(mode))throw Error('Invalid coordinator mode');
- if(value.activities!==undefined&&!Array.isArray(value.activities))throw Error('Activities must be an array');
- const activities=Array.isArray(value.activities)?value.activities:[];
- if(activities.length>14)throw Error('At most 14 recurring activities are supported');
- const days=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
- const clean=activities.map(a=>{
-  if(!a||!days.includes(a.day)||!(num(a.minutes)>0&&a.minutes<=300)||!(num(a.rpe)>=1&&a.rpe<=10))throw Error('Invalid non-running activity');
-  return{day:a.day,name:String(a.name||'Other exercise').slice(0,60),minutes:Number(a.minutes),rpe:Number(a.rpe)};
- });
- const lt1=num(value.lt1Hr);
- if(lt1!==null&&!(lt1>=60&&lt1<=210))throw Error('LT1 must be between 60 and 210 bpm');
- if(lt1!==null&&!date(value.lt1Date))throw Error('A dated LT1 estimate is required');
- return{version:1,mode,activities:clean,lt1Hr:lt1,lt1Date:lt1===null?null:value.lt1Date,
-  lt1Source:lt1===null?'not supplied':String(value.lt1Source||'User-supplied LT1 estimate').slice(0,150)};
+ // Only the optimizer mode is user configured. Previous stored sports/talk-test/LT1 inputs are deliberately ignored.
+ return{version:2,mode};
 }
 function locked(p,c){return p.date<c.now||p.date<=c.freezeThrough||(c.lockedIds||[]).includes(p.id)||p.type==='Race Day'||p.programPauseId||p.pauseReentry;}
 function weekTotals(plan){const m=new Map();for(const p of plan)if(p.type!=='Race Day')m.set(p.week,(m.get(p.week)||0)+(Number(p.distance)||0));return m;}
@@ -54,18 +43,13 @@ function invariantErrors(base,candidate,c){
    if(p.distance>0&&p.distance<1)errors.push('Sub-minimum running session');
    if(QUALITY.has(p.type)&&p.type!==original.type){
     const otherHard=candidate.some(x=>x.id!==p.id&&QUALITY.has(x.type)&&Math.abs(day(x.date)-day(p.date))<2);
-    const sport=(c.config.activities||[]).some(a=>a.rpe>=6&&Math.abs(((daysIndex(p.day)-daysIndex(a.day)+10)%7)-3)<2);
-    if(otherHard||sport)errors.push('New hard session conflicts with another hard exposure');
+    if(otherHard)errors.push('New hard session conflicts with another hard session');
     if(c.recovery!=='Normal'||c.activeInjury)errors.push('New quality prohibited by recovery constraints');
    }
   }
  }
  for(const [w,km]of totals)if(km>(limits.get(w)||0)+.11)errors.push('Existing weekly load budget exceeded');
  return [...new Set(errors)];
-}
-function daysIndex(d){return ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'].indexOf(d);}
-function exposureConflict(p,c){
- return(c.config.activities||[]).some(a=>a.rpe>=6&&Math.min((daysIndex(p.day)-daysIndex(a.day)+7)%7,(daysIndex(a.day)-daysIndex(p.day)+7)%7)<2);
 }
 function eligible(p,c){return !locked(p,c)&&p.date>c.freezeThrough&&p.date>=c.now&&day(p.date)-day(c.now)<=28&&p.type!=='Rest'&&p.phase!=='Taper';}
 function materialize(base,replacements,c){
@@ -96,8 +80,8 @@ function coordinate(base,context={}){
   if(c.activeInjury){report.status='held';report.reason='Active rehabilitation remains authoritative; no optimizer changes';return{plan:base,report};}
   const candidates=[{name:'Keep existing programme',score:0,changes:[],reason:'Reference plan'}];
   const next=base.filter(p=>eligible(p,c));
-  const guard=next.filter(p=>(QUALITY.has(p.type)||['Medium-long','Steady aerobic','Progression'].includes(p.type))&&((c.recovery!=='Normal'&&day(p.date)-day(c.now)<=7)||exposureConflict(p,c))).map(p=>({id:p.id,type:LONG.has(p.type)?'Long run':'Easy',distance:p.distance,reason:c.recovery!=='Normal'?'Replace quality while recovery is reduced; existing volume modifier is not applied twice':'Separate hard running from configured non-running hard exposure'}));
-  if(guard.length)candidates.push({name:'Protect recovery and hard-session spacing',score:100,changes:guard,reason:'Safety takes precedence; no additional HRV or pain multiplier'});
+  const guard=next.filter(p=>(QUALITY.has(p.type)||['Medium-long','Steady aerobic','Progression'].includes(p.type))&&((c.recovery!=='Normal'&&day(p.date)-day(c.now)<=7))).map(p=>({id:p.id,type:LONG.has(p.type)?'Long run':'Easy',distance:p.distance,reason:'Replace quality while recovery is reduced; existing volume modifier is not applied twice'}));
+  if(guard.length)candidates.push({name:'Protect recovery',score:100,changes:guard,reason:'Safety takes precedence; no additional HRV or pain multiplier'});
   const evidence=c.dose;
   const coverage=evidence&&evidence.hr&&evidence.hr.classifiedCoverage;
   const measured=!!evidence&&evidence.distinctMeasuredDays>=6&&coverage>=.8&&evidence.totalSeconds>0;
@@ -110,7 +94,7 @@ function coordinate(base,context={}){
   }
   // A development alternative is deliberately gated behind repeated comparable evidence.
   if((measured||evidence&&evidence.distinctMeasuredDays>=6&&evidence.power.classifiedCoverage>=.9)&&adequateResponse&&response.spanDays>=56&&Math.abs(response.efficiencyChange)<=.01&&c.recovery==='Normal'&&num(c.recentMaxPain)===0){
-   const first=next.find(p=>['Threshold','Threshold intervals'].includes(p.type)&&['Aerobic','Endurance','Development'].includes(p.detailedPhase)&&!exposureConflict(p,c));
+   const first=next.find(p=>['Threshold','Threshold intervals'].includes(p.type)&&['Aerobic','Endurance','Development'].includes(p.detailedPhase));
    if(first)candidates.push({name:'Controlled aerobic-power development',score:20,changes:[{id:first.id,type:'VO₂max intervals',distance:first.distance,reason:'One quality-session substitution within the existing distance and calibrated power envelope; no extra hard day'}],reason:'Rule-based development option; benefit remains uncertain'});
   }
   for(const x of candidates){

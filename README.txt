@@ -1,4 +1,74 @@
-AI Running Coach v15.8.0 · build 51800
+AI RUNNING COACH v15.8.1 · build 51810 — AUTOMATIC LT1 EVIDENCE & SIMPLIFIED OPTIMIZER
+20 October 2026
+
+THIS IS A COMPLETE FLAT GITHUB UPLOAD PACKAGE. Keep the SAME GitHub Pages URL and browser
+storage to preserve all existing activity data. A JSON backup is optional insurance,
+not a mandatory import/restore step. Never reset or clear the browser's app storage
+just to install a new version.
+
+WHAT CHANGED
+1. Removed the other-sport (including tennis) entry field AND its optimizer-specific
+   training-conflict decision rules. Existing loaded plans, current-week safety, and
+   recovery safeguards remain. Previous stored activities values are discarded during
+   normal state migration rather than silently remaining influential.
+2. Removed manual LT1 bpm/date/source inputs and ALL talk-test/speech prompts.
+3. New training-lt1.js examines every timestamped heart-rate record during FIT/CSV
+   imports (plus pace/power and elevation where present), before the original detailed
+   data are compacted. Stores a small observed lt1Evidence object per run, not raw
+   second-by-second recordings. Imported evidence survives reload and backup/restore.
+4. Older FIT lap-average summaries can contribute weaker HR evidence when present;
+   previously discarded second-by-second records CANNOT be reconstructed.
+5. Offline auto-LT1 is an exploratory HR-decoupling aerobic BREAKPOINT PROXY, not
+   directly measured first lactate/ventilatory threshold. It only displays a working
+   range and provisional bpm when repeated suitably steady runs genuinely bracket a
+   possible shift in HR/effort response. Six distinct qualifying days over at least
+   14 days, including at least three low-drift and three higher-drift observations
+   with adequate separation, are required. Different temperatures, fatigue, illness,
+   hills and sports physiology can shift HR drift and make this proxy inaccurate.
+   If the breakpoint cannot be established, LT1 stays UNKNOWN rather than guessed.
+6. Progress shows Automatic Aerobic Breakpoint status, source counts, dated recorded
+   observations, confidence, and the honest reason an estimate is not yet available.
+7. Where provisional automatic LT1 is supported, stored 1-bpm HR time histograms from
+   newer imported activities may be reclassified at query time into 3-zone training
+   exposure. This does not reconstruct historical raw samples or alter original
+   activity records. Power bands remain policy 80/100% CP bands, NOT LT1/2 readings.
+8. Plan now shows last optimizer review time, evidence cutoff, next training-week
+   boundary, selected strategy and reasons even when the plan remains unchanged.
+   Read-only preview now displays compared alternatives without saving any changes.
+9. Only Off / Shadow / Active optimizer mode is user-entered. Shadow remains default.
+   Active only adjusts permitted unlocked future workouts after due weekly reviews,
+   with Distance & Load and Pace & Power still authoritative.
+
+IMPORTANT EXPECTATION
+Seven historical runs in the provided 18 October example were already compacted,
+so no reliable LT1 can be inferred from that alone. Future detailed Garmin/Stryd
+FIT or detailed CSV imports will generate fresh HR evidence automatically. Import
+runs as normal; there is NO need to enter a threshold or speak during running.
+The estimator does not promise an exact LT1 after any fixed number of runs.
+
+DATA COMPATIBILITY
+- Existing schema 10400, primary/mirror keys, run/rehabilitation/shoe ledgers,
+  CP/pace/threshold HR calibrations and original completed prescriptions are retained.
+- The old optimizer sports/talk/manual LT1 settings are deliberately no longer used.
+- Newly stored lt1Evidence is an additive run attribute and included in backups.
+- No Garmin cloud sync, external API, remote user-data upload, or local server added.
+
+TEST SUMMARY
+- Eight existing regression suites: 176/176 passes.
+- New automatic LT1 suite including seeded fault/boundary scenarios: 286/286 passes.
+- Full-application Chromium integration tests: 51/51 passes.
+- Actual detailed CSV upload, save, compaction and browser reload tests: 9/9 passes.
+Total: 522/522 executed checks passed, subject to limitations in RELEASE_TEST_REPORT.md.
+
+INSTALL
+Extract the ZIP and upload all files to the GitHub repository ROOT, replacing
+same-named files and adding new training-lt1.js and automatic-lt1-regression-tests.js.
+No folders are required in the repository. Verify v15.8.1 / build 51810.
+
+---------- PREVIOUS RELEASE HISTORY (HISTORICAL, SUPERSEDED WHERE IT DESCRIBES LT1
+           OR OTHER-SPORT INPUTS) ----------
+
+AI Running Coach v15.8.1 · build 51810
 FULL APPLICATION UPLOAD PACKAGE — 19 October 2026
 
 INSTALL
@@ -6,7 +76,7 @@ INSTALL
 2. Extract this ZIP. Upload ALL extracted files into the existing GitHub repository ROOT,
    replacing matching files. Do not upload the ZIP itself and do not put the app in a subfolder.
 3. Keep the same GitHub Pages address. Wait for deployment, close/reopen or reload the app,
-   and check Settings shows v15.8.0 / build 51800.
+   and check Settings shows v15.8.1 / build 51810.
 4. Do not reset the app, clear site data, uninstall its stored data or change its URL.
 
 NEW FEATURES

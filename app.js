@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '15.8.0';
-  const BUILD = 51800;
+  const VERSION = '15.8.1';
+  const BUILD = 51810;
   const SCHEMA = 10400;
   const PRIMARY_STORAGE_KEY = 'arc_v10400_web';
   const MIRROR_STORAGE_KEY = 'arc_v10400_mirror';
@@ -506,6 +506,15 @@ let raceReadinessHistoryDirty=false;
 /* BEGIN ARC training-coordinator integration 1.0.0 */
 let arcCoordinatorReport=null;
 function arcTrainingModules(){return window.ARCTrainingDose&&window.ARCTrainingCoordinator;}
+function arcCurrentLT1(asOf=iso(today()),additionalRun=null){
+ try{
+  if(!window.ARCTrainingLT1)return{status:'building',hr:null,days:0,reason:'LT1 measurement extension unavailable'};
+  const source=(state.runs||[]).filter(r=>r.date<=asOf);
+  if(additionalRun&&additionalRun.date<=asOf&&!source.some(r=>r.id===additionalRun.id))source.push(additionalRun);
+  const threshold=calibrationFor('hr',asOf);
+  return window.ARCTrainingLT1.estimate(source,asOf,threshold?.value);
+ }catch(_){return{status:'building',hr:null,days:0,reason:'Insufficient valid LT1 data'};}
+}
 function arcTrainingConfig(){
  return window.ARCTrainingCoordinator.config(state.setup.trainingCoordinator||{});
 }
@@ -528,11 +537,16 @@ function arcFitTimerEvents(messages){
 function arcCaptureTrainingDose(run,records){
  try{
   if(!window.ARCTrainingDose)return;
+  // Extract and retain the observed HR/effort evidence before irreversible raw-stream compaction.
+  if(window.ARCTrainingLT1){
+   try{run.lt1Evidence=window.ARCTrainingLT1.summarize(run,records);}
+   catch(_){run.lt1Evidence={version:1,status:'unavailable',reason:'LT1 stream analysis fault'};}
+  }
   if(window.ARCTrainingDose.doseMatchesActivity(run,run.trainingDose))return;
-  const cfg=window.ARCTrainingCoordinator?arcTrainingConfig():{lt1Hr:null,lt1Date:null,lt1Source:'not supplied'},hr=calibrationFor('hr',run.date),pw=calibrationFor('power',run.date);
-  const lt1=cfg.lt1Date&&cfg.lt1Date<=run.date?cfg.lt1Hr:null;
+  const hr=calibrationFor('hr',run.date),pw=calibrationFor('power',run.date);
+  const proxy=arcCurrentLT1(run.date,run),lt1=proxy.status==='provisional'?proxy.hr:null;
   run.trainingDose=window.ARCTrainingDose.measure(run,records,{
-   asOf:run.date,lt1Hr:lt1,lt1Source:lt1===null?'not supplied':cfg.lt1Source,
+   asOf:run.date,lt1Hr:lt1,lt1Source:lt1===null?'not established':'automatic HR-decoupling proxy (low confidence)',
    lt2Hr:hr?.value,lt2Source:hr?.source,criticalPower:pw?.value,powerSource:pw?.source,
    measuredOn:pw?.measuredOn||hr?.measuredOn,
    powerUsable:!/fallback proportional/i.test(run.powerDiagnostics?.mapping||'')
@@ -552,7 +566,7 @@ function arcTrainingContext(){
  return{now,evidenceThrough,freezeThrough,config:cfg,recovery:ready.label,adaptiveEnabled:state.setup.adaptive!==false,
   activeInjury:Boolean(state.activeInjuryPlanId),recentMaxPain:painRows.length?Math.max(...painRows):null,
   lockedIds:[...(state.runs||[]).map(r=>r.planId).filter(Boolean),...(state.plan||[]).filter(p=>p.userLocked||p.manualOverride).map(p=>p.id)],
-  dose:window.ARCTrainingDose.aggregate(eligible,evidenceThrough,28),
+  dose:window.ARCTrainingDose.aggregate(eligible,evidenceThrough,28,{lt1:arcCurrentLT1(evidenceThrough)}),
   response:window.ARCTrainingCoordinator.compareResponse(eligible,evidenceThrough),
   targetsFor:(type,date)=>zone(type,date),
   materialize:(original,type,distance)=>{
@@ -607,7 +621,11 @@ window.ARCTrainingBridge=Object.freeze({
   if(!arcTrainingModules())throw Error('Training modules are unavailable; original app remains usable');
   const now=iso(today()),cfg=arcTrainingConfig();
   return{version:'1.0.0',coreVersion:CORE.VERSION,config:cfg,now,
-   reports:[7,28,84].map(n=>window.ARCTrainingDose.aggregate(state.runs||[],now,n)),
+   lt1:arcCurrentLT1(now),
+   reports:[7,28,84].map(n=>window.ARCTrainingDose.aggregate(state.runs||[],now,n,{lt1:arcCurrentLT1(now)})),
+   reviewAt:state.trainingReview?.evaluatedAt||null,
+   reviewThrough:state.trainingReview?.evidenceThrough||null,
+   nextReview:iso(weekEnd(currentWeek())),
    report:arcCoordinatorReport||(state.trainingReview?.report?.mode===cfg.mode?state.trainingReview.report:null)||null,
    appliedChanges:(state.plan||[]).filter(p=>p.date>=now&&p.trainingCoordinator).map(p=>({date:p.date,type:p.type,distance:p.distance,...p.trainingCoordinator})),
    recent:(state.runs||[]).filter(r=>r.date<=now).slice().sort((a,b)=>b.date.localeCompare(a.date)).slice(0,12).map(r=>({id:r.id,date:r.date,type:r.type,durationSec:r.durationSec,distanceKm:r.distanceKm,trainingDose:r.trainingDose||null}))};
@@ -615,8 +633,6 @@ window.ARCTrainingBridge=Object.freeze({
  updateConfig:input=>{
   if(!arcTrainingModules())throw Error('Training modules are unavailable');
   const checked=window.ARCTrainingCoordinator.config(input);
-  if(checked.lt1Date&&checked.lt1Date>iso(today()))throw Error('LT1 evidence cannot be future-dated');
-  if(checked.lt1Hr!==null){const h=calibrationFor('hr',iso(today()));if(h&&checked.lt1Hr>=Number(h.value))throw Error('LT1 must be below the current threshold HR');}
   const snapshot=JSON.stringify(state);
   try{
    state.setup.trainingCoordinator=checked;
@@ -648,6 +664,9 @@ function normaliseState(input){
  let recovered=0;numericSetup.forEach(k=>{const n=Number(setup[k]),range=ranges[k];if(Number.isFinite(n)&&n>=range[0]&&n<=range[1]){setup[k]=n}else{setup[k]=base.setup[k];recovered++}});
  ['planStart','raceDate'].forEach(k=>{if(!CORE.isIsoDate(setup[k])){setup[k]=base.setup[k];recovered++}});setup.raceName=CORE.cleanText(setup.raceName,100).trim()||base.setup.raceName;
  setup.adaptive=setup.adaptive!==false;
+ // Retire old LT1, talk-test and other-sport settings on reload; preserve only the selected optimizer mode.
+ const previousCoordinator=setup.trainingCoordinator&&typeof setup.trainingCoordinator==='object'?setup.trainingCoordinator:{};
+ setup.trainingCoordinator={version:2,mode:['off','shadow','active'].includes(previousCoordinator.mode)?previousCoordinator.mode:'shadow'};
  const runs=Array.isArray(src.runs)?src.runs.filter(Boolean).map((r,index)=>({...r,id:CORE.safeId(r.id,`run-${index}`),assessmentId:r.assessmentId?CORE.safeId(r.assessmentId,''):null,planId:r.planId?CORE.safeId(r.planId,''):null,type:CORE.cleanText(r.type||'Easy',80),notes:CORE.cleanText(r.notes,5000),distanceKm:optionalBounded(r.distanceKm,.01,300)??0,durationSec:optionalBounded(r.durationSec,1,172800)??0,avgHr:optionalBounded(r.avgHr,30,250),avgPower:optionalBounded(r.avgPower,1,2000),rpe:optionalBounded(r.rpe,1,10),pain:optionalBounded(r.pain,0,10),recovery:null,hrv:optionalBounded(r.hrv,1,300),powerDrift:optionalBounded(r.powerDrift,-100,100)})):[];
  const assessments=Array.isArray(src.assessments)?src.assessments.filter(Boolean).map((a,index)=>({...a,id:CORE.safeId(a.id,`assessment-${index}`),distance:optionalBounded(a.distance,.1,200)??0,time:optionalBounded(a.time,30,172800)??0,thresholdHr:optionalBounded(a.thresholdHr,30,250),criticalPower:optionalBounded(a.criticalPower,1,2000),valid:Boolean(a.valid)})):[];
  const injuries=Array.isArray(src.injuries)?src.injuries.filter(Boolean).map((i,index)=>({...i,id:CORE.safeId(i.id,`injury-${index}`),location:CORE.cleanText(i.location,300),mechanism:CORE.cleanText(i.mechanism,1000),painTriggers:CORE.cleanText(i.painTriggers,1000),clinicalDiagnosis:CORE.cleanText(i.clinicalDiagnosis,500),rehabStartDate:i.rehabStartDate||i.date||base.setup.planStart,initialPain:optionalBounded(i.initialPain,0,10),initialWalkPain:optionalBounded(i.initialWalkPain,0,10),currentPain:optionalBounded(i.currentPain,0,10),currentWalkPain:optionalBounded(i.currentWalkPain,0,10),clinicianExpectedDays:optionalBounded(i.clinicianExpectedDays,1,730),rehabArchivedAt:typeof i.rehabArchivedAt==='string'?i.rehabArchivedAt:null,rehabArchivedStage:Number(i.rehabArchivedStage)||null,rehabArchiveReason:CORE.cleanText(i.rehabArchiveReason||'',200),rehabArchiveSnapshot:i.rehabArchiveSnapshot&&typeof i.rehabArchiveSnapshot==='object'?i.rehabArchiveSnapshot:null,checkIns:Array.isArray(i.checkIns)?i.checkIns.filter(Boolean).map(c=>({...c,pain:optionalBounded(c.pain,0,10),walkPain:optionalBounded(c.walkPain,0,10),morningStiffness:optionalBounded(c.morningStiffness,0,10),runPain:optionalBounded(c.runPain,0,10),confidence:optionalBounded(c.confidence,0,10),walkMinutes:optionalBounded(c.walkMinutes,0,1440),runMinutes:optionalBounded(c.runMinutes,0,1440),symptoms:CORE.cleanText(c.symptoms,2000)})):[]})):[];
@@ -711,7 +730,7 @@ function runtimeDomainState(){
   runs:(state.runs||[]).map(r=>({
    id:r.id,date:r.date,type:r.type,distanceKm:r.distanceKm,durationSec:r.durationSec,avgHr:r.avgHr,avgPower:r.avgPower,
    rpe:r.rpe,pain:r.pain,hrv:r.hrv,powerDrift:r.powerDrift,planId:r.planId,shoeId:r.shoeId,notes:r.notes,
-   intervalAnalysis:r.intervalAnalysis,coachUpdate:r.coachUpdate,sourceFormat:r.sourceFormat,trainingDose:r.trainingDose,fitnessPowerCurve:r.fitnessPowerCurve,aerobicFitnessEvidence:r.aerobicFitnessEvidence,recordSegments:r.recordSegments,deviceCriticalPower:r.deviceCriticalPower,deviceThresholdHr:r.deviceThresholdHr
+   intervalAnalysis:r.intervalAnalysis,coachUpdate:r.coachUpdate,sourceFormat:r.sourceFormat,trainingDose:r.trainingDose,lt1Evidence:r.lt1Evidence,fitnessPowerCurve:r.fitnessPowerCurve,aerobicFitnessEvidence:r.aerobicFitnessEvidence,recordSegments:r.recordSegments,deviceCriticalPower:r.deviceCriticalPower,deviceThresholdHr:r.deviceThresholdHr
   })),
   assessments:state.assessments,
   injury:{activeInjuryPlanId:state.activeInjuryPlanId,injuries:state.injuries},
@@ -2978,7 +2997,7 @@ function buildPlan(){
  out=applyProgrammePausesToPlan(out,state.programPauses||[],{nowIso});
  if(typeof arcCoordinateTrainingPlan==='function')out=arcCoordinateTrainingPlan(out,oldPlan);
  if(typeof arcCoordinatorReport!=='undefined'&&arcCoordinatorReport?.evidenceThrough){
-  state.trainingReview={version:1,evidenceThrough:arcCoordinatorReport.evidenceThrough,report:arcCoordinatorReport};
+  state.trainingReview={version:2,evidenceThrough:arcCoordinatorReport.evidenceThrough,evaluatedAt:new Date().toISOString(),report:arcCoordinatorReport};
  }
  state.plan=out;state.planEngineVersion=PLAN_ENGINE_VERSION;state.schemaVersion=SCHEMA;state.lastPlanHealth=validatePlan(out);return save()
 }

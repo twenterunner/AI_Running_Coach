@@ -1,17 +1,17 @@
-AI Running Coach v15.8.0 · build 51800
-FULL APPLICATION UPLOAD PACKAGE — 19 October 2026
+AI Running Coach v15.8.1 / build 51810 — COMPLETE GITHUB UPLOAD ZIP
 
-INSTALL
-1. In your existing running app, Settings > Download backup. Keep the JSON backup.
-2. Extract this ZIP. Upload ALL extracted files into the existing GitHub repository ROOT,
-   replacing matching files. Do not upload the ZIP itself and do not put the app in a subfolder.
-3. Keep the same GitHub Pages address. Wait for deployment, close/reopen or reload the app,
-   and check Settings shows v15.8.0 / build 51800.
-4. Do not reset the app, clear site data, uninstall its stored data or change its URL.
+1. Extract AI_Running_Coach_v15.8.1_FULL_UPLOAD.zip.
+2. Upload ALL extracted files to the root of your existing GitHub repository,
+   replacing matching filenames and adding the new training-lt1.js file.
+3. Leave the repository and GitHub Pages address unchanged.
+4. Reload the app after GitHub Pages deploys and verify v15.8.1 / build 51810.
 
-FIRST USE
-Open Training plan > Coordinated training > Controls, LT1 evidence and other sports.
-Default: Shadow (compare only). Choose Active and confirm to permit bounded future changes.
-Example other sport: Thursday | Tennis | 60 | 7
-Leave LT1 empty when you do not have a supported dated estimate.
-Progress contains the actual-dose views. Old recordings without streams remain unknown.
+Your running history, shoes and calibrations live in your browser storage.
+Do not reset, uninstall or clear site data. A JSON backup before upgrading is
+recommended protection but is not a requirement or something you must restore
+for a normal update.
+
+NEW: Automatic LT1 evidence from timestamped HR in FIT/CSV imports; no manual
+LT1 or talk-test entry; no separate other-sport inputs. Shadow mode is default.
+LT1 is an exploratory, low-confidence HR decoupling proxy, not laboratory LT1.
+Insufficient data leaves the boundary unknown. See README.txt and the report.

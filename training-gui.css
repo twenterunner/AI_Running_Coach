@@ -16,3 +16,7 @@
 .arcTrainingFields{display:grid;grid-template-columns:1fr 1fr;gap:12px}.arcTrainingActions{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
 .arcEvidenceRun{border-bottom:1px solid #365361;padding:12px 0}.arcEvidenceRun p{margin:4px 0;font-size:.86rem}.arcChangeList{padding-left:20px}.arcChangeList li{padding:8px 0}.arcTrainingCard [role=alert]{color:#ffc4c4}
 @media(max-width:480px){.arcTrainingCard{padding:14px}.arcTrainingFields{grid-template-columns:1fr}.arcTrainingActions{flex-direction:column}.arcTrainingActions button{width:100%}.arcDoseLegend{grid-template-columns:1fr 1fr}}
+/* Automatic LT1 status and optimizer review; mobile-first, no input form for LT1. */
+.arcAutoLt1{margin:14px 0 18px;border:1px solid rgba(116,214,225,.34);padding:14px;border-radius:12px;background:rgba(6,18,36,.28)}
+.arcAutoLt1Head{display:flex;gap:12px;justify-content:space-between;align-items:flex-start;flex-wrap:wrap}.arcAutoLt1Head h4{margin:4px 0!important}.arcLt1Stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:12px 0}.arcLt1Stats>div{background:rgba(0,14,25,.22);padding:9px;border-radius:8px;min-width:0}.arcLt1Stats small{display:block;font-size:.72rem}.arcLt1Stats b{font-size:.98rem;display:block;overflow-wrap:anywhere;line-height:1.3}.arcReviewStats b{font-size:.86rem}
+@media(max-width:420px){.arcLt1Stats{grid-template-columns:1fr 1fr}.arcReviewStats{grid-template-columns:1fr}}

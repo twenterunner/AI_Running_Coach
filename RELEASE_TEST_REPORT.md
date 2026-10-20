@@ -1,113 +1,44 @@
-# AI Running Coach v15.8.0 — release verification
+# AI Running Coach v15.8.1 — verification and release notes
 
-**Build:** 51800  
-**Basis:** uploaded v15.7.30 source, matched byte-for-byte to the recovered v15.7.30 package.  
-**Baseline source commit:** `90be017b1d3b0f70bc8bbb05d5567e860a0830c0`.  
-**Disposition:** complete static application package; new optimizer defaults to Shadow.
+**Build:** 51810  
+**Basis:** v15.8.0 full uploaded ZIP (49 files); complete flat replacement app  
+**Disposition:** functional replacement ZIP; automatically inferred LT1 remains experimental and defaults to unavailable if unsupported.
 
-## Executed release gates
+## Completed execution checks
 
-| Suite / scope | Passed |
-|---|---:|
-| Existing baseline regression suites | 176/176 |
-| Training-dose module | 634/634 |
-| Workout coordinator module | 533/533 |
-| Additional boundaries | 20/20 |
-| Full-app integration and layouts | 57/57 |
-| Full-app import, persistence and fault workflows | 34/34 |
-| Populated shoe-engine baseline comparisons | 9/9 |
-| Isolated GUI controls | 18/18 |
-| **Total executed gate checks** | **1481/1481** |
+| Suite | Passed | Failed |
+|---|---:|---:|
+| Eight original application regression suites | 176 | 0 |
+| New automatic-LT1 regressions (including 250 deterministic corrupted-input and boundary scenarios) | 286 | 0 |
+| Full application Chromium integration (legacy plan comparison, every main tab, storage faults, optimizer fallback, responsive widths, reload) | 51 | 0 |
+| Real 2,201-row CSV import through the complete app, persistence, compaction, reload | 9 | 0 |
+| **Total** | **522** | **0** |
 
-The dose suite includes 600 fixed-seed sensor/boundary scenarios. The coordinator suite
-includes 500 fixed-seed allocation scenarios. These are synthetic test cases, not 1,100
-independent athlete trials or evidence of physiological/predictive accuracy.
+The full app's **Shadow-mode plan and original Pace & Power / Distance & Load calculations** were tested against the frozen v15.8.0 baseline using matching synthetic athlete history. The current week, linked/completed prescriptions, target sources and load factors were preserved in optimizer Active/Off/Shadow tests. The selected protected workouts were not modified. The optimizer continues to block unsafe and invalid proposals. The original eight suites passed after the source integration and the separate LT1/sensor regressions and end-to-end browser checks passed after subsequent refinements.
 
-The eight existing baseline suites total 176 cases and passed both before and after
-integration. Only version/build assertions were updated in the two release-marker checks;
-existing behavioral assertions were not relaxed. All five active JavaScript files pass
-Node syntax checks. Every one of the 34 statically identified local asset references resolves.
+## Input, failure and boundary scenarios
 
-## Full-application coverage
+- Zero data; archived runs lacking per-second records; weak FIT lap averages; insufficient days; identical HR ranges with no transition; all-stable and all-high-drift series; reversed HR ordering; missing/future-dated LT2.
+- Records sampled once per second or with missing data; duplicate/conflicting timestamps, out-of-order and invalid samples, long HR gaps and pauses, speed/power drift, hills, data-age and duration editing, race/interval exclusion, pain and high exertion.
+- Invalid automatically estimated LT1 is *not* promoted to training-zone data. Only a supported low-confidence provisional result can reclassify saved valid per-bpm HR histograms; missing older raw activity remains unknown.
+- Optimizer intentionally drops legacy LT1/manual talk-test and other-sport settings, retains only Off/Shadow/Active mode, and does not add a second volume multiplier.
+- Injected primary browser-storage failure, throwing optimizer, throwing training-dose engine and missing extension modules did not overwrite the authoritative core baseline in tested cases.
+- GUI: all primary pages and the new LT1/review cards rendered in Chromium with no uncaught exceptions. Tested 320, 390 and 768 px layout widths; complete app imported actual detailed CSV, compacted stream after deriving HR evidence and restored after reload.
 
-The complete app.js and styles.css executed in Chromium, with populated synthetic history.
-Tests compared the new Shadow/Off paths with the legacy application; exercised actual
-configuration controls, imported CSV recordings, retry after failed save, duplicate rejection,
-manual create/edit/delete, calibrated target changes, assessment synchronization, populated
-rehabilitation, pause/re-entry protection, backup download/restore, invalid backup rejection,
-full application reload and all principal tabs. Layout checks covered 320, 360, 390, 430,
-768 and 1280 px widths. The eight populated shoe scenarios produced the same decisions and
-valid assignment counts as the baseline. No uncaught JavaScript exceptions were observed
-in the completed full-application suites.
+## Clinical and measurement limitations
 
-## Fault injection and boundaries
+The **automatic LT1 is not a physiological measurement or independently calibrated LT1 predictor**. Stable heart-rate-to-power/speed decoupling can suggest aerobic durability, but drift is confounded by heat, fatigue, terrain, hydration and exercise duration. The model only displays a provisional HR breakpoint if repeated observations bracket a plausible change; a failure to identify it is expected with many normal training histories. LT2 or CP does not by itself identify LT1. There are no speech or talk-test requirements, and no RR-beat-level DFA-alpha1 calculation; second-by-second HR is not RR-interval HRV.
 
-Injected failures covered measurement exceptions, optimizer exceptions, malformed outputs,
-mutating callbacks, increased distances, altered power targets, changed historical workouts,
-undeclared plan changes and persistence failures. Integration checks verify fallback to the
-core baseline, no corruption of the original activity, no duplicate import, and no falsely
-reported successful save. Missing extension modules leave the original application usable.
+The test dataset is synthetic; 522 software checks **do not** demonstrate clinical accuracy, safety for every athlete, improvements in marathon outcomes, or statistically calibrated race-goal probabilities.
 
-Input tests include missing/null/NaN/infinite readings, duplicate and conflicting timestamps,
-unsorted samples, pauses, inconsistent timer durations, long gaps, invalid and future dates,
-LT1/LT2 ordering, absent LT1 or CP, future calibration dates, stale summaries after activity
-edits, corrupted persisted bands/coverage, maximal supported durations and record limits,
-insufficient response evidence, unknown pain, global adaptation disabled, injuries, locked
-sessions and taper/horizon boundaries. Active changes never increase a per-session or weekly
-running allowance or apply an additional recovery multiplier.
+## Test-environment limitations
 
-## Defects found and corrected during integration
+The full-app Chromium tests ran the actual application code and styling in a browser harness with an in-memory, fault-capable localStorage substitute. Installed Android PWA upgrades, real GitHub Pages production deployment, native localStorage quota/eviction and service-worker activation were **not** revalidated. Detailed CSV parsing was exercised end to end; the externally loaded Garmin FIT SDK was not tested against a freshly exported physical-watch FIT binary in this turn. QA screenshots are not included in this release report.
 
-- The first bridge location fell inside a date-helper extraction boundary used by the
-  existing calibration suite. Moving it restored all 25 unchanged calibration checks.
-- The baseline could rebuild an absent plan before its recovery cache had initialized when
-  historical runs existed. Startup rebuild and link reconciliation now run after initialization.
-- Old dose summaries needed activity-date/duration/distance provenance and invalidation after edits.
-- Demoted workouts could retain irrelevant interval fields from the old prescription. These
-  fields are now cleared before the existing prescription generator fills the new structure.
-- Accepted workout types needed to survive their transition into the current training week.
-- The bridge now isolates optimizer inputs and independently rechecks output authorities.
-- Completed-week active reviews are persisted and checked on startup/import, avoiding a
-  feature that would otherwise run only when its settings were manually saved.
+## Data protection
 
-## Additional historical rehabilitation checks — separate known differences
+No user backup, athlete history, private source files, raw HR traces or test fixture state is bundled. The release keeps schema 10400 and existing primary/mirror storage keys. Derived per-run LT1 evidence is a new additive field; previously compacted recordings are not reconstructed. Completed historic workout prescriptions are not rewritten. Standard backups remain compatible with stored additive fields.
 
-An older v16.1.0 static rehabilitation suite was recovered and run as an extra comparison.
-It produced **26/28 passes in BOTH v15.7.30 and v15.8.0**. Its two failures expect automatic
-phase rollback and a displayed regression magnitude. The supplied baseline instead retains
-its highest attained phase (`stage=peakStage`, `regressedBy=0`, `setback=false`). That behavior
-is unchanged in this release; the older checks were not relabelled as passes or rewritten
-to conceal the difference. Their logs remain in the QA archive, outside the release-gate total.
-This is not a new regression, but neither this test nor the new optimizer validates clinical
-rehabilitation recommendations. The optimizer makes no changes while rehabilitation is active.
+## Installation
 
-## Important test limitations
-
-- This environment blocks normal browser navigation to local/deployed app URLs. Full-app
-  browser tests therefore executed the actual application in Chromium about:blank with an
-  in-memory, fault-capable localStorage API. They validate JavaScript integration, persistence
-  contracts and rendering, **not native browser storage/eviction, installed Android PWA behavior,
-  live GitHub Pages deployment, browser cache upgrades or service-worker activation**.
-- CSV upload and parsing were exercised end-to-end within that harness. FIT adapter tests
-  supplied deterministic decoded message fixtures and checked the actual importer, retained
-  altitude/timer fields and compaction. The network-fetched external Garmin FIT SDK and an
-  actual watch-generated binary recording were not revalidated in this environment.
-- No current personal athlete backup was supplied or used. Tests use synthetic fixtures;
-  they do not exhaust every possible combination of historical stored user data.
-- Mathematical bounds and regression tests do not establish that a workout is medically
-  appropriate, that a goal forecast is calibrated, or that optimization improves marathon outcomes.
-
-## Packaging and installation
-
-The deployment ZIP has no enclosing folder and includes the complete active app, updated GUI,
-original stylesheet, service worker, manifest, existing icons/shoe imagery, release notes and
-baseline regression scripts. It contains no installer patch, mock storage code, synthetic
-athlete backup, QA exports, node_modules or developer backup folder.
-
-Back up the existing app's JSON first. Extract and upload every file into the existing
-repository root, replacing matching files. Keep the same Pages address and browser storage.
-After deployment, verify **v15.8.0 / build 51800**. Do not reset the app or clear site data.
-Shadow preserves the existing workout mix; Active is available through the new Training controls.
-
-The measurement benchmark in this container processed 3,601 samples in about 8 ms and 14,401
-samples in about 11 ms. These are single-container observations, not Android performance promises.
+Extract the **FULL_UPLOAD** ZIP and upload every extracted file into your existing GitHub repo root; do not upload the ZIP itself or put it inside a subfolder. Use the same Pages URL/browser, avoid reset and clearing site data, and verify **v15.8.1 / build 51810** in Settings. A backup is optional insurance rather than a required migration action.
