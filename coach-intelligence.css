@@ -1,0 +1,77 @@
+/* Coach Intelligence v2. Scoped to Today; does not override the other coach screens. */
+.coachIntelligencePanel{display:grid;gap:18px;margin-top:22px;color:#effbff;min-width:0}
+.coachIntelligencePanel *{box-sizing:border-box}
+.coachIntelligencePanel .ciTop{display:flex;align-items:flex-start;gap:12px;justify-content:space-between;padding:18px;border:1px solid rgba(105,225,216,.34);background:linear-gradient(145deg,rgba(8,53,70,.8),rgba(7,36,52,.62));border-radius:17px}
+.coachIntelligencePanel .ciTop>div{min-width:0;flex:1}
+.coachIntelligencePanel small{color:#91d9e3;font-size:10px;font-weight:800;letter-spacing:.075em;line-height:1.4}
+.coachIntelligencePanel .ciTop h3{font-size:clamp(19px,3vw,25px);line-height:1.2;margin:7px 0 9px;color:#fff}
+.coachIntelligencePanel p{line-height:1.5;margin:0;color:#d4e8ec;font-size:13px}
+.coachIntelligencePanel .ciTone{border:1px solid rgba(147,208,225,.3);color:#d4eff5;border-radius:30px;background:rgba(89,170,188,.12);padding:9px 12px;font-size:11px;font-weight:800;white-space:nowrap;text-align:center}
+.coachIntelligencePanel .ciTone.good{color:#bce998;border-color:rgba(138,219,110,.45)}
+.coachIntelligencePanel .ciTone.caution,.coachIntelligencePanel .ciTone.bad{color:#ffd28c;border-color:rgba(255,188,95,.5)}
+.coachIntelligencePanel .ciSectionHead{display:flex;justify-content:space-between;align-items:flex-end;gap:14px;padding:4px 2px 8px;border-bottom:1px solid rgba(185,227,235,.17)}
+.coachIntelligencePanel .ciSectionHead h4{font-size:17px;line-height:1.22;font-weight:800;color:#f3ffff;margin:4px 0 0}
+.coachIntelligencePanel .ciSectionHead>span{font-size:11px;color:#accad3;line-height:1.4;text-align:right;max-width:42%}
+.coachIntelligencePanel .ciEvidenceGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+.coachIntelligencePanel .ciFinding{min-width:0;border:1px solid rgba(166,220,224,.23);background:rgba(0,46,64,.52);padding:13px;border-radius:13px;display:flex;flex-direction:column;gap:6px}
+.coachIntelligencePanel .ciFinding.good{border-left:3px solid #87d684}
+.coachIntelligencePanel .ciFinding.caution,.coachIntelligencePanel .ciFinding.bad{border-left:3px solid #f8be6b}
+.coachIntelligencePanel .ciFinding>b{font-size:15px;line-height:1.2;color:#fff;overflow-wrap:anywhere}
+.coachIntelligencePanel .ciFinding>p{color:#cfebee;font-size:12px}
+.coachIntelligencePanel .ciMetricGrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}
+.coachIntelligencePanel .ciMetric{display:flex;flex-direction:column;min-width:0;gap:5px;background:rgba(9,42,58,.86);border:1px solid rgba(143,214,219,.24);border-radius:14px;padding:12px}
+.coachIntelligencePanel .ciMetric>b{font-size:clamp(16px,2.5vw,22px);color:white;font-weight:850;line-height:1.2;overflow-wrap:anywhere}
+.coachIntelligencePanel .ciMetric>p{font-size:11px;color:#abcdd7}
+.coachIntelligencePanel .ciDelta{font-weight:700;font-size:11px;color:#b8cbd5;line-height:1.4}
+.coachIntelligencePanel .ciDelta.good{color:#b9e594}
+.coachIntelligencePanel .ciDelta.caution{color:#ffd18d}
+.coachIntelligencePanel details{min-width:0}
+.coachIntelligencePanel summary{cursor:pointer;list-style-position:outside;color:#b8e7ec;font-size:12px;font-weight:750;padding:7px 0;line-height:1.35}
+.coachIntelligencePanel summary:focus-visible{outline:2px solid #a5eee8;outline-offset:3px}
+.coachIntelligencePanel .ciMetric details{margin-top:auto}
+.coachIntelligencePanel .ciMetric details[open]{padding-top:3px;border-top:1px solid rgba(180,230,235,.18)}
+.coachIntelligencePanel .ciMetricHistory{display:grid;grid-template-columns:1fr auto;gap:4px 10px;color:#b8d3d9;font-size:12px;margin-bottom:8px}
+.coachIntelligencePanel .ciMetricHistory b{color:#f1ffff}
+.coachIntelligencePanel .ciAudit{border:1px solid rgba(161,217,226,.29);border-radius:13px;padding:11px 16px;background:rgba(7,35,49,.8)}
+.coachIntelligencePanel .ciAudit>p{margin:8px 0;font-size:12px}
+.coachIntelligencePanel .ciScoreRows{display:grid;gap:7px;margin:12px 0}
+.coachIntelligencePanel .ciScoreRow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:3px 8px;padding:10px;border:1px solid rgba(160,220,230,.14);border-radius:8px}
+.coachIntelligencePanel .ciScoreRow span{display:flex;flex-direction:column;gap:5px;min-width:0}
+.coachIntelligencePanel .ciScoreRow span>b{font-size:12px}
+.coachIntelligencePanel .ciScoreRow span small{font-size:11px;font-weight:500;letter-spacing:0;color:#b5d0d6}
+.coachIntelligencePanel .ciScoreRow strong{font-size:12px}
+.coachIntelligencePanel .ciScoreRow em{grid-column:2;font-size:10px;color:#bcd9dc;font-style:normal;text-align:right}
+.coachIntelligencePanel .ciPathways{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.coachIntelligencePanel .ciPathways>div{border-radius:9px;padding:11px;background:rgba(46,103,112,.21);display:grid;gap:5px}
+.coachIntelligencePanel .ciPathways b{font-size:18px}
+.coachIntelligencePanel .ciLoadGrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}
+.coachIntelligencePanel .ciLoadGrid article{padding:13px;border:1px solid rgba(158,214,222,.25);border-radius:13px;background:rgba(10,51,64,.62);display:grid;align-content:start;gap:6px;min-width:0}
+.coachIntelligencePanel .ciLoadGrid b{font-size:19px;color:#fff}
+.coachIntelligencePanel .ciLoadGrid span{font-size:11px;color:#c9e5e9;line-height:1.4}
+.coachIntelligencePanel .ciRaceGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+.coachIntelligencePanel .ciRaceGrid article{min-width:0;padding:13px;border-radius:13px;background:rgba(22,70,77,.47);border:1px solid rgba(166,225,221,.27);display:grid;align-content:start;gap:7px}
+.coachIntelligencePanel .ciRaceGrid b{font-size:20px;color:#fff;line-height:1.1}
+.coachIntelligencePanel .ciRaceGrid span{font-size:12px;font-weight:700;color:#d0ecdc}
+.coachIntelligencePanel .ciRaceGrid p{font-size:11px;color:#c7dce3}
+.coachIntelligencePanel .ciEvidenceNote{font-size:12px;color:#b7cbd3}
+.coachIntelligencePanel .ciAction{border-left:3px solid #78d3c8;padding:12px 15px;background:rgba(3,34,45,.72);border-radius:0 11px 11px 0;display:grid;gap:8px}
+.coachIntelligencePanel .ciAction b{font-size:17px;color:#fff}
+.coachIntelligencePanel .ciLimitations>p{font-size:12px}
+@media(max-width:750px){
+ .coachIntelligencePanel{gap:15px;margin-top:18px}
+ .coachIntelligencePanel .ciTop{flex-wrap:wrap}
+ .coachIntelligencePanel .ciTop>.ciTone{margin-left:0}
+ .coachIntelligencePanel .ciMetricGrid{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .coachIntelligencePanel .ciLoadGrid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:430px){
+ .coachIntelligencePanel .ciTop{padding:13px}
+ .coachIntelligencePanel .ciEvidenceGrid{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .coachIntelligencePanel .ciFinding{padding:10px}
+ .coachIntelligencePanel .ciFinding>b{font-size:13px}
+ .coachIntelligencePanel .ciMetric{padding:10px}
+ .coachIntelligencePanel .ciMetric>b{font-size:17px}
+ .coachIntelligencePanel .ciRaceGrid{grid-template-columns:1fr}
+ .coachIntelligencePanel .ciSectionHead h4{font-size:16px}
+ .coachIntelligencePanel .ciSectionHead>span{font-size:10px}
+}

@@ -1,3 +1,36 @@
+COACH INTELLIGENCE V2 — RELEASE v15.8.3 / BUILD 51830
+=========================================================
+
+The Today briefing now explains: whether a completed run followed its plan,
+how the existing workout score was composed, comparable-run efficiency and
+drift evidence, qualified metric observations and previous/7/28-day changes,
+rolling training volume, HRV/readiness when present, current marathon ability
+versus conditional future-programme prediction, and the next protected action.
+Details disclose the source and confidence of each conclusion. A single run
+may be useful fitness evidence but still a poor execution of its distance goal.
+Missing HR, power, RPE, pain, LT1, and thresholds remain explicitly missing;
+a saved/retained CP or threshold is labelled as such, not promoted to a newly
+qualified estimate. High pain overrides positive performance interpretation.
+
+Architecture: coach-intelligence.js is a pure read-only interpreter, not an
+additional scoring, physiological modelling or learning engine. app.js is the
+only UI adapter to the existing app calculators. The existing data schema,
+calibration engine, FIT importer, training planner, race forecast, and guarded
+adaptive learning remain the sources of truth. Today no longer duplicates the
+separate old automatic-fitness-summary card; it remains available in Settings.
+
+Offline browser tests: 10 Chromium scenarios, 0 page errors or overflow.
+All 681 baseline regression cases and 67 new contract/fault tests passed.
+See RELEASE_TEST_REPORT.md, INSTALL.txt, and coach-intelligence-regression-tests.js.
+
+KNOWN LIMITATIONS: Historical deltas are available only when qualified dated
+estimates exist; they are not reconstructed from a held setup value. The app
+does not automatically connect to Garmin/Stryd, weather, or sleep/HRV sources
+that have not been explicitly imported. This version adds interpretation,
+not a new clinical or laboratory physiological measurement method.
+
+=========================================================
+
 ADAPTIVE PERSONALIZATION (v15.8.2)
 No manual training controls. Run outcomes are evaluated against later runs and validated
 on a chronological holdout. Sparse evidence retains fixed baseline rates and weights.
@@ -8,7 +41,7 @@ adapt; pain safeguards and original load caps remain unchanged. The Progress tab
 shows the evidence counts and parameter values. These are observational proxies
 not scientific/clinical calibration.
 
-AI RUNNING COACH v15.8.2 · build 51820 — AUTOMATIC LT1 EVIDENCE & SIMPLIFIED OPTIMIZER
+PREVIOUS RELEASE v15.8.2 · build 51820 — AUTOMATIC LT1 EVIDENCE & SIMPLIFIED OPTIMIZER
 20 October 2026
 
 THIS IS A COMPLETE FLAT GITHUB UPLOAD PACKAGE. Keep the SAME GitHub Pages URL and browser
@@ -73,12 +106,12 @@ Total: 522/522 executed checks passed, subject to limitations in RELEASE_TEST_RE
 INSTALL
 Extract the ZIP and upload all files to the GitHub repository ROOT, replacing
 same-named files and adding new training-lt1.js and automatic-lt1-regression-tests.js.
-No folders are required in the repository. Verify v15.8.2 / build 51820.
+No folders are required in the repository. Verify v15.8.3 / build 51830.
 
 ---------- PREVIOUS RELEASE HISTORY (HISTORICAL, SUPERSEDED WHERE IT DESCRIBES LT1
            OR OTHER-SPORT INPUTS) ----------
 
-AI Running Coach v15.8.2 · build 51820
+Prior version: AI Running Coach v15.8.2 · build 51820
 FULL APPLICATION UPLOAD PACKAGE — 19 October 2026
 
 INSTALL
@@ -86,7 +119,7 @@ INSTALL
 2. Extract this ZIP. Upload ALL extracted files into the existing GitHub repository ROOT,
    replacing matching files. Do not upload the ZIP itself and do not put the app in a subfolder.
 3. Keep the same GitHub Pages address. Wait for deployment, close/reopen or reload the app,
-   and check Settings shows v15.8.2 / build 51820.
+   and check Settings shows v15.8.3 / build 51830.
 4. Do not reset the app, clear site data, uninstall its stored data or change its URL.
 
 NEW FEATURES

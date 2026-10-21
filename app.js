@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '15.8.2';
-  const BUILD = 51820;
+  const VERSION = '15.8.3';
+  const BUILD = 51830;
   const SCHEMA = 10400;
   const PRIMARY_STORAGE_KEY = 'arc_v10400_web';
   const MIRROR_STORAGE_KEY = 'arc_v10400_mirror';
@@ -4591,7 +4591,7 @@ function rehabCheckinWorstPain(c){
 function todayInjuryPainDisplay(active,recoveryPain){
  const injury=active?.injury;
  if(!injury){
-  const value=Number(recoveryPain?.max);
+  const value=nullableNumber(recoveryPain?.max);
   return{
    value:Number.isFinite(value)?value:null,
    status:recoveryPain?.status||'No pain data',
@@ -4747,6 +4747,128 @@ function todayCoachInsightHtml(insight){
  return`<article class="briefingCoachInsight ${esc(insight.status||'neutral')}"><small>${esc(insight.label||'COACH INSIGHT')}</small><strong>${esc(insight.title||'')}</strong><p>${esc(insight.detail||'')}</p></article>`;
 }
 
+/* BEGIN Coach Intelligence v2 — read-only adapter to established models.
+ * WorkoutScore, comparableRunAnalysis, fitnessTrajectory, calibrationFor,
+ * arcCurrentLT1, readinessModel, the two pathways and coachEngine remain the
+ * ONLY calculation authorities. This code never writes athlete state or plan.
+ */
+function coachIntelCalibrationHistory(kind,asOf){
+ const cal=ensureCalibrationState(),byDay=new Map();
+ for(const r of cal.records||[]){
+  if(r?.kind!==kind||r.legacy||!calibrationRecordIsCurrent(r,asOf))continue;
+  const date=r.measuredOn||r.effectiveOn,value=Number(r.value);
+  if(!CORE.isIsoDate(date)||date>asOf||!calibrationValidValue(kind,value))continue;
+  // A single dated calibration represents one effective observation; latest sequence wins.
+  const previous=byDay.get(date);
+  if(!previous||Number(r.sequence||0)>=Number(previous.sequence||0))byDay.set(date,{date,value,sequence:r.sequence||0});
+ }
+ const current=calibrationFor(kind,asOf),date=current?.measuredOn||current?.effectiveOn;
+ if(current&&!current.legacy&&CORE.isIsoDate(date)&&date<=asOf&&calibrationValidValue(kind,current.value)){
+  const prior=byDay.get(date);
+  if(!prior||Number(current.sequence||0)>=Number(prior.sequence||0))byDay.set(date,{date,value:Number(current.value),sequence:current.sequence||0});
+ }
+ return[...byDay.values()].sort((a,b)=>a.date.localeCompare(b.date));
+}
+function coachIntelMetricRow({label,points=[],asOf,unit='',digits=1,note='',confidence='',lowerBetter=false,directionless=false,format=null}){
+ const api=window.ARCCoachIntelligence,summary=api.seriesDelta(points,asOf);
+ const formatValue=value=>Number.isFinite(value)?(format?format(value):value.toFixed(digits)+(unit?' '+unit:'')):'—';
+ const d=(value)=>Number.isFinite(value)?`${value>0?'+':''}${value.toFixed(digits)}${unit?' '+unit:''}`:'—';
+ const deltaTone=v=>directionless||!Number.isFinite(v)||Math.abs(v)<10**(-digits)*.49?'neutral':(lowerBetter?v<0:v>0)?'good':'caution';
+ const changed=summary.priorDelta!==null&&Math.abs(summary.priorDelta)>=10**(-digits)*.49;
+ const title=changed?`${d(summary.priorDelta)} since previous qualified value`:summary.observedAt?(summary.previous===null?'First qualified value · trend building':summary.observedToday?'No change between qualified values':'No qualifying update today'):'No qualified estimate';
+ const staleness=summary.observedAt&&api.shift(asOf,-56)>summary.observedAt?' · stale':(!summary.observedToday&&summary.observedAt?' · no new observation today':'');
+ return `<article class="ciMetric"><small>${esc(label)}</small><b>${esc(formatValue(summary.current))}</b><span class="ciDelta ${deltaTone(summary.priorDelta)}">${esc(title)}</span><p>${summary.observedAt?`Observed ${esc(fmtDate(summary.observedAt))}${esc(staleness)}`:'Waiting for evidence'}${confidence?' · '+esc(confidence):''}</p><details><summary>7/28-day change &amp; source</summary><div class="ciMetricHistory"><span>7 days</span><b>${esc(d(summary.delta7))}</b><span>28 days</span><b>${esc(d(summary.delta28))}</b><span>Previous</span><b>${esc(formatValue(summary.previous))}</b></div><p>${esc(note||'This is a model estimate, not a direct physiological measurement.')} No new qualifying measurement means no claim of improvement.</p></details></article>`;
+}
+function coachIntelRetainedMetricRow({label,value,unit='',note='',digits=0,format=null}){
+ const v=window.ARCCoachIntelligence.number(value);
+ const display=v===null?'—':format?format(v):v.toFixed(digits)+(unit?' '+unit:'');
+ return `<article class="ciMetric"><small>${esc(label)}</small><b>${esc(display)}</b><span class="ciDelta neutral">${v===null?'No qualifying measurement':'Retained setting · no measured change'}</span><p>${esc(note||'Legacy configuration, not a new physiological observation.')}</p><details><summary>7/28-day change &amp; source</summary><p>No dated qualified observations support a trend. This setting is held, not evidence of an improvement.</p></details></article>`;
+}
+function coachIntelTodayHtml({todayRun,plan,engine,report,ready,priorityTitle,priorityBullets,programmePause,injuryDay}){
+ const api=window.ARCCoachIntelligence;
+ if(!api)return''; // Fail closed: the existing coach and data remain available.
+ const key=iso(today()),runPlan=todayRun?(todayRun.planId?state.plan.find(x=>x.id===todayRun.planId):plan&&plan.type!=='Rest'?plan:null):null;
+ const details=todayRun?workoutScoreDetails(todayRun,runPlan):null,comp=todayRun?comparableRunAnalysis(todayRun):null;
+ let two=null;
+ if(todayRun)try{two=twoPathwayDecisionForRun(todayRun,runPlan)}catch(_){/* Pathway unavailable -> explicitly unknown */}
+ const assessment=api.runAssessment({run:todayRun,plan:runPlan,scoreDetails:details,comparison:comp,pathways:two});
+ const allRuns=completedRuns(key),load=api.loadSummary(allRuns,key),fitness=fitnessTrajectory(key),latest=fitness.latest;
+ const cp=calibrationFor('power',key),lt2=calibrationFor('hr',key),benchmark=calibrationFor('pace',key);
+ const lt1=arcCurrentLT1(key);
+ const metricsRows=[];
+ const fitPoints=(fitness.history||[]).filter(x=>x&&CORE.isIsoDate(x.date));
+ metricsRows.push(coachIntelMetricRow({label:'Estimated VO₂max',points:fitPoints.map(x=>({date:x.date,value:x.value})),asOf:key,unit:'mL/kg/min',digits:1,confidence:latest?.confidence||'',note:'Submaximal HR–pace oxygen-cost estimate; the number is not a direct laboratory measurement.'}));
+ if(fitness.group)metricsRows.push(coachIntelMetricRow({label:'VO₂-based fitness age',points:fitPoints.filter(x=>Number.isFinite(x.ageEquivalent)).map(x=>({date:x.date,value:x.ageEquivalent})),asOf:key,unit:'years',digits:1,lowerBetter:true,note:'Population-reference equivalent from the same VO₂max model; not Garmin fitness age or biological age.'}));
+ else metricsRows.push(`<article class="ciMetric"><small>VO₂-based fitness age</small><b>—</b><span class="ciDelta neutral">Not configured</span><p>Set birth year and reference group in Progress; no age is invented.</p></article>`);
+ const cpHistory=coachIntelCalibrationHistory('power',key);
+ metricsRows.push(cpHistory.length?coachIntelMetricRow({label:'Critical power',points:cpHistory,asOf:key,unit:'W',digits:0,confidence:cp?.automatic?'automatic':'dated calibration',note:`Source: ${cp?.source||'dated calibration'}. A change is shown only from qualified observations.`}):coachIntelRetainedMetricRow({label:'Critical power',value:cp?.value,unit:'W',note:`${cp?.source||'No CP measurement'}. A legacy setup value is retained but not treated as a new fitness measurement.`}));
+ const lt1Now=lt1?.status==='provisional'&&Number.isFinite(Number(lt1.hr))?Number(lt1.hr):null;
+ const lt1Points=[];
+ for(const days of [28,7,0]){
+  const date=api.shift(key,-days),result=days?arcCurrentLT1(date):lt1;
+  if(result?.status==='provisional'&&Number.isFinite(Number(result.hr))){
+   const measuredOn=result.observations?.at(-1)?.date||date;
+   if(CORE.isIsoDate(measuredOn))lt1Points.push({date:measuredOn,value:Number(result.hr)});
+  }
+ }
+ if(lt1Now!==null)metricsRows.push(coachIntelMetricRow({label:'LT1 · provisional proxy',points:lt1Points,asOf:key,unit:'bpm',digits:0,directionless:true,confidence:'low confidence',note:`${lt1.reason||'Estimated from sustained HR decoupling.'} Neither a lab LT1 measurement nor an automatically estimated LT1 pace/power.`}));
+ else metricsRows.push(`<article class="ciMetric"><small>LT1 · aerobic boundary</small><b>—</b><span class="ciDelta neutral">Not established</span><p>${esc(lt1?.reason||'Not enough repeatable aerobic-drift evidence.')}</p></article>`);
+ const lt2History=coachIntelCalibrationHistory('hr',key);
+ metricsRows.push(lt2History.length?coachIntelMetricRow({label:'LT2 · threshold HR',points:lt2History,asOf:key,unit:'bpm',digits:0,directionless:true,confidence:lt2?.automatic?'automatic':'dated calibration',note:`Source: ${lt2?.source||'dated calibration'}. LT2 is never inferred from easy-run average heart rate.`}):coachIntelRetainedMetricRow({label:'LT2 · threshold HR',value:lt2?.value,unit:'bpm',note:`${lt2?.source||'No LT2 measurement'}. A retained LT2 is not new evidence.`}));
+ const paceHistory=coachIntelCalibrationHistory('pace',key);
+ metricsRows.push(paceHistory.length?coachIntelMetricRow({label:'5 km reference pace',points:paceHistory,asOf:key,unit:'s/km',digits:0,lowerBetter:true,format:v=>pace(v),note:`Source: ${benchmark?.source||'dated calibration'}. This is a 5 km distance-specific reference, not an easy-run pace.`}):coachIntelRetainedMetricRow({label:'5 km reference pace',value:benchmark?.value,format:v=>pace(v),note:`${benchmark?.source||'No 5 km reference measurement'}. A held pace is not proof of a new benchmark.`}));
+ const rpe=api.number(todayRun?.rpe),pain=api.number(todayRun?.pain),hrv=ready.hrv;
+ const hrvContext=hrv?.ready&&Number.isFinite(hrv.rolling)&&Number.isFinite(hrv.baseline)?`Previous-night HRV rolling ${Math.round(hrv.rolling)} ms versus personal ${Math.round(hrv.baseline)} ms baseline.`:'Not enough recent HRV observations for a dependable personal comparison.';
+ const last7=load.last7.km,prior7=load.previous7.km;
+ const loadSentence=`${last7.toFixed(1)} km in the last 7 days versus ${prior7.toFixed(1)} km in the preceding 7 days${load.percent7!==null?` (${load.percent7>0?'+':''}${load.percent7.toFixed(0)}%)`:' (percentage change unavailable from zero baseline)'}. 28-day volume ${load.last28.km.toFixed(1)} km.`;
+ const trailingRun=allRuns.filter(x=>x.date<key).sort((a,b)=>b.date.localeCompare(a.date))[0]||null;
+ const trace=[];
+ if(assessment){
+  for(const x of assessment.drivers.slice(0,4))trace.push({label:x.label,value:x.value,detail:x.detail,tone:x.tone});
+  if(assessment.components.length){
+   const least=assessment.components[0];
+   trace.push({label:'Largest execution weakness',value:`${least.name}: ${least.score.toFixed(0)}/100`,detail:`Weighted ${least.weight.toFixed(0)}% in the *existing* execution score. ${least.detail}`,tone:least.score<80?'caution':'neutral'});
+  }
+ }else{
+  trace.push({label:'Training exposure',value:`${last7.toFixed(1)} km / 7 days`,detail:`${load.last7.count} runs during the rolling week. ${loadSentence}`,tone:'neutral'});
+  if(trailingRun)trace.push({label:'Last completed run',value:`${fmtDate(trailingRun.date)} · ${Number(trailingRun.distanceKm).toFixed(1)} km`,detail:'Historical data inform today; this is not a run completed today.',tone:'neutral'});
+  if(hrv?.ready)trace.push({label:'Readiness',value:ready.label,detail:todayReadinessExplanation(ready),tone:ready.label==='Normal'?'good':'caution'});
+ }
+ const hrvMissing=!(hrv?.ready),latestSource=latest?`${fmtDate(latest.date)} · ${latest.count} steady HR/pace observations (${latest.confidence} confidence)`:'no independent steady HR/pace estimate yet';
+ const limitations=[...new Set([...(assessment?.limitations||[]),...(hrvMissing?['reliable recent HRV baseline']:[]),...(!latest?['qualified VO₂max series']:[]),...(lt1Now===null?['established LT1 breakpoint']:[])])];
+ const verdict=programmePause?'Programme pause takes priority':injuryDay?'Rehabilitation criteria take priority':assessment?.verdict|| (plan&&plan.type!=='Rest'?'No completed planned session today — use current evidence':'Recovery day — review the signals');
+ const verdictTone=programmePause||injuryDay?'caution':assessment?.tone||'neutral';
+ const raceHistory=(state.raceReadinessHistory||[]).filter(x=>x&&CORE.isIsoDate(x.date)&&x.date<key);
+ const raceNow=Number(engine.pred),raceScenario=Number(engine.projection?.predictedTime),currentHist=api.seriesDelta([...raceHistory.map(x=>({date:x.date,value:x.current})),{date:key,value:raceNow}],key);
+ const forecastHist=api.seriesDelta([...raceHistory.map(x=>({date:x.date,value:x.expected})),{date:key,value:raceScenario}],key);
+ const forecastPct=Number.isFinite(engine.projectedModel?.probability)?Math.round(engine.projectedModel.probability):null;
+ const trend=(x)=>Number.isFinite(x)?`${x<0?'−':x>0?'+':''}${esc(fmtTime(Math.abs(x)))} ${x<0?'faster':x>0?'slower':'unchanged'}`:'not established';
+ const next=(state.plan||[]).filter(p=>p.date>key&&!['Rest','Race Day'].includes(p.type)).sort((a,b)=>a.date.localeCompare(b.date))[0]||null;
+ const nextText=programmePause?'No run recommended while the programme pause is active.':injuryDay?'Resume only if active rehabilitation criteria permit.':next?`${fmtDate(next.date)} · ${next.type} · ${Number(next.distance).toFixed(1)} km. ${next.purpose||''}`:'No further purposeful session in the current programme.';
+ const decisionText=priorityBullets.filter(Boolean).slice(0,2).join(' ');
+ const componentRows=assessment?.components.map(c=>`<div class="ciScoreRow"><span><b>${esc(c.name)}</b><small>${esc(c.detail)}${c.scope?' · '+esc(c.scope):''}</small></span><strong>${Math.round(c.score)}/100</strong><em>${c.weight.toFixed(0)}% weight</em></div>`).join('')||'';
+ const dose=assessment?.dose,hasHrDose=dose&&dose.seconds>0&&dose.hrCoverage!==null;
+ const doseText=hasHrDose?`Measured HR exposure: ${Math.round((dose.lowHr||0)/60)} min below LT1, ${Math.round((dose.moderateHr||0)/60)} min between thresholds, ${Math.round((dose.highHr||0)/60)} min above LT2, and ${Math.round((dose.unknownHr||0)/60)} min unknown. Classified HR coverage ${Math.round(dose.hrCoverage*100)}% (${dose.status}).`:'Second-by-second, threshold-classified HR exposure is not sufficiently available; no zone minutes are inferred.';
+ return `<section class="coachIntelligencePanel" aria-label="Coach Intelligence v2">
+  <div class="ciTop"><div><small>COACH INTELLIGENCE · ${assessment?'POST-RUN':'DAILY'} EVIDENCE</small><h3>${esc(verdict)}</h3><p>${esc(decisionText)}</p></div><span class="ciTone ${verdictTone}">${assessment?`Execution ${assessment.score===null?'—':assessment.score+'/100'}`:'Daily review'}</span></div>
+  <div class="ciSectionHead"><div><small>01 · WHY</small><h4>What the signals actually say</h4></div><span>${esc(report.evidenceCoverage)}% model-component evidence</span></div>
+  <div class="ciEvidenceGrid">${trace.map(x=>`<article class="ciFinding ${esc(x.tone||'neutral')}"><small>${esc(x.label)}</small><b>${esc(x.value)}</b><p>${esc(x.detail)}</p></article>`).join('')}</div>
+  ${assessment?`<details class="ciAudit"><summary>Show full workout score &amp; physiological evidence</summary><p>${esc(details?.interpretation||'')} The execution score is a weighted prescription-adherence measure, not a direct physiological adaptation score. ${details?.capReason?esc(details.capReason):''}</p><div class="ciScoreRows">${componentRows||'<p>No score components available.</p>'}</div><div class="ciPathways">${assessment.pathways.map(x=>`<div><small>${esc(x.name)} signal</small><b>${x.signal===null?'—':(x.signal>0?'+':'')+x.signal.toFixed(2)}</b><p>${esc(x.interpretation||'Evidence insufficient')} · ${esc(x.confidence)} confidence</p></div>`).join('')}</div><p>${esc(doseText)}</p><p>${esc(`Effort ${rpe===null?'not entered':rpe+'/10'} · pain ${pain===null?'not entered':pain+'/10'}. Unknown pain and effort do not count as zero.`)}</p></details>`:''}
+  <div class="ciSectionHead"><div><small>02 · WHAT CHANGED</small><h4>Physiological metric audit</h4></div><span>Actual observed changes, not forced updates</span></div>
+  <div class="ciMetricGrid">${metricsRows.join('')}</div>
+  <div class="ciSectionHead"><div><small>03 · RECOVERY COST</small><h4>Training load &amp; readiness</h4></div><span>${esc(ready.label)}</span></div>
+  <div class="ciLoadGrid"><article><small>LAST 7 DAYS</small><b>${last7.toFixed(1)} km</b><span>${load.percent7!==null?`${load.percent7>0?'+':''}${load.percent7.toFixed(0)}% vs previous week`:'No prior-week distance baseline'}</span></article><article><small>LAST 28 DAYS</small><b>${load.last28.km.toFixed(1)} km</b><span>${load.last28.count} recorded runs</span></article><article><small>READINESS MODIFIER</small><b>${(ready.modifier*100).toFixed(1)}%</b><span>${esc(ready.label)} · ${esc(todayReadinessExplanation(ready))}</span></article></div>
+  <p class="ciEvidenceNote">${esc(hrvContext)} Weekly distance is training exposure, not a calibrated fatigue or injury-risk probability. ${assessment?.over?'The completed run exceeded the assigned distance; monitor subsequent recovery rather than treating extra distance as automatically productive.':''}</p>
+  <div class="ciSectionHead"><div><small>04 · GOAL PROGRESSION</small><h4>Marathon outlook — now vs future scenario</h4></div></div>
+  <div class="ciRaceGrid"><article><small>CURRENT ESTIMATED ABILITY</small><b>${esc(fmtEstimate(raceNow,Boolean(engine.currentModel?.provisional)))}</b><span>Change since last saved snapshot: ${trend(currentHist.priorDelta)}</span><p>Current model range: ${esc(fmtEstimate(Number(engine.currentModel?.rangeLow),Boolean(engine.currentModel?.provisional)))}–${esc(fmtEstimate(Number(engine.currentModel?.rangeHigh),Boolean(engine.currentModel?.provisional)))}</p></article><article><small>PROJECTED PROGRAMME SCENARIO</small><b>${esc(fmtEstimate(raceScenario,Boolean(engine.projectedModel?.provisional)))}</b><span>Change since last saved snapshot: ${trend(forecastHist.priorDelta)}</span><p>Future training assumptions: ${esc(Number(engine.projection?.completionAssumption)>0?Math.round(engine.projection.completionAssumption*100)+'% programme completion assumed':'not verified')}. Target probability: ${forecastPct!==null?forecastPct+'%':'not established'}.</p></article></div>
+  <p class="ciEvidenceNote">The programme scenario is a conditional future forecast, not today's running ability. The change shown compares existing stored daily race-readiness snapshots; it is not necessarily caused by a single run. ${esc(engine.projectedModel?.provisional?'The projection is provisional; numerical precision exceeds the evidence.':'Uncertainty remains even with a supported model.')}</p>
+  <div class="ciSectionHead"><div><small>05 · ACTION</small><h4>What happens next &amp; why</h4></div></div>
+  <div class="ciAction"><b>${esc(priorityTitle)}</b><p>${esc(nextText)}</p>${(pain!==null&&pain>=3)?'<p>Logged pain limits progression: reassess symptoms before another demanding session.</p>':''}<p>Change the next workout only through the existing guarded plan/recovery engine; this report does not create a competing training prescription.</p></div>
+  <details class="ciAudit ciLimitations"><summary>Evidence provenance, missing inputs &amp; confidence</summary><p><b>Estimated VO₂max:</b> ${esc(latestSource)}. <b>LT1:</b> ${esc(lt1?.reason||'Not established')}. <b>Critical power:</b> ${esc(cp?.source||'Not available')}. <b>Threshold HR:</b> ${esc(lt2?.source||'Not available')}.</p><p><b>Missing or limited:</b> ${esc(limitations.length?limitations.join(', '):'No explicitly missing fields among the checked sources')}. The evidence coverage percentage is the existing race-model component support; it does NOT mean that an equivalent percentage of FIT sensor values exists.</p><p>Confidence is source-specific. Terrain, weather, sensor accuracy, hydration, illness and effort can influence HR/pace/power comparisons. The app does not directly import Garmin or Stryd wellness data, and must not pretend those measurements are available.</p></details>
+ </section>`;
+}
+/* END Coach Intelligence v2 */
+
 function todayCoachOtherRunsToday(p){
  const key=iso(today()),rows=(state.runs||[]).filter(r=>r&&r.date===key&&r.source!=='assessment').slice().sort((a,b)=>String(b.updatedAt||b.createdAt||b.id||'').localeCompare(String(a.updatedAt||a.createdAt||a.id||'')));
  if(!p||p.type==='Rest')return[];
@@ -4756,7 +4878,7 @@ function todayCoachOtherRunsToday(p){
 function consolidatedTodayCoachBriefing(p){
  const engine=coachEngine(),report=evidenceBasedCoach(engine),ast=report.athleteState,ready=readinessModel(),active=todayActiveInjury(),injuryDay=active.day,rehabSummary=todayRehabStatusSummary(active),todayRun=todayCoachRunForBriefing(p),postRun=Boolean(todayRun),programmePause=currentProgrammePause(),scheduledPause=upcomingProgrammePauses().find(x=>programmePauseStatus(x)==='scheduled')||null;
  const evidence=Math.round(clamp(Number(report.evidenceCoverage)||0,0,100)),remaining=raceTimeRemaining(),pain=ready.pain,todayPain=todayInjuryPainDisplay(active,pain),trajectory=todayCoachTrajectoryInsight(engine);
- const readinessDetail=todayReadinessExplanation(ready),painValue=Number.isFinite(Number(todayPain.value))?`${Number(todayPain.value).toFixed(0)}/10`:'—',painText=todayPain.text;
+ const readinessDetail=todayReadinessExplanation(ready),painValue=Number.isFinite(todayPain.value)?`${todayPain.value.toFixed(0)}/10`:'—',painText=todayPain.text;
  const modeTitle=programmePause?'Programme paused':injuryDay&&rehabSummary?rehabSummary.date:p&&p.type!=='Rest'?p.type:'Recovery',modeText=programmePause?`${programmePauseReasonLabel(programmePause.reason)} · ${fmtDate(programmePause.startDate)}–${fmtDate(programmePause.endDate)}`:injuryDay&&rehabSummary?`Normal running estimate · ${rehabSummary.detail}`:p&&p.type!=='Rest'?`${Number(p.distance).toFixed(1)} km · ${p.purpose||'Complete as prescribed'}`:'No run scheduled · recovery is today’s training';
  let priorityTitle,priorityBullets,insights=[];
  if(programmePause){
@@ -4774,14 +4896,15 @@ function consolidatedTodayCoachBriefing(p){
  }else if(postRun){
   const plan=todayRun.planId?state.plan.find(x=>x.id===todayRun.planId):(p&&p.type!=='Rest'?p:null),details=workoutScoreDetails(todayRun,plan),score=Number(details?.score),painScore=Number(todayRun.pain);
   if(Number.isFinite(painScore)&&painScore>=5)priorityTitle='Stop here and prioritise recovery';
+  else if(plan&&Number.isFinite(Number(plan.distance))&&Number(plan.distance)>0&&Number(todayRun.distanceKm)>Number(plan.distance)*1.08)priorityTitle='Extra distance logged — absorb the unplanned training load';
   else if(Number.isFinite(score)&&score>=90)priorityTitle='Bank a high-quality session — no extra work needed';
   else if(Number.isFinite(score)&&score>=75)priorityTitle='Session complete — absorb the training';
   else if(Number.isFinite(score))priorityTitle='Use today’s evidence; do not compensate';
   else priorityTitle='Run logged — let the evidence settle';
   priorityBullets=[
    `${Number(todayRun.distanceKm).toFixed(2)} km logged${plan?` against ${Number(plan.distance).toFixed(1)} km planned`:''}${Number.isFinite(score)?` · execution ${Math.round(score)}/100`:''}.`,
-   details?.interpretation?`${details.interpretation} is now part of today’s coaching decision.`:'The saved run is now part of today’s coaching evidence.',
-   'Today is now a post-run decision: recover, review the response, and protect the next purposeful session.'
+   details?.targetComparison?.needsReview?details.targetComparison.notice:(Number(todayRun.distanceKm)>Number(plan?.distance||Infinity)*1.08?'The run exceeded the planned volume, even if the measured physiological response was favourable.':'The physiological and execution evidence is evaluated below.'),
+   'The next-session decision stays subject to pain, recovery and the existing plan safeguards.'
   ];
   insights=[todayCoachPostRunSessionInsight(todayRun,p),todayCoachPostRunLearningInsight(todayRun),todayCoachPostRunNextInsight(todayRun,trajectory)];
  }else if(injuryDay){
@@ -4819,12 +4942,12 @@ function consolidatedTodayCoachBriefing(p){
      <div class="briefingGauges"><div class="evidenceCompleteness" style="--evidence:${evidence}"><div class="evidenceRing"><strong>${evidence}</strong><span>%</span></div><small>Evidence completeness</small></div></div>
    </div>
    <div class="briefingDecision"><small>${postRun?'COACH’S DECISION NOW':'TODAY\'S PRIORITY'}</small><strong>${esc(priorityTitle)}</strong>${todayBulletList(priorityBullets,'runnerBullets priorityBullets')}</div>
-   <div class="briefingCoachInsights">${insights.filter(Boolean).map(todayCoachInsightHtml).join('')}</div>
+   ${coachIntelTodayHtml({todayRun,plan:p,engine,report,ready,priorityTitle,priorityBullets,programmePause,injuryDay})}${(programmePause||injuryDay)?`<div class="briefingCoachInsights">${insights.filter(Boolean).map(todayCoachInsightHtml).join('')}</div>`:''}
  </section>
  <div class="todayStatusGrid seriousStatusGrid">
    <article class="todayStatusCard ${programmePause?'neutral':'training'}"><h4>${programmePause?'PROGRAMME STATUS':injuryDay?'ACTIVE REHAB':'TODAY’S FOCUS'}</h4><div class="statusRing">${todayPictogram(programmePause?'recovery':injuryDay?'rehab':p&&p.type!=='Rest'?'training':'recovery')}</div><div class="statusCopy"><strong>${esc(modeTitle)}</strong><p>${esc(modeText)}</p></div></article>
    <article class="todayStatusCard ${ready.label==='Normal'?'good':ready.label==='Restricted'?'caution':'neutral'}"><h4>READINESS</h4><div class="statusRing">${todayPictogram('readiness')}</div><div class="statusCopy"><strong>${esc(ready.label)}</strong><p>${esc(readinessDetail)}</p></div></article>
-   <article class="todayStatusCard ${Number(todayPain.value)>=3?'caution':'good'}"><h4>PAIN / INJURY</h4><div class="statusRing">${todayPictogram('pain')}</div><div class="statusCopy"><strong>${painValue}</strong><p>${esc(painText)}</p></div></article>
+   <article class="todayStatusCard ${!Number.isFinite(todayPain.value)?'neutral':todayPain.value>=3?'caution':'good'}"><h4>PAIN / INJURY</h4><div class="statusRing">${todayPictogram('pain')}</div><div class="statusCopy"><strong>${painValue}</strong><p>${esc(painText)}</p></div></article>
  </div>
  ${todayRehabCard(active)}
  ${todayWorkoutCard(p,injuryDay)}
@@ -4835,7 +4958,7 @@ function dailyCoachFocus(){return''}
 function renderToday(){
  const p=state.plan.find(x=>x.date===iso(today()));
  $('todayDate').textContent=today().toLocaleDateString(undefined,{weekday:'long',day:'numeric',month:'long',year:'numeric'});
- $('todayCard').innerHTML=consolidatedTodayCoachBriefing(p)+autoFitnessSummaryHtml()+calibrationReviewCardHtml('today');$('todayCoach').innerHTML='';
+ $('todayCard').innerHTML=consolidatedTodayCoachBriefing(p)+calibrationReviewCardHtml('today');$('todayCoach').innerHTML=''; // Fitness inputs remain in Settings; Today has one metric audit.
  document.querySelectorAll('#today [data-workout-toggle]').forEach(btn=>btn.addEventListener('click',()=>{
    const details=document.getElementById(`workout-details-${btn.dataset.workoutToggle}`);
    if(!details)return;
@@ -6472,7 +6595,7 @@ let recoveryPainCache={key:null,value:null};
 function recoveryPainState(){
  const key=`${runtimeDomainRevisions.runs}|${iso(today())}`;
  if(recoveryPainCache.key===key&&recoveryPainCache.value)return recoveryPainCache.value;
- const recent=completedRuns().filter(r=>Number.isFinite(Number(r.pain))).sort((a,b)=>b.date.localeCompare(a.date)).slice(0,5);
+ const recent=completedRuns().filter(r=>nullableNumber(r.pain)!==null).sort((a,b)=>b.date.localeCompare(a.date)).slice(0,5);
  let value;
  if(!recent.length)value={count:0,average:null,max:null,status:'No pain data'};
  else{const vals=recent.map(r=>Number(r.pain)),average=avg(vals),max=Math.max(...vals);value={count:vals.length,average,max,status:max>=5?'Pain needs attention':max>=3?'Monitor pain':'No significant pain signal'}}

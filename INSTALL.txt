@@ -1,19 +1,43 @@
-AI Running Coach v15.8.2 / build 51820 — COMPLETE GITHUB UPLOAD ZIP
+AI RUNNING COACH v15.8.3 · BUILD 51830
+COMPLETE REPLACEMENT PACKAGE FOR YOUR EXISTING GITHUB PAGES APP
 
-1. Extract AI_Running_Coach_v15.8.2_FULL_UPLOAD.zip.
-2. Upload ALL extracted files to the root of your existing GitHub repository,
-   replacing matching filenames and adding the new adaptive-learning.js file.
-3. Leave the repository and GitHub Pages address unchanged.
-4. Reload the app after GitHub Pages deploys and verify v15.8.2 / build 51820.
+WHAT THIS RELEASE DOES
+Coach Intelligence v2 replaces generic Today coaching paragraphs with a
+consolidated daily/post-run evidence report. It reuses the existing fitness,
+readiness, workout scoring, two-pathway and planning engines (no competing
+physiology model, scoring algorithm, or new saved athlete-data schema).
 
-Your running history, shoes and calibrations live in your browser storage.
-Do not reset, uninstall or clear site data. A JSON backup before upgrading is
-recommended protection but is not a requirement or something you must restore
-for a normal update.
+PUBLISHING FROM GITHUB
+1. Download AI_Running_Coach_v15.8.3_FULL_UPLOAD.zip.
+2. EXTRACT the ZIP on your phone or computer. All app files are flat; the
+   extracted package has no source folders to navigate.
+3. Replace the matching files at the ROOT of the repository used for GitHub
+   Pages, and ADD the new coach-intelligence.js, coach-intelligence.css, and
+   coach-intelligence-regression-tests.js.
+4. Commit the changes. Do not change the GitHub Pages URL, repository name,
+   or app origin. Wait for Pages to deploy and reopen the app.
+5. Verify the app says v15.8.3 / build 51830. Check the Today page after a
+   run and on a day with no completed planned run.
 
-NEW: Personal adaptive learning (guarded, held-out validation) and transparent
-precision in factor calculations. Existing LT1 remains.
-Automatic LT1 evidence from timestamped HR in FIT/CSV imports; no manual
-LT1 or talk-test entry; no separate other-sport inputs. Shadow mode is default.
-LT1 is an exploratory, low-confidence HR decoupling proxy, not laboratory LT1.
-Insufficient data leaves the boundary unknown. See README.txt and the report.
+IMPORTANT: GitHub's standard “Upload files” does not unpack a ZIP. Do not
+upload just the ZIP file into the repo expecting the website to update.
+Use the extracted individual files. The ZIP is the easy-to-transfer package.
+
+EXISTING TRAINING DATA
+Version 15.8.3 keeps storage schema 10400 and the same local storage keys.
+It does not reset training history, shoes, injuries, calibrations or plans.
+Avoid clearing browser data, moving the website to a new origin, or uninstalling
+the PWA until you are confident your backup exists. Taking a JSON backup is a
+sensible precaution; a normal app-code update does not require restoring it.
+
+VALIDATION
+See RELEASE_TEST_REPORT.md and coach-intelligence-regression-tests.js:
+681 / 681 existing regression cases plus 67 / 67 new cases, and
+10 / 10 Chromium UI integration scenarios (320–1200 px, post-run, missing
+data, overshoot, pain override, future activities).
+
+LIMITATIONS
+Only confirmed saved inputs are used. No new Garmin/Stryd direct sync, sleep
+or weather integration has been added. This release explains the existing
+engine; it does not assume those signals are available. A retained threshold
+or critical power is displayed but must not be interpreted as new progress.
