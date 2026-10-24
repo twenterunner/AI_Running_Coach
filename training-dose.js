@@ -5,7 +5,7 @@
   if (root) root.ARCTrainingDose = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
-  const VERSION = '1.1.0', MAX_SECONDS = 172800, MAX_RECORDS = 400000;
+  const VERSION = '1.2.0', MAX_SECONDS = 172800, MAX_RECORDS = 400000;
   const finite = v => v !== null && v !== undefined && v !== '' && typeof v !== 'boolean' && Number.isFinite(Number(v));
   const num = v => finite(v) ? Number(v) : null;
   const validDate = v => { if(typeof v!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(v))return false; const t=Date.parse(v+'T12:00:00Z'); return Number.isFinite(t)&&new Date(t).toISOString().slice(0,10)===v; };
@@ -70,10 +70,20 @@
     if(!(span>0&&span<=MAX_SECONDS))return failure(run,'Invalid recording time span');
     const timers=timerIntervals(start,end,run.trainingTimerEvents);
     const active=sum(timers.ranges.map(x=>x[1]-x[0]));
-    if(active-declared>1.01||declared-active>Math.max(5,declared*.01))return failure(run,timers.known?'Timer events disagree with activity duration':'Paused or incomplete timeline cannot be assigned accurately');
+    if(active-declared>1.01||declared-active>Math.max(5,declared*.01)){
+      const reason=`${timers.known?'FIT timer events':'Observed sample span'} disagree with the ${declared.toFixed(1)} s activity timer by ${Math.abs(active-declared).toFixed(1)} s; no duration was assigned without evidence`;
+      const result=failure(run,reason,declared);
+      result.timing={version:1,declaredSeconds:declared,observedSpanSeconds:span,observedActiveSeconds:active,
+        unassignedTimerSeconds:Math.max(0,declared-active),materialUnassigned:true,timerEventsVerified:timers.known};
+      return result;
+    }
     const total=declared; // the session timer remains authoritative
     if(active>declared){let excess=active-declared;for(let i=timers.ranges.length-1;i>=0&&excess>0;i--){const r=timers.ranges[i],cut=Math.min(excess,r[1]-r[0]);r[1]-=cut;excess-=cut;}flags.push('Rounded recording endpoint clipped to the activity timer');}
-    if(declared>active)flags.push('Trailing unrecorded timer seconds remain unknown');
+    // The first and last FIT record do not necessarily coincide with timer edges.
+    // Record the discrepancy without claiming it occurred specifically at the end.
+    const unassignedTimerSeconds=Math.max(0,declared-active);
+    const materialUnassigned=unassignedTimerSeconds>Math.max(10,declared*.005);
+    if(materialUnassigned)flags.push(`${unassignedTimerSeconds.toFixed(1)} s of timer time outside observed timestamp intervals (position not verified)`);
     const h=blank(total,'HR threshold zones (LT estimates, not laboratory measurement)',{lt1:cal.lt1Hr,lt2:cal.lt2Hr}),
       p=blank(total,'Relative-CP bands (80% / 100%; NOT LT1 / LT2)',{lowBoundary:cal.criticalPower===null?null:cal.criticalPower*.8,highBoundary:cal.criticalPower});
     const hh=new Map(),ph=new Map();let validHr=0,validPower=0,gap=0,rangeIndex=0;
@@ -116,7 +126,10 @@
     return {version:1,engineVersion:VERSION,status:coverage>=.8?'measured':'partial',reason:'Elapsed-time-weighted recorded samples',
       timerSeconds:total,pausedSeconds:Math.max(0,span-active),hr:h,power:p,calibration:cal,
       confidence:coverage>=.9?'good recording coverage':coverage>=.8?'usable recording coverage':'limited recording coverage',
-      activity:{date:run.date,durationSec:declared,distanceKm:num(run.distanceKm)},sourceRecords:rows.length,gapSeconds:gap,flags:[...new Set(flags)],method:'Left sample held for at most 10 seconds; known timer stops excluded'};
+      activity:{date:run.date,durationSec:declared,distanceKm:num(run.distanceKm)},sourceRecords:rows.length,gapSeconds:gap,
+      timing:{version:1,declaredSeconds:declared,observedSpanSeconds:span,observedActiveSeconds:active,
+        unassignedTimerSeconds,materialUnassigned,timerEventsVerified:timers.known},
+      flags:[...new Set(flags)],method:'Left sample held for at most 10 seconds; known timer stops excluded'};
   }
   function measure(run,records,input){try{return measureUnsafe(run,records,input);}catch(e){return failure(null,'Measurement fault; no exposure inferred');}}
   function isUsableDose(d) {

@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '15.8.3';
-  const BUILD = 51830;
+  const VERSION = '15.8.4';
+  const BUILD = 51840;
   const SCHEMA = 10400;
   const PRIMARY_STORAGE_KEY = 'arc_v10400_web';
   const MIRROR_STORAGE_KEY = 'arc_v10400_mirror';
@@ -539,8 +539,13 @@ function arcCaptureTrainingDose(run,records){
   if(!window.ARCTrainingDose)return;
   // Extract and retain the observed HR/effort evidence before irreversible raw-stream compaction.
   if(window.ARCTrainingLT1){
-   try{run.lt1Evidence=window.ARCTrainingLT1.summarize(run,records);}
-   catch(_){run.lt1Evidence={version:1,status:'unavailable',reason:'LT1 stream analysis fault'};}
+   try{
+    const datedLt2=calibrationFor('hr',run.date);
+    const analyzed=window.ARCTrainingLT1.summarize(run,records,{lt2Hr:datedLt2?.value});
+    // Keep an honest exclusion reason and exact activity identity after raw samples
+    // are compacted. Re-matching a run must not silently revive stale evidence.
+    run.lt1Evidence={...analyzed,activity:analyzed.activity||{date:run.date,durationSec:Number(run.durationSec),distanceKm:Number(run.distanceKm)}};
+   }catch(_){run.lt1Evidence={version:1,status:'unavailable',method:'second-by-second HR',reason:'LT1 stream analysis fault',activity:{date:run.date,durationSec:Number(run.durationSec),distanceKm:Number(run.distanceKm)}};}
   }
   if(window.ARCTrainingDose.doseMatchesActivity(run,run.trainingDose))return;
   const hr=calibrationFor('hr',run.date),pw=calibrationFor('power',run.date);
@@ -619,10 +624,10 @@ function arcCoordinateTrainingPlan(baseline,previousPlan=[]){
 window.ARCTrainingBridge=Object.freeze({
  snapshot:()=>{
   if(!arcTrainingModules())throw Error('Training modules are unavailable; original app remains usable');
-  const now=iso(today()),cfg=arcTrainingConfig();
-  return{version:'1.0.0',coreVersion:CORE.VERSION,config:cfg,now,
-   lt1:arcCurrentLT1(now),
-   reports:[7,28,84].map(n=>window.ARCTrainingDose.aggregate(state.runs||[],now,n,{lt1:arcCurrentLT1(now)})),
+  const now=iso(today()),cfg=arcTrainingConfig(),lt1=arcCurrentLT1(now);
+  return{version:'1.1.0',coreVersion:CORE.VERSION,config:cfg,now,
+   lt1,
+   reports:[7,28,84].map(n=>window.ARCTrainingDose.aggregate(state.runs||[],now,n,{lt1})),
    reviewAt:state.trainingReview?.evaluatedAt||null,
    reviewThrough:state.trainingReview?.evidenceThrough||null,
    nextReview:iso(weekEnd(currentWeek())),
@@ -12683,9 +12688,37 @@ $('activityFile').onchange=async e=>{
  try{
    preview=await parseRunImportFile(f);
    if(!preview||!preview.distanceKm||!preview.durationSec)throw Error('The activity could not be summarised from this file.');
-   if(state.runs.some(r=>r.id===preview.id||(
+   const priorRun=state.runs.find(r=>r.id===preview.id||(
      r.date===preview.date&&Math.abs(Number(r.distanceKm)-Number(preview.distanceKm))<.02&&Math.abs(Number(r.durationSec)-Number(preview.durationSec))<5
-   )))throw Error('This activity appears to have already been imported.');
+   ));
+   if(priorRun){
+    // A deliberate re-analysis refreshes only compact measurement evidence.
+    // Never require the runner to delete a logged run, its plan link or shoe data.
+    if(!Array.isArray(preview.fitRecords)||preview.fitRecords.length<2)throw Error('This activity already exists, and the selected recording contains no detailed samples to re-analyse.');
+    $('importPreview').className='panel';
+    $('importPreview').innerHTML=`<div class="logImportPreviewHead"><span>${logPictogram('log')}</span><div><small>EXISTING ACTIVITY</small><h3>Re-analyse recording evidence</h3><p>${esc(priorRun.date)} · ${esc(priorRun.type)} · ${Number(priorRun.distanceKm).toFixed(2)} km</p></div></div><p>This recording matches an existing saved run. Recalculate LT1 steady-section evidence and timer / HR / power coverage from the original samples. Keep the existing run, notes, training-plan link, shoes, recovery and coaching history unchanged. No duplicate run will be added.</p><button id="arcReanalyseRecording" class="primary full" type="button">Refresh recording evidence only</button>`;
+    $('arcReanalyseRecording').onclick=()=>{
+     try{
+      const idx=state.runs.findIndex(r=>r.id===priorRun.id);if(idx<0)throw Error('The original activity is no longer available.');
+      const original=state.runs[idx];
+      if(original.date!==preview.date||Math.abs(Number(original.distanceKm)-Number(preview.distanceKm))>=.02||Math.abs(Number(original.durationSec)-Number(preview.durationSec))>=5)throw Error('File no longer matches the stored activity closely enough for safe re-analysis.');
+      const source={...original,fitLaps:Array.isArray(preview.fitLaps)?preview.fitLaps:original.fitLaps,
+       trainingTimerEvents:Array.isArray(preview.trainingTimerEvents)?preview.trainingTimerEvents:original.trainingTimerEvents,
+       powerDiagnostics:preview.powerDiagnostics||original.powerDiagnostics};
+      delete source.trainingDose; // always recompute timer alignment; never silently reuse a stale report
+      arcCaptureTrainingDose(source,preview.fitRecords);
+      if(!source.trainingDose||!source.lt1Evidence)throw Error('The recording could not be re-analysed safely. Original saved evidence was kept.');
+      const next={...original,fitLaps:source.fitLaps,trainingTimerEvents:source.trainingTimerEvents,
+       trainingDose:source.trainingDose,lt1Evidence:source.lt1Evidence};
+      state.runs[idx]=next;
+      if(!save()){state.runs[idx]=original;throw Error('Device storage could not save refreshed evidence; original run retained.');}
+      $('importPreview').className='hidden';preview=null;input.value='';
+      invalidatePageRenderCache();renderAll();window.dispatchEvent(new CustomEvent('arc-training-updated'));
+      toast('Recording evidence refreshed. Your saved run and coaching history were preserved.');
+     }catch(err){toast(err?.message||'Could not refresh the recording evidence.',true)}
+    };
+    return;
+   }
 
    let m=metrics(preview),format=preview.sourceFormat==='fit-activity'?(preview.sourceDevice||'FIT activity'):'Stryd CSV';
    $('importPreview').className='panel';

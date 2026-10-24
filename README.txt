@@ -1,3 +1,17 @@
+RELEASE v15.8.4 / BUILD 51840 — DATA EVIDENCE CLARITY & AUTOMATIC LT1
+- Minor FIT timer-vs-timestamp differences no longer trigger generic per-run warnings.
+  Present actual HR/power sample coverage and quantified unmatched timer seconds;
+  missing seconds are not fabricated or automatically assigned to the final moments.
+- Display LT1 review disposition (accepted / partial / excluded) for each recent run,
+  including Hills and Easy + strides, with specific reasons and contribution counts.
+- Analyse continuous, demonstrably steady segments of mixed sessions conservatively;
+  reject hills without altitude verification, short intervals, high HR/effort, missing data.
+- New explicit re-analyse flow for already-imported FIT/CSV recordings; retains the
+  existing run and its links/history while refreshing only compact derived evidence.
+- Existing training load/planner/scoring/fitness authorities unchanged; schema 10400.
+
+PREVIOUS RELEASE HISTORY FOLLOWS.
+
 COACH INTELLIGENCE V2 — RELEASE v15.8.3 / BUILD 51830
 =========================================================
 

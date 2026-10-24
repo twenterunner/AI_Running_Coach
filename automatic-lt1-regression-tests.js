@@ -48,8 +48,8 @@ test('No talk test or other sport GUI fields remain',()=>{const s=fs.readFileSyn
 test('Normalisation removes retired stored LT1 / talk / other sport inputs',()=>{const source=fs.readFileSync(__dirname+'/app.js','utf8');A(source.includes('setup.trainingCoordinator={version:2,mode:'));A(source.includes('const previousCoordinator=setup.trainingCoordinator'));});
 test('Stream analysis precedes irreversible compaction',()=>{const s=fs.readFileSync(__dirname+'/app.js','utf8');const a=s.indexOf('function compactRunActivityStream('),b=s.indexOf('function compactHistoricalActivityStreams(',a),block=s.slice(a,b);A(block.indexOf('arcCaptureTrainingDose(run,records)')>=0);A(block.indexOf('arcCaptureTrainingDose(run,records)')<block.indexOf('delete run.fitRecords'));});
 test('Updated front-end loads LT1 analysis before core integration',()=>{const s=fs.readFileSync(__dirname+'/index.html','utf8');A(s.indexOf('training-lt1.js')<s.indexOf('app.js?v='));});
-test('Version markers all agree',()=>{const s=fs.readFileSync(__dirname+'/app.js','utf8'),h=fs.readFileSync(__dirname+'/index.html','utf8'),m=JSON.parse(fs.readFileSync(__dirname+'/manifest.webmanifest','utf8'));A(s.includes("VERSION = '15.8.3'"));A(h.includes('v15.8.3'));A.equal(m.build,51830);});
-let seed=51830;function random(){seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;}
+test('Version markers all agree',()=>{const s=fs.readFileSync(__dirname+'/app.js','utf8'),h=fs.readFileSync(__dirname+'/index.html','utf8'),m=JSON.parse(fs.readFileSync(__dirname+'/manifest.webmanifest','utf8'));A(s.includes("VERSION = '15.8.4'"));A(h.includes('v15.8.4'));A.equal(m.build,51840);});
+let seed=51840;function random(){seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;}
 for(let i=0;i<250;i++)test('Seeded sensor fault and boundary '+i,()=>{
  const day=i%25,r=run(day,120+Math.floor(random()*70),Math.floor(random()*17));
  const damage=Math.floor(random()*8);

@@ -204,9 +204,9 @@ test('no duplicate automatic fitness panel on Today, Settings retains it',()=>{
 test('coaching extension loaded before app, with coherent build ids',()=>{
  const html=fs.readFileSync(path.join(__dirname,'index.html'),'utf8');
  const man=JSON.parse(fs.readFileSync(path.join(__dirname,'manifest.webmanifest'),'utf8'));
- A.match(html,/<script src="coach-intelligence\.js\?v=51830"><\/script>.*<script src="app\.js\?v=51830&training=51830"><\/script>/s);
- A.match(html,/<link rel="stylesheet" href="coach-intelligence\.css\?v=51830">/);
- A.equal(man.version,'15.8.3');A.equal(man.build,51830);
+ A.match(html,/<script src="coach-intelligence\.js\?v=51840"><\/script>.*<script src="app\.js\?v=51840&training=51840"><\/script>/s);
+ A.match(html,/<link rel="stylesheet" href="coach-intelligence\.css\?v=51840">/);
+ A.equal(man.version,'15.8.4');A.equal(man.build,51840);
 });
 let seed=417;function rand(){seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296}
 test('200 fault injections: malformed samples do not crash the interpreter',()=>{
