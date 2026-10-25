@@ -1,3 +1,17 @@
+RELEASE v15.8.5 / BUILD 51850 — DISTINCT RUN-TYPE COLORS AND SYMBOLS
+- Progress > Efficiency factor + Aerobic durability: each comparable run type
+  now receives a stable high-contrast color and distinctive marker shape.
+- Easy: cyan circle; Easy + strides: magenta diamond; Long run: green square;
+  Hills: amber upright triangle. All 18 monitored run types have different
+  colors; other types use additional shapes and colors.
+- Chart points, interactive SVG legends and Metrics by comparable run type
+  use the same single source of run-type visual definitions.
+- Existing recording, LT1, physiology, readiness, coaching, planner, local
+  data, calibrations and schema are untouched. Changes are visual only.
+- Includes run-type-chart-regression-tests.js. See RELEASE_TEST_REPORT.md.
+
+PREVIOUS RELEASE HISTORY FOLLOWS.
+
 RELEASE v15.8.4 / BUILD 51840 — DATA EVIDENCE CLARITY & AUTOMATIC LT1
 - Minor FIT timer-vs-timestamp differences no longer trigger generic per-run warnings.
   Present actual HR/power sample coverage and quantified unmatched timer seconds;

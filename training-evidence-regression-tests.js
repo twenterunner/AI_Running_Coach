@@ -81,7 +81,7 @@ test('Run model and fitness scoring code unchanged by reanalysis in existing app
 });
 test('Schema and public build markers are coherent',()=>{
  const a=fs.readFileSync(__dirname+'/app.js','utf8'),h=fs.readFileSync(__dirname+'/index.html','utf8'),m=JSON.parse(fs.readFileSync(__dirname+'/manifest.webmanifest','utf8'));
- A(a.includes("VERSION = '15.8.4'"));A(a.includes('SCHEMA = 10400'));A(h.includes('v15.8.4'));A.equal(m.build,51840);
+ A(a.includes("VERSION = '15.8.5'"));A(a.includes('SCHEMA = 10400'));A(h.includes('v15.8.5'));A.equal(m.build,51850);
 });
 let seed=51840;function random(){seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;}
 for(let i=0;i<96;i++)test('Seeded mixed-workout fault and timer boundary '+i,()=>{

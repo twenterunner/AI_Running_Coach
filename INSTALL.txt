@@ -1,17 +1,19 @@
-AI RUNNING COACH v15.8.4 · BUILD 51840
+AI RUNNING COACH v15.8.5 · BUILD 51850
 COMPLETE REPLACEMENT PACKAGE FOR YOUR EXISTING GITHUB PAGES APP
 
 WHAT THIS RELEASE DOES
-This build adds transparent LT1 inclusion/exclusion and quantified FIT coverage.
-Re-upload a saved FIT in Log to refresh old LT1 evidence without deleting the run.
+Progress > Efficiency factor and Aerobic durability now distinguish workout
+categories using different high-contrast colours AND different geometric
+symbols in the plot points, legends and comparable-run-type detail cards.
+Examples: Easy = cyan circle, Easy + strides = magenta diamond,
+Long run = green square, Hills = amber triangle.
 
-Coach Intelligence v2 replaces generic Today coaching paragraphs with a
-consolidated daily/post-run evidence report. It reuses the existing fitness,
-readiness, workout scoring, two-pathway and planning engines (no competing
-physiology model, scoring algorithm, or new saved athlete-data schema).
+This is a display-only change: all previous v15.8.4 LT1 evidence coverage,
+Coach Intelligence v2, training, fitness, auto-calibration, race plans and
+saved athlete data continue to work under the same schema.
 
 PUBLISHING FROM GITHUB
-1. Download AI_Running_Coach_v15.8.4_FULL_UPLOAD.zip.
+1. Download AI_Running_Coach_v15.8.5_FULL_UPLOAD.zip.
 2. EXTRACT the ZIP on your phone or computer. All app files are flat; the
    extracted package has no source folders to navigate.
 3. Upload all extracted files to the ROOT of the repository used for GitHub
@@ -19,9 +21,9 @@ PUBLISHING FROM GITHUB
    training-evidence-regression-tests.js).
 4. Commit the changes. Do not change the GitHub Pages URL, repository name,
    or app origin. Wait for Pages to deploy and reopen the app.
-5. Verify the app says v15.8.4 / build 51840. Open Progress →
-   Automatic Aerobic Breakpoint → Observation details: accepted, partially
-   accepted and excluded runs all appear with explanations.
+5. Verify the app says v15.8.5 / build 51850. Open Progress →
+   Efficiency factor and Aerobic durability. Check the matching colors and
+   plot symbols in both charts and Metrics by comparable run type.
 6. For an old Hills or Easy + strides run, choose Log → Import FIT / CSV,
    select the SAME original detailed recording, then choose the new
    "Refresh recording evidence only" action. No duplicate activity is added.
@@ -33,7 +35,7 @@ upload just the ZIP file into the repo expecting the website to update.
 Use the extracted individual files. The ZIP is the easy-to-transfer package.
 
 EXISTING TRAINING DATA
-Version 15.8.4 keeps storage schema 10400 and the same local storage keys.
+Version 15.8.5 keeps storage schema 10400 and the same local storage keys.
 It does not reset training history, shoes, injuries, calibrations or plans.
 Avoid clearing browser data, moving the website to a new origin, or uninstalling
 the PWA until you are confident your backup exists. Taking a JSON backup is a
@@ -41,9 +43,11 @@ sensible precaution; a normal app-code update does not require restoring it.
 
 VALIDATION
 See RELEASE_TEST_REPORT.md and training-evidence-regression-tests.js.
-12 Node regression suites: 878 / 878 passing (including 130 dedicated new
-scenario/fault checks). Chromium Progress checks: 390px and 768px, both pass
-on local browser fixtures; actual 24 Oct source FIT not provided for verification.
+12 prior Node regression suites: 878 / 878 passing. One additional independent
+run-type-chart suite: 7 / 7 passing (total 885 / 885). Isolated real chart
+rendering checked at 360, 390 and 768px without JavaScript errors or horizontal
+overflow, using illustrative synthetic values only. Full-app live-activity
+Chrome test and actual source FIT validation are outside this UI-only update.
 
 LIMITATIONS
 Only confirmed saved inputs are used. No new Garmin/Stryd direct sync, sleep

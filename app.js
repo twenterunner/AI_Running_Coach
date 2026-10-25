@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '15.8.4';
-  const BUILD = 51840;
+  const VERSION = '15.8.5';
+  const BUILD = 51850;
   const SCHEMA = 10400;
   const PRIMARY_STORAGE_KEY = 'arc_v10400_web';
   const MIRROR_STORAGE_KEY = 'arc_v10400_mirror';
@@ -2660,9 +2660,66 @@ let validRun=dur>0&&km>0,validHr=validRun&&hr>0,validPw=validRun&&pw>0&&kg>0;
 return{pace:validRun?dur/km:null,dph:validHr?km*1000/(dur/60*hr):null,wpb:validHr&&pw>0?pw/hr:null,
  efficiencyJ:validHr&&pw>0?pw*60/hr:null,effect:validPw?(km*1000/dur)/(pw/kg):null,wkg:pw>0&&kg>0?pw/kg:null}}
 const metricRunTypes=['Recovery','Easy','Easy + strides','Steady aerobic','Medium-long','Long run','Specific long run','Race rehearsal','Marathon-specific','Half-marathon-specific','Threshold','Threshold intervals','Hills','Fartlek','VO₂max intervals','Race-pace intervals','Fitness assessment','Race'];
-const runTypeColors={'Recovery':'#3B82F6','Shakeout':'#3B82F6','Easy':'#4CC9F0','Easy + strides':'#4CC9F0','Steady aerobic':'#4CC9F0','Medium-long':'#4CC9F0','Long run':'#4CC9F0','Specific long run':'#4CC9F0','Race rehearsal':'#3B82F6','Marathon':'#F6B94A','Marathon-specific':'#F6B94A','Half-marathon-specific':'#F6B94A','Tempo':'#F47777','Threshold':'#F47777','Threshold intervals':'#F47777','Intervals':'#F6B94A','Hills':'#F6B94A','Fartlek':'#F6B94A','VO₂max intervals':'#F6B94A','Race-pace intervals':'#F6B94A','Fitness assessment':'#DDF6FF','Race':'#07111D'};
+// Stable, high-contrast run-type identity across BOTH Progress charts, their legends,
+// and the expandable comparable-run-type cards. Colour is never the only cue:
+// every observation also has a recognisable marker shape.
+const runTypeColors={
+ 'Recovery':'#90A8FF','Shakeout':'#90A8FF',
+ 'Easy':'#45CDF5','Easy + strides':'#EF86FA',
+ 'Steady aerobic':'#30E0C4','Medium-long':'#FFE080',
+ 'Long run':'#8BE77C','Specific long run':'#50E4A5',
+ 'Race rehearsal':'#FF738F','Marathon':'#FFC178',
+ 'Marathon-specific':'#F8B06A','Half-marathon-specific':'#B69CFF',
+ 'Tempo':'#FF8A88','Threshold':'#FF806E','Threshold intervals':'#FF9A70',
+ 'Intervals':'#FFCA60','Hills':'#FFBD4B','Fartlek':'#DCF76C',
+ 'VO₂max intervals':'#FF82BF','Race-pace intervals':'#9FE7FF',
+ 'Fitness assessment':'#F3EEFF','Race':'#F69AD2'
+};
+const runTypeMarkers={
+ 'Recovery':'circle','Shakeout':'circle',
+ 'Easy':'circle','Easy + strides':'diamond',
+ 'Steady aerobic':'hexagon','Medium-long':'pentagon',
+ 'Long run':'square','Specific long run':'triangle-down',
+ 'Race rehearsal':'star','Marathon':'pentagon',
+ 'Marathon-specific':'hexagon','Half-marathon-specific':'diamond',
+ 'Tempo':'triangle','Threshold':'triangle','Threshold intervals':'square',
+ 'Intervals':'diamond','Hills':'triangle','Fartlek':'star',
+ 'VO₂max intervals':'cross','Race-pace intervals':'plus',
+ 'Fitness assessment':'pentagon','Race':'star'
+};
+// SVG primitives instead of platform-dependent emoji: these retain their appearance
+// on Android, desktop, in dark mode and at narrow phone widths.
+function runTypeMarkerSvg(marker,cx,cy,color,size=7){
+ const x=Number(cx),y=Number(cy),r=Math.max(2,Number(size)||7),c=/^#[0-9a-f]{6}$/i.test(color)?color:'#45CDF5';
+ const a=n=>Number(n).toFixed(2);
+ const xy=(xx,yy)=>`${a(xx)},${a(yy)}`;
+ const poly=(count,rotate=-Math.PI/2,inner=1)=>{
+  const pts=[];for(let i=0;i<count*(inner<1?2:1);i++){
+   const radius=inner<1&&i%2?r*inner:r,angle=rotate+i*Math.PI*2/(count*(inner<1?2:1));
+   pts.push(xy(x+radius*Math.cos(angle),y+radius*Math.sin(angle)));
+  }return pts.join(' ');
+ };
+ const outline='stroke="#071E29" stroke-width="2" stroke-linejoin="round"';
+ switch(marker){
+  case 'diamond':return `<polygon points="${[xy(x,y-r),xy(x+r,y),xy(x,y+r),xy(x-r,y)].join(' ')}" fill="${c}" ${outline}/>`;
+  case 'square':return `<rect x="${a(x-r*.78)}" y="${a(y-r*.78)}" width="${a(r*1.56)}" height="${a(r*1.56)}" rx="1.2" fill="${c}" ${outline}/>`;
+  case 'triangle':return `<polygon points="${[xy(x,y-r),xy(x+r*.96,y+r*.78),xy(x-r*.96,y+r*.78)].join(' ')}" fill="${c}" ${outline}/>`;
+  case 'triangle-down':return `<polygon points="${[xy(x-r*.96,y-r*.78),xy(x+r*.96,y-r*.78),xy(x,y+r)].join(' ')}" fill="${c}" ${outline}/>`;
+  case 'hexagon':return `<polygon points="${poly(6,-Math.PI/6)}" fill="${c}" ${outline}/>`;
+  case 'pentagon':return `<polygon points="${poly(5)}" fill="${c}" ${outline}/>`;
+  case 'star':return `<polygon points="${poly(5,-Math.PI/2,.47)}" fill="${c}" ${outline}/>`;
+  case 'cross':return `<path d="M${a(x-r*.74)} ${a(y-r*.74)}L${a(x+r*.74)} ${a(y+r*.74)}M${a(x+r*.74)} ${a(y-r*.74)}L${a(x-r*.74)} ${a(y+r*.74)}" stroke="${c}" stroke-width="4.5" stroke-linecap="round" fill="none"/>`;
+  case 'plus':return `<path d="M${a(x-r)} ${a(y)}H${a(x+r)}M${a(x)} ${a(y-r)}V${a(y+r)}" stroke="${c}" stroke-width="4.5" stroke-linecap="round" fill="none"/>`;
+  default:return `<circle cx="${a(x)}" cy="${a(y)}" r="${a(r*.83)}" fill="${c}" ${outline}/>`;
+ }
+}
+function runTypeLegendGlyph(series){
+ const c=series.color||'#45CDF5';
+ if(!series.marker)return `<i style="--series:${c}"></i>`;
+ return `<svg class="runTypeLegendGlyph" width="28" height="20" viewBox="0 0 28 20" aria-hidden="true"><line x1="2" y1="10" x2="26" y2="10" stroke="${c}" stroke-width="3.1" stroke-linecap="round"/>${runTypeMarkerSvg(series.marker,14,10,c,6.5)}</svg>`;
+}
 function metricSeries(runs,valueFn,labelSuffix=''){return metricRunTypes.map(type=>({
- label:type+labelSuffix,data:runs.map(r=>r.type===type?valueFn(r):null),color:runTypeColors[type]
+ label:type+labelSuffix,data:runs.map(r=>r.type===type?valueFn(r):null),color:runTypeColors[type],marker:runTypeMarkers[type]
 })).filter(s=>s.data.some(Number.isFinite))}
 function typeMetricSummary(runs){return metricRunTypes.map(type=>{
  let group=runs.filter(r=>r.type===type),eff=group.map(r=>metrics(r).efficiencyJ).filter(Number.isFinite),drift=group.map(r=>r.powerDrift).filter(Number.isFinite);
@@ -4153,12 +4210,12 @@ function renderProgressSvgChart(canvas,series,options={}){
    if(s.horizontal){const y=py(vals[0].v);plot.push(`<line x1="${left}" y1="${y.toFixed(2)}" x2="${W-right}" y2="${y.toFixed(2)}" stroke="${s.color||'#4CC9F0'}" stroke-width="3" ${s.dashed?'stroke-dasharray="10 7"':''}/>`);return;}
    const pts=vals.map(o=>`${px(o.i).toFixed(2)},${py(o.v).toFixed(2)}`).join(' ');
    if(vals.length>1)plot.push(`<polyline fill="none" stroke="${s.color||'#4CC9F0'}" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" points="${pts}" ${s.dashed?'stroke-dasharray="10 7"':''}/>`);
-   if(s.points!==false)vals.forEach(o=>plot.push(`<circle cx="${px(o.i).toFixed(2)}" cy="${py(o.v).toFixed(2)}" r="5" fill="#f5fbff" stroke="${s.color||'#4CC9F0'}" stroke-width="3"/>`));
+   if(s.points!==false)vals.forEach(o=>plot.push(s.marker?runTypeMarkerSvg(s.marker,px(o.i),py(o.v),s.color||'#45CDF5',7.8):`<circle cx="${px(o.i).toFixed(2)}" cy="${py(o.v).toFixed(2)}" r="5" fill="#f5fbff" stroke="${s.color||'#4CC9F0'}" stroke-width="3"/>`));
  });
  const xlabels=[];
  const positions=options.allLabels?labels.map((_,i)=>i):[0,Math.floor((labels.length-1)/2),labels.length-1].filter((v,i,a)=>v>=0&&a.indexOf(v)===i);
  positions.forEach(i=>{if(labels[i]!=null)xlabels.push(`<text class="axis x" x="${px(i).toFixed(2)}" y="${H-16}" text-anchor="middle">${xml(labels[i])}</text>`)});
- const legend=series.filter(s=>s.label).map(s=>`<span><i style="--series:${s.color||'#4CC9F0'};${s.dashed?'--dash:1':''}"></i>${xml(s.label)}</span>`).join('');
+ const legend=series.filter(s=>s.label).map(s=>`<span>${runTypeLegendGlyph(s)}${xml(s.label)}</span>`).join('');
  mount.innerHTML=`<div class="progressChartLegend">${legend}</div><svg class="progressInlineChart" viewBox="0 0 ${W} ${H}" role="img" aria-label="${xml(canvas.getAttribute('aria-label')||'Progress chart')}">${grid.join('')}${plot.join('')}${xlabels.join('')}</svg>`;
 }
 
@@ -6333,7 +6390,7 @@ function renderMetrics(){
  if(driftRuns.length) renderProgressSvgChart($('driftChart'),driftSeries,{min:driftValues.length?Math.min(0,Math.floor(Math.min(...driftValues)-2)):0,max:driftValues.length?Math.max(10,Math.ceil(Math.max(...driftValues)+2)):10,ticks:6,formatY:v=>Math.round(v)+'%',labels:driftLabels,allLabels:driftRuns.length<=8});
 
  let summary=typeMetricSummary(rs);
- $('metricTypeSummary').innerHTML=summary.length?`<div class="metricTypeCards">${summary.map(x=>`<article class="metricTypeCard"><div class="metricTypeTitle"><i style="--runColor:${runTypeColors[x.type]}"></i><b>${esc(x.type)}</b></div><div class="metricTypeMetrics"><div><small>Efficiency avg</small><strong>${Number.isFinite(x.effAvg)?x.effAvg.toFixed(1)+' J/beat':'—'}</strong></div><div><small>Efficiency best</small><strong>${Number.isFinite(x.effBest)?x.effBest.toFixed(1)+' J/beat':'—'}</strong></div><div><small>Drift avg</small><strong>${Number.isFinite(x.driftAvg)?x.driftAvg.toFixed(1)+'%':'—'}</strong></div><div><small>Drift best</small><strong>${Number.isFinite(x.driftBest)?x.driftBest.toFixed(1)+'%':'—'}</strong></div></div></article>`).join('')}</div>`:'<span class="muted">No qualifying run metrics yet.</span>';
+ $('metricTypeSummary').innerHTML=summary.length?`<div class="metricTypeCards">${summary.map(x=>`<article class="metricTypeCard"><div class="metricTypeTitle">${runTypeLegendGlyph({color:runTypeColors[x.type],marker:runTypeMarkers[x.type]})}<b>${esc(x.type)}</b></div><div class="metricTypeMetrics"><div><small>Efficiency avg</small><strong>${Number.isFinite(x.effAvg)?x.effAvg.toFixed(1)+' J/beat':'—'}</strong></div><div><small>Efficiency best</small><strong>${Number.isFinite(x.effBest)?x.effBest.toFixed(1)+' J/beat':'—'}</strong></div><div><small>Drift avg</small><strong>${Number.isFinite(x.driftAvg)?x.driftAvg.toFixed(1)+'%':'—'}</strong></div><div><small>Drift best</small><strong>${Number.isFinite(x.driftBest)?x.driftBest.toFixed(1)+'%':'—'}</strong></div></div></article>`).join('')}</div>`:'<span class="muted">No qualifying run metrics yet.</span>';
 }
 function assessmentRunId(a){return a.runId||`assessment-run-${a.id}`}
 function syncAssessmentRun(a){
@@ -8551,11 +8608,11 @@ function progressSvgIntoMount(mountId,series,options={}){
    // Never bridge across missing observations. Each contiguous run is drawn independently.
    let segment=[];const flush=()=>{if(segment.length>1){const pts=segment.map(o=>`${x(o.i)},${y(o.v)}`).join(' ');parts.push(`<polyline fill="none" stroke="${color}" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" points="${pts}" ${sr.dashed?'stroke-dasharray="8 6"':''}/>`)}segment=[]};
    (sr.data||[]).forEach((v,i)=>{if(Number.isFinite(v))segment.push({v,i});else flush()});flush();
-   if(sr.points!==false)vals.forEach(o=>parts.push(`<circle cx="${x(o.i)}" cy="${y(o.v)}" r="4.5" fill="#f5fbff" stroke="${color}" stroke-width="2.5"/>`));
+   if(sr.points!==false)vals.forEach(o=>parts.push(sr.marker?runTypeMarkerSvg(sr.marker,x(o.i),y(o.v),color,7.8):`<circle cx="${x(o.i)}" cy="${y(o.v)}" r="4.5" fill="#f5fbff" stroke="${color}" stroke-width="2.5"/>`));
   });
   const positions=options.allLabels?labels.map((_,i)=>i):[0,Math.floor((labels.length-1)/2),labels.length-1].filter((v,i,a)=>v>=0&&a.indexOf(v)===i);
   positions.forEach(i=>{if(labels[i]!=null)parts.push(`<text class="axis x" x="${x(i)}" y="${H-9}" text-anchor="middle">${xe(labels[i])}</text>`)});
-  const legend=cleanSeries.filter(s=>s.label).map(s=>`<span><i style="--series:${s.color||'#3dd6c6'}"></i>${xe(s.label)}</span>`).join('');
+  const legend=cleanSeries.filter(s=>s.label).map(s=>`<span>${runTypeLegendGlyph(s)}${xe(s.label)}</span>`).join('');
   mount.innerHTML=`${legend?`<div class="progressChartLegend">${legend}</div>`:''}${options.notice?`<div class="progressChartNote">${xe(options.notice)}</div>`:''}<svg class="progressInlineChart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="${xe(options.aria||'Progress chart')}">${parts.join('')}</svg>`;
  }catch(err){recordDiagnostic('Progress chart '+mountId,err);mount.setAttribute('aria-hidden','false');mount.innerHTML=`<div class="progressChartState"><div><b>Chart unavailable</b><p>The underlying data are preserved. Reload after updating the app.</p></div></div>`;}
 }
