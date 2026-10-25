@@ -57,14 +57,15 @@
     const score=number(scoreDetails?.score),actual=number(run.distanceKm),planned=number(plan?.distance),pain=number(run.pain),rpe=number(run.rpe);
     const ratio=actual!==null&&planned!==null&&planned>0?actual/planned:null;
     const over=ratio!==null&&ratio>1.08,under=ratio!==null&&ratio<.92;
-    const efficiency=number(comparison?.efficiencyDelta),drift=number(run.powerDrift);
+    const efficiency=number(comparison?.efficiencyDelta),measuredDrift=number(run.powerDrift),drift=measuredDrift!==null&&measuredDrift>0?measuredDrift:null;
     const comparable=acceptableConfidence(comparison?.confidence)&&number(comparison?.count)>=3;
     const drivers=[];
     if(ratio!==null)drivers.push({tone:over||under?'caution':'good',label:'Prescription',value:`${Math.round(ratio*100)}% of planned distance`,detail:over?'Extra distance adds unplanned load; it is not bonus credit.':under?'Distance below the assigned stimulus.':'Distance close to prescription.',source:'Saved plan + run distance'});
     else drivers.push({tone:'neutral',label:'Prescription',value:'No linked distance target',detail:'A valid session can be analysed, but plan compliance cannot be scored.',source:'Plan matching'});
     if(efficiency!==null&&comparable)drivers.push({tone:efficiency>=2?'good':efficiency<=-3?'caution':'neutral',label:'Aerobic efficiency',value:`${efficiency>=0?'+':''}${efficiency.toFixed(1)}%`,detail:`Against ${comparison.count} comparable earlier runs (${comparison.confidence.toLowerCase()} confidence). This is association, not proof of adaptation.`,source:'Existing comparable-run model'});
     else drivers.push({tone:'neutral',label:'Aerobic efficiency',value:'Comparison pending',detail:'A sufficiently similar, confident baseline is needed before declaring improvement.',source:'Existing comparable-run model'});
-    if(drift!==null)drivers.push({tone:drift<=3?'good':drift>6?'caution':'neutral',label:'Cardiac drift',value:`${drift.toFixed(1)}%`,detail:'Power-based drift, interpreted in workout context. Low drift does not by itself demonstrate improved fitness.',source:'Imported run physiology'});
+    if(drift!==null)drivers.push({tone:drift<=3?'good':drift>6?'caution':'neutral',label:'Cardiac drift',value:(drift<.1?drift.toPrecision(2):drift.toFixed(1))+'%',detail:'Power-based drift, interpreted in workout context. Low drift does not by itself demonstrate improved fitness.',source:'Imported run physiology'});
+     else if(measuredDrift!==null)drivers.push({tone:'neutral',label:'Cardiac drift',value:'Excluded · not used',detail:'Zero or negative drift is excluded from aerobic durability analysis.',source:'Imported run physiology'});
     if(pain!==null)drivers.push({tone:pain>=3?'caution':'neutral',label:'Pain',value:`${pain}/10`,detail:pain>=3?'Limits positive training conclusions.':'Recorded pain score.',source:'Post-run entry'});
     const caution=pain!==null&&pain>=5;
     let verdict,tone;

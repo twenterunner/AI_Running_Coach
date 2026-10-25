@@ -40,7 +40,7 @@ const dateSource = source.slice(datesStart, datesEnd);
 const functionNames = [
   'weeks', 'weekStart', 'weekEnd', 'currentWeek', 'trainingWeekForDate', 'reviewWeekForDate',
   'completedRuns', 'trainingWeekRuns', 'weekData',
-  'workoutFamily', 'effectiveRunType', 'loadDecisionSignalForRun', 'loadAcceptedContribution', 'paceAcceptedContribution',
+  'workoutFamily', 'eligibleCardiacDrift', 'formatCardiacDrift', 'effectiveRunType', 'loadDecisionSignalForRun', 'loadAcceptedContribution', 'paceAcceptedContribution',
   'weeklyLoadEvidence', 'weeklyPaceEvidence', 'adaptiveFactorDetails', 'adaptiveFactor',
   'pathwayEvidenceTrace',
   'provisionalWeeklyAdjustment', 'pacePowerCommittedFactor', 'pacePowerProvisionalFactor', 'pacePowerReviewState',
@@ -66,7 +66,7 @@ function fixture() {
   const p = (id, date, distance, week = 1) => ({id, date, distance, week, type: 'Easy'});
   const r = (id, date, distanceKm, planId, fixtureScore) => ({
     id, date, distanceKm, planId, fixtureScore, type: 'Easy', durationSec: distanceKm * 480,
-    avgHr: 145, avgPower: 200, powerDrift: 0, pain: 0, rpe: 4
+    avgHr: 145, avgPower: 200, powerDrift: 1.5, pain: 0, rpe: 4
   });
   return {
     setup: {planStart: '2026-10-10', raceDate: '2026-11-07', adaptive: true, minFactor: .75, maxFactor: 1.2},

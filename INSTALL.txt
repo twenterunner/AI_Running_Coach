@@ -1,56 +1,48 @@
-AI RUNNING COACH v15.8.5 · BUILD 51850
-COMPLETE REPLACEMENT PACKAGE FOR YOUR EXISTING GITHUB PAGES APP
+AI RUNNING COACH v15.8.6 · BUILD 51860
+FLAT, CHANGED-FILES-ONLY GITHUB UPLOAD
 
-WHAT THIS RELEASE DOES
-Progress > Efficiency factor and Aerobic durability now distinguish workout
-categories using different high-contrast colours AND different geometric
-symbols in the plot points, legends and comparable-run-type detail cards.
-Examples: Easy = cyan circle, Easy + strides = magenta diamond,
-Long run = green square, Hills = amber triangle.
+WHAT IS IN THIS ZIP
+This ZIP contains ONLY files added or modified compared with v15.8.5 / build
+51850 from the GitHub Pages deployment of commit
+b4e4fcdaad8cd4907c0ecd206eaf409a8abc50c0 (25 October 2026).
+Every file is at the root of the ZIP. No folders, unchanged photos, styles,
+or other unchanged app files are included.
 
-This is a display-only change: all previous v15.8.4 LT1 evidence coverage,
-Coach Intelligence v2, training, fitness, auto-calibration, race plans and
-saved athlete data continue to work under the same schema.
+WHAT HAS CHANGED
+- Actual power-based cardiac drift is calculated and stored unchanged.
+- Zero, negative and invalid drift values are excluded from aerobic durability
+  charts, comparisons, scoring, averages and coaching conclusions.
+- Excluded readings are not displayed numerically. The app shows an explanatory
+  exclusion message where applicable, without inventing replacement points.
+- Positive readings display actual measured percentages, including small ones;
+  the aerobic durability chart's axis stays strictly positive.
+- Current version/build references and relevant regression tests are updated.
+- The storage schema and browser storage keys are unchanged.
 
-PUBLISHING FROM GITHUB
-1. Download AI_Running_Coach_v15.8.5_FULL_UPLOAD.zip.
-2. EXTRACT the ZIP on your phone or computer. All app files are flat; the
-   extracted package has no source folders to navigate.
-3. Upload all extracted files to the ROOT of the repository used for GitHub
-   Pages (replace existing files and add any new ones, including
-   training-evidence-regression-tests.js).
-4. Commit the changes. Do not change the GitHub Pages URL, repository name,
-   or app origin. Wait for Pages to deploy and reopen the app.
-5. Verify the app says v15.8.5 / build 51850. Open Progress →
-   Efficiency factor and Aerobic durability. Check the matching colors and
-   plot symbols in both charts and Metrics by comparable run type.
-6. For an old Hills or Easy + strides run, choose Log → Import FIT / CSV,
-   select the SAME original detailed recording, then choose the new
-   "Refresh recording evidence only" action. No duplicate activity is added.
-   A FIT with actual elevation data is best for confirming flat sections
-   within Hills. An existing compact archive cannot restore deleted samples.
+GITHUB UPLOAD (NO MORE THAN 100 FILES)
+1. Extract this ZIP locally; it contains fewer than 100 files, all at the root.
+2. Open your GitHub repository and choose Add file > Upload files.
+3. Upload the extracted files DIRECTLY into the repository root, replacing
+   matching filenames and adding new ones. Keep existing unchanged files.
+4. Commit the changes to the branch served by GitHub Pages.
+5. Reload the installed app after Pages deploys and check that the header reads
+   v15.8.6 · build 51860. If needed, close and reopen the PWA.
+6. Open Progress > Aerobic durability. Only positive drift percentages should
+   appear; excluded observations must not have a 0%/negative label or point.
 
-IMPORTANT: GitHub's standard “Upload files” does not unpack a ZIP. Do not
-upload just the ZIP file into the repo expecting the website to update.
-Use the extracted individual files. The ZIP is the easy-to-transfer package.
+DO NOT delete unchanged repository files. Uploading the ZIP itself directly to
+GitHub does not unpack or deploy the app. Extract it and upload its contents.
 
-EXISTING TRAINING DATA
-Version 15.8.5 keeps storage schema 10400 and the same local storage keys.
-It does not reset training history, shoes, injuries, calibrations or plans.
-Avoid clearing browser data, moving the website to a new origin, or uninstalling
-the PWA until you are confident your backup exists. Taking a JSON backup is a
-sensible precaution; a normal app-code update does not require restoring it.
+VERIFICATION
+- The new cardiac-drift regression suite passed 12/12 checks.
+- Fourteen current regression suites passed (897 tests). Eight historical suites
+  already fail on the unchanged v15.8.5 baseline; see the included detailed
+  release test report for those known pre-existing failures.
+- The full-app browser smoke test could not be performed in this environment.
 
-VALIDATION
-See RELEASE_TEST_REPORT.md and training-evidence-regression-tests.js.
-12 prior Node regression suites: 878 / 878 passing. One additional independent
-run-type-chart suite: 7 / 7 passing (total 885 / 885). Isolated real chart
-rendering checked at 360, 390 and 768px without JavaScript errors or horizontal
-overflow, using illustrative synthetic values only. Full-app live-activity
-Chrome test and actual source FIT validation are outside this UI-only update.
+DATA SAFETY
+The application code does not contain your saved runs. Records are stored in
+your browser on the existing GitHub Pages origin. Take an in-app JSON backup
+before updating and do not reset site data.
 
-LIMITATIONS
-Only confirmed saved inputs are used. No new Garmin/Stryd direct sync, sleep
-or weather integration has been added. This release explains the existing
-engine; it does not assume those signals are available. A retained threshold
-or critical power is displayed but must not be interpreted as new progress.
+No changes were pushed to GitHub. The extracted files are the deliverable.

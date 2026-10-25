@@ -1,4 +1,4 @@
-/* v15.8.5: independent, isolated chart style regression checks (no data writes). */
+/* v15.8.6: independent, isolated chart style regression checks (no data writes). */
 'use strict';
 const fs=require('fs'),vm=require('vm'),assert=require('node:assert/strict');
 const src=fs.readFileSync(__dirname+'/app.js','utf8');
@@ -69,9 +69,9 @@ test('The legacy SVG renderer and comparable card reuse symbols too',()=>{
  assert(css.includes('.progressChartLegend .runTypeLegendGlyph'));
 });
 test('No schema change or accidental save/plan edit in marker helper',()=>{
- assert(src.includes('const BUILD = 51850;'));
+ assert(src.includes('const BUILD = 51860;'));
  assert(src.includes('SCHEMA = 10400'));
- assert(html.includes('v15.8.5 · build 51850'));
+ assert(html.includes('v15.8.6 · build 51860'));
  assert(!/\b(?:state\.|save\(|localStorage|indexedDB|recalibrate)/.test(defs));
 });
 if(process.exitCode)process.exit(process.exitCode);

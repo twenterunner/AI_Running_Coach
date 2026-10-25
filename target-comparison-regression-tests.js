@@ -5,7 +5,7 @@ const fs=require('fs'),vm=require('vm'),assert=require('assert/strict'),path=req
 const flag=process.argv.indexOf('--source');
 const source=fs.readFileSync(flag>=0?process.argv[flag+1]:path.join(__dirname,'app.js'),'utf8');
 function fn(name){const start=source.search(new RegExp('\\bfunction '+name+'\\('));assert(start>=0,name+' exists');for(let end=source.indexOf('}',start);end>=0;end=source.indexOf('}',end+1)){const value=source.slice(start,end+1);try{new vm.Script('('+value+'\n)');return value}catch{}}throw Error('Could not extract '+name)}
-const names=['steadyTargetSection','steadySectionEvidenceKey','steadySectionAnalysis','captureSteadySectionEvidence','workoutTargetComparison','workoutScoreDetails','intervalScoredWorkRows','executionProfile','expectedRpe','scoreBand','workoutFamily','baseType','pace','fmtTime','compactRunActivityStream','applyRunMatch'];
+const names=['steadyTargetSection','steadySectionEvidenceKey','steadySectionAnalysis','captureSteadySectionEvidence','workoutTargetComparison','workoutScoreDetails','eligibleCardiacDrift','intervalScoredWorkRows','executionProfile','expectedRpe','scoreBand','workoutFamily','baseType','pace','fmtTime','compactRunActivityStream','applyRunMatch'];
 const profiles=source.slice(source.indexOf('const EXECUTION_PROFILES='),source.indexOf('function executionProfile('));
 const aliases=source.match(/const TYPE_ALIASES=[^;]+;/)[0];
 function harness(){

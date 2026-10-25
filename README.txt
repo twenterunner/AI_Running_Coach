@@ -1,3 +1,14 @@
+RELEASE v15.8.6 / BUILD 51860 — POSITIVE-ONLY CARDIAC DRIFT ANALYSIS
+- The power-based cardiac drift formula is unchanged; source measurements are stored as signed percentages.
+- Zero/negative cardiac drift measurements are excluded from aerobic-durability charts, scores, averages, and coaching interpretation, not converted into zero/positive values.
+- Excluded runs do not show their zero/negative number; they display an exclusion explanation. Positive measurements display the measured percentage, with extra precision for very small positive values.
+- Chart axes do not include zero or negative percentages; excluded samples create gaps in the trend rather than misleading connected lines.
+- A shared predicate controls execution, comparative baseline, learning signals, endurance, race evidence, coach interpretation and display; the storage schema, FIT import and original run data are unchanged.
+- Updated run-type chart and coach regression suites; new cardiac-drift tests, plus unchanged historic release notes and assets.
+- See RELEASE_TEST_REPORT_v15.8.6.md for the executed regression results and known historical test mismatches.
+
+PREVIOUS RELEASE HISTORY FOLLOWS.
+
 RELEASE v15.8.5 / BUILD 51850 — DISTINCT RUN-TYPE COLORS AND SYMBOLS
 - Progress > Efficiency factor + Aerobic durability: each comparable run type
   now receives a stable high-contrast color and distinctive marker shape.
