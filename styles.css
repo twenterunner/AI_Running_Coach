@@ -6513,28 +6513,3 @@ body:has(#onboarding:not(.hidden)) #nav,body:has(#onboarding:not(.hidden)) #more
 #dashboard.progressPage .progressChartLegend .runTypeLegendGlyph,
 #dashboard.progressPage .metricTypeTitle .runTypeLegendGlyph{display:block;flex:0 0 28px;width:28px;height:20px;overflow:visible}
 #dashboard.progressPage .metricTypeTitle .runTypeLegendGlyph{margin-left:0}
-
-/* Daily coaching: one actionable brief, with supporting detail on demand. */
-#today .dailyCoachCard{width:100%;box-sizing:border-box;padding:clamp(22px,4vw,40px);border-radius:22px;background:#fff;color:#132638;border:1px solid #d8e5ed;box-shadow:0 14px 40px #0002}
-#today .dailyCoachEyebrow{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;font-size:.875rem;font-weight:750;letter-spacing:.06em;color:#346071}
-#today .dailyCoachReadiness{color:#915400;letter-spacing:0}
-#today .dailyCoachCard h3{font-size:clamp(1.8rem,5vw,2.65rem);line-height:1.15;margin:18px 0 10px;color:#122c3c}
-#today .dailyCoachPurpose{font-size:1rem;line-height:1.6;color:#476173;margin:0;max-width:65ch}
-#today .dailyCoachTargets{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin:26px 0;padding:20px 0;border-block:1px solid #e2eaf0}
-#today .dailyCoachTargets span{display:flex;flex-direction:column;gap:7px}
-#today .dailyCoachTargets small,#today .dailyCoachFocus small{font-size:.875rem;color:#526b78;font-weight:700;letter-spacing:.04em}
-#today .dailyCoachTargets b{font-size:clamp(1rem,3vw,1.4rem);color:#173e51}
-#today .dailyCoachFocus{padding:18px 20px;border-radius:12px;background:#edf7f7;margin-top:24px;border-left:4px solid #138a85}
-#today .dailyCoachFocus p{font-size:1.05rem;line-height:1.6;margin:6px 0 0;color:#163f48;max-width:65ch}
-#today .dailyCoachFuel{font-size:1rem;color:#294b5c;line-height:1.6}
-#today .dailyCoachActions{margin-top:24px;display:flex;gap:12px}
-#today .dailyCoachActions button{min-height:48px;font-size:1rem}
-#today .dailyCoachNext{font-size:.9375rem;color:#526b78;margin:22px 0 0;padding-top:18px;border-top:1px solid #e2eaf0;line-height:1.6}
-#today .dailyCoachDetails{width:100%;box-sizing:border-box;border:1px solid #29465b;border-radius:14px;background:#112635;margin-top:14px;padding:0 20px;font-size:1rem;color:#dfebf3}
-#today .dailyCoachDetails summary{padding:19px 0;cursor:pointer;font-weight:650;font-size:1rem}
-#today .dailyCoachDetails[open]{padding-bottom:20px}
-#today .dailyCoachDetails p{font-size:1rem;line-height:1.6}
-@media(max-width:480px){#today .dailyCoachTargets{gap:8px}#today .dailyCoachTargets small{font-size:.875rem;letter-spacing:0}#today .dailyCoachCard{border-radius:16px}#today .dailyCoachActions button{width:100%}}
-#today .dailyCoachEyebrow>span{color:#346071}
-#today .dailyCoachEyebrow>.dailyCoachReadiness{color:#915400}
-#today .dailyCoachNext b{color:#365567}
