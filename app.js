@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '15.9.3';
-  const BUILD = 51930;
+  const VERSION = '15.8.6';
+  const BUILD = 51860;
   const SCHEMA = 10400;
   const PRIMARY_STORAGE_KEY = 'arc_v10400_web';
   const MIRROR_STORAGE_KEY = 'arc_v10400_mirror';
@@ -347,7 +347,7 @@ const diagnostics=[];
 function recordDiagnostic(source,error){const message=error?.stack||error?.message||String(error);diagnostics.unshift({time:new Date().toLocaleString(),source,message});if(diagnostics.length>20)diagnostics.length=20;console.error(source,error);renderDiagnostics();}
 function renderDiagnostics(){const box=$('diagnosticsContent');if(!box)return;box.innerHTML=diagnostics.length?diagnostics.map(x=>`<div class="diagnosticItem"><b>${esc(x.time)} · ${esc(x.source)}</b><pre>${esc(x.message)}</pre></div>`).join(''):'<p class="muted">No JavaScript errors have been recorded in this session.</p>';}
 window.addEventListener('error',e=>recordDiagnostic('Window error',e.error||e.message));window.addEventListener('unhandledrejection',e=>recordDiagnostic('Unhandled promise rejection',e.reason));
-const PLAN_ENGINE_VERSION=9;
+const PLAN_ENGINE_VERSION=7;
 const FIVE_DAY_TEMPLATE=[['Monday',false,'Easy'],['Tuesday',true,'Intervals'],['Wednesday',true,'Easy'],['Thursday',true,'Tempo'],['Friday',false,'Easy'],['Saturday',true,'Easy'],['Sunday',true,'Long run']];
 const RACE_PROFILES=[
  {key:'5k',label:'5K',maxDistance:7.5,currentWeekly:18,peakLong:12,maxWeekly:32,growth:.07,taperDays:7,days:[['Monday',false,'Easy'],['Tuesday',true,'Intervals'],['Wednesday',true,'Easy'],['Thursday',false,'Easy'],['Friday',false,'Easy'],['Saturday',true,'Tempo'],['Sunday',true,'Long run']]},
@@ -383,46 +383,18 @@ function profileMatrixKey(profile=raceProfile()){return['50k','75k','100k'].incl
 const QUALITY_SESSION_TYPES=new Set(['Intervals','Tempo','Fitness assessment','Hills','Fartlek','Threshold','Threshold intervals','VO₂max intervals','Race-pace intervals','Marathon-specific','Half-marathon-specific']);
 const LONG_SESSION_TYPES=new Set(['Long run','Specific long run','Race rehearsal','Progression']);
 function isQualitySessionType(type){return QUALITY_SESSION_TYPES.has(type)}
-function injuryTrainingCheckStamp(c){return c?JSON.stringify([c.date,c.pain??null,c.walkPain??null,c.runPain??null,c.nextDayWorse??null,c.alteredGait??null,c.newSwelling??null,c.runStatus??null]):''}
-function trainingInjuryContext(asOf=iso(today())){
- const injury=(state.injuries||[]).find(i=>i.id===state.activeInjuryPlanId);
- if(!injury||injury.rehabArchivedAt)return{injury:null,active:false,stale:false};
- const checks=(injury.checkIns||[]).filter(c=>CORE.isIsoDate(c.date)&&c.date<=asOf).sort((a,b)=>a.date.localeCompare(b.date));
- const latest=checks.at(-1),statusDate=String(injury.trainingStatusUpdatedAt||'').slice(0,10);
- const resolved=injury.trainingStatus==='recovered'&&CORE.isIsoDate(statusDate)&&statusDate<=asOf&&(!latest||latest.date<statusDate||injuryTrainingCheckStamp(latest)===injury.trainingStatusCheckStamp);
- if(resolved)return{injury,active:false,stale:false};
- const dates=[injury.date,injury.rehabStartDate,latest?.date,statusDate].filter(d=>CORE.isIsoDate(d)&&d<=asOf).sort();
- const last=dates.at(-1),age=last?(dte(asOf)-dte(last))/DAY:Infinity;
- // An old record is unknown current status, not a perpetual return-to-run order.
- return{injury,active:age<=21,stale:age>21,lastEvidence:last||null};
-}
-function capacityReviewStamp(){
- const now=iso(today()),from=iso(addCalendarDays(today(),-28));
- return JSON.stringify([now,state.activeInjuryPlanId,(state.injuries||[]).map(i=>[i.id,i.trainingStatus,i.trainingStatusUpdatedAt,i.rehabArchivedAt,(i.checkIns||[]).map(c=>[c.date,c.pain,c.nextDayWorse,c.alteredGait])]),(state.runs||[]).filter(r=>r.date>=from&&r.date<=now).map(r=>[r.id,r.date,r.distanceKm,r.durationSec,r.pain,r.rpe,r.source]).sort((a,b)=>String(a[0]).localeCompare(String(b[0])))]);
-}
-function capacityReviewDue(){return state.setup.adaptive!==false&&state.capacityReviewStamp!==capacityReviewStamp()}
-function startingCapacityProfile(asOf=state.setup.planStart,includeCurrentDay=false){
- const setup=state.setup||{},profile=raceProfile(setup.raceDistance),cutoff=CORE.isIsoDate(asOf)?dte(asOf):today(),start=includeCurrentDay?addCalendarDays(cutoff,1):cutoff,lookback=new Date(start.getTime()-28*DAY),fourWeeks=lookback;
- const evidenceThrough=iso(addCalendarDays(start,-1));
- // Read the live rows: an import may trigger planning before save() refreshes caches.
- const historical=(state.runs||[]).filter(r=>CORE.isCurrentEvidence(r,evidenceThrough)&&r.source!=='assessment'&&CORE.isIsoDate(r.date)&&dte(r.date)>=lookback&&dte(r.date)<start&&Number(r.distanceKm)>0);
+function startingCapacityProfile(){
+ const setup=state.setup||{},profile=raceProfile(setup.raceDistance),start=CORE.isIsoDate(setup.planStart)?dte(setup.planStart):today(),lookback=new Date(start.getTime()-56*DAY),fourWeeks=new Date(start.getTime()-28*DAY);
+ const historical=(state.runs||[]).filter(r=>CORE.isIsoDate(r.date)&&dte(r.date)>=lookback&&dte(r.date)<start&&Number(r.distanceKm)>0);
  const observedLongest=historical.length?Math.max(...historical.map(r=>Number(r.distanceKm)||0)):0;
  const observedFourWeekKm=sum(historical.filter(r=>dte(r.date)>=fourWeeks).map(r=>Number(r.distanceKm)||0));
- const recent14=historical.filter(r=>dte(r.date)>=new Date(start.getTime()-14*DAY)),days=new Set(historical.map(r=>r.date)).size;
- const recent7=historical.filter(r=>dte(r.date)>=new Date(start.getTime()-7*DAY));
- const previous7=recent14.filter(r=>dte(r.date)<new Date(start.getTime()-7*DAY));
- // Crossing into an unlogged week must not halve the last completed week's capacity.
- const observedWeekly=Math.max(observedLongest,observedFourWeekKm/4,sum(recent14.map(r=>Number(r.distanceKm)||0))/2,sum(recent7.map(r=>Number(r.distanceKm)||0)),sum(previous7.map(r=>Number(r.distanceKm)||0)));
- const recentEnough=recent14.length>0&&days>=3;
- const earnedGrowth=recentEnough&&!trainingInjuryContext(asOf).active&&recent14.every(r=>nullableNumber(r.pain)!==null&&Number(r.pain)<3&&Number(r.rpe||0)<8)?Math.min(.10,Math.max(0,Number(setup.growth)||0)):0;
- const weekly=Math.max(1,recentEnough?observedWeekly*(1+earnedGrowth):Number(setup.currentWeekly)||observedWeekly||1),longest=Math.max(1,recentEnough?observedLongest:Number(setup.currentLongest)||observedLongest||1),enabledDays=Math.max(1,state.days.filter(d=>d[1]).length);
+ const weekly=Math.max(1,Number(setup.currentWeekly)||0,observedFourWeekKm/4),longest=Math.max(1,Number(setup.currentLongest)||0,observedLongest),enabledDays=Math.max(1,state.days.filter(d=>d[1]).length);
  const qualityExposure=historical.filter(r=>isQualitySessionType(r.type)||['Marathon','Race'].includes(r.type)).length;
  const longRatio=longest/Math.max(1,Number(setup.peakLong)||profile.peakLong||longest),weeklyRatio=weekly/Math.max(1,Number(setup.maxWeekly)||profile.maxWeekly||weekly),readiness=Math.min(clamp(longRatio,0,1),clamp(weeklyRatio,0,1));
  let rampWeeks=readiness<.18?4:readiness<.32?3:readiness<.48?2:readiness<.62?1:0;
  if(qualityExposure>=2)rampWeeks=Math.max(0,rampWeeks-1);
- if(days>=6&&recent14.length>=3)rampWeeks=Math.min(rampWeeks,1);
- if(trainingInjuryContext(asOf).active)rampWeeks=Math.max(rampWeeks,3);
- return{profileKey:profile.key,longest,weekly,enabledDays,qualityExposure,longRatio,weeklyRatio,readiness,rampWeeks,earnedGrowth,observedDays:days,source:recentEnough?'recent completed runs':'declared current capacity'};
+ if(state.activeInjuryPlanId)rampWeeks=Math.max(rampWeeks,3);
+ return{profileKey:profile.key,longest,weekly,enabledDays,qualityExposure,longRatio,weeklyRatio,readiness,rampWeeks};
 }
 function capacityEnvelopeForWeek(w,weeklyKm,longKm,startCapacity=startingCapacityProfile()){
  const rampActive=startCapacity.rampWeeks>0&&w<=startCapacity.rampWeeks&&phase(w)!=='Taper',rampFraction=rampActive?(w-1)/Math.max(1,startCapacity.rampWeeks-1):1,avg=Math.max(1,Number(weeklyKm)||0)/Math.max(1,startCapacity.enabledDays),long=Math.max(1,Number(longKm)||startCapacity.longest);
@@ -462,14 +434,14 @@ function capacityAwareSession(type,requestedKm,w,envelope){
  }
  if(ramp&&type==='Fitness assessment')type='Easy + strides';
  let ceiling=Math.min(sessionDistanceCeiling(type,envelope),structuralSessionCeiling(type,phase(w),envelope));
- if(isQualitySessionType(type)&&Math.min(ceiling,Number(requestedKm)||0)<3.8){type=envelope.stridesCap>=3?'Easy + strides':'Easy';ceiling=Math.min(sessionDistanceCeiling(type,envelope),structuralSessionCeiling(type,phase(w),envelope));}
- if(type==='Easy + strides'&&Math.min(ceiling,Number(requestedKm)||0)<2.5){type='Easy';ceiling=Math.min(sessionDistanceCeiling(type,envelope),structuralSessionCeiling(type,phase(w),envelope));}
+ if(isQualitySessionType(type)&&Number.isFinite(ceiling)&&ceiling<3.8){type=envelope.stridesCap>=3?'Easy + strides':'Easy';ceiling=Math.min(sessionDistanceCeiling(type,envelope),structuralSessionCeiling(type,phase(w),envelope));}
+ if(type==='Easy + strides'&&Number.isFinite(ceiling)&&ceiling<2.5){type='Easy';ceiling=Math.min(sessionDistanceCeiling(type,envelope),structuralSessionCeiling(type,phase(w),envelope));}
  let km=Math.max(1,Number(requestedKm)||0),limited=Number.isFinite(ceiling)&&km>ceiling+.05;
  if(limited)km=ceiling;
  // A maximal assessment needs the test itself plus at least 1.5 km of easy preparation/recovery.
  if(type==='Fitness assessment'){
   const required=5+1.5;
-  if(Math.min(ceiling,km)<required-.05){type='Easy + strides';ceiling=Math.min(sessionDistanceCeiling(type,envelope),structuralSessionCeiling(type,phase(w),envelope));km=Math.min(km,ceiling);limited=true;}
+  if(Number.isFinite(ceiling)&&ceiling<required-.05){type='Easy + strides';ceiling=Math.min(sessionDistanceCeiling(type,envelope),structuralSessionCeiling(type,phase(w),envelope));km=Math.min(km,ceiling);limited=true;}
  }
  km=Math.max(1,Math.round(km*10)/10);
  const typeChanged=type!==originalType,onRampWeek=ramp?w:0;
@@ -548,7 +520,6 @@ function arcTrainingConfig(){
 }
 function arcTrainingReviewDue(){
  try{
-  if(capacityReviewDue())return true;
   if(!arcTrainingModules()||arcTrainingConfig().mode!=='active'||state.setup.adaptive===false)return false;
   const cutoff=iso(addCalendarDays(weekStart(currentWeek()),-1));
   return state.trainingReview?.evidenceThrough!==cutoff||state.trainingReview?.report?.mode!=='active';
@@ -598,7 +569,7 @@ function arcTrainingContext(){
  const eligible=(state.runs||[]).filter(r=>r.date<=evidenceThrough);
  const painRows=(state.runs||[]).filter(r=>r.date<=now&&r.date>=iso(addCalendarDays(today(),-14))&&r.pain!==null&&r.pain!==undefined&&r.pain!=='').map(r=>Number(r.pain)).filter(Number.isFinite);
  return{now,evidenceThrough,freezeThrough,config:cfg,recovery:ready.label,adaptiveEnabled:state.setup.adaptive!==false,
-  activeInjury:trainingInjuryContext().active,recentMaxPain:painRows.length?Math.max(...painRows):null,
+  activeInjury:Boolean(state.activeInjuryPlanId),recentMaxPain:painRows.length?Math.max(...painRows):null,
   lockedIds:[...(state.runs||[]).map(r=>r.planId).filter(Boolean),...(state.plan||[]).filter(p=>p.userLocked||p.manualOverride).map(p=>p.id)],
   dose:window.ARCTrainingDose.aggregate(eligible,evidenceThrough,28,{lt1:arcCurrentLT1(evidenceThrough)}),
   response:window.ARCTrainingCoordinator.compareResponse(eligible,evidenceThrough),
@@ -2017,7 +1988,7 @@ function persistAutomaticFitnessUpdate(before){
  const after=automaticFitnessSnapshot();
  // A new reliable baseline rebuilds ONLY uncompleted prescriptions. The plan
  // builder already protects all past workouts and those linked to recorded runs.
- return (autoFitnessChanged(before,after)||capacityReviewDue()||(typeof arcTrainingReviewDue==='function'&&arcTrainingReviewDue()))?buildPlan():save();
+ return (autoFitnessChanged(before,after)||(typeof arcTrainingReviewDue==='function'&&arcTrainingReviewDue()))?buildPlan():save();
 }
 function autoFitnessSummaryHtml(){
  const model=autoFitnessModel(),effective=kind=>{
@@ -2791,7 +2762,6 @@ function hrvModel(){
 
  const hist=hrvHistory(), values=hist.map(x=>x.value), n=values.length;
  if(!n)return{count:0,status:'not available',factor:1,baseline:null,rolling:null,deviation:null,ready:false,confidence:'none',detail:'No previous-night Garmin HRV values have been logged.'};
- if(hist.at(-1).date<iso(addCalendarDays(today(),-7)))return{count:n,status:'Update needed',factor:1,baseline:null,rolling:null,deviation:null,ready:false,confidence:'none',detail:'No HRV report in the past seven days.'};
 
  // HRV is used from the first logged value. Early estimates are deliberately
  // low influence because the personal baseline is still provisional.
@@ -2966,8 +2936,6 @@ function validatePlan(plan=state.plan){
   if(p.type!=='Rest'&&p.type!=='Race Day'&&(!p.zone||![p.zone.pace,p.zone.hr,p.zone.power].every(Number.isFinite)))issues.push({severity:'error',id:p.id,message:'Training targets are missing or invalid.'});
  });
  CORE.validatePlanInvariants(plan,state.setup).forEach(error=>issues.push({severity:'error',id:error.field,message:error.message}));
- const requestedPeak=Number(state.setup.peakLong)||0,plannedPeak=Math.max(0,...(plan||[]).filter(p=>LONG_SESSION_TYPES.has(p.type)).map(p=>Number(p.distance)||0));
- if(requestedPeak>0&&plannedPeak+.11<requestedPeak)issues.push({severity:'warning',id:'peakLong',message:`Configured peak long run: ${requestedPeak.toFixed(1)} km; current plan reaches ${plannedPeak.toFixed(1)} km. Remaining time, session progression or weekly-distance limits prevent the full target.`});
  const errors=issues.filter(x=>x.severity==='error').length,warnings=issues.length-errors;
  const score=Math.max(0,100-errors*8-warnings*2);
  return{checked:(plan||[]).length,issues,errors,warnings,score,valid:errors===0};
@@ -3147,69 +3115,20 @@ function extendProgrammePause(id){
 }
 function bindProgrammePauseControls(){document.querySelectorAll('#plan [data-pause-action]').forEach(btn=>btn.onclick=()=>{const a=btn.dataset.pauseAction;if(a==='new')openProgrammePauseDialog();else if(a==='resume')resumeProgrammeEarly();else if(a==='extend')extendProgrammePause(btn.dataset.pauseId);else if(a==='cancel')cancelScheduledProgrammePause(btn.dataset.pauseId)})}
 
-// Reserve the independently progressed long run, then share the remaining budget.
-function balancedWeekAllocation(training,assignments,budget,envelope,w){
- if(budget<1)return new Map();
- const count=training.length;
- const longDay=training.find(x=>LONG_SESSION_TYPES.has(assignments.get(x.date)));
- const longDistance=longDay?Math.min(envelope.longCap,budget):0;
- const keepCount=longDay?1+Math.min(count-1,Math.max(0,Math.floor((budget-longDistance+.001)/2))):Math.min(count,Math.max(1,Math.floor(budget/2)));
- let chosen=training;
- if(keepCount<count){
-  let best=null;
-  for(let mask=1;mask<(1<<count);mask++){
-   const subset=training.filter((_,i)=>mask&(1<<i));
-   if(subset.length!==keepCount||(longDay&&!subset.includes(longDay)))continue;
-   const indexes=subset.map(x=>training.indexOf(x)),gaps=subset.slice(1).map((x,i)=>(dte(x.date)-dte(subset[i].date))/DAY);
-   const score=(gaps.length?Math.min(...gaps):7)*100+sum(gaps)-sum(indexes)*.001;
-   if(!best||score>best.score)best={subset,score};
-  }
-  chosen=best?.subset||training.slice(0,keepCount);
- }
- const rows=chosen.map(x=>{
-  const requested=assignments.get(x.date)||'Easy',isLong=LONG_SESSION_TYPES.has(requested);
-  const cap=capacityAwareSession(requested,budget,w,envelope);
-  return{date:x.date,type:requested,cap:cap.km,weight:requested==='Recovery'?.8:isQualitySessionType(requested)?1.1:1,km:isLong?longDistance:Math.min(2,cap.km)};
- });
- let left=Math.max(0,budget-sum(rows.map(r=>r.km)));
- for(let step=0;step<10&&left>.001;step++){
-  const open=rows.filter(r=>r.km<r.cap-.001),weights=sum(open.map(r=>r.weight));if(!weights)break;
-  let used=0;for(const r of open){const add=Math.min(r.cap-r.km,left*r.weight/weights);r.km+=add;used+=add}left-=used;
- }
- return new Map(rows.map(r=>[r.date,Math.floor((r.km+1e-8)*10)/10]));
-}
-function longRunProjection(w,anchorWeek,anchorDistance){
- const target=Math.max(.1,Number(state.setup.peakLong)||anchorDistance),start=Math.min(target,Math.max(.1,anchorDistance));
- const peakWeek=Math.max(anchorWeek,weeks()-Math.ceil(state.setup.taperDays/7));
- const buildWeeks=[];
- for(let week=anchorWeek+1;week<=peakWeek;week++){
-  const recoveryWeek=week%4===0&&phase(week)==='Build'&&week>anchorWeek+1&&week!==peakWeek;
-  if(!recoveryWeek)buildWeeks.push(week);
- }
- const steps=buildWeeks.length,requiredGrowth=steps>0?Math.pow(target/start,1/steps)-1:0;
- // Keep the existing 10% session-growth ceiling. The old fixed +1.5 km limit
- // prevented feasible configured peaks even when there were enough weeks.
- // Recovery weeks do not earn an unseen progression step to be caught up later.
- const growth=Math.min(.10,Math.max(0,requiredGrowth)),elapsed=buildWeeks.filter(week=>week<=w).length;
- return{distance:Math.min(target,start*Math.pow(1+growth,elapsed)),target,peakWeek,requiredGrowth,limited:requiredGrowth>.10};
-}
 function buildPlan(){
- if(typeof updateRuntimeDomainRevisions==='function')updateRuntimeDomainRevisions();
  const nowIso=iso(today()),oldPlan=Array.isArray(state.plan)?state.plan:[],oldByDate=new Map(oldPlan.map(p=>[p.date,p]));
- let out=[],total=weeks(),taper=Math.ceil(state.setup.taperDays/7),startCapacity=startingCapacityProfile();
- const planningWeek=currentWeek(),rollingCapacity=startingCapacityProfile(nowIso,true);
+ let out=[],total=weeks(),taper=Math.ceil(state.setup.taperDays/7),startCapacity=startingCapacityProfile(),longProgression=Math.max(1,startCapacity.longest);
  for(let w=1;w<=total;w++){
-   if(w===planningWeek&&state.setup.adaptive!==false)startCapacity=rollingCapacity;
-   const relativeWeek=state.setup.adaptive!==false&&w>=planningWeek?w-planningWeek:w-1;
-   let dp=detailedPhase(w),ph=phase(w),factor=adaptiveFactor(w),base=Math.min(state.setup.maxWeekly,startCapacity.weekly*Math.pow(1+state.setup.growth,relativeWeek));
+   let dp=detailedPhase(w),ph=phase(w),factor=adaptiveFactor(w),base=Math.min(state.setup.maxWeekly,startCapacity.weekly*Math.pow(1+state.setup.growth,w-1));
    if(w%4===0&&ph==='Build')base*=.9;
    if(ph==='Taper'){let left=total-w;base*=left===0?.42:left===1?.62:.78}
    base*=factor;
 
-   const anchorWeek=state.setup.adaptive!==false&&w>=planningWeek?planningWeek:1;
-   const longProjection=longRunProjection(w,anchorWeek,startCapacity.longest);
-   let long=longProjection.distance;
-   if(w%4===0&&ph==='Build'&&w>anchorWeek+1&&w!==longProjection.peakWeek)long*=.85;
+   let prog=clamp((w-1)/Math.max(1,total-taper-2),0,1),desiredLong=startCapacity.longest+(state.setup.peakLong-startCapacity.longest)*prog;
+   if(w===1)longProgression=startCapacity.longest;
+   else if(ph!=='Taper')longProgression=Math.min(desiredLong,Math.min(longProgression*1.10,longProgression+1.5));
+   let long=longProgression;
+   if(w%4===0&&ph==='Build')long*=.85;
    if(ph==='Taper'){let left=total-w;long=Math.min(long,left===0?0:left===1?18:24)}
    long=(ph==='Taper'&&total===w)?0:Math.max(1,Math.round(long*10)/10);
 
@@ -3226,32 +3145,39 @@ function buildPlan(){
    let training=weekDates.filter(x=>x.cfg[1]&&x.date!==state.setup.raceDate);
    let assignedTypes=training.map(x=>assignments.get(x.date)||'Easy');
    let hasLong=assignedTypes.some(x=>LONG_SESSION_TYPES.has(x));
+   let quality=training.filter(x=>isQualitySessionType(assignments.get(x.date)));
+   let aerobic=training.filter(x=>!isQualitySessionType(assignments.get(x.date))&&!LONG_SESSION_TYPES.has(assignments.get(x.date)));
 
-   // Race distance stays outside the ordinary weekly training budget.
+   // Race week excludes race distance from ordinary training volume. During the
+   // opening on-ramp, less of the non-long-run budget is allocated to quality;
+   // the safe volume is instead distributed across easy aerobic running.
    let trainingBudget=isRaceWeek?Math.min(18,Math.max(8,base*.32)):base;
-   let longDistance=hasLong?Math.min(long,trainingBudget):0;
-   const supportedDays=hasLong?1+Math.min(Math.max(0,training.length-1),Math.max(0,Math.floor((trainingBudget-longDistance+.001)/2))):Math.min(training.length,Math.max(1,Math.floor(trainingBudget/2)));
-   let envelope=capacityEnvelopeForWeek(relativeWeek+1,trainingBudget,longDistance||long,{...startCapacity,enabledDays:supportedDays});
-   // Future weeks are projections; today's ceiling is anchored to demonstrated capacity.
-   envelope.startLongest=startCapacity.longest;
-   const allocation=balancedWeekAllocation(training,assignments,trainingBudget,envelope,relativeWeek+1);
+   let longDistance=hasLong?Math.min(long,trainingBudget*.62):0;
+   let remaining=Math.max(0,trainingBudget-longDistance),rampActive=startCapacity.rampWeeks>0&&w<=startCapacity.rampWeeks&&ph!=='Taper';
+   let envelope=capacityEnvelopeForWeek(w,trainingBudget,longDistance||long,startCapacity);
+   let rampQualityFraction=[.28,.32,.36,.40][Math.min(3,Math.max(0,w-1))],qualityFraction=isRaceWeek?.32:(rampActive?rampQualityFraction:.48);
+   let rawQualityBudget=quality.length?remaining*qualityFraction:0,structuralQualityBudget=quality.length?sum(quality.map(x=>Math.min(envelope.qualityCap,structuralSessionCeiling(assignments.get(x.date),ph,envelope)))):0;
+   let qualityBudget=quality.length?Math.min(rawQualityBudget,structuralQualityBudget):0;
+   let aerobicBudget=Math.max(0,remaining-qualityBudget);
+   let qualityShare=quality.length?qualityBudget/quality.length:0;
+   let aerobicShare=aerobic.length?aerobicBudget/aerobic.length:0;
 
    weekDates.forEach(({dateObj,date,dayName,cfg})=>{
      let requestedType=date===state.setup.raceDate?'Race Day':(cfg[1]?(assignments.get(date)||'Easy'):'Rest');
      if(isRaceWeek&&requestedType==='Fitness assessment')requestedType='Easy';
      if(isRaceWeek&&LONG_SESSION_TYPES.has(requestedType))requestedType='Easy';
-     if(requestedType!=='Rest'&&requestedType!=='Race Day'&&!allocation.has(date))requestedType='Rest';
 
      let dist=0;
      if(requestedType==='Race Day')dist=state.setup.raceDistance;
-     if(requestedType!=='Rest'&&requestedType!=='Race Day')dist=allocation.get(date)||0;
+     else if(LONG_SESSION_TYPES.has(requestedType))dist=longDistance;
+     else if(isQualitySessionType(requestedType))dist=qualityShare;
+     else if(requestedType!=='Rest')dist=aerobicShare;
 
-     let capacity=requestedType==='Rest'||requestedType==='Race Day'?{type:requestedType,km:dist,requestedKm:dist,capacityCeiling:null,capacityLimited:false,typeChanged:false,originalType:requestedType,onRampWeek:0,onRampWeeks:startCapacity.rampWeeks,capacityReason:''}:capacityAwareSession(requestedType,dist,relativeWeek+1,envelope);
+     let capacity=requestedType==='Rest'||requestedType==='Race Day'?{type:requestedType,km:dist,requestedKm:dist,capacityCeiling:null,capacityLimited:false,typeChanged:false,originalType:requestedType,onRampWeek:0,onRampWeeks:startCapacity.rampWeeks,capacityReason:''}:capacityAwareSession(requestedType,dist,w,envelope);
      let type=capacity.type,z=zone(type,date),id=`${date}-${type}`,detail=prescription(type,capacity.km,w,ph,z,capacity);
      if(capacity.capacityReason){detail.whyAmount=`${detail.whyAmount||'The amount follows the current programme load.'} ${capacity.capacityReason}`;}
      let prescribedDistance=Number.isFinite(detail.totalDistance)?detail.totalDistance:Math.round(capacity.km*10)/10;
-     const capacityRationale=`Based on ${startCapacity.source}: ${startCapacity.weekly.toFixed(1)} km/week and a ${startCapacity.longest.toFixed(1)} km longest run. The long run progresses toward your configured ${Number(state.setup.peakLong).toFixed(1)} km peak before taper. This week's ${trainingBudget.toFixed(1)} km budget reserves ${longDistance.toFixed(1)} km for the long run and shares the remainder across the other sessions. Future weeks are reviewed against completed training.`;
-     let item={id,week:w,date,day:dayName,type,distance:prescribedDistance,phase:ph,detailedPhase:dp,factor,zone:z,requestedType:capacity.typeChanged?capacity.originalType:null,capacityCeiling:capacity.capacityCeiling,capacityLimited:capacity.capacityLimited,onRampWeek:capacity.onRampWeek,onRampWeeks:capacity.onRampWeeks,capacityReason:capacity.capacityReason,capacityRationale,...detail};
+     let item={id,week:w,date,day:dayName,type,distance:prescribedDistance,phase:ph,detailedPhase:dp,factor,zone:z,requestedType:capacity.typeChanged?capacity.originalType:null,capacityCeiling:capacity.capacityCeiling,capacityLimited:capacity.capacityLimited,onRampWeek:capacity.onRampWeek,onRampWeeks:capacity.onRampWeeks,capacityReason:capacity.capacityReason,...detail};
      const existing=oldByDate.get(date),hasLinkedEvidence=existing&&(state.runs||[]).some(r=>r.planId===existing.id||((r.date===date)&&r.matchStatus==='matched'));
      // Preserve only genuine history or a future/today prescription that already has linked run evidence.
      // All other current/future days must take the freshly generated item. Keeping a same-id
@@ -3268,7 +3194,7 @@ function buildPlan(){
  if(typeof arcCoordinatorReport!=='undefined'&&arcCoordinatorReport?.evidenceThrough){
   state.trainingReview={version:2,evidenceThrough:arcCoordinatorReport.evidenceThrough,evaluatedAt:new Date().toISOString(),report:arcCoordinatorReport};
  }
- state.plan=out;state.planEngineVersion=PLAN_ENGINE_VERSION;state.schemaVersion=SCHEMA;state.capacityReviewStamp=capacityReviewStamp();state.lastPlanHealth=validatePlan(out);return save()
+ state.plan=out;state.planEngineVersion=PLAN_ENGINE_VERSION;state.schemaVersion=SCHEMA;state.lastPlanHealth=validatePlan(out);return save()
 }
 
 function prescription(type,km,w,ph,z,context={}){
@@ -4611,7 +4537,7 @@ function todayWorkoutStructure(p){
  return`<div class="todayWorkoutViz"><div class="workoutVizHeader"><span>WORKOUT STRUCTURE</span><b>${esc(p.distanceCheck||`${Number(p.distance).toFixed(1)} km total`)}</b></div><svg class="workoutProfile" viewBox="0 0 600 104" preserveAspectRatio="none" role="img" aria-label="Workout structure with ${warm.toFixed(1)} kilometre warm-up, ${esc(repLabel)}, and ${cool.toFixed(1)} kilometre cooldown"><line class="profileBaseline" x1="18" y1="77" x2="582" y2="77"/>${shapes}<text x="${(plotX+warmW/2).toFixed(1)}" y="94">WU ${warm.toFixed(1)} km</text><text class="mainLabel" x="${(mainX+mainW/2).toFixed(1)}" y="14">${esc(repLabel)}</text><text x="${(coolX+coolW/2).toFixed(1)}" y="94">CD ${cool.toFixed(1)} km</text></svg><div class="workoutVizLegend"><span><i class="warmKey"></i>Warm-up</span><span><i class="workKey"></i>Work</span>${recoveries?'<span><i class="recoveryKey"></i>Recovery</span>':''}<span><i class="coolKey"></i>Cooldown</span></div></div>`;
 }
 function todayActiveInjury(){
- const context=trainingInjuryContext(),injury=context.active?context.injury:null;if(!injury)return{injury:null,progress:null,day:null};
+ const injury=(state.injuries||[]).find(x=>x.id===state.activeInjuryPlanId);if(!injury)return{injury:null,progress:null,day:null};
  const progress=injuryPrediction(injury),todayStr=iso(today());
  const day=buildRehabCalendar(injury,progress).find(d=>d.date===todayStr)||rehabCalendarDay(injury,progress,todayStr,rehabPlanDayIndex(injury,todayStr));
  return{injury,progress,day};
@@ -4641,7 +4567,7 @@ function todayWorkoutCard(p,injuryDay){
    </section>`;
  }
  const z=p.zone||{},targetScope=esc(p.targetScope||'main set');
- const caution=injuryDay?['Active rehabilitation takes priority over this running prescription.','Only run if today’s rehabilitation criteria and safety rule allow it.']:(p.onRampWeek?[`Opening ramp · week ${p.onRampWeek} of ${p.onRampWeeks}.`]:null);
+ const caution=injuryDay?['Active rehabilitation takes priority over this running prescription.','Only run if today’s rehabilitation criteria and safety rule allow it.']:(p.onRampWeek?[`Capacity on-ramp week ${p.onRampWeek} of ${p.onRampWeeks}: this session is limited by your starting training capacity.`]:null);
  return`<section class="todayRunnerCard todayWorkoutCard">
    <div class="runnerSectionHead"><span class="runnerCardIcon">${todayPictogram('shoe')}</span><div><small>TODAY’S RUNNING PLAN</small><h3>${esc(p.type)}</h3><p>${esc(p.phase||phase(currentWeek()))} · ${Number(p.distance).toFixed(1)} km</p></div></div>
    ${caution?todayBulletList(caution,'runnerBullets cautionBullets'):''}
@@ -4952,9 +4878,9 @@ function coachIntelTodayHtml({todayRun,plan,engine,report,ready,priorityTitle,pr
  const fitPoints=(fitness.history||[]).filter(x=>x&&CORE.isIsoDate(x.date));
  metricsRows.push(coachIntelMetricRow({label:'Estimated VO₂max',points:fitPoints.map(x=>({date:x.date,value:x.value})),asOf:key,unit:'mL/kg/min',digits:1,confidence:latest?.confidence||'',note:'Submaximal HR–pace oxygen-cost estimate; the number is not a direct laboratory measurement.'}));
  if(fitness.group)metricsRows.push(coachIntelMetricRow({label:'VO₂-based fitness age',points:fitPoints.filter(x=>Number.isFinite(x.ageEquivalent)).map(x=>({date:x.date,value:x.ageEquivalent})),asOf:key,unit:'years',digits:1,lowerBetter:true,note:'Population-reference equivalent from the same VO₂max model; not Garmin fitness age or biological age.'}));
- else metricsRows.push(`<article class="ciMetric"><small>VO₂-based fitness age</small><b>—</b><span class="ciDelta neutral">Not configured</span><p>Set birth year and reference group in Progress.</p></article>`);
+ else metricsRows.push(`<article class="ciMetric"><small>VO₂-based fitness age</small><b>—</b><span class="ciDelta neutral">Not configured</span><p>Set birth year and reference group in Progress; no age is invented.</p></article>`);
  const cpHistory=coachIntelCalibrationHistory('power',key);
- metricsRows.push(cpHistory.length?coachIntelMetricRow({label:'Critical power',points:cpHistory,asOf:key,unit:'W',digits:0,confidence:cp?.automatic?'automatic':'dated calibration',note:`Source: ${cp?.source||'dated calibration'}.`}):coachIntelRetainedMetricRow({label:'Critical power',value:cp?.value,unit:'W',note:`${cp?.source||'No CP measurement'}.`}));
+ metricsRows.push(cpHistory.length?coachIntelMetricRow({label:'Critical power',points:cpHistory,asOf:key,unit:'W',digits:0,confidence:cp?.automatic?'automatic':'dated calibration',note:`Source: ${cp?.source||'dated calibration'}. A change is shown only from qualified observations.`}):coachIntelRetainedMetricRow({label:'Critical power',value:cp?.value,unit:'W',note:`${cp?.source||'No CP measurement'}. A legacy setup value is retained but not treated as a new fitness measurement.`}));
  const lt1Now=lt1?.status==='provisional'&&Number.isFinite(Number(lt1.hr))?Number(lt1.hr):null;
  const lt1Points=[];
  for(const days of [28,7,0]){
@@ -4967,29 +4893,29 @@ function coachIntelTodayHtml({todayRun,plan,engine,report,ready,priorityTitle,pr
  if(lt1Now!==null)metricsRows.push(coachIntelMetricRow({label:'LT1 · provisional proxy',points:lt1Points,asOf:key,unit:'bpm',digits:0,directionless:true,confidence:'low confidence',note:`${lt1.reason||'Estimated from sustained HR decoupling.'} Neither a lab LT1 measurement nor an automatically estimated LT1 pace/power.`}));
  else metricsRows.push(`<article class="ciMetric"><small>LT1 · aerobic boundary</small><b>—</b><span class="ciDelta neutral">Not established</span><p>${esc(lt1?.reason||'Not enough repeatable aerobic-drift evidence.')}</p></article>`);
  const lt2History=coachIntelCalibrationHistory('hr',key);
- metricsRows.push(lt2History.length?coachIntelMetricRow({label:'LT2 · threshold HR',points:lt2History,asOf:key,unit:'bpm',digits:0,directionless:true,confidence:lt2?.automatic?'automatic':'dated calibration',note:`Source: ${lt2?.source||'dated calibration'}.`}):coachIntelRetainedMetricRow({label:'LT2 · threshold HR',value:lt2?.value,unit:'bpm',note:`${lt2?.source||'No LT2 measurement'}.`}));
+ metricsRows.push(lt2History.length?coachIntelMetricRow({label:'LT2 · threshold HR',points:lt2History,asOf:key,unit:'bpm',digits:0,directionless:true,confidence:lt2?.automatic?'automatic':'dated calibration',note:`Source: ${lt2?.source||'dated calibration'}. LT2 is never inferred from easy-run average heart rate.`}):coachIntelRetainedMetricRow({label:'LT2 · threshold HR',value:lt2?.value,unit:'bpm',note:`${lt2?.source||'No LT2 measurement'}. A retained LT2 is not new evidence.`}));
  const paceHistory=coachIntelCalibrationHistory('pace',key);
- metricsRows.push(paceHistory.length?coachIntelMetricRow({label:'5 km reference pace',points:paceHistory,asOf:key,unit:'s/km',digits:0,lowerBetter:true,format:v=>pace(v),note:`Source: ${benchmark?.source||'dated calibration'}.`}):coachIntelRetainedMetricRow({label:'5 km reference pace',value:benchmark?.value,format:v=>pace(v),note:`${benchmark?.source||'No 5 km reference measurement'}.`}));
+ metricsRows.push(paceHistory.length?coachIntelMetricRow({label:'5 km reference pace',points:paceHistory,asOf:key,unit:'s/km',digits:0,lowerBetter:true,format:v=>pace(v),note:`Source: ${benchmark?.source||'dated calibration'}. This is a 5 km distance-specific reference, not an easy-run pace.`}):coachIntelRetainedMetricRow({label:'5 km reference pace',value:benchmark?.value,format:v=>pace(v),note:`${benchmark?.source||'No 5 km reference measurement'}. A held pace is not proof of a new benchmark.`}));
  const rpe=api.number(todayRun?.rpe),pain=api.number(todayRun?.pain),hrv=ready.hrv;
  const hrvContext=hrv?.ready&&Number.isFinite(hrv.rolling)&&Number.isFinite(hrv.baseline)?`Previous-night HRV rolling ${Math.round(hrv.rolling)} ms versus personal ${Math.round(hrv.baseline)} ms baseline.`:'Not enough recent HRV observations for a dependable personal comparison.';
  const last7=load.last7.km,prior7=load.previous7.km;
- const loadSentence=`${last7.toFixed(1)} km in the last 7 days versus ${prior7.toFixed(1)} km in the preceding 7 days${load.percent7!==null?` (${load.percent7>0?'+':''}${load.percent7.toFixed(0)}%)`:''}. 28-day volume ${load.last28.km.toFixed(1)} km.`;
+ const loadSentence=`${last7.toFixed(1)} km in the last 7 days versus ${prior7.toFixed(1)} km in the preceding 7 days${load.percent7!==null?` (${load.percent7>0?'+':''}${load.percent7.toFixed(0)}%)`:' (percentage change unavailable from zero baseline)'}. 28-day volume ${load.last28.km.toFixed(1)} km.`;
  const trailingRun=allRuns.filter(x=>x.date<key).sort((a,b)=>b.date.localeCompare(a.date))[0]||null;
  const trace=[];
  if(assessment){
-  for(const x of assessment.drivers.slice(0,4))trace.push({label:x.label,value:x.value,detail:x.label==='Aerobic efficiency'&&x.value==='Comparison pending'?'More comparable runs needed.':x.detail,tone:x.tone});
+  for(const x of assessment.drivers.slice(0,4))trace.push({label:x.label,value:x.value,detail:x.detail,tone:x.tone});
   if(assessment.components.length){
    const least=assessment.components[0];
-   trace.push({label:'Execution detail',value:`${least.name}: ${least.score.toFixed(0)}/100`,detail:`${least.weight.toFixed(0)}% of execution score. ${least.detail}`,tone:least.score<80?'caution':'neutral'});
+   trace.push({label:'Largest execution weakness',value:`${least.name}: ${least.score.toFixed(0)}/100`,detail:`Weighted ${least.weight.toFixed(0)}% in the *existing* execution score. ${least.detail}`,tone:least.score<80?'caution':'neutral'});
   }
  }else{
   trace.push({label:'Training exposure',value:`${last7.toFixed(1)} km / 7 days`,detail:`${load.last7.count} runs during the rolling week. ${loadSentence}`,tone:'neutral'});
-  if(trailingRun)trace.push({label:'Last completed run',value:`${fmtDate(trailingRun.date)} · ${Number(trailingRun.distanceKm).toFixed(1)} km`,detail:'Your latest recorded session.',tone:'neutral'});
+  if(trailingRun)trace.push({label:'Last completed run',value:`${fmtDate(trailingRun.date)} · ${Number(trailingRun.distanceKm).toFixed(1)} km`,detail:'Historical data inform today; this is not a run completed today.',tone:'neutral'});
   if(hrv?.ready)trace.push({label:'Readiness',value:ready.label,detail:todayReadinessExplanation(ready),tone:ready.label==='Normal'?'good':'caution'});
  }
  const hrvMissing=!(hrv?.ready),latestSource=latest?`${fmtDate(latest.date)} · ${latest.count} steady HR/pace observations (${latest.confidence} confidence)`:'no independent steady HR/pace estimate yet';
  const limitations=[...new Set([...(assessment?.limitations||[]),...(hrvMissing?['reliable recent HRV baseline']:[]),...(!latest?['qualified VO₂max series']:[]),...(lt1Now===null?['established LT1 breakpoint']:[])])];
- const verdict=programmePause?'Programme pause takes priority':injuryDay?'Rehabilitation criteria take priority':assessment?.verdict|| (plan&&plan.type!=='Rest'?'Today’s training guidance':'Recovery day');
+ const verdict=programmePause?'Programme pause takes priority':injuryDay?'Rehabilitation criteria take priority':assessment?.verdict|| (plan&&plan.type!=='Rest'?'No completed planned session today — use current evidence':'Recovery day — review the signals');
  const verdictTone=programmePause||injuryDay?'caution':assessment?.tone||'neutral';
  const raceHistory=(state.raceReadinessHistory||[]).filter(x=>x&&CORE.isIsoDate(x.date)&&x.date<key);
  const raceNow=Number(engine.pred),raceScenario=Number(engine.projection?.predictedTime),currentHist=api.seriesDelta([...raceHistory.map(x=>({date:x.date,value:x.current})),{date:key,value:raceNow}],key);
@@ -5003,20 +4929,20 @@ function coachIntelTodayHtml({todayRun,plan,engine,report,ready,priorityTitle,pr
  const dose=assessment?.dose,hasHrDose=dose&&dose.seconds>0&&dose.hrCoverage!==null;
  const doseText=hasHrDose?`Measured HR exposure: ${Math.round((dose.lowHr||0)/60)} min below LT1, ${Math.round((dose.moderateHr||0)/60)} min between thresholds, ${Math.round((dose.highHr||0)/60)} min above LT2, and ${Math.round((dose.unknownHr||0)/60)} min unknown. Classified HR coverage ${Math.round(dose.hrCoverage*100)}% (${dose.status}).`:'Second-by-second, threshold-classified HR exposure is not sufficiently available; no zone minutes are inferred.';
  return `<section class="coachIntelligencePanel" aria-label="Coach Intelligence v2">
-  <div class="ciTop"><div><small>COACH INTELLIGENCE · ${assessment?'POST-RUN':'DAILY'} EVIDENCE</small><h3>${esc(verdict)}</h3></div><span class="ciTone ${verdictTone}">${assessment?`Execution ${assessment.score===null?'—':assessment.score+'/100'}`:'Daily review'}</span></div>
-  <div class="ciSectionHead"><div><small>01 · WHY</small><h4>What your training says</h4></div><span>${esc(report.evidenceCoverage)}% model-component evidence</span></div>
+  <div class="ciTop"><div><small>COACH INTELLIGENCE · ${assessment?'POST-RUN':'DAILY'} EVIDENCE</small><h3>${esc(verdict)}</h3><p>${esc(decisionText)}</p></div><span class="ciTone ${verdictTone}">${assessment?`Execution ${assessment.score===null?'—':assessment.score+'/100'}`:'Daily review'}</span></div>
+  <div class="ciSectionHead"><div><small>01 · WHY</small><h4>What the signals actually say</h4></div><span>${esc(report.evidenceCoverage)}% model-component evidence</span></div>
   <div class="ciEvidenceGrid">${trace.map(x=>`<article class="ciFinding ${esc(x.tone||'neutral')}"><small>${esc(x.label)}</small><b>${esc(x.value)}</b><p>${esc(x.detail)}</p></article>`).join('')}</div>
   ${assessment?`<details class="ciAudit"><summary>Show full workout score &amp; physiological evidence</summary><p>${esc(details?.interpretation||'')} The execution score is a weighted prescription-adherence measure, not a direct physiological adaptation score. ${details?.capReason?esc(details.capReason):''}</p><div class="ciScoreRows">${componentRows||'<p>No score components available.</p>'}</div><div class="ciPathways">${assessment.pathways.map(x=>`<div><small>${esc(x.name)} signal</small><b>${x.signal===null?'—':(x.signal>0?'+':'')+x.signal.toFixed(2)}</b><p>${esc(x.interpretation||'Evidence insufficient')} · ${esc(x.confidence)} confidence</p></div>`).join('')}</div><p>${esc(doseText)}</p><p>${esc(`Effort ${rpe===null?'not entered':rpe+'/10'} · pain ${pain===null?'not entered':pain+'/10'}. Unknown pain and effort do not count as zero.`)}</p></details>`:''}
-  <div class="ciSectionHead"><div><small>02 · WHAT CHANGED</small><h4>Fitness & training metrics</h4></div><span>Latest values & changes</span></div>
+  <div class="ciSectionHead"><div><small>02 · WHAT CHANGED</small><h4>Physiological metric audit</h4></div><span>Actual observed changes, not forced updates</span></div>
   <div class="ciMetricGrid">${metricsRows.join('')}</div>
   <div class="ciSectionHead"><div><small>03 · RECOVERY COST</small><h4>Training load &amp; readiness</h4></div><span>${esc(ready.label)}</span></div>
   <div class="ciLoadGrid"><article><small>LAST 7 DAYS</small><b>${last7.toFixed(1)} km</b><span>${load.percent7!==null?`${load.percent7>0?'+':''}${load.percent7.toFixed(0)}% vs previous week`:'No prior-week distance baseline'}</span></article><article><small>LAST 28 DAYS</small><b>${load.last28.km.toFixed(1)} km</b><span>${load.last28.count} recorded runs</span></article><article><small>READINESS MODIFIER</small><b>${(ready.modifier*100).toFixed(1)}%</b><span>${esc(ready.label)} · ${esc(todayReadinessExplanation(ready))}</span></article></div>
-  <p class="ciEvidenceNote">${esc(hrvContext)} ${assessment?.over?'Extra distance logged; prioritise recovery.':''}</p>
-  <div class="ciSectionHead"><div><small>04 · GOAL PROGRESSION</small><h4>Race outlook</h4></div></div>
+  <p class="ciEvidenceNote">${esc(hrvContext)} Weekly distance is training exposure, not a calibrated fatigue or injury-risk probability. ${assessment?.over?'The completed run exceeded the assigned distance; monitor subsequent recovery rather than treating extra distance as automatically productive.':''}</p>
+  <div class="ciSectionHead"><div><small>04 · GOAL PROGRESSION</small><h4>Marathon outlook — now vs future scenario</h4></div></div>
   <div class="ciRaceGrid"><article><small>CURRENT ESTIMATED ABILITY</small><b>${esc(fmtEstimate(raceNow,Boolean(engine.currentModel?.provisional)))}</b><span>Change since last saved snapshot: ${trend(currentHist.priorDelta)}</span><p>Current model range: ${esc(fmtEstimate(Number(engine.currentModel?.rangeLow),Boolean(engine.currentModel?.provisional)))}–${esc(fmtEstimate(Number(engine.currentModel?.rangeHigh),Boolean(engine.currentModel?.provisional)))}</p></article><article><small>PROJECTED PROGRAMME SCENARIO</small><b>${esc(fmtEstimate(raceScenario,Boolean(engine.projectedModel?.provisional)))}</b><span>Change since last saved snapshot: ${trend(forecastHist.priorDelta)}</span><p>Future training assumptions: ${esc(Number(engine.projection?.completionAssumption)>0?Math.round(engine.projection.completionAssumption*100)+'% programme completion assumed':'not verified')}. Target probability: ${forecastPct!==null?forecastPct+'%':'not established'}.</p></article></div>
-  <p class="ciEvidenceNote">${engine.projectedModel?.provisional?'Provisional forecast · based on your current programme.':'Forecast based on your current programme.'}</p>
+  <p class="ciEvidenceNote">The programme scenario is a conditional future forecast, not today's running ability. The change shown compares existing stored daily race-readiness snapshots; it is not necessarily caused by a single run. ${esc(engine.projectedModel?.provisional?'The projection is provisional; numerical precision exceeds the evidence.':'Uncertainty remains even with a supported model.')}</p>
   <div class="ciSectionHead"><div><small>05 · ACTION</small><h4>What happens next &amp; why</h4></div></div>
-  <div class="ciAction"><b>${esc(priorityTitle)}</b><p>${esc(nextText)}</p>${(pain!==null&&pain>=3)?'<p>Logged pain limits progression: reassess symptoms before another demanding session.</p>':''}</div>
+  <div class="ciAction"><b>${esc(priorityTitle)}</b><p>${esc(nextText)}</p>${(pain!==null&&pain>=3)?'<p>Logged pain limits progression: reassess symptoms before another demanding session.</p>':''}<p>Change the next workout only through the existing guarded plan/recovery engine; this report does not create a competing training prescription.</p></div>
   <details class="ciAudit ciLimitations"><summary>Evidence provenance, missing inputs &amp; confidence</summary><p><b>Estimated VO₂max:</b> ${esc(latestSource)}. <b>LT1:</b> ${esc(lt1?.reason||'Not established')}. <b>Critical power:</b> ${esc(cp?.source||'Not available')}. <b>Threshold HR:</b> ${esc(lt2?.source||'Not available')}.</p><p><b>Missing or limited:</b> ${esc(limitations.length?limitations.join(', '):'No explicitly missing fields among the checked sources')}. The evidence coverage percentage is the existing race-model component support; it does NOT mean that an equivalent percentage of FIT sensor values exists.</p><p>Confidence is source-specific. Terrain, weather, sensor accuracy, hydration, illness and effort can influence HR/pace/power comparisons. The app does not directly import Garmin or Stryd wellness data, and must not pretend those measurements are available.</p></details>
  </section>`;
 }
@@ -5031,7 +4957,6 @@ function todayCoachOtherRunsToday(p){
 function consolidatedTodayCoachBriefing(p){
  const engine=coachEngine(),report=evidenceBasedCoach(engine),ast=report.athleteState,ready=readinessModel(),active=todayActiveInjury(),injuryDay=active.day,rehabSummary=todayRehabStatusSummary(active),todayRun=todayCoachRunForBriefing(p),postRun=Boolean(todayRun),programmePause=currentProgrammePause(),scheduledPause=upcomingProgrammePauses().find(x=>programmePauseStatus(x)==='scheduled')||null;
  const evidence=Math.round(clamp(Number(report.evidenceCoverage)||0,0,100)),remaining=raceTimeRemaining(),pain=ready.pain,todayPain=todayInjuryPainDisplay(active,pain),trajectory=todayCoachTrajectoryInsight(engine);
- const injuryContext=trainingInjuryContext();
  const readinessDetail=todayReadinessExplanation(ready),painValue=Number.isFinite(todayPain.value)?`${todayPain.value.toFixed(0)}/10`:'—',painText=todayPain.text;
  const modeTitle=programmePause?'Programme paused':injuryDay&&rehabSummary?rehabSummary.date:p&&p.type!=='Rest'?p.type:'Recovery',modeText=programmePause?`${programmePauseReasonLabel(programmePause.reason)} · ${fmtDate(programmePause.startDate)}–${fmtDate(programmePause.endDate)}`:injuryDay&&rehabSummary?`Normal running estimate · ${rehabSummary.detail}`:p&&p.type!=='Rest'?`${Number(p.distance).toFixed(1)} km · ${p.purpose||'Complete as prescribed'}`:'No run scheduled · recovery is today’s training';
  let priorityTitle,priorityBullets,insights=[];
@@ -5041,11 +4966,11 @@ function consolidatedTodayCoachBriefing(p){
    const painScore=Number(todayRun.pain),ill=programmePause.reason==='illness';
    priorityTitle=Number.isFinite(painScore)&&painScore>=5?'Stop running and protect recovery':'Activity logged during the pause — do not add more';
    priorityBullets=[`${Number(todayRun.distanceKm).toFixed(2)} km ${todayRun.type||'run'} was logged while the programme pause is active.`,`The pause remains active; this activity is treated as extra load and does not trigger catch-up training.`,ill?'If illness symptoms were worsened by the run, extend recovery rather than forcing the planned return date.':'Resume the programme early first if you want future running to become prescribed training again.'];
-   insights=[{label:'PAUSE LOAD DEVIATION',title:`${Number(todayRun.distanceKm).toFixed(2)} km added inside a no-training window`,detail:'The activity is retained as real training evidence, but the coach does not pretend the paused prescription was completed. The return sequence remains conservative.',status:'warn'},{label:'PAUSE IMPACT',title:impact?`${impact.impactLabel} projected race impact`:`${risk.label} short-term fitness risk`,detail:impact?`${Number(impact.deltaSec||0)<5?'Most of the planned interruption is still expected to be absorbed by remaining preparation time.':`The stored planning estimate is about +${fmtTime(Number(impact.deltaSec)||0)} to expected finish time.`}`:risk.text,status:risk.cls},{label:'WHAT HAPPENS NEXT',title:`Pause remains active through ${fmtDate(programmePause.endDate)}`,detail:`Controlled re-entry still uses ${profile.sessions} guarded session${profile.sessions===1?'':'s'}. End or extend the pause explicitly rather than using an ad-hoc run to change the plan.`,status:'neutral'}];
+   insights=[{label:'PAUSE LOAD DEVIATION',title:`${Number(todayRun.distanceKm).toFixed(2)} km added inside a no-training window`,detail:'The activity is retained as real training evidence, but the coach does not pretend the paused prescription was completed. The return sequence remains conservative.',status:'warn'},{label:'PAUSE IMPACT',title:impact?`${impact.impactLabel} projected race impact`:`${risk.label} short-term fitness risk`,detail:impact?`${Number(impact.deltaSec||0)<5?'Most of the planned interruption is still expected to be absorbed by remaining preparation time.':`The stored planning estimate is about +${fmtTime(Number(impact.deltaSec)||0)} to expected finish time.`} This is a planning heuristic, not a medical or physiological guarantee.`:risk.text,status:risk.cls},{label:'WHAT HAPPENS NEXT',title:`Pause remains active through ${fmtDate(programmePause.endDate)}`,detail:`Controlled re-entry still uses ${profile.sessions} guarded session${profile.sessions===1?'':'s'}. End or extend the pause explicitly rather than using an ad-hoc run to change the plan.`,status:'neutral'}];
   }else{
    priorityTitle=programmePause.reason==='illness'?'Recover fully — the programme is deliberately paused':'Protect continuity — the programme is deliberately paused';
    priorityBullets=[`${programmePauseReasonLabel(programmePause.reason)} pause · ${remainingPause} day${remainingPause===1?'':'s'} remaining.`,`No missed workout will be stacked or chased later.`,`Controlled re-entry begins from ${fmtDate(resume)}${programmePause.reason==='illness'?'; extend the pause if you are not recovered.':'.'}`];
-   insights=[{label:'PAUSE IMPACT',title:impact?`${impact.impactLabel} projected race impact · ${Number(impact.pausedKm||impact.kmReduction||0).toFixed(1)} km in the pause window`:`${risk.label} short-term fitness risk`,detail:impact?`${Number(impact.deltaSec||0)<5?'The race-day effect is currently expected to be largely absorbed by the remaining preparation time.':`Expected programme finish-time effect is about +${fmtTime(Number(impact.deltaSec)||0)}.`} ${risk.text}`:risk.text,status:risk.cls},{label:'HOW THE PLAN IS PROTECTING YOU',title:`${profile.sessions} guarded re-entry session${profile.sessions===1?'':'s'} after the pause`,detail:'The plan includes a gradual return after your pause.',status:'good'},{label:'WHAT TO DO NOW',title:programmePause.reason==='illness'?'Recovery is the training objective':'Do not compensate with hidden training',detail:programmePause.reason==='illness'?'Resume only when you are actually ready. If illness lasts longer than planned, extend the pause rather than forcing the re-entry date.':'If travel unexpectedly allows a run, keep it optional and easy unless you first end the pause and let the plan rebuild.',status:'neutral'}];
+   insights=[{label:'PAUSE IMPACT',title:impact?`${impact.impactLabel} projected race impact · ${Number(impact.pausedKm||impact.kmReduction||0).toFixed(1)} km in the pause window`:`${risk.label} short-term fitness risk`,detail:impact?`${Number(impact.deltaSec||0)<5?'The race-day effect is currently expected to be largely absorbed by the remaining preparation time.':`Expected programme finish-time effect is about +${fmtTime(Number(impact.deltaSec)||0)}.`} ${risk.text}`:risk.text,status:risk.cls},{label:'HOW THE PLAN IS PROTECTING YOU',title:`${profile.sessions} guarded re-entry session${profile.sessions===1?'':'s'} after the pause`,detail:'The app removes the unavailable sessions, does not move them into adjacent days, and temporarily reduces volume / hard running on return before restoring the normal phase structure.',status:'good'},{label:'WHAT TO DO NOW',title:programmePause.reason==='illness'?'Recovery is the training objective':'Do not compensate with hidden training',detail:programmePause.reason==='illness'?'Resume only when you are actually ready. If illness lasts longer than planned, extend the pause rather than forcing the re-entry date.':'If travel unexpectedly allows a run, keep it optional and easy unless you first end the pause and let the plan rebuild.',status:'neutral'}];
   }
  }else if(postRun){
   const plan=todayRun.planId?state.plan.find(x=>x.id===todayRun.planId):(p&&p.type!=='Rest'?p:null),details=workoutScoreDetails(todayRun,plan),score=Number(details?.score),painScore=Number(todayRun.pain);
@@ -5057,18 +4982,18 @@ function consolidatedTodayCoachBriefing(p){
   else priorityTitle='Run logged — let the evidence settle';
   priorityBullets=[
    `${Number(todayRun.distanceKm).toFixed(2)} km logged${plan?` against ${Number(plan.distance).toFixed(1)} km planned`:''}${Number.isFinite(score)?` · execution ${Math.round(score)}/100`:''}.`,
-   details?.targetComparison?.needsReview?details.targetComparison.notice:(Number(todayRun.distanceKm)>Number(plan?.distance||Infinity)*1.08?'Extra distance adds recovery load.':null),
-   null
+   details?.targetComparison?.needsReview?details.targetComparison.notice:(Number(todayRun.distanceKm)>Number(plan?.distance||Infinity)*1.08?'The run exceeded the planned volume, even if the measured physiological response was favourable.':'The physiological and execution evidence is evaluated below.'),
+   'The next-session decision stays subject to pain, recovery and the existing plan safeguards.'
   ];
   insights=[todayCoachPostRunSessionInsight(todayRun,p),todayCoachPostRunLearningInsight(todayRun),todayCoachPostRunNextInsight(todayRun,trajectory)];
  }else if(injuryDay){
   priorityTitle='Complete rehabilitation before considering the run plan';
   priorityBullets=[`${injuryDay.title} is today’s primary training task.`,injuryDay.rule,p&&p.type!=='Rest'?`${p.type} should only be completed if rehabilitation criteria allow it.`:null];
-  const rehabInsight={label:'COACH OBSERVATION',title:'Rehabilitation comes first today',detail:`Follow today’s rehab criteria before running.`,status:'warn'};
+  const rehabInsight={label:'COACH OBSERVATION',title:'Rehabilitation evidence overrides performance progression today',detail:`The active rehabilitation plan is in control of today’s decision. Running targets only matter after the phase-specific criteria are satisfied.`,status:'warn'};
   insights=[rehabInsight,trajectory,todayCoachPreRunSuccessInsight(p,ready,report)];
  }else if(p&&p.type!=='Rest'){
   priorityTitle=`Execute ${p.type} as prescribed`;
-  priorityBullets=[p.purpose||'Deliver the intended training stimulus without adding unplanned load.',`Target ${Number(p.distance).toFixed(1)} km at the prescribed effort.`,ready.label!=='Normal'?`Readiness is ${ready.label.toLowerCase()}; keep the effort controlled.`:null];
+  priorityBullets=[p.purpose||'Deliver the intended training stimulus without adding unplanned load.',`Target ${Number(p.distance).toFixed(1)} km and stay inside the prescribed pace/power/HR guidance.`,ready.label!=='Normal'?`Readiness is ${ready.label.toLowerCase()}; respect the temporary recovery modifier.`:null];
   const otherRuns=todayCoachOtherRunsToday(p),other=otherRuns[0];
   let observation=other?{label:'COACH OBSERVATION',title:`${Number(other.distanceKm).toFixed(2)} km already logged today — the planned ${p.type} is still outstanding`,detail:`The logged ${other.type} was not matched to today’s planned session. Treat it as additional load rather than invisible mileage; do not automatically stack the full prescription if readiness, pain or total load would be compromised.`,status:'warn'}:ready.label!=='Normal'?{label:'COACH OBSERVATION',title:`Readiness is ${ready.label.toLowerCase()} today`,detail:`${readinessDetail}. The recovery signal takes precedence over proving fitness in this session.`,status:'warn'}:todayCoachExecutionInsight(report);
   const adaptation=todayCoachPreRunAdaptationInsight();
@@ -5076,7 +5001,7 @@ function consolidatedTodayCoachBriefing(p){
   insights=[observation,trajectory,todayCoachPreRunSuccessInsight(p,ready,report)];
  }else{
   priorityTitle='Recover deliberately';
-  priorityBullets=['No run scheduled. Use today to recover.','Follow the next session as planned.'];
+  priorityBullets=['No purposeful running session is scheduled today.','Do not add catch-up mileage.','Protect the next scheduled training exposure.'];
   insights=[todayCoachExecutionInsight(report),trajectory,todayCoachPreRunSuccessInsight(p,ready,report)];
  }
  if(!programmePause&&scheduledPause){
@@ -5101,7 +5026,7 @@ function consolidatedTodayCoachBriefing(p){
  <div class="todayStatusGrid seriousStatusGrid">
    <article class="todayStatusCard ${programmePause?'neutral':'training'}"><h4>${programmePause?'PROGRAMME STATUS':injuryDay?'ACTIVE REHAB':'TODAY’S FOCUS'}</h4><div class="statusRing">${todayPictogram(programmePause?'recovery':injuryDay?'rehab':p&&p.type!=='Rest'?'training':'recovery')}</div><div class="statusCopy"><strong>${esc(modeTitle)}</strong><p>${esc(modeText)}</p></div></article>
    <article class="todayStatusCard ${ready.label==='Normal'?'good':ready.label==='Restricted'?'caution':'neutral'}"><h4>READINESS</h4><div class="statusRing">${todayPictogram('readiness')}</div><div class="statusCopy"><strong>${esc(ready.label)}</strong><p>${esc(readinessDetail)}</p></div></article>
-   <article class="todayStatusCard ${!Number.isFinite(todayPain.value)?'neutral':todayPain.value>=3?'caution':'good'}"><h4>PAIN / INJURY</h4><div class="statusRing">${todayPictogram('pain')}</div><div class="statusCopy"><strong>${painValue}</strong><p>${esc(painText)}</p>${injuryContext.stale?`<details><summary>Update old injury status</summary><div class="buttonRow"><button type="button" class="secondary" data-training-injury="recovered">Recovered</button><button type="button" class="secondary" data-training-injury="active">Still limiting</button></div></details>`:''}</div></article>
+   <article class="todayStatusCard ${!Number.isFinite(todayPain.value)?'neutral':todayPain.value>=3?'caution':'good'}"><h4>PAIN / INJURY</h4><div class="statusRing">${todayPictogram('pain')}</div><div class="statusCopy"><strong>${painValue}</strong><p>${esc(painText)}</p></div></article>
  </div>
  ${todayRehabCard(active)}
  ${todayWorkoutCard(p,injuryDay)}
@@ -6752,8 +6677,7 @@ let recoveryPainCache={key:null,value:null};
 function recoveryPainState(){
  const key=`${runtimeDomainRevisions.runs}|${iso(today())}`;
  if(recoveryPainCache.key===key&&recoveryPainCache.value)return recoveryPainCache.value;
- const since=iso(addCalendarDays(today(),-7));
- const recent=completedRuns().filter(r=>r.date>=since&&nullableNumber(r.pain)!==null).sort((a,b)=>b.date.localeCompare(a.date)).slice(0,5);
+ const recent=completedRuns().filter(r=>nullableNumber(r.pain)!==null).sort((a,b)=>b.date.localeCompare(a.date)).slice(0,5);
  let value;
  if(!recent.length)value={count:0,average:null,max:null,status:'No pain data'};
  else{const vals=recent.map(r=>Number(r.pain)),average=avg(vals),max=Math.max(...vals);value={count:vals.length,average,max,status:max>=5?'Pain needs attention':max>=3?'Monitor pain':'No significant pain signal'}}
@@ -12618,14 +12542,7 @@ const pages=[['today','Today'],['plan','Plan'],['runs','Log'],['dashboard','Prog
 $('nav').innerHTML=pages.map((p,i)=>`<button data-page="${p[0]}" class="${i?'':'active'}">${p[1]}</button>`).join('');
 const pageNodes=new Map([...document.querySelectorAll('.page')].map(node=>[node.id,node]));
 const navButtons=new Map([...document.querySelectorAll('#nav button')].map(node=>[node.dataset.page,node]));
-document.body.onclick=e=>{const injuryStatus=e.target.closest('[data-training-injury]');if(injuryStatus){
- const injury=(state.injuries||[]).find(i=>i.id===state.activeInjuryPlanId);if(!injury)return;
- const before=JSON.parse(JSON.stringify(state));
- injury.trainingStatus=injuryStatus.dataset.trainingInjury;injury.trainingStatusUpdatedAt=new Date().toISOString();
- injury.trainingStatusCheckStamp=injuryTrainingCheckStamp((injury.checkIns||[]).filter(c=>c.date<=iso(today())).sort((a,b)=>a.date.localeCompare(b.date)).at(-1));
- if(!buildPlan()){state=before;renderAll();toast('The injury status could not be saved.',true);return}
- invalidatePageRenderCache();renderAll();toast(injury.trainingStatus==='recovered'?'Recovered status saved. Your plan now follows your recent running.':'Current injury restriction saved. Update your rehab check-in.');return;
-}if(e.target.id==='addShoeBtn'){openShoeForm();return}let sd=e.target.closest('[data-shoe-detail]');if(sd){openShoeDetail(sd.dataset.shoeDetail);return}let cps=e.target.closest('[data-choose-plan-shoe]');if(cps){choosePlanShoe(cps.dataset.choosePlanShoe);return}if(e.target.id==='addInjuryBtn'){openInjuryForm();return}let activate=e.target.closest('[data-activate-injury-plan]');if(activate){let id=activate.dataset.activateInjuryPlan,current=state.injuries.find(x=>x.id===state.activeInjuryPlanId),next=state.injuries.find(x=>x.id===id);if(next?.rehabArchivedAt){toast('Archived rehabilitation plans are read-only. Their history remains available for review.',true);return}if(next&&confirm(`Switch the active recovery plan from ${current?.location||'the current injury'} to ${next.location||'this injury'}? Only one plan can be followed at a time.`)){state.activeInjuryPlanId=id;save();renderInjury();toast('Active recovery plan switched.')}return;}let closeRehab=e.target.closest('[data-close-rehab-plan]');if(closeRehab){
+document.body.onclick=e=>{if(e.target.id==='addShoeBtn'){openShoeForm();return}let sd=e.target.closest('[data-shoe-detail]');if(sd){openShoeDetail(sd.dataset.shoeDetail);return}let cps=e.target.closest('[data-choose-plan-shoe]');if(cps){choosePlanShoe(cps.dataset.choosePlanShoe);return}if(e.target.id==='addInjuryBtn'){openInjuryForm();return}let activate=e.target.closest('[data-activate-injury-plan]');if(activate){let id=activate.dataset.activateInjuryPlan,current=state.injuries.find(x=>x.id===state.activeInjuryPlanId),next=state.injuries.find(x=>x.id===id);if(next?.rehabArchivedAt){toast('Archived rehabilitation plans are read-only. Their history remains available for review.',true);return}if(next&&confirm(`Switch the active recovery plan from ${current?.location||'the current injury'} to ${next.location||'this injury'}? Only one plan can be followed at a time.`)){state.activeInjuryPlanId=id;save();renderInjury();toast('Active recovery plan switched.')}return;}let closeRehab=e.target.closest('[data-close-rehab-plan]');if(closeRehab){
  const injury=state.injuries.find(x=>x.id===closeRehab.dataset.closeRehabPlan);if(!injury)return;
  let prediction=null;try{prediction=injuryPrediction(injury)}catch(err){recordDiagnostic('Close rehabilitation plan',err)}
  if(!prediction||prediction.stage!==INJURY_STAGES.length-1){toast('This rehabilitation plan can only be closed once it is in Phase 6.',true);return}
@@ -13129,7 +13046,7 @@ function initialiseApplication(){
 
   // Stored state has already been loaded and normalised above. Only regenerate
   // the programme if the persisted programme is genuinely absent.
-  if(!Array.isArray(state.plan)||!state.plan.length||Number(state.planEngineVersion)!==PLAN_ENGINE_VERSION||capacityReviewDue()||arcTrainingReviewDue()){
+  if(!Array.isArray(state.plan)||!state.plan.length||Number(state.planEngineVersion)!==PLAN_ENGINE_VERSION||arcTrainingReviewDue()){
    startupLoaderStatus(Number(state.planEngineVersion)!==PLAN_ENGINE_VERSION?'Updating capacity-aware running plan…':'Loading running plan…');
    buildPlan();
   }
