@@ -1,7 +1,7 @@
-// AI Running Coach v15.8.6 · build 51860
+// AI Running Coach v15.9.0 · build 51900
 'use strict';
 
-const BUILD = 51860;
+const BUILD = 51900;
 const CACHE_PREFIX = 'arc-v';
 
 self.addEventListener('install', () => {
