@@ -5,8 +5,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '15.9.2';
-  const BUILD = 51920;
+  const VERSION = '15.9.3';
+  const BUILD = 51930;
   const SCHEMA = 10400;
   const PRIMARY_STORAGE_KEY = 'arc_v10400_web';
   const MIRROR_STORAGE_KEY = 'arc_v10400_mirror';
@@ -347,7 +347,7 @@ const diagnostics=[];
 function recordDiagnostic(source,error){const message=error?.stack||error?.message||String(error);diagnostics.unshift({time:new Date().toLocaleString(),source,message});if(diagnostics.length>20)diagnostics.length=20;console.error(source,error);renderDiagnostics();}
 function renderDiagnostics(){const box=$('diagnosticsContent');if(!box)return;box.innerHTML=diagnostics.length?diagnostics.map(x=>`<div class="diagnosticItem"><b>${esc(x.time)} · ${esc(x.source)}</b><pre>${esc(x.message)}</pre></div>`).join(''):'<p class="muted">No JavaScript errors have been recorded in this session.</p>';}
 window.addEventListener('error',e=>recordDiagnostic('Window error',e.error||e.message));window.addEventListener('unhandledrejection',e=>recordDiagnostic('Unhandled promise rejection',e.reason));
-const PLAN_ENGINE_VERSION=8;
+const PLAN_ENGINE_VERSION=9;
 const FIVE_DAY_TEMPLATE=[['Monday',false,'Easy'],['Tuesday',true,'Intervals'],['Wednesday',true,'Easy'],['Thursday',true,'Tempo'],['Friday',false,'Easy'],['Saturday',true,'Easy'],['Sunday',true,'Long run']];
 const RACE_PROFILES=[
  {key:'5k',label:'5K',maxDistance:7.5,currentWeekly:18,peakLong:12,maxWeekly:32,growth:.07,taperDays:7,days:[['Monday',false,'Easy'],['Tuesday',true,'Intervals'],['Wednesday',true,'Easy'],['Thursday',false,'Easy'],['Friday',false,'Easy'],['Saturday',true,'Tempo'],['Sunday',true,'Long run']]},
@@ -410,7 +410,9 @@ function startingCapacityProfile(asOf=state.setup.planStart,includeCurrentDay=fa
  const observedFourWeekKm=sum(historical.filter(r=>dte(r.date)>=fourWeeks).map(r=>Number(r.distanceKm)||0));
  const recent14=historical.filter(r=>dte(r.date)>=new Date(start.getTime()-14*DAY)),days=new Set(historical.map(r=>r.date)).size;
  const recent7=historical.filter(r=>dte(r.date)>=new Date(start.getTime()-7*DAY));
- const observedWeekly=Math.max(observedFourWeekKm/4,sum(recent14.map(r=>Number(r.distanceKm)||0))/2,sum(recent7.map(r=>Number(r.distanceKm)||0)));
+ const previous7=recent14.filter(r=>dte(r.date)<new Date(start.getTime()-7*DAY));
+ // Crossing into an unlogged week must not halve the last completed week's capacity.
+ const observedWeekly=Math.max(observedLongest,observedFourWeekKm/4,sum(recent14.map(r=>Number(r.distanceKm)||0))/2,sum(recent7.map(r=>Number(r.distanceKm)||0)),sum(previous7.map(r=>Number(r.distanceKm)||0)));
  const recentEnough=recent14.length>0&&days>=3;
  const earnedGrowth=recentEnough&&!trainingInjuryContext(asOf).active&&recent14.every(r=>nullableNumber(r.pain)!==null&&Number(r.pain)<3&&Number(r.rpe||0)<8)?Math.min(.10,Math.max(0,Number(setup.growth)||0)):0;
  const weekly=Math.max(1,recentEnough?observedWeekly*(1+earnedGrowth):Number(setup.currentWeekly)||observedWeekly||1),longest=Math.max(1,recentEnough?observedLongest:Number(setup.currentLongest)||observedLongest||1),enabledDays=Math.max(1,state.days.filter(d=>d[1]).length);
@@ -460,14 +462,14 @@ function capacityAwareSession(type,requestedKm,w,envelope){
  }
  if(ramp&&type==='Fitness assessment')type='Easy + strides';
  let ceiling=Math.min(sessionDistanceCeiling(type,envelope),structuralSessionCeiling(type,phase(w),envelope));
- if(isQualitySessionType(type)&&Number.isFinite(ceiling)&&ceiling<3.8){type=envelope.stridesCap>=3?'Easy + strides':'Easy';ceiling=Math.min(sessionDistanceCeiling(type,envelope),structuralSessionCeiling(type,phase(w),envelope));}
- if(type==='Easy + strides'&&Number.isFinite(ceiling)&&ceiling<2.5){type='Easy';ceiling=Math.min(sessionDistanceCeiling(type,envelope),structuralSessionCeiling(type,phase(w),envelope));}
+ if(isQualitySessionType(type)&&Math.min(ceiling,Number(requestedKm)||0)<3.8){type=envelope.stridesCap>=3?'Easy + strides':'Easy';ceiling=Math.min(sessionDistanceCeiling(type,envelope),structuralSessionCeiling(type,phase(w),envelope));}
+ if(type==='Easy + strides'&&Math.min(ceiling,Number(requestedKm)||0)<2.5){type='Easy';ceiling=Math.min(sessionDistanceCeiling(type,envelope),structuralSessionCeiling(type,phase(w),envelope));}
  let km=Math.max(1,Number(requestedKm)||0),limited=Number.isFinite(ceiling)&&km>ceiling+.05;
  if(limited)km=ceiling;
  // A maximal assessment needs the test itself plus at least 1.5 km of easy preparation/recovery.
  if(type==='Fitness assessment'){
   const required=5+1.5;
-  if(Number.isFinite(ceiling)&&ceiling<required-.05){type='Easy + strides';ceiling=Math.min(sessionDistanceCeiling(type,envelope),structuralSessionCeiling(type,phase(w),envelope));km=Math.min(km,ceiling);limited=true;}
+  if(Math.min(ceiling,km)<required-.05){type='Easy + strides';ceiling=Math.min(sessionDistanceCeiling(type,envelope),structuralSessionCeiling(type,phase(w),envelope));km=Math.min(km,ceiling);limited=true;}
  }
  km=Math.max(1,Math.round(km*10)/10);
  const typeChanged=type!==originalType,onRampWeek=ramp?w:0;
@@ -2964,6 +2966,8 @@ function validatePlan(plan=state.plan){
   if(p.type!=='Rest'&&p.type!=='Race Day'&&(!p.zone||![p.zone.pace,p.zone.hr,p.zone.power].every(Number.isFinite)))issues.push({severity:'error',id:p.id,message:'Training targets are missing or invalid.'});
  });
  CORE.validatePlanInvariants(plan,state.setup).forEach(error=>issues.push({severity:'error',id:error.field,message:error.message}));
+ const requestedPeak=Number(state.setup.peakLong)||0,plannedPeak=Math.max(0,...(plan||[]).filter(p=>LONG_SESSION_TYPES.has(p.type)).map(p=>Number(p.distance)||0));
+ if(requestedPeak>0&&plannedPeak+.11<requestedPeak)issues.push({severity:'warning',id:'peakLong',message:`Configured peak long run: ${requestedPeak.toFixed(1)} km; current plan reaches ${plannedPeak.toFixed(1)} km. Remaining time, session progression or weekly-distance limits prevent the full target.`});
  const errors=issues.filter(x=>x.severity==='error').length,warnings=issues.length-errors;
  const score=Math.max(0,100-errors*8-warnings*2);
  return{checked:(plan||[]).length,issues,errors,warnings,score,valid:errors===0};
@@ -3143,10 +3147,13 @@ function extendProgrammePause(id){
 }
 function bindProgrammePauseControls(){document.querySelectorAll('#plan [data-pause-action]').forEach(btn=>btn.onclick=()=>{const a=btn.dataset.pauseAction;if(a==='new')openProgrammePauseDialog();else if(a==='resume')resumeProgrammeEarly();else if(a==='extend')extendProgrammePause(btn.dataset.pauseId);else if(a==='cancel')cancelScheduledProgrammePause(btn.dataset.pauseId)})}
 
-// Allocate one coherent weekly budget; never reserve a giant long run first.
+// Reserve the independently progressed long run, then share the remaining budget.
 function balancedWeekAllocation(training,assignments,budget,envelope,w){
- const count=training.length,keepCount=Math.min(count,Math.max(1,Math.floor(budget/2)));
+ if(budget<1)return new Map();
+ const count=training.length;
  const longDay=training.find(x=>LONG_SESSION_TYPES.has(assignments.get(x.date)));
+ const longDistance=longDay?Math.min(envelope.longCap,budget):0;
+ const keepCount=longDay?1+Math.min(count-1,Math.max(0,Math.floor((budget-longDistance+.001)/2))):Math.min(count,Math.max(1,Math.floor(budget/2)));
  let chosen=training;
  if(keepCount<count){
   let best=null;
@@ -3159,37 +3166,50 @@ function balancedWeekAllocation(training,assignments,budget,envelope,w){
   }
   chosen=best?.subset||training.slice(0,keepCount);
  }
- const longShare=chosen.length>=5?.35:chosen.length===4?.40:chosen.length===3?.45:chosen.length===2?.55:1;
  const rows=chosen.map(x=>{
   const requested=assignments.get(x.date)||'Easy',isLong=LONG_SESSION_TYPES.has(requested);
   const cap=capacityAwareSession(requested,budget,w,envelope);
-  return{date:x.date,type:requested,cap:Math.min(cap.km,isLong?budget*longShare:Infinity),weight:isLong?1.55:requested==='Recovery'?.8:isQualitySessionType(requested)?1.1:1,km:0};
+  return{date:x.date,type:requested,cap:cap.km,weight:requested==='Recovery'?.8:isQualitySessionType(requested)?1.1:1,km:isLong?longDistance:Math.min(2,cap.km)};
  });
- let left=Math.max(0,budget);
+ let left=Math.max(0,budget-sum(rows.map(r=>r.km)));
  for(let step=0;step<10&&left>.001;step++){
   const open=rows.filter(r=>r.km<r.cap-.001),weights=sum(open.map(r=>r.weight));if(!weights)break;
   let used=0;for(const r of open){const add=Math.min(r.cap-r.km,left*r.weight/weights);r.km+=add;used+=add}left-=used;
  }
  return new Map(rows.map(r=>[r.date,Math.floor((r.km+1e-8)*10)/10]));
 }
+function longRunProjection(w,anchorWeek,anchorDistance){
+ const target=Math.max(.1,Number(state.setup.peakLong)||anchorDistance),start=Math.min(target,Math.max(.1,anchorDistance));
+ const peakWeek=Math.max(anchorWeek,weeks()-Math.ceil(state.setup.taperDays/7));
+ const buildWeeks=[];
+ for(let week=anchorWeek+1;week<=peakWeek;week++){
+  const recoveryWeek=week%4===0&&phase(week)==='Build'&&week>anchorWeek+1&&week!==peakWeek;
+  if(!recoveryWeek)buildWeeks.push(week);
+ }
+ const steps=buildWeeks.length,requiredGrowth=steps>0?Math.pow(target/start,1/steps)-1:0;
+ // Keep the existing 10% session-growth ceiling. The old fixed +1.5 km limit
+ // prevented feasible configured peaks even when there were enough weeks.
+ // Recovery weeks do not earn an unseen progression step to be caught up later.
+ const growth=Math.min(.10,Math.max(0,requiredGrowth)),elapsed=buildWeeks.filter(week=>week<=w).length;
+ return{distance:Math.min(target,start*Math.pow(1+growth,elapsed)),target,peakWeek,requiredGrowth,limited:requiredGrowth>.10};
+}
 function buildPlan(){
  if(typeof updateRuntimeDomainRevisions==='function')updateRuntimeDomainRevisions();
  const nowIso=iso(today()),oldPlan=Array.isArray(state.plan)?state.plan:[],oldByDate=new Map(oldPlan.map(p=>[p.date,p]));
- let out=[],total=weeks(),taper=Math.ceil(state.setup.taperDays/7),startCapacity=startingCapacityProfile(),longProgression=Math.max(1,startCapacity.longest);
+ let out=[],total=weeks(),taper=Math.ceil(state.setup.taperDays/7),startCapacity=startingCapacityProfile();
  const planningWeek=currentWeek(),rollingCapacity=startingCapacityProfile(nowIso,true);
  for(let w=1;w<=total;w++){
-   if(w===planningWeek&&state.setup.adaptive!==false){startCapacity=rollingCapacity;longProgression=startCapacity.longest;}
+   if(w===planningWeek&&state.setup.adaptive!==false)startCapacity=rollingCapacity;
    const relativeWeek=state.setup.adaptive!==false&&w>=planningWeek?w-planningWeek:w-1;
    let dp=detailedPhase(w),ph=phase(w),factor=adaptiveFactor(w),base=Math.min(state.setup.maxWeekly,startCapacity.weekly*Math.pow(1+state.setup.growth,relativeWeek));
    if(w%4===0&&ph==='Build')base*=.9;
    if(ph==='Taper'){let left=total-w;base*=left===0?.42:left===1?.62:.78}
    base*=factor;
 
-   let prog=clamp((w-1)/Math.max(1,total-taper-2),0,1),desiredLong=startCapacity.longest+(state.setup.peakLong-startCapacity.longest)*prog;
-   if(w===1||w===planningWeek&&state.setup.adaptive!==false)longProgression=Math.min(Number(state.setup.peakLong)||Infinity,startCapacity.longest*(1+(startCapacity.earnedGrowth||0)));
-   else if(ph!=='Taper')longProgression=Math.min(desiredLong,Math.min(longProgression*1.10,longProgression+1.5));
-   let long=longProgression;
-   if(w%4===0&&ph==='Build')long*=.85;
+   const anchorWeek=state.setup.adaptive!==false&&w>=planningWeek?planningWeek:1;
+   const longProjection=longRunProjection(w,anchorWeek,startCapacity.longest);
+   let long=longProjection.distance;
+   if(w%4===0&&ph==='Build'&&w>anchorWeek+1&&w!==longProjection.peakWeek)long*=.85;
    if(ph==='Taper'){let left=total-w;long=Math.min(long,left===0?0:left===1?18:24)}
    long=(ph==='Taper'&&total===w)?0:Math.max(1,Math.round(long*10)/10);
 
@@ -3209,8 +3229,8 @@ function buildPlan(){
 
    // Race distance stays outside the ordinary weekly training budget.
    let trainingBudget=isRaceWeek?Math.min(18,Math.max(8,base*.32)):base;
-   const supportedDays=Math.min(training.length,Math.max(1,Math.floor(trainingBudget/2))),longShare=supportedDays>=5?.35:supportedDays===4?.40:supportedDays===3?.45:supportedDays===2?.55:1;
-   let longDistance=hasLong?Math.min(long,trainingBudget*longShare):0;
+   let longDistance=hasLong?Math.min(long,trainingBudget):0;
+   const supportedDays=hasLong?1+Math.min(Math.max(0,training.length-1),Math.max(0,Math.floor((trainingBudget-longDistance+.001)/2))):Math.min(training.length,Math.max(1,Math.floor(trainingBudget/2)));
    let envelope=capacityEnvelopeForWeek(relativeWeek+1,trainingBudget,longDistance||long,{...startCapacity,enabledDays:supportedDays});
    // Future weeks are projections; today's ceiling is anchored to demonstrated capacity.
    envelope.startLongest=startCapacity.longest;
@@ -3230,7 +3250,7 @@ function buildPlan(){
      let type=capacity.type,z=zone(type,date),id=`${date}-${type}`,detail=prescription(type,capacity.km,w,ph,z,capacity);
      if(capacity.capacityReason){detail.whyAmount=`${detail.whyAmount||'The amount follows the current programme load.'} ${capacity.capacityReason}`;}
      let prescribedDistance=Number.isFinite(detail.totalDistance)?detail.totalDistance:Math.round(capacity.km*10)/10;
-     const capacityRationale=`Based on ${startCapacity.source}: ${startCapacity.weekly.toFixed(1)} km/week and a ${startCapacity.longest.toFixed(1)} km longest run. This week's ${trainingBudget.toFixed(1)} km budget is shared across ${supportedDays} run days; the long run is limited to ${Math.round(longShare*100)}% of the budget. Future weeks are projections, reviewed against completed training.`;
+     const capacityRationale=`Based on ${startCapacity.source}: ${startCapacity.weekly.toFixed(1)} km/week and a ${startCapacity.longest.toFixed(1)} km longest run. The long run progresses toward your configured ${Number(state.setup.peakLong).toFixed(1)} km peak before taper. This week's ${trainingBudget.toFixed(1)} km budget reserves ${longDistance.toFixed(1)} km for the long run and shares the remainder across the other sessions. Future weeks are reviewed against completed training.`;
      let item={id,week:w,date,day:dayName,type,distance:prescribedDistance,phase:ph,detailedPhase:dp,factor,zone:z,requestedType:capacity.typeChanged?capacity.originalType:null,capacityCeiling:capacity.capacityCeiling,capacityLimited:capacity.capacityLimited,onRampWeek:capacity.onRampWeek,onRampWeeks:capacity.onRampWeeks,capacityReason:capacity.capacityReason,capacityRationale,...detail};
      const existing=oldByDate.get(date),hasLinkedEvidence=existing&&(state.runs||[]).some(r=>r.planId===existing.id||((r.date===date)&&r.matchStatus==='matched'));
      // Preserve only genuine history or a future/today prescription that already has linked run evidence.
